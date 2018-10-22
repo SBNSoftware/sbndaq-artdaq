@@ -1,0 +1,48 @@
+# The parent line must be the first non-comment line in the file
+# This line defines the product name and version
+parent sbndaq_artdaq	v0_01_00
+defaultqual	e15:icarus
+
+# These optional lines define the installed directories where
+# headers, libraries, and executables will be found
+# Use them only if your product does not conform to the defaults
+# Format: directory_type directory_path directory_name
+# The only recognized values of the first field are incdir, libdir, and bindir
+# The only recognized values of the second field are product_dir and fq_dir
+# The third field is not constrained
+# The examples here reflect the defaults
+incdir      product_dir include
+libdir      fq_dir      lib
+bindir      fq_dir      bin
+fcldir      -
+
+#
+product		      version	   optional
+artdaq                v3_03_00
+sbndaq_artdaq_core    v0_01_00
+caencomm	      v1_2a
+caenvme		      v2_50
+caendigitizer	      v2_7_6
+cetbuildtools         v7_02_01       -       only_for_build
+end_product_list
+
+# s* - see artdaq-core's product_deps
+# -nq- here means there is no qualifier
+# a "-" here means the dependent product is not required by the parent and will not be setup
+qualifier		artdaq	 	  sbndaq_artdaq_core  caenvme caencomm caendigitizer
+e15:prof		e15:s64:prof      e15:prof            -nq-    -nq-     -nq-
+e15:debug		e15:s64:debug     e15:debug           -nq-    -nq-     -nq-
+e15:prof:icarus		e15:s64:prof      e15:prof:icarus     -nq-    -nq-     -nq-
+e15:debug:icarus	e15:s64:debug     e15:debug:icarus    -nq-    -nq-     -nq-
+
+end_qualifier_list
+
+envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
+
+# Preserve tabs and formatting in emacs and vi / vim:
+
+### Local Variables:
+### tab-width: 8
+### End:
+
+# vi:set ts=8 noexpandtab:
