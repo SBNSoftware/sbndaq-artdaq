@@ -1,0 +1,21 @@
+#include "sbndaq-artdaq/BuildInfo/GetPackageBuildInfo.hh"
+
+#include <string>
+
+namespace icarus
+{
+
+artdaq::PackageBuildInfo GetPackageBuildInfo::getPackageBuildInfo()
+{
+
+    artdaq::PackageBuildInfo pkg;
+
+    pkg.setPackageName ( "icarus-artdaq" );
+    pkg.setPackageVersion ( "@version@" );
+    pkg.setBuildTimestamp ( "@utcDateTime@" );
+
+    return pkg;
+}
+
+}
+
