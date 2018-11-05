@@ -550,7 +550,7 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
       // that is why I use the fEvCounter
       fragments.emplace_back( artdaq::Fragment::FragmentBytes(event_size,
 							      fEvCounter,fBoardID,
-							      icarus::detail::FragmentType::CAENV1730,
+							      sbndaq::detail::FragmentType::CAENV1730,
 							      metadata) );
       TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created fragment " << fBoardID << "," << fEvCounter << TLOG_ENDL;
       std::copy(fCircularBuffer.Buffer().begin(),

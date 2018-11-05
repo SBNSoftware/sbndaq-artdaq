@@ -23,19 +23,20 @@ sbndaq_artdaq_core    v0_01_00
 caencomm	      v1_2a
 caenvme		      v2_50
 caendigitizer	      v2_7_6
-cetbuildtools         v7_02_01       -       only_for_build
+cetbuildtools         v7_02_01      -       only_for_build
+libxml2               v2_9_4b       -
 end_product_list
 
 # s* - see artdaq-core's product_deps
 # -nq- here means there is no qualifier
 # a "-" here means the dependent product is not required by the parent and will not be setup
-qualifier		artdaq	 	  sbndaq_artdaq_core  caenvme caencomm caendigitizer
-e15:prof		e15:s64:prof      e15:prof            -nq-    -nq-     -nq-
-e15:debug		e15:s64:debug     e15:debug           -nq-    -nq-     -nq-
-e15:prof:icarus		e15:s64:prof      e15:prof:icarus     -nq-    -nq-     -nq-
-e15:debug:icarus	e15:s64:debug     e15:debug:icarus    -nq-    -nq-     -nq-
-e15:prof:sbnd		e15:s64:prof      e15:prof:sbnd       -nq-    -nq-     -nq-
-e15:debug:sbnd  	e15:s64:debug     e15:debug:sbnd      -nq-    -nq-     -nq-
+qualifier		artdaq	 	  sbndaq_artdaq_core  caenvme caencomm caendigitizer libxml2
+e15:prof		e15:s64:prof      e15:prof            -nq-    -nq-     -nq-          -
+e15:debug		e15:s64:debug     e15:debug           -nq-    -nq-     -nq-          -
+e15:prof:icarus		e15:s64:prof      e15:prof:icarus     -nq-    -nq-     -nq-          -
+e15:debug:icarus	e15:s64:debug     e15:debug:icarus    -nq-    -nq-     -nq-          -
+e15:prof:sbnd		e15:s64:prof      e15:prof:sbnd       -nq-    -nq-     -nq-          prof
+e15:debug:sbnd  	e15:s64:debug     e15:debug:sbnd      -nq-    -nq-     -nq-          debug
 
 end_qualifier_list
 

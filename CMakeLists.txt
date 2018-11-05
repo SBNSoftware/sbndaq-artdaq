@@ -96,7 +96,7 @@ IF(ICARUS_BUILD)
 ENDIF()
 
 IF(SBND_BUILD)
-
+  find_ups_product( libxml2 v2_9_4b )
 ENDIF()
 
 
