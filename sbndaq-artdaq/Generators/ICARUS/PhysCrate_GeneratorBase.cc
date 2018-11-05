@@ -111,7 +111,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   frags.emplace_back( artdaq::Fragment::FragmentBytes(metadata_.ExpectedDataSize()*1.2,  
 						      0, fragment_id(),
-						      icarus::detail::FragmentType::PHYSCRATEDATA, metadata_) );
+						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_) );
 
   TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ Initialized data of size %lu",frags.back()->dataSizeBytes());
 
