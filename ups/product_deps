@@ -34,6 +34,8 @@ e15:prof		e15:s64:prof      e15:prof            -nq-    -nq-     -nq-
 e15:debug		e15:s64:debug     e15:debug           -nq-    -nq-     -nq-
 e15:prof:icarus		e15:s64:prof      e15:prof:icarus     -nq-    -nq-     -nq-
 e15:debug:icarus	e15:s64:debug     e15:debug:icarus    -nq-    -nq-     -nq-
+e15:prof:sbnd		e15:s64:prof      e15:prof:sbnd       -nq-    -nq-     -nq-
+e15:debug:sbnd  	e15:s64:debug     e15:debug:sbnd      -nq-    -nq-     -nq-
 
 end_qualifier_list
 
