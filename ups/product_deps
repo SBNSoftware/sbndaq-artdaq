@@ -24,7 +24,7 @@ caencomm	      v1_2a
 caenvme		      v2_50
 caendigitizer	      v2_7_6
 cetbuildtools         v7_02_01      -       only_for_build
-libxml2               v2_9_4b       -
+libxml2               v2_9_5       -
 end_product_list
 
 # s* - see artdaq-core's product_deps
