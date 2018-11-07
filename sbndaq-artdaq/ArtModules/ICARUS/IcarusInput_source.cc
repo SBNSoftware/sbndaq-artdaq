@@ -15,7 +15,7 @@ namespace icarus
 	/**
 	 * \brief DemoInput is an art::Source using the detail::RawEventQueueReader class
 	 */
-	typedef art::Source< artdaq::detail::SharedMemoryReader<icarus::makeFragmentTypeMap> > IcarusInput;
+	typedef art::Source< artdaq::detail::SharedMemoryReader<sbndaq::makeFragmentTypeMap> > IcarusInput;
 }
 
 namespace art
@@ -25,7 +25,7 @@ namespace art
 	* source.fileNames and don't want the files services to be used.
 	*/
 	template <>
-	struct Source_generator<artdaq::detail::SharedMemoryReader<icarus::makeFragmentTypeMap>>
+	struct Source_generator<artdaq::detail::SharedMemoryReader<sbndaq::makeFragmentTypeMap>>
 	{
 		static constexpr bool value = true; ///< Used to suppress use of file services on art Source
 	};

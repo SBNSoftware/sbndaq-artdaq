@@ -29,6 +29,12 @@ ELSE()
    MESSAGE ("Performing SBND_BUILD")
 ENDIF()
 
+IF (NOT(SBND_BUILD OR ICARUS_BUILD))
+   MESSAGE("No experiment-specific build specified. Building all.")
+   SET(SBND_BUILD 1)
+   SET(ICARUS_BUILD 1)
+ENDIF()
+
 # cetbuildtools contains our cmake modules
 SET ( CETBUILDTOOLS_VERSION $ENV{CETBUILDTOOLS_VERSION} )
 IF (NOT CETBUILDTOOLS_VERSION)
