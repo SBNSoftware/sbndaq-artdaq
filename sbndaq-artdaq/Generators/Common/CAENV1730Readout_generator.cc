@@ -14,6 +14,7 @@
 // constructor of the CAENV1730Readout. It wants the param set 
 // which means the fhicl paramters in CAENV1730Readout.hh
 sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) : 
+  CommandableFragmentGenerator(ps),
   fCAEN(ps),								     
   fAcqMode(CAEN_DGTZ_SW_CONTROLLED)
 {
