@@ -1,0 +1,45 @@
+#include "metrics.fcl" 
+
+services: {
+  scheduler: {
+    errorOnFailureToPut: false 
+  }
+
+  NetMonTransportServiceInterface: {
+    service_provider: NetMonTransportService 
+  }
+}
+
+daq: {
+
+  aggregator: {
+    expected_events_per_bunch: 1 
+    max_fragment_size_bytes: 100000000 
+    print_event_store_stats: true 
+    buffer_count: 20 
+    event_queue_depth: 2 
+    event_queue_wait_time: 1 
+    onmon_event_prescale: 1 
+    xmlrpc_client_list: "daqinterface-replace-this" # Will be set by DAQInterface
+    # Will be set by DAQInterface
+    subrun_size_MB: -1 
+    subrun_duration: -1 
+    subrun_event_count: 0 
+    is_dispatcher: true 
+    overwrite_mode: true 
+    routing_token_config: {
+      use_routing_master: false 
+    }
+    auto_suppression_enabled: false 
+
+    sources: {}
+  }
+}
+
+source: {
+  module_type: NetMonInput 
+}
+
+outputs: {}
+physics: {}
+process_name: DAQDP 

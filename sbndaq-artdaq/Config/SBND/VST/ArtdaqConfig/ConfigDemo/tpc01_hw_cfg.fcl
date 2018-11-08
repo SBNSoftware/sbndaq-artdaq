@@ -1,0 +1,81 @@
+  daq: {
+  fragment_receiver: {
+	mpi_sync_interval: 50
+
+	# CommandableFragmentGenerator Configuration: 
+	fragment_ids: []
+	fragment_id: -99 # Please define only one of these
+
+	sleep_on_stop_us: 0
+
+	 # Possible values are: Ignored, Single, Buffer, Window
+	request_mode: "Ignored"
+
+	data_buffer_depth_fragments: 1000
+	data_buffer_depth_mb: 1000
+
+	request_port: 3001
+	request_address: "227.128.12.26" # Multicast request address
+
+	# Request message contains tzero. Window will be from tzero -
+	# offset to tzero + width
+
+	request_window_offset: 0 
+	request_window_width: 0
+
+	# How long to wait before discarding request messages that are
+        # outside the available data
+	
+	stale_request_timeout: "0xFFFFFFFF" 
+	
+	# If request windows are unique, avoids a copy operation, but
+	# the same data point cannot be used for two requests. If this
+	# is not anticipated, leave set to "true"
+
+	request_windows_are_unique: true 
+
+	# separate_data_thread MUST be true for requests to be
+        # applied! If requests are not desired, but a separate readout
+        # thread is, set this to true and request_mode to ignored.
+
+	separate_data_thread: false 
+
+	# Whether a thread should be started which periodically calls
+        # checkHWStatus_, a user-defined function which should be used
+        # to check hardware status registers and report to MetricMan:
+
+	separate_monitoring_thread: false 
+
+	# How often, in microseconds, checkHWStatus_() should be
+        # called. 0 to disable:
+
+	hardware_poll_interval_us: 0 
+
+        generator: ToySimulator
+	  fragment_type: TOY2
+	  fragment_id: 1
+	  board_id: 1
+	  starting_fragment_id: 1
+	  random_seed: 2899
+	  sleep_on_stop_us: 500000 
+	  nADCcounts: 40
+	  throttle_usecs: 100000
+	  distribution_type: 2
+	  timestamp_scale_factor: 1
+
+        destinations: { }
+
+	routing_table_config: {
+	    use_routing_master: false
+	}
+  }
+
+  metrics: {
+	brFile: {
+	  metricPluginType: "file"
+	  level: 3
+	  fileName: "/tmp/boardreader/br_%UID%_metrics.log"
+	  uniquify: true
+	}
+  }
+}

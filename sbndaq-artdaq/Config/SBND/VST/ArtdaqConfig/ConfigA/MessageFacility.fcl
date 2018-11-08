@@ -1,0 +1,3 @@
+ 
+udp : { type : "UDP" threshold : "INFO"  port : 30000 host : "lariat-daq04.fnal.gov" } 
+

@@ -1,0 +1,31 @@
+export ARTDAQ_DAQINTERFACE_USER_DIR=/home/nfs/sbnd/SBND_DAQ3/dev/srcs/sbnddaq_readout/DAQInterfaceSetup
+
+export DAQINTERFACE_SETTINGS=$ARTDAQ_DAQINTERFACE_USER_DIR/sbnd_settings
+export DAQINTERFACE_KNOWN_BOARDREADERS_LIST=$ARTDAQ_DAQINTERFACE_USER_DIR/known_boardreaders_list
+export DAQINTERFACE_FHICL_DIRECTORY=$ARTDAQ_DAQINTERFACE_USER_DIR/Config
+# export DAQINTERFACE_FHICL_DIRECTORY=IGNORED
+
+if [[ ! -e $DAQINTERFACE_SETTINGS ]]; then
+   echo "Unable to find settings file \"$DAQINTERFACE_SETTINGS\"" >&2
+   export DAQINTERFACE_USER_SOURCEFILE_ERRNO=1
+   return 
+fi
+
+if [[ ! -e $DAQINTERFACE_KNOWN_BOARDREADERS_LIST ]]; then
+   echo "Unable to find boardreaders list file \"$DAQINTERFACE_KNOWN_BOARDREADERS_LIST\"" >&2
+   export DAQINTERFACE_USER_SOURCEFILE_ERRNO=2
+   return 
+fi
+
+if [[ "$DAQINTERFACE_FHICL_DIRECTORY" != "IGNORED" && ! -e $DAQINTERFACE_FHICL_DIRECTORY ]]; then
+   echo "Unable to find FHiCL configuration directory \"$DAQINTERFACE_FHICL_DIRECTORY\"" >&2
+   export DAQINTERFACE_USER_SOURCEFILE_ERRNO=3
+   return
+elif [[ "$DAQINTERFACE_FHICL_DIRECTORY" == "IGNORED" ]]; then 
+   echo "Put code here which sets up the database environment"
+   export ARTDAQ_DATABASE_DATADIR="${HOME}/databases"
+   export ARTDAQ_DATABASE_URI="filesystemdb://${ARTDAQ_DATABASE_DATADIR}/online_config_db"
+   printf "\nARTDAQ_DATABASE_URI=${ARTDAQ_DATABASE_URI}"
+fi
+
+export DAQINTERFACE_USER_SOURCEFILE_ERRNO=0

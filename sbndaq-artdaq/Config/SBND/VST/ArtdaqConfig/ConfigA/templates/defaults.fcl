@@ -1,0 +1,6 @@
+defaults: {
+      max_fragment_size_words:2097152
+      print_event_store_stats: true
+      mpi_buffer_count :32
+      fragment_type_map:[[1,"missed"],[2,"TOY1"],[3,"TOY2"],[4,"ASCII"]] 
+}

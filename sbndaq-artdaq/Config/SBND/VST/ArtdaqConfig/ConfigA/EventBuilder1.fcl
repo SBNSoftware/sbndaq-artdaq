@@ -1,0 +1,92 @@
+ 
+#include "metrics.fcl" 
+
+services: {
+
+scheduler: {
+
+errorOnFailureToPut: false 
+
+}
+NetMonTransportServiceInterface: {
+
+service_provider: NetMonTransportService 
+
+destinations: {
+
+}
+routing_table_config: {
+
+use_routing_master: false 
+
+}
+}
+}
+daq: {
+
+event_builder: {
+
+expected_fragments_per_event: 10 
+max_fragment_size_bytes: 52428800 # 50MB
+
+use_art: true 
+
+print_event_store_stats: true 
+
+buffer_count: 20 
+
+max_incomplete_events: 75 # Same as boardreader sync interval
+# Same as boardreader sync interval
+verbose: false 
+
+send_requests: true 
+
+request_port: 3001 # Can be set by DAQInterface
+# Can be set by DAQInterface
+request_address: "227.128.12.26" # Can be set by DAQInterface        
+# Can be set by DAQInterface        
+routing_token_config: {
+
+use_routing_master: false 
+
+}
+sources: {
+
+}
+}
+}
+outputs: {
+
+rootNetOutput: {
+
+module_type: RootNetOutput 
+
+}
+
+}
+physics: {
+
+analyzers: {
+}
+producers: {
+}
+filters: {
+}
+
+p1: [] 
+
+a1: [] 
+
+my_output_modules: [rootNetOutput] 
+
+}
+source: {
+
+module_type: SBNDDAQInput 
+
+waiting_time: 2500000 
+
+resume_after_timeout: true 
+
+}
+process_name: DAQ 

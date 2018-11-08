@@ -1,0 +1,78 @@
+
+services: {
+  scheduler: {
+    errorOnFailureToPut: false
+  }
+  NetMonTransportServiceInterface: {
+    service_provider: NetMonTransportService
+    #broadcast_sends: true
+	destinations: {	}
+
+	routing_table_config: {
+	    use_routing_master: false
+	}
+  }
+}
+
+daq: {
+  event_builder: {
+	expected_fragments_per_event: 0  # Will be set by DAQInterface
+	max_fragment_size_bytes: 16777216
+	use_art: true
+	print_event_store_stats: true
+	buffer_count: 20
+	max_incomplete_events: 75 # Same as boardreader sync interval
+	verbose: true
+	send_requests: false
+
+	routing_token_config: {
+	use_routing_master: false
+	}
+
+	sources: { }
+  }
+  metrics: {
+	evbFile: {
+	  metricPluginType: "file"
+	  level: 3
+	  fileName: "/tmp/eventbuilder/evb_%UID%_metrics.log"
+	  uniquify: true
+	}
+  }
+} 
+
+outputs: {
+  rootNetOutput: {
+    module_type: RootNetOutput
+  }
+  #normalOutput: {
+  #  module_type: RootOutput
+  #  fileName: "/tmp/artdaqdemo_eb00_r%06r_sr%02s_%to_%#.root"
+  #  fileProperties: { maxSubRuns: 1 maxRuns: 1  }
+  #  compressionLevel: 3
+  #  fastCloning: false
+ #}
+}
+
+physics: {
+  analyzers: {
+
+  }
+
+  producers: {
+  }
+
+  filters: {
+
+  }
+
+   
+  my_output_modules: [ rootNetOutput ]
+  #my_output_modules: [ normalOutput ]
+}
+source: {
+  module_type: SBNDDAQInput
+  waiting_time: 2500000
+  resume_after_timeout: true
+}
+process_name: DAQ

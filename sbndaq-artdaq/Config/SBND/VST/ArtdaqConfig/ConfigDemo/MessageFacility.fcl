@@ -1,0 +1,14 @@
+ 
+
+# This file was automatically generated as /home/nfs/sbnd/SBND_DAQ3/dev/srcs/sbnddaq_readout/DAQInterfaceSetup/Config/ConfigA/MessageFacility.fcl at Thu Oct  4 14:34:28 CDT 2018 on host lariat-daq04.fnal.gov, and is
+# the default file DAQInterface uses to determine how to modify the
+# standard MessageFacility configuration found in artdaq-core
+# v3_02_01's configureMessageFacility.cc file. You can edit the
+# contents below to change the behavior of how/where MessageFacility
+# messages are sent, though keep in mind that this FHiCL will be
+# nested inside a table. Or you can use a different file by setting
+# the environment variable DAQINTERFACE_MESSAGEFACILITY_FHICL to the
+# name of the other file.
+
+udp : { type : "UDP" threshold : "DEBUG"  port : 30000 host : "lariat-daq04.fnal.gov" } 
+

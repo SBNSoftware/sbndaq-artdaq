@@ -1,0 +1,23 @@
+DAQ setup script: /home/nfs/sbnd/SBND_DAQ3/dev/setup_daq_env.sh
+#PMT stands for the "Process Management Tool"
+PMT host: lariat-daq04.fnal.gov
+PMT port: 7200
+disable recovery: true
+
+# debug level can range from 0 to 3 (increasing order of verbosity)
+
+debug level: 1
+
+EventBuilder host: lariat-daq04.fnal.gov
+EventBuilder port: 7135
+EventBuilder label: EventBuilder1
+
+DataLogger host: lariat-daq04.fnal.gov
+DataLogger port: 7165
+DataLogger label: DataLogger1
+
+Dispatcher host: lariat-daq04.fnal.gov
+Dispatcher port: 7166
+Dispatcher label: Dispatcher1
+
+manage processes: true
