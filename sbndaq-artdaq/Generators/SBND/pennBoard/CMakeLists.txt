@@ -12,6 +12,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_pennBoard
 			${Boost_SYSTEM_LIBRARY}
 			-lpthread
 			sbndaq-artdaq-core_Overlays_SBND
+			sbndaq-artdaq-core_Overlays_SBND_Penn
 			)
 	
  add_subdirectory(emulator)
