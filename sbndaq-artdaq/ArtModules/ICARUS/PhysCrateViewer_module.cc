@@ -78,8 +78,8 @@ void icarus::PhysCrateViewer::analyze(art::Event const & evt)
   art::Handle< std::vector<artdaq::Fragment> > raw_data;
   evt.getByLabel(raw_data_label_, "PHYSCRATEDATA", raw_data);
 
-  art::Handle< std::vector<artdaq::Fragment> > raw_stat;
-  evt.getByLabel(raw_data_label_, "PHYSCRATESTAT", raw_stat);
+  // art::Handle< std::vector<artdaq::Fragment> > raw_stat;
+  // evt.getByLabel(raw_data_label_, "PHYSCRATESTAT", raw_stat);
   
   if(!raw_data.isValid()){
     TLOG(TLVL_INFO) <<  "Run " << evt.run() << ", subrun " << evt.subRun()
@@ -87,12 +87,12 @@ void icarus::PhysCrateViewer::analyze(art::Event const & evt)
               << " PhysCrate fragments " << " in module " << raw_data_label_;    
     return;
   }
-  if(!raw_stat.isValid()){
+  /* if(!raw_stat.isValid()){
     TLOG(TLVL_INFO) <<  "Run " << evt.run() << ", subrun " << evt.subRun()
               << ", event " << eventNumber << " has zero"
               << " PhysCrateStat fragments " << " in module " << raw_data_label_;
     return;
-  }
+  } */
 
   art::ServiceHandle<art::TFileService> tfs;
   std::vector<TH2F*> hist_vector;
@@ -109,7 +109,8 @@ void icarus::PhysCrateViewer::analyze(art::Event const & evt)
     const auto& frag((*raw_data)[idx]);
     
     PhysCrateFragment bb(frag);
-    for(size_t i_b=0; i_b < bb.nBoards(); ++i_b){
+    // for(size_t i_b=0; i_b < bb.nBoards(); ++i_b){
+    for(size_t i_b=0; i_b < 1; ++i_b){
       std::stringstream ss_hist_title,ss_hist_name;
       ss_hist_title << "(Run,Event,Fragment,Board)=("
 		    << evt.run() <<","
