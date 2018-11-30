@@ -6,6 +6,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_pennBoard
 		   	${CANVAS_UTILITIES}
 		 	${FHICLCPP}
 			${CETLIB}
+                        ${CETLIB_EXCEPT}
 			$ENV{LIBXML2_FQ_DIR}/lib/libxml2.so
 			${MF_MESSAGELOGGER}
 			${MF_UTILITIES}
