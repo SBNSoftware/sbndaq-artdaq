@@ -95,3 +95,36 @@ simple_plugin(SpectraTimeData "generator"
   ${CETLIB}
   ${CETLIB_EXCEPT}
 )
+
+art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
+		  SOURCE BernCRTZMQ_GeneratorBase.cc
+		  LIBRARIES
+  		        sbndaq-artdaq-core_Overlays
+  			sbndaq-artdaq-core_Overlays_Common
+  			sbndaq-artdaq_Common_Utilities
+			artdaq_Application
+			artdaq_DAQdata
+			artdaq-core_Utilities
+			artdaq-core_Data
+			${ART_UTILITIES}
+			${FHICLCPP}
+			${MF_MESSAGELOGGER}
+			${MF_UTILITIES}
+			${CETLIB}
+		)
+
+simple_plugin(BernCRTZMQData "generator"
+  sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq-core_Overlays_Common
+  zmq
+  artdaq_Application
+  artdaq_DAQdata
+  artdaq-core_Utilities
+  artdaq-core_Data
+  ${ART_UTILITIES}
+  ${FHICLCPP}
+  ${MF_MESSAGELOGGER}
+  ${MF_UTILITIES}
+  ${CETLIB}
+  )
