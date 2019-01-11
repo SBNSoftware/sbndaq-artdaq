@@ -20,7 +20,7 @@ namespace icarus {
     void ConfigureStart(); //called in start()
     void ConfigureStop();  //called in stop()
 
-    int  GetData(size_t&,uint32_t*);       //called in getNext_()
+    int  GetData();
     void FillStatPack(statpack&);
     bool Monitor();
 
@@ -52,7 +52,8 @@ namespace icarus {
     bool         _doVetoTest;
     unsigned int _vetoTestPeriod;
     share::WorkerThreadUPtr _vetoTestThread;
-    
+    share::WorkerThreadUPtr GetData_thread_;
+
  };
 }
 

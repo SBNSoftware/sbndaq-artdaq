@@ -42,6 +42,7 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs", 100000);
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check", 10000);
+  fCircularBufferSize = ps_.get<size_t>("CircularBufferSize", 1e9);
   metadata_ = PhysCrateFragmentMetadata(RunNumber_,
 					nBoards_,
 					ChannelsPerBoard_,
@@ -60,6 +61,9 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
 
 void icarus::PhysCrate_GeneratorBase::start() {
   current_subrun_ = 0;
+
+  fCircularBuffer = sbndaq::CircularBuffer<uint16_t>(fCircularBufferSize/sizeof(uint16_t));
+
   ConfigureStart();
 
   share::ThreadFunctor functor = std::bind(&PhysCrate_GeneratorBase::Monitor,this);
@@ -106,6 +110,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   TRACE(TR_LOG,"PhysCrate_GeneratorBase::getNext_(frags) called.");
 
+  if ( fCircularBuffer.Buffer().empty() ) {
+    TRACE(TR_LOG,"PhysCrate_GeneratorBase::getNext_(frags) no data in circular buffer.");
+    return true;
+  }
+
   //std::cout << metadata_ << std::endl;
   TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ Expected data size: %lu",metadata_.ExpectedDataSize());
 
@@ -116,25 +125,56 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ Initialized data of size %lu",frags.back()->dataSizeBytes());
 
   PhysCrateFragment newfrag(*frags.back());
-  last_status_ = GetData(last_read_data_size_,(uint32_t*)(frags.back()->dataBeginBytes()));
 
+  size_t data_size = 0;
+  uint16_t const* data_ptr = fCircularBuffer.LinearizeAndGetData();
+  //  the Tile Header is at the beginning of the board data:
+  auto const* dt = reinterpret_cast< DataTile const* >(data_ptr);
+  auto const* dt_header = &( dt->Header );
+  uint32_t this_data_size = ntohl( dt_header->packSize );
+  // std::cout << std::dec << "data_size: " << data_size << ", this_data_size: " << this_data_size << ", token: " << std::hex << dt_header->token << std::endl;
+  auto const* board_block = reinterpret_cast< A2795DataBlock const * >( dt->data );
+  auto ev_num = board_block->header.event_number;
+  auto new_ev_num = ev_num;
+  // std::cout << "ev_num: " << ev_num << std::endl;
+
+  do {
+    // get the pointer to the "current" board data
+    // check the event number from the current board data
+    // compute the size of the current board data
+    // if event number has changed, exit the loop
+    // go to the next board data
+    data_size += this_data_size;
+    auto const* this_data_ptr = data_ptr + data_size;
+    // if ( this_data_ptr >= end_data_ptr ) break;
+    dt = reinterpret_cast< DataTile const* >(this_data_ptr);
+    dt_header = &( dt->Header );
+    this_data_size = ntohl( dt_header->packSize );
+    // std::cout << std::dec << "data_size: " << data_size << ", this_data_size: " << this_data_size << ", token: " << std::hex << dt_header->token << std::endl;
+    board_block = reinterpret_cast< A2795DataBlock const * >( dt->data );
+    new_ev_num = board_block->header.event_number;;
+    // std::cout << "new_ev_num: " << new_ev_num << std::endl;
+
+  } while ( new_ev_num == ev_num );
+
+  // std::cout << "Go to a new event..." << std::endl;
   //GAL: metricMan->sendMetric(".GetData.Size",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.Size.last",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.Size.min",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.Size.max",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
-
-  if(last_read_data_size_==0){
-    frags.pop_back();
-    return true;
-  }
   
-  TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ : Read data status was %d, Read data size was %lu",
-	last_status_,last_read_data_size_);
+  std::copy( fCircularBuffer.Buffer().begin(), fCircularBuffer.Buffer().begin() + data_size,
+             (uint32_t*)( frags.back()->dataBeginBytes() ) );
+  TRACE(42,"42");
 
-  frags.back()->resizeBytes(last_read_data_size_);
+  TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ : Read data size was %lu", (long unsigned int)data_size );
+
+  frags.back()->resizeBytes( data_size );
+  // Erase the copied part of the circular buffer
+  fCircularBuffer.Erase( data_size );
 
   //give proper event number
-  auto ev_num = newfrag.BoardEventNumber()+1;
+  // ++ev_num;
   frags.back()->setSequenceID(ev_num);
 
   //GAL: metricMan->sendMetric(".getNext.EventNumber.last",(int)ev_num,"events",1,artdaq::MetricMode::LastPoint);
