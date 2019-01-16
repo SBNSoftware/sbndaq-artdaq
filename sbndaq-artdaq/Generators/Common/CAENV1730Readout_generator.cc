@@ -423,25 +423,28 @@ void sbndaq::CAENV1730Readout::stop()
 
 bool sbndaq::CAENV1730Readout::GetData()
 {
-  TLOG_ARB(TGETDATA,TRACE_NAME) << "Begin of GetData()" << TLOG_ENDL;
+  TLOG(TGETDATA) << "Begin of GetData()" << TLOG_ENDL;
   
   uint32_t this_data_size=0;  // define this to then pass its adress to the function that reads data
+  CAEN_DGTZ_ErrorCode retcod;
 
   if(fSWTrigger) {
     usleep(fGetNextSleep);
-    TLOG_ARB(TGETDATA,TRACE_NAME) << "Sending SW trigger..." << TLOG_ENDL;
-    CAEN_DGTZ_SendSWtrigger(fHandle);
+    TLOG(TGETDATA) << "Sending SW trigger..." << TLOG_ENDL;
+    retcod = CAEN_DGTZ_SendSWtrigger(fHandle);
+    TLOG(TGETDATA) << "CAEN_DGTZ_SendSWtrigger returned " << retcod;
   }
   
   // read the data from the buffer of the card 
   // this_data_size is the size of the acq window
-  TLOG_ARB(TGETDATA,TRACE_NAME) << "Calling ReadData" << TLOG_ENDL;
-  CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, 
-		     (char*)(fBuffer.get()),&this_data_size);
-  TLOG_ARB(TGETDATA,TRACE_NAME) << "ReadData complete with returned data size " << this_data_size << TLOG_ENDL;
+  char *bufp = (char*)(fBuffer.get());
+  TLOG(TGETDATA) << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)bufp << ",&this_data_size="<<&this_data_size<<")";
+  retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, 
+		     bufp, &this_data_size);
+  TLOG(TGETDATA) << "ReadData complete with returned data size " << this_data_size << " retcod=" << retcod;
 
   if(this_data_size==0) {
-    TLOG_ARB(TGETDATA,TRACE_NAME) << "No data. Sleep for " << fGetNextSleep << " us and return." << TLOG_ENDL;
+    TLOG(TGETDATA) << "No data. Sleep for " << fGetNextSleep << " us and return.";
     usleep(fGetNextSleep);
     return false;
   }
@@ -501,10 +504,12 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
   // I loop over the readout windows of the acq window
   for(size_t i_rw=0; i_rw<n_readout_windows; ++i_rw){
     
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Get Readout Window number " << i_rw << TLOG_ENDL;
+	char * buf_begin = (char*)(&(*fCircularBuffer.Buffer().begin()));
+	TLOG(TMAKEFRAG) << "Get Readout Window number - i_rw=" << i_rw << " Buffer().begin()=" << (void*)buf_begin << " metadata.ExpectedDataSize()="<< metadata.ExpectedDataSize();
     
-    // I scan the rw's ponting at them with eventptr
-    char* rwptr = (char*)(&(*(fCircularBuffer.Buffer().begin())) + i_rw*metadata.ExpectedDataSize()/sizeof(uint16_t));
+	// I scan the rw's ponting at them with eventptr
+    char* rwptr = buf_begin + i_rw*metadata.ExpectedDataSize()/sizeof(uint16_t);
+    //char* rwptr = (char*)(&(*(fCircularBuffer.Buffer().begin())) + i_rw*metadata.ExpectedDataSize()/sizeof(uint16_t));
     CAENV1730EventHeader* header = reinterpret_cast<CAENV1730EventHeader*>(rwptr);
     uint32_t rwcounter = header->eventCounter; // I get the eventcounter for the i_e^th readout window	
 
