@@ -111,7 +111,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
 			${MF_MESSAGELOGGER}
 			${MF_UTILITIES}
 			${CETLIB}
-		)
+ 	    ${CETLIB_EXCEPT}	
+)
 
 simple_plugin(BernCRTZMQData "generator"
   sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
@@ -127,4 +128,5 @@ simple_plugin(BernCRTZMQData "generator"
   ${MF_MESSAGELOGGER}
   ${MF_UTILITIES}
   ${CETLIB}
+  ${CETLIB_EXCEPT}
   )
