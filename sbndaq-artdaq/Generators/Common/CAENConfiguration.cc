@@ -22,6 +22,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   maxEventsPerTransfer(0),
   eventsPerInterrupt(0),
   irqWaitTime(0),
+  allowTriggerOverlap(true),
   usePedestals(0),
   dacValue(0),
   ioLevel(0),
@@ -46,6 +47,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   maxEventsPerTransfer = ps.get<int>("maxEventsPerTransfer");
   runSyncMode          = ps.get<int>("runSyncMode");
   outputSignalMode     = ps.get<int>("outputSignalMode");
+  allowTriggerOverlap  = ps.get<bool>("allowTriggerOverlap");
   usePedestals         = ps.get<bool>("usePedestals");
   dacValue             = ps.get<int>("dacValue");
   ioLevel              = ps.get<int>("ioLevel");
@@ -108,6 +110,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  nBoards               " << e.nBoards << std::endl;
   os << "  EnableReadout         " << e.enableReadout << std::endl;
   os << "  RecordLength          " << e.recordLength << std::endl;
+  os << "  AllowTriggerOverlap   " << e.allowTriggerOverlap << std::endl;
   os << "  UsePedestals          " << e.usePedestals << std::endl;
   os << "  DacValue              " << e.dacValue << std::endl;
   os << "  nChannels             " << e.nChannels << std::endl;

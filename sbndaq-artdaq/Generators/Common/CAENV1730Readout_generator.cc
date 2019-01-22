@@ -221,6 +221,7 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
 
   CAEN_DGTZ_ErrorCode retcode;
   uint32_t readback;
+  uint32_t addr;
 
   //set the trigger configurations
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetSWTriggerMode" << fCAEN.swTrgMode << TLOG_ENDL;
@@ -284,6 +285,11 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   retcode = CAEN_DGTZ_GetExtTriggerInputMode(fHandle,(CAEN_DGTZ_TriggerMode_t *)&readback);
   CheckReadback("SetExtTriggerInputMode", fBoardID,fCAEN.extTrgMode,readback);  
 
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerOverlap" << fCAEN.allowTriggerOverlap << TLOG_ENDL;
+  if ( fCAEN.allowTriggerOverlap ) { addr = CONFIG_SET_ADDR;}
+  else                             { addr = CONFIG_CLEAR_ADDR;}
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,TRIGGER_OVERLAP_MASK);
+  sbndaq::CAENDecoder::checkError(retcode,"SetTriggerOverlap",fBoardID);
 
   //level=1 for TTL, =0 for NIM
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetIOLevel " << (CAEN_DGTZ_IOLevel_t)(fCAEN.ioLevel) << TLOG_ENDL;

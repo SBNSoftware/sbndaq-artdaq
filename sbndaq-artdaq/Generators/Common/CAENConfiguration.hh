@@ -33,6 +33,7 @@ class CAENConfiguration
     int  maxEventsPerTransfer;
     int  eventsPerInterrupt;
     int  irqWaitTime;
+    bool allowTriggerOverlap;
     bool usePedestals;
     int  dacValue;
     int  ioLevel;

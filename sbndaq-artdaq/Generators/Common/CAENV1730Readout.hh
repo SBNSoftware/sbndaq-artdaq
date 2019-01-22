@@ -35,6 +35,14 @@ namespace sbndaq
 
   private:
 
+    typedef enum 
+    { 
+      CONFIG_READ_ADDR     = 0x8000,
+      CONFIG_SET_ADDR      = 0x8004,
+      CONFIG_CLEAR_ADDR    = 0x8008,
+      TRIGGER_OVERLAP_MASK = 0x0002
+    } REGISTERS_t;
+
     //CAEN pieces
     CAENConfiguration     fCAEN;	// initialized in the constructor
     int                   fHandle;
