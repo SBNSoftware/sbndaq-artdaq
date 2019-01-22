@@ -421,6 +421,10 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
+bool sbndaq::CAENV1730Readout::checkHWStatus_(){
+  return true;
+}
+
 bool sbndaq::CAENV1730Readout::GetData()
 {
   TLOG(TGETDATA) << "Begin of GetData()" << TLOG_ENDL;

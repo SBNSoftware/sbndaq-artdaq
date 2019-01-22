@@ -28,6 +28,7 @@ namespace sbndaq
     virtual ~CAENV1730Readout();
 
     bool getNext_(artdaq::FragmentPtrs & output) override;
+    bool checkHWStatus_() override;
     void start() override;
     void stop() override;
     void stopNoMutex() override { stop(); }
