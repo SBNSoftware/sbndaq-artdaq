@@ -25,7 +25,7 @@ caenvme		      v2_50
 caendigitizer	      v2_7_6
 cetbuildtools         v7_02_01     -       only_for_build
 libxml2               v2_9_5       -
-icarus_artdaq_base    v0_06_01     -
+icarus_artdaq_base    v0_06_03     -
 end_product_list
 
 # s* - see artdaq-core's product_deps
