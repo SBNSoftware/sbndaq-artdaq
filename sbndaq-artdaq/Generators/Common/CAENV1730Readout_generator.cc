@@ -449,7 +449,12 @@ bool sbndaq::CAENV1730Readout::GetData()
     return false;
   }
 
-  fCircularBuffer.Insert(this_data_size/sizeof(uint16_t),fBuffer);
+  TLOG(TGETDATA) << "checking if size()="<<fCircularBuffer.Buffer().size()
+				 << " + this_data_size ("<<this_data_size/sizeof(uint16_t)<<") is > capacity ("<<fCircularBuffer.Buffer().capacity()<<")";
+  if ((fCircularBuffer.Buffer().size()+(this_data_size/sizeof(uint16_t))) > fCircularBuffer.Buffer().capacity())
+	  TLOG(TGETDATA) << "DROPPING DATA -- FIXME WES?BILL";
+  else	
+	  fCircularBuffer.Insert(this_data_size/sizeof(uint16_t),fBuffer);
   
   return true;
 }
@@ -508,8 +513,17 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
 	TLOG(TMAKEFRAG) << "Get Readout Window number - i_rw=" << i_rw << " Buffer().begin()=" << (void*)buf_begin << " metadata.ExpectedDataSize()="<< metadata.ExpectedDataSize();
     
 	// I scan the rw's ponting at them with eventptr
-    char* rwptr = buf_begin + i_rw*metadata.ExpectedDataSize()/sizeof(uint16_t);
+    char* rwptr = buf_begin + i_rw*metadata.ExpectedDataSize();
     //char* rwptr = (char*)(&(*(fCircularBuffer.Buffer().begin())) + i_rw*metadata.ExpectedDataSize()/sizeof(uint16_t));
+    //if ((ulong)rwptr > (ulong)(&(*fCircularBuffer.Buffer().end()))) {
+    //    TLOG (TMAKEFRAG) << "CAENV1730Readout rwptr beyond end of Buffer() FIXME - should never happen. If it does, give up on life";
+	//		event_size += metadata.ExpectedDataSize();
+	//	fCircularBuffer.Erase(event_size/sizeof(uint16_t));
+	//	return true;
+    //}
+    
+    TLOG (TMAKEFRAG) << "First 4 bytes from CAENV1730Readout header " <<   *((uint32_t*)rwptr);
+
     CAENV1730EventHeader* header = reinterpret_cast<CAENV1730EventHeader*>(rwptr);
     uint32_t rwcounter = header->eventCounter; // I get the eventcounter for the i_e^th readout window	
 
@@ -541,7 +555,7 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
 				     << " prev_eventcounter = " << prev_rwcounter << TLOG_ENDL;
     }//end if event counter increasing
     else{ 																// now I am ready to build the artdaq fragm
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "i am in the else\n" 
+      TLOG(TMAKEFRAG) << "i am in the else\n" 
 				     << "event_size = " << event_size 
 				     << " total_data_size = " << total_data_size 		
 				     << " i_rw*metadata.ExpectedDataSize() = " << i_rw*metadata.ExpectedDataSize() 
