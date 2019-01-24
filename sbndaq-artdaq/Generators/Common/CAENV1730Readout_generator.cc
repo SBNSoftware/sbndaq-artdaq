@@ -422,6 +422,16 @@ void sbndaq::CAENV1730Readout::stop()
 }
 
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
+
+  for(int32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
+
+    CAEN_DGTZ_ReadTemperature(fHandle,ch,&(ch_temps[ch]));
+    TLOG_ARB(TTEMP,TRACE_NAME) << "Channel " << ch
+			       <<" temp: " << ch_temps[ch] << "  C"
+			       << TLOG_ENDL;
+    //metric call here...
+  }
+  
   return true;
 }
 
@@ -485,7 +495,8 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
   // I initialize this metadata object
   // because its expected size is = to the size of a rw
   CAENV1730FragmentMetadata metadata(fNChannels,fCAEN.recordLength,
-				     zeit.tv_sec,zeit.tv_nsec);
+				     zeit.tv_sec,zeit.tv_nsec,
+				     ch_temps);
   TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created metadata with metadata.ExpectedDataSize() = " 
 				 << metadata.ExpectedDataSize() << TLOG_ENDL;
 

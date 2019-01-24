@@ -71,7 +71,9 @@ namespace sbndaq
 	TSTATUS   = 7,
 	TGETNEXT  = 8,
 	TGETDATA  = 9,
-	TMAKEFRAG = 10
+        TMAKEFRAG = 10,
+
+        TTEMP = 30
     };
 
     //fhicl parameters
@@ -94,8 +96,8 @@ namespace sbndaq
     uint32_t event_size;	
     uint32_t n_readout_windows;
 
-
-
+    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
+    
     //functions
     void Configure();
 
