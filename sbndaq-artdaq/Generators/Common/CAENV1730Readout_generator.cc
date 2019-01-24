@@ -510,10 +510,16 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
   for(size_t i_rw=0; i_rw<n_readout_windows; ++i_rw){
     
 	char * buf_begin = (char*)(&(*fCircularBuffer.Buffer().begin()));
-	TLOG(TMAKEFRAG) << "Get Readout Window number - i_rw=" << i_rw << " Buffer().begin()=" << (void*)buf_begin << " metadata.ExpectedDataSize()="<< metadata.ExpectedDataSize();
+	TLOG(TMAKEFRAG) << "Get Readout Window number - i_rw=" << i_rw
+					<< " Buffer().begin()=" << (void*)buf_begin 
+					<< " metadata.ExpectedDataSize()="<< metadata.ExpectedDataSize();
     
 	// I scan the rw's ponting at them with eventptr
-    char* rwptr = buf_begin + i_rw*metadata.ExpectedDataSize();
+	char* rwptr;
+	if(fCombineReadoutWindows)
+		rwptr = buf_begin + i_rw*metadata.ExpectedDataSize();
+	else
+		rwptr = buf_begin;// + i_rw*metadata.ExpectedDataSize();
     //char* rwptr = (char*)(&(*(fCircularBuffer.Buffer().begin())) + i_rw*metadata.ExpectedDataSize()/sizeof(uint16_t));
     //if ((ulong)rwptr > (ulong)(&(*fCircularBuffer.Buffer().end()))) {
     //    TLOG (TMAKEFRAG) << "CAENV1730Readout rwptr beyond end of Buffer() FIXME - should never happen. If it does, give up on life";
