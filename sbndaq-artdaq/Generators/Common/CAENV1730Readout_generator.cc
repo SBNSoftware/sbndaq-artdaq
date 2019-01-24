@@ -458,8 +458,8 @@ bool sbndaq::CAENV1730Readout::GetData()
   TLOG(TGETDATA) << "checking if size()="<<fCircularBuffer.Buffer().size()
 				 << " + this_data_size ("<<this_data_size/sizeof(uint16_t)<<") is > capacity ("<<fCircularBuffer.Buffer().capacity()<<")";
   if ((fCircularBuffer.Buffer().size()+(this_data_size/sizeof(uint16_t))) > fCircularBuffer.Buffer().capacity())
-	  TLOG(TGETDATA) << "DROPPING DATA -- FIXME WES?BILL";
-  else	
+	  TLOG(TGETDATA) << "WILL BLOCK -- FIXME WES?BILL";
+  //else	
 	  fCircularBuffer.Insert(this_data_size/sizeof(uint16_t),fBuffer);
   
   return true;
