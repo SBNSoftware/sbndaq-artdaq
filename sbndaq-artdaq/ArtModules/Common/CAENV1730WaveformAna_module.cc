@@ -107,7 +107,7 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
       fWvfmsVec[i_ch].resize(ch_size);
       
       //fill...
-      for (size_t i_t=-; i_t<ch_size; ++i_t){
+      for (size_t i_t=0; i_t<ch_size; ++i_t){
 	if(i_t%2==0) fWvfmsVec[i_ch][i_t] = *(data+ch_size+i_t+1);
 	else if(i_t%2==1) fWvfmsVec[i_ch][i_t] = *(data+ch_size+i_t-1);
       }
@@ -116,12 +116,12 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
       float wvfm_mean = std::accumulate(fWvfmsVec[i_ch].begin(),fWvfmsVec[i_ch].end(),0.0) / fWvfmsVec[i_ch].size();
       
       //get rms
-      float rms=0.0;
+      float wvfm_rms=0.0;
       for(auto const& val : fWvfmsVec[i_ch])
-	rms+= (val-wvfm_mean)*(val-wvfm_mean);
-      rms = std::sqrt(rms/fWvfmsVec[i_ch].size());
+	wvfm_rms += (val-wvfm_mean)*(val-wvfm_mean);
+      wvfm_rms = std::sqrt(wvfm_rms/fWvfmsVec[i_ch].size());
       
-      nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,i_ch,ped,rms);
+      nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,i_ch,wvfm_mean,wvfm_rms);
     }
   }
   
