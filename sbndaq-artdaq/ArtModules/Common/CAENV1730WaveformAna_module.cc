@@ -102,17 +102,20 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
     fWvfmsVec.resize(nChannels);
     
     //use that to get the number of 16-bit words for each channel
-    size_t ch_size = (ev_size - sizeof(CAENV1730EventHeader)/sizeof(uint32_t))*2/nChannels;
+    size_t n_samples = (ev_size - sizeof(CAENV1730EventHeader)/sizeof(uint32_t))*2/nChannels;
     const uint16_t* data = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() + sizeof(CAENV1730EventHeader));
     
     for(size_t i_ch=0; i_ch<nChannels; ++i_ch){
-      fWvfmsVec[i_ch].resize(ch_size);
+      fWvfmsVec[i_ch].resize(n_samples);
       
       //fill...
-      for (size_t i_t=0; i_t<ch_size; ++i_t){
-	if(i_t%2==0) fWvfmsVec[i_ch][i_t] = *(data+ch_size+i_t+1);
-	else if(i_t%2==1) fWvfmsVec[i_ch][i_t] = *(data+ch_size+i_t-1);
+      for (size_t i_t=0; i_t<n_samples; ++i_t){
+	if(i_t%2==0) fWvfmsVec[i_ch][i_t] = *(data+n_samples+i_t+1);
+	else if(i_t%2==1) fWvfmsVec[i_ch][i_t] = *(data+n_samples+i_t-1);
       }
+
+      //by here you have a vector<uint16_t> that is the waveform, in fWvfmsVec[i_ch]
+
       
       //get mean
       float wvfm_mean = std::accumulate(fWvfmsVec[i_ch].begin(),fWvfmsVec[i_ch].end(),0.0) / fWvfmsVec[i_ch].size();

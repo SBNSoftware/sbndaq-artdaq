@@ -35,6 +35,7 @@ class CAENConfiguration
     int  irqWaitTime;
     bool usePedestals;
     int  dacValue;
+    int  dynamicRange;
     int  ioLevel;
     int  nChannels;
     int  triggerPolarity; 

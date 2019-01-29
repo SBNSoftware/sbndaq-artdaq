@@ -85,7 +85,8 @@ namespace sbndaq
     uint32_t fGetNextSleep;
     bool     fSWTrigger;
     bool     fCombineReadoutWindows;
-    
+    bool     fCalibrateOnConfig;
+
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
@@ -106,6 +107,7 @@ namespace sbndaq
     void ConfigureTrigger();
     void ConfigureReadout();
     void ConfigureAcquisition();
+    void RunADCCalibration();
 
     bool WaitForTrigger();
     bool GetData();

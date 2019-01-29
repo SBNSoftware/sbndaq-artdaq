@@ -24,6 +24,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   irqWaitTime(0),
   usePedestals(0),
   dacValue(0),
+  dynamicRange(0),
   ioLevel(0),
   nChannels(0),
   triggerPolarity(0),
@@ -48,6 +49,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   outputSignalMode     = ps.get<int>("outputSignalMode");
   usePedestals         = ps.get<bool>("usePedestals");
   dacValue             = ps.get<int>("dacValue");
+  dynamicRange         = ps.get<int>("dynamicRange");
   ioLevel              = ps.get<int>("ioLevel");
   nChannels            = ps.get<int>("nChannels");
   extTrgMode           = ps.get<int>("extTrgMode");
@@ -110,6 +112,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  RecordLength          " << e.recordLength << std::endl;
   os << "  UsePedestals          " << e.usePedestals << std::endl;
   os << "  DacValue              " << e.dacValue << std::endl;
+  os << "  DynamicRange          " << e.dynamicRange << std::endl;
   os << "  nChannels             " << e.nChannels << std::endl;
   os << "  MaxEventsPerTransfer  " << e.maxEventsPerTransfer << std::endl;
   os << "  PostPercent           " << e.postPercent << "%" << std::endl;
