@@ -153,28 +153,28 @@ bool sbndaq::SpectraTime_generatorBase::getData()
 
 	//Output is in the form: $PTNTA,20160619232817,2,T3,0000000,+050,3,,*11
 	// Now, let's fill a buffer with the good parts of the output string that we want
-    std::string nugget;
-    int count = 0;
-    LOG_INFO("SpectraTime") << output.str() ;
-    while(std::getline(output, nugget, ',')) {
-		if(count == 1){
-			SpectraTimeTemp.time[0] = stoi(nugget.substr(0,2));
-			SpectraTimeTemp.time[1] = stoi(nugget.substr(2,2));
-			SpectraTimeTemp.time[2] = stoi(nugget.substr(4,2));
-			SpectraTimeTemp.time[3] = stoi(nugget.substr(6,2));
-			SpectraTimeTemp.time[4] = stoi(nugget.substr(8,2));
-			SpectraTimeTemp.time[5] = stoi(nugget.substr(10,2));
-			SpectraTimeTemp.time[6] = stoi(nugget.substr(12,2));
-		}
-		else if(count ==2)
-			SpectraTimeTemp.quality = stoi(nugget);
-		else if(count == 5)
-			SpectraTimeTemp.phase   = stoi(nugget);
-		else if(count == 6)
-			SpectraTimeTemp.status  = stoi(nugget);
+    // std::string nugget;
+    // int count = 0;
+    // LOG_INFO("SpectraTime") << output.str() ;
+    // while(std::getline(output, nugget, ',')) {
+    // 		if(count == 1){
+    // 			SpectraTimeTemp.time[0] = stoi(nugget.substr(0,2));
+    // 			SpectraTimeTemp.time[1] = stoi(nugget.substr(2,2));
+    // 			SpectraTimeTemp.time[2] = stoi(nugget.substr(4,2));
+    // 			SpectraTimeTemp.time[3] = stoi(nugget.substr(6,2));
+    // 			SpectraTimeTemp.time[4] = stoi(nugget.substr(8,2));
+    // 			SpectraTimeTemp.time[5] = stoi(nugget.substr(10,2));
+    // 			SpectraTimeTemp.time[6] = stoi(nugget.substr(12,2));
+    // 		}
+    // 		else if(count ==2)
+    // 			SpectraTimeTemp.quality = stoi(nugget);
+    // 		else if(count == 5)
+    // 			SpectraTimeTemp.phase   = stoi(nugget);
+    // 		else if(count == 6)
+    // 			SpectraTimeTemp.status  = stoi(nugget);
 
-		count++;
-    }
+    // 		count++;
+    //}
     SpectraTimeCircularBuffer_.buffer.push_front(SpectraTimeTemp);
     return(true);
 }
