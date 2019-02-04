@@ -70,7 +70,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
   retcod = ca_pend_io(1.0);
   SEVCHK(retcod,"ca_pend_io error");  
 
-  for (int i=0;i<pvNames.size(); i++)
+  for (unsigned int i=0;i<pvNames.size(); i++)
   {
     chid channel;
     std::cout << pvNames[i] << std::endl;
@@ -115,7 +115,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
     printf("Read:      %d\n", ca_read_access(channel));
     printf("Write:     %d\n", ca_write_access(channel));
     printf("Type:      %s\n", dbr_type_to_text(ca_field_type(channel)));
-    printf("Count:     %d\n", ca_element_count(channel));
+    printf("Count:     %d\n", (int)ca_element_count(channel));
   }
 
   dcsMQ = 0xAD0;
@@ -185,7 +185,8 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
     nBytes = msgrcv(dcsID,(void *)&gpsInfo,sizeof(gpsInfo), GPSInfo::GPS_INFO_MTYPE, 0);
     if ( nBytes <=0 )
     {
-      printf("Error msgrcv %X (%d) [%s] %d %d\n", dcsMQ,errno, strerror(errno), nBytes, sizeof(gpsInfo));
+      printf("Error msgrcv %X (%d) [%s]\n", dcsMQ,errno, 
+	     strerror(errno));
     }
     else
     {
@@ -193,7 +194,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
       //      gps.print();
 
       // Broadcast values over EPICS
-      for (int i=0; i<pv.size(); ++i)
+      for (unsigned int i=0; i<pv.size(); ++i)
       {
 
 	int   intData = 0;
@@ -292,6 +293,14 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
 
 int main(int argc, char* argv[])
 {
+  if ( argc < 2 ) 
+  {
+    std::cout << "Expected one argument:" << std::endl;
+    std::cout << "  gps-bcast <experiment, ICARUS or SBND>" 
+	       << std::endl << std::endl;
+    exit(-1);
+  }
+
   FILE * ptr = fopen(".epics/.epics","r");
   std::string user, pass;
   if ( ptr != NULL )
@@ -308,7 +317,7 @@ int main(int argc, char* argv[])
 
   }
 
-  GPSBroadcast gps("ICARUS",user,pass);
+  GPSBroadcast gps(argv[1],user,pass);
 
 }
 
