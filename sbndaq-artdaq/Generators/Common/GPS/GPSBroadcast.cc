@@ -77,7 +77,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
     retcod = ca_create_channel(pvNames[i].c_str(), NULL, NULL, 99, &channel);
     SEVCHK(retcod,"ca_create_channel error");  
 
-    int dataType;
+    int dataType = 0;
     switch ( i )
     {
       case 0: dataType = DBR_LONG;  break; // status
