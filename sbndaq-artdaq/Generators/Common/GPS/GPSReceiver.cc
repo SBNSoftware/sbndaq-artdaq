@@ -83,10 +83,10 @@ int main(int argc, char* argv[])
   bool ok = true;
   while ( ok )
   {
-    clock_gettime(CLOCK_REALTIME,&gps.gpsInfo.gps.systemTimer); // heart beat
+    clock_gettime(CLOCK_REALTIME,&gps.gpsInfo.gps.data.systemTimer); // heart beat
     sleep(1);
-    int32_t zeit = gps.gpsInfo.gps.timeStamp;
-    if ( std::abs( zeit - gps.gpsInfo.gps.systemTimer.tv_sec ) > 10 )
+    int32_t zeit = gps.gpsInfo.gps.data.timeStamp;
+    if ( std::abs( zeit - gps.gpsInfo.gps.data.systemTimer.tv_sec ) > 10 )
     {
       std::cout << "Suspects comms hangup, exiting" << std::endl;
       ok = false;
