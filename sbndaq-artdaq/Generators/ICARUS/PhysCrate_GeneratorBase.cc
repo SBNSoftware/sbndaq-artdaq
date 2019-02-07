@@ -128,34 +128,31 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   size_t data_size = 0;
   uint16_t const* data_ptr = fCircularBuffer.LinearizeAndGetData();
-  //  the Tile Header is at the beginning of the board data:
   auto const* dt = reinterpret_cast< DataTile const* >(data_ptr);
-  auto const* dt_header = &( dt->Header );
-  uint32_t this_data_size = ntohl( dt_header->packSize );
-  // std::cout << std::dec << "data_size: " << data_size << ", this_data_size: " << this_data_size << ", token: " << std::hex << dt_header->token << std::endl;
-  auto const* board_block = reinterpret_cast< A2795DataBlock const * >( dt->data );
-  auto ev_num = board_block->header.event_number;
-  auto new_ev_num = ev_num;
-  // std::cout << "ev_num: " << ev_num << std::endl;
+  std::cout << "PhysCrate_GeneratorBase::getNext_ : nBoards_: " << nBoards_ << std::endl;
 
+  uint16_t iBoard = 0;
   do {
-    // get the pointer to the "current" board data
-    // check the event number from the current board data
-    // compute the size of the current board data
-    // if event number has changed, exit the loop
-    // go to the next board data
+    //  the Tile Header is at the beginning of the board data:
+    auto const* nextTile = dt + data_size;
+    auto const nt_header = nextTile->Header;;
+    uint32_t this_data_size = ntohl( nt_header.packSize );
+    if ( this_data_size == 0 ) continue;
     data_size += this_data_size;
-    auto const* this_data_ptr = data_ptr + data_size;
-    // if ( this_data_ptr >= end_data_ptr ) break;
-    dt = reinterpret_cast< DataTile const* >(this_data_ptr);
-    dt_header = &( dt->Header );
-    this_data_size = ntohl( dt_header->packSize );
-    // std::cout << std::dec << "data_size: " << data_size << ", this_data_size: " << this_data_size << ", token: " << std::hex << dt_header->token << std::endl;
-    board_block = reinterpret_cast< A2795DataBlock const * >( dt->data );
-    new_ev_num = board_block->header.event_number;;
-    // std::cout << "new_ev_num: " << new_ev_num << std::endl;
+    ++iBoard;
+    std::cout << "PhysCrate_GeneratorBase::getNext_ : iBoard: " << iBoard << ", this_data_size: " << this_data_size << ", data_size: " << data_size << std::endl;
+    // uint32_t this_timeinfo = dt_header.timeinfo;
+    // uint32_t this_crate_id = dt_header.crate_id;
+    // uint32_t this_board_id = dt_header.board_id;
+    // uint32_t this_board_status = dt_header.board_status;
+    // std::cout << std::dec << "data_size: " << this_data_size << ", timeinfo: " << this_timeinfo
+    //           << ", crate_id: " << this_crate_id << ", board_id: " << this_board_id << ", board_status: " << this_board_status << std::endl;
 
-  } while ( new_ev_num == ev_num );
+    // auto const* board_block = reinterpret_cast< A2795DataBlock const * >( dt->data );
+    // auto ev_num = board_block->header.event_number;
+    // auto new_ev_num = ev_num;
+    // std::cout << "ev_num: " << ev_num << std::endl;
+  } while ( iBoard < nBoards_ );
 
   // std::cout << "Go to a new event..." << std::endl;
   //GAL: metricMan->sendMetric(".GetData.Size",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
@@ -163,18 +160,24 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   //GAL: metricMan->sendMetric(".GetData.Size.min",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.Size.max",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
   
-  std::copy( fCircularBuffer.Buffer().begin(), fCircularBuffer.Buffer().begin() + data_size,
-             (uint32_t*)( frags.back()->dataBeginBytes() ) );
-  TRACE(42,"42");
+  std::cout << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size << std::endl;
+  std::copy( fCircularBuffer.Buffer().begin(), fCircularBuffer.Buffer().begin() + data_size/sizeof(uint16_t),
+             (uint16_t*)( frags.back()->dataBeginBytes() ) );
+  // TRACE(42,"42");
 
+  std::cout << "PhysCrate_GeneratorBase::getNext_ : copied the circular buffer to frags." << std::endl;
   TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ : Read data size was %lu", (long unsigned int)data_size );
 
   frags.back()->resizeBytes( data_size );
+  std::cout << "PhysCrate_GeneratorBase::getNext_ : resized frags." << std::endl;
   // Erase the copied part of the circular buffer
-  fCircularBuffer.Erase( data_size );
+  fCircularBuffer.Erase( data_size/sizeof(uint16_t) );
+  std::cout << "PhysCrate_GeneratorBase::getNext_ : erazed the circular buffer." << std::endl;
 
   //give proper event number
   // ++ev_num;
+  auto ev_num = newfrag.BoardEventNumber()+1;
+  std::cout << "ev_num: " << ev_num << std::endl;
   frags.back()->setSequenceID(ev_num);
 
   //GAL: metricMan->sendMetric(".getNext.EventNumber.last",(int)ev_num,"events",1,artdaq::MetricMode::LastPoint);

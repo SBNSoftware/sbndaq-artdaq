@@ -227,8 +227,12 @@ int icarus::PhysCrateData::GetData(){
     if( this_data_size == 32 ) continue;
 
     // ++iBoard;
-    data_size += this_data_size;
-    // std::cout << "PhysCrateData: data_size: " << std::dec << data_size << ", this_data_size: " << this_data_size << ", token: " << std::hex << data_ptr->Header.token << std::endl;
+    
+    std::cout << "PhysCrateData: data_size: " << std::dec << data_size << ", this_data_size: " << this_data_size 
+              << ", token: " << std::hex << data_ptr->Header.token << ", info1: " << data_ptr->Header.info1 
+              << ", info2: " << data_ptr->Header.info2 << ", info3: " << data_ptr->Header.info3 
+              << ", timeinfo: " << data_ptr->Header.timeinfo << ", chID: " << data_ptr->Header.chID << std::endl;
+   
     auto ev_ptr = reinterpret_cast<uint32_t*>(data_ptr->data);    
     TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
     
@@ -241,6 +245,7 @@ int icarus::PhysCrateData::GetData(){
     //   data_size = 0;
     // }
     fCircularBuffer.Insert( this_data_size, reinterpret_cast<uint16_t const*>(data_ptr) );
+    data_size += this_data_size;
     TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data copied! Size was %lu, with %lu now acquired.",
          this_data_size, data_size);
   }
