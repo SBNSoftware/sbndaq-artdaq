@@ -3,6 +3,7 @@ add_subdirectory(GPS)
 include_directories( ${CAENCOMM_INC} )
 include_directories( ${CAENVME_INC} )
 include_directories( ${CAENDIGITIZER_INC} )
+include_directories( ./GPS )
 
 cet_find_library( CAENDIGITIZER    NAMES CAENDigitizer    PATHS ENV CAENDIGITIZER_LIB   NO_DEFAULT_PATH )
 cet_find_library( CAEN_VME         NAMES CAENVME          PATHS ENV CAENVME_LIB         NO_DEFAULT_PATH )
@@ -41,6 +42,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
 		  SOURCE SpectraTime_generatorBase.cc
+		  	 GPS/GPSInfo.cc
 		  LIBRARIES
 			artdaq_DAQdata
   			artdaq-core_Utilities
