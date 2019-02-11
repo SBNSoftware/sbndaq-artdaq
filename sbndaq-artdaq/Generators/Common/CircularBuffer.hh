@@ -88,7 +88,7 @@ namespace sbndaq{
 	//TRACE(TDEBUG,"Linearize circular buffer called. Size is %lu. Is linear? %s",
 	//  buffer.size(),buffer.is_linearized()?"yes":"no");
 	TLOG(TDEBUG)<<"Linearize circular buffer called. Size is "<<buffer.size()
-				<<". Is linear? "<<(buffer.is_linearized()?"yes":"no");
+				<<". Is linear? "<< std::string(buffer.is_linearized()?"yes":"no");
     
     if(buffer.is_linearized())
       return buffer.size();
@@ -101,8 +101,11 @@ namespace sbndaq{
     //TRACE(TDEBUG,"Circular buffer linearize complete. Size is %lu. Is linear? %s",
 	//  buffer.size(),buffer.is_linearized()?"yes":"no");
 	TLOG(TDEBUG)<< "Circular buffer linearize complete. Size is "<<buffer.size()
-				<<". Is linear? "<<(buffer.is_linearized()?"yes":"no");
-    
+				<<". Is linear? "<< std::string(buffer.is_linearized()?"yes":"no");
+   
+   if(!buffer.is_linearized() )	
+		 throw std::runtime_error("Circular buffer is not linear.");
+
     return buffer.size();
   }
   
