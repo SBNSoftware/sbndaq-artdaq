@@ -70,14 +70,14 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
   retcod = ca_pend_io(1.0);
   SEVCHK(retcod,"ca_pend_io error");  
 
-  for (int i=0;i<pvNames.size(); i++)
+  for (unsigned int i=0;i<pvNames.size(); i++)
   {
     chid channel;
     std::cout << pvNames[i] << std::endl;
     retcod = ca_create_channel(pvNames[i].c_str(), NULL, NULL, 99, &channel);
     SEVCHK(retcod,"ca_create_channel error");  
 
-    int dataType;
+    int dataType = 0;
     switch ( i )
     {
       case 0: dataType = DBR_LONG;  break; // status
@@ -115,7 +115,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
     printf("Read:      %d\n", ca_read_access(channel));
     printf("Write:     %d\n", ca_write_access(channel));
     printf("Type:      %s\n", dbr_type_to_text(ca_field_type(channel)));
-    printf("Count:     %d\n", ca_element_count(channel));
+    printf("Count:     %d\n", (int)ca_element_count(channel));
   }
 
   dcsMQ = 0xAD0;
@@ -185,7 +185,8 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
     nBytes = msgrcv(dcsID,(void *)&gpsInfo,sizeof(gpsInfo), GPSInfo::GPS_INFO_MTYPE, 0);
     if ( nBytes <=0 )
     {
-      printf("Error msgrcv %X (%d) [%s] %d %d\n", dcsMQ,errno, strerror(errno), nBytes, sizeof(gpsInfo));
+      printf("Error msgrcv %X (%d) [%s]\n", dcsMQ,errno, 
+	     strerror(errno));
     }
     else
     {
@@ -193,7 +194,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
       //      gps.print();
 
       // Broadcast values over EPICS
-      for (int i=0; i<pv.size(); ++i)
+      for (unsigned int i=0; i<pv.size(); ++i)
       {
 
 	int   intData = 0;
@@ -203,29 +204,29 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
 
 	switch ( i )
 	{
-   	  case 0:  intData   = gpsInfo.status; break;
-	  case 1:  intData   = gpsInfo.timeStamp;   break;
-     	  case 2:  floatData = gpsInfo.systemDifference; break;
-	  case 3:  intData   = gpsInfo.oscillatorQuality; break;
-	  case 4:  intData   = gpsInfo.ppsDifference; break;
-	  case 5:  intData   = gpsInfo.finePhaseComparator; break;
-	  case 6:  intData   = gpsInfo.message; break;
-	  case 7:  intData   = gpsInfo.transferQuality; break;
-	  case 8:  intData   = gpsInfo.actualFrequency; break;
-	  case 9:  intData   = gpsInfo.holdoverFrequency; break;
-	  case 10: intData   = gpsInfo.eepromFrequency; break;
-	  case 11: intData   = gpsInfo.loopTimeConstantMode; break;
-	  case 12: intData   = gpsInfo.loopTimeConstantInUse; break;
-          case 13: floatData = gpsInfo.sigmaPPS; break;
-	  case 14: charData  = gpsInfo.messageStatus; break;
-	  case 15: floatData = gpsInfo.latitude; break;
-	  case 16: charData  = gpsInfo.hemisphereNS; break;
-	  case 17: floatData = gpsInfo.longitude; break;
-	  case 18: charData  = gpsInfo.hemisphereEW; break;
-	  case 19: charPtr   = gpsInfo.location; break;
-	  case 20: charPtr   = gpsInfo.timeStampString; break;
-	  case 21: intData   = gpsInfo.systemTime.tv_sec; break;
-	  case 22: intData   = gpsInfo.systemTime.tv_nsec; break;
+   	  case 0:  intData   = gpsInfo.data.status; break;
+	  case 1:  intData   = gpsInfo.data.timeStamp;   break;
+     	  case 2:  floatData = gpsInfo.data.systemDifference; break;
+	  case 3:  intData   = gpsInfo.data.oscillatorQuality; break;
+	  case 4:  intData   = gpsInfo.data.ppsDifference; break;
+	  case 5:  intData   = gpsInfo.data.finePhaseComparator; break;
+	  case 6:  intData   = gpsInfo.data.message; break;
+	  case 7:  intData   = gpsInfo.data.transferQuality; break;
+	  case 8:  intData   = gpsInfo.data.actualFrequency; break;
+	  case 9:  intData   = gpsInfo.data.holdoverFrequency; break;
+	  case 10: intData   = gpsInfo.data.eepromFrequency; break;
+	  case 11: intData   = gpsInfo.data.loopTimeConstantMode; break;
+	  case 12: intData   = gpsInfo.data.loopTimeConstantInUse; break;
+          case 13: floatData = gpsInfo.data.sigmaPPS; break;
+	  case 14: charData  = gpsInfo.data.messageStatus; break;
+	  case 15: floatData = gpsInfo.data.latitude; break;
+	  case 16: charData  = gpsInfo.data.hemisphereNS; break;
+	  case 17: floatData = gpsInfo.data.longitude; break;
+	  case 18: charData  = gpsInfo.data.hemisphereEW; break;
+	  case 19: charPtr   = gpsInfo.data.location; break;
+	  case 20: charPtr   = gpsInfo.data.timeStampString; break;
+	  case 21: intData   = gpsInfo.data.systemTime.tv_sec; break;
+	  case 22: intData   = gpsInfo.data.systemTime.tv_nsec; break;
 	}
 
 
@@ -256,32 +257,32 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
       ca_flush_io();
 
       // Write values to runcon database
-      hemiNS[0]  = gps.gps.hemisphereNS;
-      hemiEW[0]  = gps.gps.hemisphereEW;
-      message[0] = gps.gps.messageStatus;
+      hemiNS[0]  = gps.gps.data.hemisphereNS;
+      hemiEW[0]  = gps.gps.data.hemisphereEW;
+      message[0] = gps.gps.data.messageStatus;
 
       pqxx::work work(*dbConnection);
       pqxx::result result = work.prepared("insertGPS")
-	(gps.gps.timeStamp)               
-	(gps.gps.systemTimer.tv_sec)      
-	(gps.gps.systemTimer.tv_nsec)     
-	(gps.gps.systemDifference)        
-	(gps.gps.status)                  
-	(gps.gps.oscillatorQuality)       
-	(gps.gps.ppsDifference)           
-	(gps.gps.finePhaseComparator)     
-	(gps.gps.message)                 
-	(gps.gps.transferQuality)         
-	(gps.gps.actualFrequency)         
-	(gps.gps.holdoverFrequency)       
-	(gps.gps.eepromFrequency)         
-	(gps.gps.loopTimeConstantMode)    
-	(gps.gps.loopTimeConstantInUse)   
-	(gps.gps.sigmaPPS)                
+	(gps.gps.data.timeStamp)               
+	(gps.gps.data.systemTimer.tv_sec)      
+	(gps.gps.data.systemTimer.tv_nsec)     
+	(gps.gps.data.systemDifference)        
+	(gps.gps.data.status)                  
+	(gps.gps.data.oscillatorQuality)       
+	(gps.gps.data.ppsDifference)           
+	(gps.gps.data.finePhaseComparator)     
+	(gps.gps.data.message)                 
+	(gps.gps.data.transferQuality)         
+	(gps.gps.data.actualFrequency)         
+	(gps.gps.data.holdoverFrequency)       
+	(gps.gps.data.eepromFrequency)         
+	(gps.gps.data.loopTimeConstantMode)    
+	(gps.gps.data.loopTimeConstantInUse)   
+	(gps.gps.data.sigmaPPS)                
 	(message)           
-	(gps.gps.latitude)                
+	(gps.gps.data.latitude)                
 	(hemiNS)            
-	(gps.gps.longitude)               
+	(gps.gps.data.longitude)               
 	(hemiEW)            
 	.exec();        
       work.commit();
@@ -292,6 +293,14 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
 
 int main(int argc, char* argv[])
 {
+  if ( argc < 2 ) 
+  {
+    std::cout << "Expected one argument:" << std::endl;
+    std::cout << "  gps-bcast <experiment, ICARUS or SBND>" 
+	       << std::endl << std::endl;
+    exit(-1);
+  }
+
   FILE * ptr = fopen(".epics/.epics","r");
   std::string user, pass;
   if ( ptr != NULL )
@@ -308,7 +317,7 @@ int main(int argc, char* argv[])
 
   }
 
-  GPSBroadcast gps("ICARUS",user,pass);
+  GPSBroadcast gps(argv[1],user,pass);
 
 }
 

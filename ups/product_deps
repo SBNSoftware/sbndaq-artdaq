@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq	v0_01_02
+parent sbndaq_artdaq	v0_01_03
 defaultqual	e15
 
 # These optional lines define the installed directories where
@@ -19,10 +19,12 @@ fcldir      -
 #
 product		      version	   optional
 artdaq                v3_03_01
-sbndaq_artdaq_core    v0_01_01
+sbndaq_artdaq_core    v0_01_02
 caencomm	      v1_2a
 caenvme		      v2_50
 caendigitizer	      v2_7_6
+pqxx		      v6_2_5a
+cetbuildtools         v7_02_01     -       only_for_build
 libxml2               v2_9_5       -
 icarus_artdaq_base    v0_06_03     -
 cetbuildtools         v7_02_01     -       only_for_build
@@ -32,13 +34,13 @@ end_product_list
 # s* - see artdaq-core's product_deps
 # -nq- here means there is no qualifier
 # a "-" here means the dependent product is not required by the parent and will not be setup
-qualifier		artdaq	 	  sbndaq_artdaq_core  caenvme caencomm caendigitizer libxml2 icarus_artdaq_base
-e15:prof		e15:s64:prof      e15:prof            -nq-    -nq-     -nq-          prof    e15:prof
-e15:debug		e15:s64:debug     e15:debug           -nq-    -nq-     -nq-          debug   e15:debug
-e15:prof:icarus		e15:s64:prof      e15:prof:icarus     -nq-    -nq-     -nq-          -       e15:prof
-e15:debug:icarus	e15:s64:debug     e15:debug:icarus    -nq-    -nq-     -nq-          -       e15:debug
-e15:prof:sbnd		e15:s64:prof      e15:prof:sbnd       -nq-    -nq-     -nq-          prof    -
-e15:debug:sbnd  	e15:s64:debug     e15:debug:sbnd      -nq-    -nq-     -nq-          debug   -
+qualifier		artdaq	 	  sbndaq_artdaq_core  caenvme caencomm caendigitizer libxml2 icarus_artdaq_base   pqxx
+e15:prof		e15:s64:prof      e15:prof            -nq-    -nq-     -nq-          prof    e15:prof		  e15:p2714b:prof
+e15:debug		e15:s64:debug     e15:debug           -nq-    -nq-     -nq-          debug   e15:debug		  e15:p2714b:debug
+e15:prof:icarus		e15:s64:prof      e15:prof:icarus     -nq-    -nq-     -nq-          -       e15:prof		  e15:p2714b:prof
+e15:debug:icarus	e15:s64:debug     e15:debug:icarus    -nq-    -nq-     -nq-          -       e15:debug		  e15:p2714b:debug
+e15:prof:sbnd		e15:s64:prof      e15:prof:sbnd       -nq-    -nq-     -nq-          prof    -			  e15:p2714b:prof
+e15:debug:sbnd  	e15:s64:debug     e15:debug:sbnd      -nq-    -nq-     -nq-          debug   -			  e15:p2714b:debug
 
 end_qualifier_list
 

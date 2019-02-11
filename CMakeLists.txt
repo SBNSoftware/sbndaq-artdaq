@@ -81,7 +81,7 @@ find_ups_boost( v1_63_0b filesystem
                         system
                         unit_test_framework
  )
-
+find_ups_product( pqxx v6_2_5a )
 find_ups_product( cetbuildtools v5_08_01 )
 find_ups_product( sqlite v3_16_02_00a)
  
