@@ -34,6 +34,9 @@ namespace sbndaq
     //void init();
 
   private:
+    bool readSingleWindowFragments(artdaq::FragmentPtrs &);
+		bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
+		
 
     typedef enum 
     { 
@@ -98,7 +101,7 @@ namespace sbndaq
     uint32_t fEvCounter; // set to zero at the beginning
     int32_t  prev_rwcounter;
     uint32_t total_data_size;
-    uint32_t event_size;	
+    //uint32_t event_size;	
     uint32_t n_readout_windows;
 
 

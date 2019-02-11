@@ -41,7 +41,6 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 
   fInterruptEventNumber = ps.get<uint16_t>("InterruptEventNumber"); //1
   TLOG_ARB(TCONFIG,TRACE_NAME) << "InterruptEventNumber=" << fInterruptEventNumber << TLOG_ENDL;
-
   fSWTrigger = ps.get<bool>("SWTrigger"); //false
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SWTrigger=" << fSWTrigger << TLOG_ENDL;
 
@@ -471,8 +470,12 @@ bool sbndaq::CAENV1730Readout::GetData()
 // the card and stores them
 bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
 {
+	return fCombineReadoutWindows ? readCombinedWindowFragments(fragments): readSingleWindowFragments(fragments);
+
+#if 0	
   TLOG_ARB(TGETNEXT,TRACE_NAME) << "Begin of getNext_()" << TLOG_ENDL;
-  
+ 
+  uint32_t event_size =0;	
   uint32_t this_data_size=0;  // define this to then pass its adress to the function that reads data
   struct timespec zeit;	      // keine anung
 
@@ -609,8 +612,87 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
   usleep(fGetNextSleep);
 
   TLOG_ARB(TGETNEXT,TRACE_NAME) << "getNext_() done." << TLOG_ENDL;
+  return true;
+#endif
+}
+
+
+bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & fragments){
+  TLOG_ARB(TGETNEXT,TRACE_NAME) << "Begin of readSingleWindowFragments()" << TLOG_ENDL;
+
+  constexpr auto sizeof_unit16_t = sizeof(uint16_t);
+  const auto available_datasize_bytes= fCircularBuffer.Buffer().size()*sizeof_unit16_t;
+
+  if(! available_datasize_bytes ){
+    TLOG_ARB(TGETNEXT,TRACE_NAME) << "CircularBuffer is empty. Sleep for " << fGetNextSleep << " us and return." << TLOG_ENDL;
+    ::usleep(fGetNextSleep);
+    return true;
+  }
+
+  TLOG_ARB(TGETDATA,TRACE_NAME) << "CircularBuffer has " <<  available_datasize_bytes << " bytes of new data."<< TLOG_ENDL;
+
+  struct timespec now;
+  clock_gettime(CLOCK_REALTIME,&now);
+  const auto metadata = CAENV1730FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec);
+  const auto fragment_datasize_bytes = metadata.ExpectedDataSize();
+  TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created CAENV1730FragmentMetadata with expected data size of " << fragment_datasize_bytes << " bytes." TLOG_ENDL;
+
+  if( available_datasize_bytes % fragment_datasize_bytes ){
+    TLOG_WARNING("CAENV1730Readout") << "Last readout window is not fully transferred into CircularBuffer; Will retry after " << fGetNextSleep << " us." << TLOG_ENDL;
+    ::usleep(fGetNextSleep);
+    return true;
+  }
+
+  fCircularBuffer.Linearize();
+
+  const auto available_readoutwindow_count = available_datasize_bytes / fragment_datasize_bytes ;
+  auto remaining_readoutwindow_count = available_readoutwindow_count;
+
+  while (remaining_readoutwindow_count--){
+    const auto readoutwindow_begin = fCircularBuffer.Buffer().begin();
+    TLOG(TMAKEFRAG) << "Get Readout Window number " << available_readoutwindow_count - remaining_readoutwindow_count << " of "
+      << available_readoutwindow_count << " readoutwindow_begin=" << (void*) &*readoutwindow_begin;
+
+    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(&*readoutwindow_begin);
+    const auto readoutwindow_event_counter = header->eventCounter;
+    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Readout window event counters current / gap  = " << readoutwindow_event_counter  << " / "
+      << readoutwindow_event_counter - prev_rwcounter  << TLOG_ENDL;
+
+    auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,fEvCounter,fBoardID,sbndaq::detail::FragmentType::CAENV1730,metadata);
+    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created fragment " << fBoardID << " for event " << fEvCounter << TLOG_ENDL;
+
+    const auto fragment_datasize_words = fragment_datasize_bytes/sizeof_unit16_t;
+    const auto readoutwindow_end = readoutwindow_begin + fragment_datasize_words ;
+    auto fragment_buffer_begin = reinterpret_cast<uint16_t*> (fragment_uptr->dataBeginBytes());
+
+    std::copy(readoutwindow_begin,readoutwindow_end,fragment_buffer_begin);
+    fCircularBuffer.Erase(fragment_datasize_words);
+    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Fragment data copied for event " << fEvCounter << "." << TLOG_ENDL;
+
+    fragments.emplace_back(nullptr);
+    std::swap(fragments.back(),fragment_uptr);
+
+    fEvCounter++;
+    prev_rwcounter = readoutwindow_event_counter;
+  }
+
+  const auto actual_readout_bytes  = std::accumulate( fragments.begin(), fragments.end(), 0ul,[](auto& a, auto const& f){return a+f->dataSizeBytes();});
+  if (actual_readout_bytes != available_datasize_bytes) {
+    TLOG_ARB(TGETNEXT,TRACE_NAME) << "Error in readSingleWindowFragments actual_readout_bytes != available_datasize_bytes "
+      << actual_readout_bytes << " / " << available_datasize_bytes << TLOG_ENDL;
+  }
+
+  ::usleep(fGetNextSleep);
+  TLOG_ARB(TGETNEXT,TRACE_NAME) << "End of readSingleWindowFragments()"
+    << std::string(fragments.size() != available_readoutwindow_count ? "Error: fragment count != readout window count!":"") << TLOG_ENDL;
 
   return true;
+}
+
+
+
+bool  sbndaq::CAENV1730Readout::readCombinedWindowFragments(artdaq::FragmentPtrs &){
+throw std::runtime_error("Implement me correctly!");
 }
 
 void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
