@@ -30,7 +30,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   fVerbosity = ps.get<int>("Verbosity"); //-1
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Verbosity=" << fVerbosity << TLOG_ENDL;
 
-  fBoardChainNumber = ps.get<int>("BoardChainNumber"); //0				
+  fBoardChainNumber = ps.get<int>("BoardChainNumber"); //0
   TLOG_ARB(TCONFIG,TRACE_NAME) << "BoardChainNumber=" << fBoardChainNumber << TLOG_ENDL;
 
   fInterruptLevel = ps.get<uint8_t>("InterruptLevel"); //1
@@ -88,7 +88,67 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
     sleep(1);
     Configure();
   }
+
+  CAEN_DGTZ_EnaDis_t  state;
+  uint8_t             interruptLevel;
+  uint32_t            statusId;
+  uint16_t            eventNumber;
+  CAEN_DGTZ_IRQMode_t mode;
+
+  CAEN_DGTZ_EnaDis_t  stateOut;
+  uint8_t             interruptLevelOut;
+  uint32_t            statusIdOut;
+  uint16_t            eventNumberOut;
+  CAEN_DGTZ_IRQMode_t modeOut;
+
+  if(fInterruptLevel>0){
+    state           = CAEN_DGTZ_ENABLE;
+    interruptLevel  = fInterruptLevel;
+    statusId        = 0;
+    eventNumber     = 1;
+    mode            = CAEN_DGTZ_IRQ_MODE_ROAK; // Default mode
+  }
+  else{
+    state           = CAEN_DGTZ_DISABLE;
+    interruptLevel  = fInterruptLevel;
+    statusId        = 0;
+    eventNumber     = 1;
+    mode            = CAEN_DGTZ_IRQ_MODE_ROAK; // Default mode
+  }
+
+  retcode = CAEN_DGTZ_SetInterruptConfig(fHandle,
+                                        state,
+                                        interruptLevel,
+                                        statusId,
+                                        eventNumber,
+                                        mode);
+  CAENDecoder::checkError(retcode,"SetInterruptConfig",fBoardID);
+
+  retcode = CAEN_DGTZ_GetInterruptConfig (fHandle,
+                                          &stateOut,
+                                          &interruptLevelOut,
+                                          &statusIdOut,
+                                          &eventNumberOut,
+                                          &modeOut);
+  CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
   
+  if (state != stateOut){
+    TLOG_WARNING("CAENV1730Readout")
+      << "Interrupt State was not setup properly." << TLOG_ENDL;
+  }
+  if (interruptLevel != interruptLevelOut){
+    TLOG_WARNING("CAENV1730Readout")
+      << "Interrupt State was not setup properly." << TLOG_ENDL;
+  }
+  if (eventNumber != eventNumberOut){
+    TLOG_WARNING("CAENV1730Readout")
+      << "Interrupt State was not setup properly." << TLOG_ENDL;
+  }
+  if (mode != modeOut){
+    TLOG_WARNING("CAENV1730Readout")
+      << "Interrupt State was not setup properly." << TLOG_ENDL;
+  }
+
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&CAENV1730Readout::GetData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
@@ -391,7 +451,7 @@ void sbndaq::CAENV1730Readout::start()
   ConfigureDataBuffer();
   total_data_size = 0;
   prev_rwcounter = -1;
-  
+
   if((CAEN_DGTZ_AcqMode_t)(fCAEN.acqMode)==CAEN_DGTZ_AcqMode_t::CAEN_DGTZ_SW_CONTROLLED)
     {
       CAEN_DGTZ_ErrorCode retcode;
@@ -426,10 +486,10 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
-bool sbndaq::CAENV1730Readout::GetData()
-{
+
+bool sbndaq::CAENV1730Readout::GetData(){
   TLOG(TGETDATA) << "Begin of GetData()" << TLOG_ENDL;
-  
+
   uint32_t this_data_size=0;  // define this to then pass its adress to the function that reads data
   CAEN_DGTZ_ErrorCode retcod;
 
@@ -439,14 +499,36 @@ bool sbndaq::CAENV1730Readout::GetData()
     retcod = CAEN_DGTZ_SendSWtrigger(fHandle);
     TLOG(TGETDATA) << "CAEN_DGTZ_SendSWtrigger returned " << retcod;
   }
-  
-  // read the data from the buffer of the card 
+
+  // read the data from the buffer of the card
   // this_data_size is the size of the acq window
   char *bufp = (char*)(fBuffer.get());
-  TLOG(TGETDATA) << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)bufp << ",&this_data_size="<<&this_data_size<<")";
-  retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT, 
-		     bufp, &this_data_size);
-  TLOG(TGETDATA) << "ReadData complete with returned data size " << this_data_size << " retcod=" << retcod;
+  if(fCAEN.interruptLevel > 0){
+    retcod = CAEN_DGTZ_RearmInterrupt(fHandle);
+    CAENDecoder::checkError(retcod,"RearmInterrupt",fBoardID);
+
+    retcod = CAEN_DGTZ_IRQWait(fHandle, fGetNextSleep);
+    if ( retcod != CAEN_DGTZ_Timeout ) {
+      CAENDecoder::checkError(retcod,"IRQWait",fBoardID);
+      if (retcod == CAEN_DGTZ_Success){
+        TLOG(TGETDATA) << "Calling ReadData(fHandle="<<
+            fHandle<< ",bufp=" << (void*)bufp << ",&this_data_size="<<&this_data_size<<")";
+        retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
+                                    bufp, &this_data_size);
+        TLOG(TGETDATA) << "ReadData complete with returned data size "
+                       << this_data_size << " retcod=" << retcod;
+      }
+    }
+
+  }
+  else{
+    TLOG(TGETDATA) << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)bufp
+                   << ",&this_data_size="<<&this_data_size<<")";
+    retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
+                                bufp, &this_data_size);
+    TLOG(TGETDATA) << "ReadData complete with returned data size " << this_data_size
+                   << " retcod=" << retcod;
+  }
 
   if(this_data_size==0) {
     TLOG(TGETDATA) << "No data. Sleep for " << fGetNextSleep << " us and return.";
@@ -455,14 +537,15 @@ bool sbndaq::CAENV1730Readout::GetData()
   }
 
   TLOG(TGETDATA) << "checking if size()="<<fCircularBuffer.Buffer().size()
-				 << " + this_data_size ("<<this_data_size/sizeof(uint16_t)<<") is > capacity ("<<fCircularBuffer.Buffer().capacity()<<")";
+                 << " + this_data_size ("<<this_data_size/sizeof(uint16_t)
+                 <<") is > capacity ("<<fCircularBuffer.Buffer().capacity()<<")";
   if ((fCircularBuffer.Buffer().size()+(this_data_size/sizeof(uint16_t))) > fCircularBuffer.Buffer().capacity())
 	  TLOG(TGETDATA) << "WILL BLOCK -- FIXME WES?BILL";
   //else	
 	  fCircularBuffer.Insert(this_data_size/sizeof(uint16_t),fBuffer);
   
   return true;
-}
+}// CAENV1730Readout::GetData()
 
 
 

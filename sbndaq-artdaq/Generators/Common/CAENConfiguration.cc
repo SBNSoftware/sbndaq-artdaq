@@ -28,6 +28,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   ioLevel(0),
   nChannels(0),
   triggerPolarity(0),
+  interruptLevel(0),
   extTrgMode(0),
   swTrgMode(0),
   acqMode(0),
@@ -65,6 +66,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   readoutMode          = ps.get<int>("readoutMode");
   analogMode           = ps.get<int>("analogMode");
   testPattern          = ps.get<int>("testPattern");
+  interruptLevel       = ps.get<int>("InterruptLevel");
 
   char tag[1024];
   channelEnableMask = 0;
@@ -139,6 +141,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;
   os << "  AnalogMode            " << e.analogMode << std::endl;
   os << "  TestPattern           " << e.testPattern << std::endl;
+  os << "  InterruptLevel        " << e.interruptLevel << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )
