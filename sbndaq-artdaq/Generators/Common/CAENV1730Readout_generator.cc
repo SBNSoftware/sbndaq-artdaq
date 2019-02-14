@@ -247,11 +247,11 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   for(uint32_t ch=0; ch<fNChannels; ++ch){
 
     TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channel " << ch
-				 << " trigger threshold to " << fCAEN.triggerThreshold << TLOG_ENDL;
-    retcode = CAEN_DGTZ_SetChannelTriggerThreshold(fHandle,ch,fCAEN.triggerThreshold); //0x8000
+				 << " trigger threshold to " << fCAEN.triggerThresholds[ch] << TLOG_ENDL;
+    retcode = CAEN_DGTZ_SetChannelTriggerThreshold(fHandle,ch,fCAEN.triggerThresholds[ch]); //0x8000
     sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerThreshold",fBoardID);
     retcode = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readback);
-    CheckReadback("SetChannelTriggerThreshold",fBoardID,fCAEN.triggerThreshold,readback);
+    CheckReadback("SetChannelTriggerThreshold",fBoardID,fCAEN.triggerThresholds[ch],readback);
 
     //pulse width only set in pairs
     if(ch%2==0){

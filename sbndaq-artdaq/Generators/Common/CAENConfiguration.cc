@@ -28,7 +28,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   ioLevel(0),
   nChannels(0),
   triggerPolarity(0),
-  triggerThreshold(0),
   extTrgMode(0),
   swTrgMode(0),
   acqMode(0),
@@ -56,7 +55,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   swTrgMode            = ps.get<int>("swTrgMode");
   acqMode              = ps.get<int>("acqMode");
   triggerPolarity      = ps.get<int>("triggerPolarity");
-  triggerThreshold     = ps.get<uint16_t>("triggerThreshold");
   triggerPulseWidth    = ps.get<uint8_t>("triggerPulseWidth");
   debugLevel           = ps.get<int>("debugLevel");
   postPercent          = ps.get<int>("postPercent");
@@ -70,10 +68,14 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
 
   char tag[1024];
   channelEnableMask = 0;
-  if ( enableReadout )
-  {
-    for ( int j=0; j<MAX_CHANNELS; j++)
-    {
+
+  for ( int j=0; j<MAX_CHANNELS; j++){
+    sprintf(tag,"triggerThreshold%d", j);
+    triggerThresholds[j] = ps.get<uint16_t>(tag);
+  }
+
+  if ( enableReadout ){
+    for ( int j=0; j<MAX_CHANNELS; j++){
       sprintf(tag,"channelEnable%d", j);
       channelEnable[j] = ps.get<bool>(tag);
       if ( channelEnable[j] )
@@ -126,6 +128,8 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.extTrgMode) << std::endl;
   os << "  SWTrgMode             " << e.swTrgMode << " " 
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.swTrgMode) << std::endl;
+  for ( int j=0; j<sbndaq::CAENConfiguration::MAX_CHANNELS; j++)
+      os << "    Channel " << j << " Threshold " << e.triggerThresholds[j] << std::endl;
   os << "  AcqMode               " << e.acqMode << " " 
      << sbndaq::CAENDecoder::AcquisitionMode((CAEN_DGTZ_AcqMode_t)e.acqMode) << std::endl;
   os << "  DebugLevel            " << e.debugLevel << std::endl;
