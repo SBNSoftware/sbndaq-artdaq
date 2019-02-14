@@ -22,7 +22,7 @@ artdaq                v3_03_01
 sbndaq_artdaq_core    v0_01_02
 caencomm	      v1_2a
 caenvme		      v2_50
-caendigitizer	      v2_7_6
+caendigitizer	      v2_12_0
 pqxx		      v6_2_5a
 cetbuildtools         v7_02_01     -       only_for_build
 libxml2               v2_9_5       -
