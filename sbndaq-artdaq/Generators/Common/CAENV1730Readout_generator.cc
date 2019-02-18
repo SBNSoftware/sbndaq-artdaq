@@ -753,7 +753,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
   struct timespec now;
   clock_gettime(CLOCK_REALTIME,&now);
-  const auto metadata = CAENV1730FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec);
+  const auto metadata = CAENV1730FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec,ch_temps);
   const auto fragment_datasize_bytes = metadata.ExpectedDataSize();
   TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created CAENV1730FragmentMetadata with expected data size of " << fragment_datasize_bytes << " bytes." TLOG_ENDL;
 
@@ -766,7 +766,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   fCircularBuffer.Linearize();
 
   const auto available_readoutwindow_count = available_datasize_bytes / fragment_datasize_bytes ;
-  auto remaining_readoutwindow_count = available_readoutwindow_count;
+  int remaining_readoutwindow_count = available_readoutwindow_count;
 
   while (remaining_readoutwindow_count--){
     const auto readoutwindow_begin = fCircularBuffer.Buffer().begin();
