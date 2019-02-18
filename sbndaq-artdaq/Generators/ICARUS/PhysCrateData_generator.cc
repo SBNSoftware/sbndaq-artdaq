@@ -66,7 +66,7 @@ void icarus::PhysCrateData::VetoOff(){
 
 void icarus::PhysCrateData::InitializeHardware(){
   physCr.reset(new PhysCrate());
-  physCr->initialize();
+  physCr->initialize(pcieLinks_);
 }
 
 BoardConf icarus::PhysCrateData::GetBoardConf(){
