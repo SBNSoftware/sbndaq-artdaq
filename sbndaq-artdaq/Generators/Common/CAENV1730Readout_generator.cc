@@ -53,6 +53,10 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   fCombineReadoutWindows = ps.get<bool>("CombineReadoutWindows");
   TLOG_ARB(TCONFIG,TRACE_NAME) << "CombineReadoutWindows=" << fCombineReadoutWindows << TLOG_ENDL;
 
+  fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig",false);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "CalibrateOnConfig=" << fCalibrateOnConfig << TLOG_ENDL;
+
+
   CAEN_DGTZ_ErrorCode retcode;
 
   if(fVerbosity>0)
@@ -183,6 +187,7 @@ void sbndaq::CAENV1730Readout::Configure()
 
   retcode = CAEN_DGTZ_Reset(fHandle);
 
+  ConfigureReadout();
   ConfigureRecordFormat();
   ConfigureTrigger();
   
@@ -194,7 +199,17 @@ void sbndaq::CAENV1730Readout::Configure()
 
   ConfigureAcquisition();
 
+  if(fCalibrateOnConfig)
+    RunADCCalibration();
+
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure() done." << TLOG_ENDL;
+}
+
+void sbndaq::CAENV1730Readout::RunADCCalibration()
+{
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
+  auto retcode = CAEN_DGTZ_Calibrate(fHandle);
+  sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
 }
 
 void sbndaq::CAENV1730Readout::ConfigureRecordFormat()
@@ -366,6 +381,7 @@ void sbndaq::CAENV1730Readout::ConfigureReadout()
 
   CAEN_DGTZ_ErrorCode retcode;
   uint32_t readback;
+  uint32_t addr,mask;
   
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetRunSyncMode " << (CAEN_DGTZ_RunSyncMode_t)(fCAEN.runSyncMode) << TLOG_ENDL;
   retcode = CAEN_DGTZ_SetRunSynchronizationMode(fHandle,
@@ -374,13 +390,19 @@ void sbndaq::CAENV1730Readout::ConfigureReadout()
   retcode = CAEN_DGTZ_GetRunSynchronizationMode(fHandle,(CAEN_DGTZ_RunSyncMode_t*)&readback);
   CheckReadback("SetRunSynchronizationMode",fBoardID,fCAEN.runSyncMode,readback);
   
-  uint32_t mask = ( 1 << TEST_PATTERN_t::TEST_PATTERN_S );
-  uint32_t addr = (fCAEN.testPattern)
+  mask = ( 1 << TEST_PATTERN_t::TEST_PATTERN_S );
+  addr = (fCAEN.testPattern)
     ? CAEN_DGTZ_BROAD_CH_CONFIGBIT_SET_ADD
     : CAEN_DGTZ_BROAD_CH_CLEAR_CTRL_ADD;
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTestPattern addr=" << addr << ", mask=" << mask << TLOG_ENDL;
   retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,mask);
   sbndaq::CAENDecoder::checkError(retcode,"SetTestPattern",fBoardID);
+
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetDyanmicRange " << fCAEN.dynamicRange << TLOG_ENDL;
+  mask = (uint32_t)(fCAEN.dynamicRange);
+  addr = 0x8028;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,mask);
+  sbndaq::CAENDecoder::checkError(retcode,"SetDynamicRange",fBoardID);
 
   for(uint32_t ch=0; ch<fNChannels; ++ch){
     TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channel " << ch << " DC offset to " << fCAEN.pedestal[ch] << TLOG_ENDL;
@@ -486,8 +508,22 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
+bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
-bool sbndaq::CAENV1730Readout::GetData(){
+  for(int32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
+
+    CAEN_DGTZ_ReadTemperature(fHandle,ch,&(ch_temps[ch]));
+    TLOG_ARB(TTEMP,TRACE_NAME) << "Channel " << ch
+			       <<" temp: " << ch_temps[ch] << "  C"
+			       << TLOG_ENDL;
+    //metric call here...
+  }
+  
+  return true;
+}
+
+bool sbndaq::CAENV1730Readout::GetData()
+{
   TLOG(TGETDATA) << "Begin of GetData()" << TLOG_ENDL;
 
   uint32_t this_data_size=0;  // define this to then pass its adress to the function that reads data
@@ -578,7 +614,8 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
   // I initialize this metadata object
   // because its expected size is = to the size of a rw
   CAENV1730FragmentMetadata metadata(fNChannels,fCAEN.recordLength,
-				     zeit.tv_sec,zeit.tv_nsec);
+				     zeit.tv_sec,zeit.tv_nsec,
+				     ch_temps);
   TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created metadata with metadata.ExpectedDataSize() = " 
 				 << metadata.ExpectedDataSize() << TLOG_ENDL;
 

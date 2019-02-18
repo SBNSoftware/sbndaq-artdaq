@@ -55,7 +55,7 @@ sbndaq::CAENV1730WaveformAna::CAENV1730WaveformAna(fhicl::ParameterSet const & p
 {
   art::ServiceHandle<art::TFileService> tfs; //pointer to a file named tfs
   nt_header = tfs->make<TNtuple>("nt_header","CAENV1730 Header Ntuple","art_ev:caen_ev:caen_ev_tts");
-  nt_wvfm = tfs->make<TNtuple>("nt_wvfm","Waveform information Ntuple","art_ev:caen_ev:caen_ev_tts:ch:ped:rms");
+  nt_wvfm = tfs->make<TNtuple>("nt_wvfm","Waveform information Ntuple","art_ev:caen_ev:caen_ev_tts:ch:ped:rms:temp");
 }
 
 sbndaq::CAENV1730WaveformAna::~CAENV1730WaveformAna()
@@ -84,6 +84,8 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
     const auto& frag((*rawFragHandle)[idx]); // use this fragment as a refernce to the same data
     CAENV1730Fragment bb(frag);
     
+    auto const* md = bb.Metadata();
+
     CAENV1730Event const* event_ptr = bb.Event();
     CAENV1730EventHeader header = event_ptr->Header;
     
@@ -96,32 +98,36 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
     //get the number of 32-bit words from the header
     size_t const& ev_size(header.eventSize);
     
-    size_t nChannels = 16; //fixme
+    size_t nChannels = md->nChannels; //fixme
     fWvfmsVec.resize(nChannels);
     
     //use that to get the number of 16-bit words for each channel
-    size_t ch_size = (ev_size - sizeof(CAENV1730EventHeader)/sizeof(uint32_t))*2/nChannels;
+    size_t n_samples = (ev_size - sizeof(CAENV1730EventHeader)/sizeof(uint32_t))*2/nChannels;
     const uint16_t* data = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() + sizeof(CAENV1730EventHeader));
     
     for(size_t i_ch=0; i_ch<nChannels; ++i_ch){
-      fWvfmsVec[i_ch].resize(ch_size);
+      fWvfmsVec[i_ch].resize(n_samples);
       
       //fill...
-      for (size_t i_t=-; i_t<ch_size; ++i_t){
-	if(i_t%2==0) fWvfmsVec[i_ch][i_t] = *(data+ch_size+i_t+1);
-	else if(i_t%2==1) fWvfmsVec[i_ch][i_t] = *(data+ch_size+i_t-1);
+      for (size_t i_t=0; i_t<n_samples; ++i_t){
+	if(i_t%2==0) fWvfmsVec[i_ch][i_t] = *(data+n_samples+i_t+1);
+	else if(i_t%2==1) fWvfmsVec[i_ch][i_t] = *(data+n_samples+i_t-1);
       }
+
+      //by here you have a vector<uint16_t> that is the waveform, in fWvfmsVec[i_ch]
+
       
       //get mean
       float wvfm_mean = std::accumulate(fWvfmsVec[i_ch].begin(),fWvfmsVec[i_ch].end(),0.0) / fWvfmsVec[i_ch].size();
       
       //get rms
-      float rms=0.0;
+      float wvfm_rms=0.0;
       for(auto const& val : fWvfmsVec[i_ch])
-	rms+= (val-wvfm_mean)*(val-wvfm_mean);
-      rms = std::sqrt(rms/fWvfmsVec[i_ch].size());
+	wvfm_rms += (val-wvfm_mean)*(val-wvfm_mean);
+      wvfm_rms = std::sqrt(wvfm_rms/fWvfmsVec[i_ch].size());
       
-      nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,i_ch,ped,rms);
+      nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,
+		    i_ch,wvfm_mean,wvfm_rms,md->chTemps[i_ch]);
     }
   }
   
