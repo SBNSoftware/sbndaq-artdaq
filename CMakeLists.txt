@@ -56,14 +56,12 @@ cet_set_compiler_flags(DIAGS VIGILANT
  EXTRA_FLAGS -pedantic -Wall -fPIC -DLINUX -D_LINUX -Wno-unused-variable -Wno-overloaded-virtual
  )
 
-IF (SANITIZE_ADDRESS)
-  string(TOUPPER ${SANITIZE_ADDRESS} SANITIZE_ADDRESS_UC )
-  if( ${SANITIZE_ADDRESS_UC} MATCHES "TRUE" )
-    MESSAGE (STATUS "Enable  -fsanitize=address")
-    cet_add_compiler_flags(-fsanitize=address)
-  endif()
+SET ( SANITIZE_ADDRESS $ENV{SANITIZE_ADDRESS} )
+IF ( SANITIZE_ADDRESS )
+    MESSAGE (STATUS "Enable  -fsanitize=address -Wno-unused-command-line-argument -fno-omit-frame-pointer")
+    cet_add_compiler_flags(-fsanitize=address  -Wno-unused-command-line-argument -fno-omit-frame-pointer)
 ENDIF()
- 
+
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
@@ -83,7 +81,7 @@ find_ups_boost( v1_63_0b filesystem
                         system
                         unit_test_framework
  )
-
+find_ups_product( pqxx v6_2_5a )
 find_ups_product( cetbuildtools v5_08_01 )
 find_ups_product( sqlite v3_16_02_00a)
  
@@ -91,7 +89,7 @@ find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
-find_ups_product( sbndaq_artdaq_core v0_01_00 )
+find_ups_product( sbndaq_artdaq_core v0_01_02 )
 
 #include CAEN directories...
 include_directories($ENV{CAENCOMMDIR}/include)
@@ -142,7 +140,7 @@ add_subdirectory(sbndaq-artdaq)
 #add_subdirectory(test)
 
 # tools
-#add_subdirectory(tools)
+add_subdirectory(tools)
 
 # examples
 #FILE(COPY examples DESTINATION .)

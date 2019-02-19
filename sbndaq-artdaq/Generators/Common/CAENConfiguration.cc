@@ -22,12 +22,14 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   maxEventsPerTransfer(0),
   eventsPerInterrupt(0),
   irqWaitTime(0),
+  allowTriggerOverlap(true),
   usePedestals(0),
   dacValue(0),
+  dynamicRange(0),
   ioLevel(0),
   nChannels(0),
   triggerPolarity(0),
-  triggerThreshold(0),
+  interruptLevel(0),
   extTrgMode(0),
   swTrgMode(0),
   acqMode(0),
@@ -46,15 +48,16 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   maxEventsPerTransfer = ps.get<int>("maxEventsPerTransfer");
   runSyncMode          = ps.get<int>("runSyncMode");
   outputSignalMode     = ps.get<int>("outputSignalMode");
+  allowTriggerOverlap  = ps.get<bool>("allowTriggerOverlap");
   usePedestals         = ps.get<bool>("usePedestals");
   dacValue             = ps.get<int>("dacValue");
+  dynamicRange         = ps.get<int>("dynamicRange");
   ioLevel              = ps.get<int>("ioLevel");
   nChannels            = ps.get<int>("nChannels");
   extTrgMode           = ps.get<int>("extTrgMode");
   swTrgMode            = ps.get<int>("swTrgMode");
   acqMode              = ps.get<int>("acqMode");
   triggerPolarity      = ps.get<int>("triggerPolarity");
-  triggerThreshold     = ps.get<uint16_t>("triggerThreshold");
   triggerPulseWidth    = ps.get<uint8_t>("triggerPulseWidth");
   debugLevel           = ps.get<int>("debugLevel");
   postPercent          = ps.get<int>("postPercent");
@@ -65,13 +68,18 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   readoutMode          = ps.get<int>("readoutMode");
   analogMode           = ps.get<int>("analogMode");
   testPattern          = ps.get<int>("testPattern");
+  interruptLevel       = ps.get<int>("InterruptLevel");
 
   char tag[1024];
   channelEnableMask = 0;
-  if ( enableReadout )
-  {
-    for ( int j=0; j<MAX_CHANNELS; j++)
-    {
+
+  for ( int j=0; j<MAX_CHANNELS; j++){
+    sprintf(tag,"triggerThreshold%d", j);
+    triggerThresholds[j] = ps.get<uint16_t>(tag);
+  }
+
+  if ( enableReadout ){
+    for ( int j=0; j<MAX_CHANNELS; j++){
       sprintf(tag,"channelEnable%d", j);
       channelEnable[j] = ps.get<bool>(tag);
       if ( channelEnable[j] )
@@ -108,8 +116,10 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  nBoards               " << e.nBoards << std::endl;
   os << "  EnableReadout         " << e.enableReadout << std::endl;
   os << "  RecordLength          " << e.recordLength << std::endl;
+  os << "  AllowTriggerOverlap   " << e.allowTriggerOverlap << std::endl;
   os << "  UsePedestals          " << e.usePedestals << std::endl;
   os << "  DacValue              " << e.dacValue << std::endl;
+  os << "  DynamicRange          " << e.dynamicRange << std::endl;
   os << "  nChannels             " << e.nChannels << std::endl;
   os << "  MaxEventsPerTransfer  " << e.maxEventsPerTransfer << std::endl;
   os << "  PostPercent           " << e.postPercent << "%" << std::endl;
@@ -123,6 +133,8 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.extTrgMode) << std::endl;
   os << "  SWTrgMode             " << e.swTrgMode << " " 
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.swTrgMode) << std::endl;
+  for ( int j=0; j<sbndaq::CAENConfiguration::MAX_CHANNELS; j++)
+      os << "    Channel " << j << " Threshold " << e.triggerThresholds[j] << std::endl;
   os << "  AcqMode               " << e.acqMode << " " 
      << sbndaq::CAENDecoder::AcquisitionMode((CAEN_DGTZ_AcqMode_t)e.acqMode) << std::endl;
   os << "  DebugLevel            " << e.debugLevel << std::endl;
@@ -132,6 +144,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;
   os << "  AnalogMode            " << e.analogMode << std::endl;
   os << "  TestPattern           " << e.testPattern << std::endl;
+  os << "  InterruptLevel        " << e.interruptLevel << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )

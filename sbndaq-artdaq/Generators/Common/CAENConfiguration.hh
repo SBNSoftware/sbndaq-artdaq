@@ -33,13 +33,16 @@ class CAENConfiguration
     int  maxEventsPerTransfer;
     int  eventsPerInterrupt;
     int  irqWaitTime;
+    bool allowTriggerOverlap;
     bool usePedestals;
     int  dacValue;
+    int  dynamicRange;
     int  ioLevel;
     int  nChannels;
-    int  triggerPolarity; 
-    uint16_t  triggerThreshold;
+    int  triggerPolarity;
+    uint16_t triggerThresholds[MAX_CHANNELS];
     uint8_t   triggerPulseWidth;
+    int  interruptLevel;
     int  extTrgMode;
     int  swTrgMode;
     int  selfTrgMode;
@@ -56,7 +59,7 @@ class CAENConfiguration
     int  channelEnable[MAX_CHANNELS];
     int  channelSelfTrgLogic[MAX_CHANNELS/2];
     int  channelSelfTrgPulseType[MAX_CHANNELS/2];
-   
+
     uint32_t  channelEnableMask;
     uint32_t  channelSelfTrgMask;
 

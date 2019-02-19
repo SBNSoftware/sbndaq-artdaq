@@ -28,12 +28,24 @@ namespace sbndaq
     virtual ~CAENV1730Readout();
 
     bool getNext_(artdaq::FragmentPtrs & output) override;
+    bool checkHWStatus_() override;
     void start() override;
     void stop() override;
     void stopNoMutex() override { stop(); }
     //void init();
 
   private:
+    bool readSingleWindowFragments(artdaq::FragmentPtrs &);
+		bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
+		
+
+    typedef enum 
+    { 
+      CONFIG_READ_ADDR     = 0x8000,
+      CONFIG_SET_ADDR      = 0x8004,
+      CONFIG_CLEAR_ADDR    = 0x8008,
+      TRIGGER_OVERLAP_MASK = 0x0002
+    } REGISTERS_t;
 
     //CAEN pieces
     CAENConfiguration     fCAEN;	// initialized in the constructor
@@ -70,7 +82,9 @@ namespace sbndaq
 	TSTATUS   = 7,
 	TGETNEXT  = 8,
 	TGETDATA  = 9,
-	TMAKEFRAG = 10
+        TMAKEFRAG = 10,
+
+        TTEMP = 30
     };
 
     //fhicl parameters
@@ -82,7 +96,8 @@ namespace sbndaq
     uint32_t fGetNextSleep;
     bool     fSWTrigger;
     bool     fCombineReadoutWindows;
-    
+    bool     fCalibrateOnConfig;
+
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
@@ -90,11 +105,11 @@ namespace sbndaq
     uint32_t fEvCounter; // set to zero at the beginning
     int32_t  prev_rwcounter;
     uint32_t total_data_size;
-    uint32_t event_size;	
+    //uint32_t event_size;	
     uint32_t n_readout_windows;
 
-
-
+    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
+    
     //functions
     void Configure();
 
@@ -103,6 +118,7 @@ namespace sbndaq
     void ConfigureTrigger();
     void ConfigureReadout();
     void ConfigureAcquisition();
+    void RunADCCalibration();
 
     bool WaitForTrigger();
     bool GetData();

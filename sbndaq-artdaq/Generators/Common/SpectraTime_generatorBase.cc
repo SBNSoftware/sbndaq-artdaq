@@ -1,6 +1,8 @@
 //
 // sbnddaq-readout/Generators/SpectraTime_generatorBase.cc (D.Cianci,W.Badgett)
 //
+// Read from a message queue GPS status messages, buffer them and send them out on request to the EVBs
+//
 
 #include "sbndaq-artdaq/Generators/Common/SpectraTime_generatorBase.hh"
 
@@ -25,53 +27,26 @@ sbndaq::SpectraTime_generatorBase::~SpectraTime_generatorBase()
   stopAll();
 }
 
-void sbndaq::SpectraTime_generatorBase::init(){
-
+void sbndaq::SpectraTime_generatorBase::init()
+{
   SequenceTimeWindowSize_ = ps_.get<uint32_t>("SequenceTimeWindowSize",1e6); //one ms
   eventCounter = 0;
-  spectratimeFD = -1;
 
-	// Okay, let's see if the gps is there!
-	device = "/dev/ttyUSB0";
-	if(access(device.c_str(),F_OK) != 0){
-		char line[256];
-		sprintf(line,"Error finding Spectratime GPS device /dev/ttyUSB0");
-		LOG_ERROR("SpectraTime") << line;
-		// Throw some kind of error. Not sure how quite yet.
-	}
+  // Connect to GPS message queue
+  daqMQ = (key_t)GPS_MQ;
+  daqID = msgget(daqMQ,0);
+  if ( daqID < 0 )
+  {
+    LOG_ERROR("SpectraTime_generator") << "Error on msgget 0x" << std::hex << daqMQ << std::dec 
+				       << " " << strerror(errno);
 
-	// He's home. Now, let's see if we can turn him on.
-	spectratimeFD = open(device.c_str(),O_RDWR);
-	if(spectratimeFD < 0){
-		char line[256];
-		sprintf(line,"Error opening Spectratime GPS device /dev/ttyUSB");
-		LOG_ERROR("SpectraTime") << line;
-		// Throw some kind of error. Not sure how quite yet.
-	}
-
+  }
 }
 
 void sbndaq::SpectraTime_generatorBase::start()
 {
 	// Initialize our buffer
 	SpectraTimeBuffer_t STBuffer_ = SpectraTimeBuffer_t();
-
-	// Let's clear spectratime buffer (by pressing enter, essentially)
-	char line[2];
-	sprintf(line,"\n");
-	ssize_t nBytes = write(spectratimeFD,line,2);
-	if( nBytes != (ssize_t)2 )
-	{
-	  std::cout << "Failed to get through to our boy." << std::endl;
-	  LOG_ERROR("SpectraTime") << "Failed to get through to our boy.";
-	}
-
-	// Now, let's tell him to start spitting out Data char line[4];
-    sprintf(line,"BTA\n");
-    LOG_INFO("SpectraTime") << "Telling our boy to go with: " << line;
-    nBytes = write(spectratimeFD,line,5);
-    if( nBytes != (ssize_t)5 )
-            LOG_ERROR("SpectraTime") << "Failed to get through to our boy." << std::endl;
 
 	// Magically start worker getdata thread.
         share::ThreadFunctor functor = std::bind(&SpectraTime_generatorBase::getData,this);
@@ -90,20 +65,6 @@ void sbndaq::SpectraTime_generatorBase::stopAll()
     running = false;
     GetData_thread_->stop();
   }
-
-  if ( spectratimeFD >= 0 )
-  {
-    // Turn off status reports
-    // char line[80];
-    // sprintf(line,"BT0\n");
-    // LOG_ERROR("SpectraTime") << "Telling our boy to stop with: " << line << std::endl;
-    // ssize_t nBytes = write(spectratimeFD,line,5);
-    // if( nBytes != (ssize_t)5 )
-    //   LOG_ERROR("SpectraTime") << "Failed to get through to our boy." << std::endl;
-    
-    close(spectratimeFD);
-    spectratimeFD = -1;
-  }
 }
 
 void sbndaq::SpectraTime_generatorBase::stop()
@@ -118,65 +79,22 @@ void sbndaq::SpectraTime_generatorBase::stopNoMutex()
 
 bool sbndaq::SpectraTime_generatorBase::getData()
 {
-	// Okay, cool. Now let's see what he says!
-  	int retcod = 0;
-  	struct timeval timeOut;
-  	timeOut.tv_sec = 10;
-  	timeOut.tv_usec = 0;
-  	fd_set set;
-  	char letter;
-  	letter = '\0';
-  	std::stringstream output;
-	LOG_INFO("SpectraTime") << "Starting getData()" << std::endl;
+  ssize_t nBytes = 1;
 
-  	while(letter != '\n'){
-		letter = '\0';
-		FD_ZERO(&set);
-		FD_SET(spectratimeFD,&set);
-		retcod = select(spectratimeFD+1, &set, NULL, NULL, &timeOut);
-		if(retcod < 0)
-			LOG_ERROR("SpectraTime") << "Failed to select device" << std::endl;
-		else if(retcod == 0){
-			LOG_ERROR("SpectraTime") << "Device timeout" << std::endl;
-			return 1;
-		}
-		else if( FD_ISSET(spectratimeFD, &set) ){
-			retcod = read(spectratimeFD, &letter,1);
-			if(retcod < 0)
-				LOG_ERROR("SpectraTime") << "Failed to read from device" << std::endl;
-		}
-		else
-			LOG_ERROR("SpectraTime") << "Device failes ISSIT response" << std::endl;
-	  	if( letter > '\0' )
-			output << letter;
- 	}
-
-	//Output is in the form: $PTNTA,20160619232817,2,T3,0000000,+050,3,,*11
-	// Now, let's fill a buffer with the good parts of the output string that we want
-    std::string nugget;
-    int count = 0;
-    LOG_INFO("SpectraTime") << output.str() ;
-    while(std::getline(output, nugget, ',')) {
-		if(count == 1){
-			SpectraTimeTemp.time[0] = stoi(nugget.substr(0,2));
-			SpectraTimeTemp.time[1] = stoi(nugget.substr(2,2));
-			SpectraTimeTemp.time[2] = stoi(nugget.substr(4,2));
-			SpectraTimeTemp.time[3] = stoi(nugget.substr(6,2));
-			SpectraTimeTemp.time[4] = stoi(nugget.substr(8,2));
-			SpectraTimeTemp.time[5] = stoi(nugget.substr(10,2));
-			SpectraTimeTemp.time[6] = stoi(nugget.substr(12,2));
-		}
-		else if(count ==2)
-			SpectraTimeTemp.quality = stoi(nugget);
-		else if(count == 5)
-			SpectraTimeTemp.phase   = stoi(nugget);
-		else if(count == 6)
-			SpectraTimeTemp.status  = stoi(nugget);
-
-		count++;
+  while ( nBytes > 0 )
+  {
+    nBytes = msgrcv(daqID,(void *)&gpsInfo,sizeof(gpsInfo), GPSInfo::GPS_INFO_MTYPE,0);
+    if ( nBytes <= 0 )
+    {
+      LOG_ERROR("SpectraTime_generator") << "Error on msgrcv 0x" << std::hex << daqMQ << std::dec << " " << 
+	strerror(errno);
     }
-    SpectraTimeCircularBuffer_.buffer.push_front(SpectraTimeTemp);
-    return(true);
+    else
+    {
+      SpectraTimeCircularBuffer_.buffer.push_front(SpectraTimeTemp);
+    }
+  }
+  return(true);
 }
 
 bool sbndaq::SpectraTime_generatorBase::getNext_(artdaq::FragmentPtrs & frags)
