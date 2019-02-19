@@ -549,10 +549,20 @@ bool sbndaq::CAENV1730Readout::GetData()
       if (retcod == CAEN_DGTZ_Success){
         TLOG(TGETDATA) << "Calling ReadData(fHandle="<<
             fHandle<< ",bufp=" << (void*)bufp << ",&this_data_size="<<&this_data_size<<")";
+
         retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                                     bufp, &this_data_size);
+
+        const auto header = reinterpret_cast<CAENV1730EventHeader const *>(bufp);
+
         TLOG(TGETDATA) << "ReadData complete with returned data size "
-                       << this_data_size << " retcod=" << retcod;
+                       << this_data_size << " retcod=" << retcod << ", event size in the header " << header->eventSize * 4;
+				
+				if (this_data_size != header->eventSize *4 )  {
+				TLOG(TLVL_ERROR) << "Event size in the header does not match the expected size; header/expected " << header->eventSize*4 << "/" << this_data_size;
+
+			//	 	throw std::runtime_error("Event size in the header does not match the expected size" );
+				}
       }
     }
 
