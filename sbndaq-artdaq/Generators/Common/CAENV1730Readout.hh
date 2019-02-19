@@ -28,6 +28,7 @@ namespace sbndaq
     virtual ~CAENV1730Readout();
 
     bool getNext_(artdaq::FragmentPtrs & output) override;
+    bool checkHWStatus_() override;
     void start() override;
     void stop() override;
     void stopNoMutex() override { stop(); }
@@ -81,7 +82,9 @@ namespace sbndaq
 	TSTATUS   = 7,
 	TGETNEXT  = 8,
 	TGETDATA  = 9,
-	TMAKEFRAG = 10
+        TMAKEFRAG = 10,
+
+        TTEMP = 30
     };
 
     //fhicl parameters
@@ -93,7 +96,8 @@ namespace sbndaq
     uint32_t fGetNextSleep;
     bool     fSWTrigger;
     bool     fCombineReadoutWindows;
-    
+    bool     fCalibrateOnConfig;
+
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
@@ -104,8 +108,8 @@ namespace sbndaq
     //uint32_t event_size;	
     uint32_t n_readout_windows;
 
-
-
+    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
+    
     //functions
     void Configure();
 
@@ -114,6 +118,7 @@ namespace sbndaq
     void ConfigureTrigger();
     void ConfigureReadout();
     void ConfigureAcquisition();
+    void RunADCCalibration();
 
     bool WaitForTrigger();
     bool GetData();
