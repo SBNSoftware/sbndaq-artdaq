@@ -237,7 +237,8 @@ int icarus::PhysCrateData::GetData(){
     TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
     
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( data_ptr->data );
-    // std::cout << "PhysCrateData: event_number: " << board_block->header.event_number << std::endl;
+    std::cout << "PhysCrateData: event_number: " << board_block->header.event_number 
+              << ", time_stamp: " << board_block->header.time_stamp << std::endl;
 
     // if ( iBoard == nBoards ) {
     //   fCircularBuffer.Insert( data_size, reinterpret_cast<uint16_t const*>(data_ptr) );
