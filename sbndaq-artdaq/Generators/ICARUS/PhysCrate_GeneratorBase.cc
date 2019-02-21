@@ -127,12 +127,12 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   PhysCrateFragment newfrag(*frags.back());
 
   size_t data_size = 0;
-  uint16_t const* data_ptr = fCircularBuffer.LinearizeAndGetData();
-  auto const* dt = reinterpret_cast< DataTile const* >(data_ptr);
   std::cout << "PhysCrate_GeneratorBase::getNext_ : nBoards_: " << nBoards_ << std::endl;
 
   uint16_t iBoard = 0;
   do {
+    uint16_t const* data_ptr = fCircularBuffer.LinearizeAndGetData();
+    auto const* dt = reinterpret_cast< DataTile const* >(data_ptr);
     //  the Tile Header is at the beginning of the board data:
     auto const* nextTile = dt + data_size;
     auto const nt_header = nextTile->Header;;
@@ -141,17 +141,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     data_size += this_data_size;
     ++iBoard;
     std::cout << "PhysCrate_GeneratorBase::getNext_ : iBoard: " << iBoard << ", this_data_size: " << this_data_size << ", data_size: " << data_size << std::endl;
-    // uint32_t this_timeinfo = dt_header.timeinfo;
-    // uint32_t this_crate_id = dt_header.crate_id;
-    // uint32_t this_board_id = dt_header.board_id;
-    // uint32_t this_board_status = dt_header.board_status;
-    // std::cout << std::dec << "data_size: " << this_data_size << ", timeinfo: " << this_timeinfo
-    //           << ", crate_id: " << this_crate_id << ", board_id: " << this_board_id << ", board_status: " << this_board_status << std::endl;
 
-    // auto const* board_block = reinterpret_cast< A2795DataBlock const * >( dt->data );
-    // auto ev_num = board_block->header.event_number;
-    // auto new_ev_num = ev_num;
-    // std::cout << "ev_num: " << ev_num << std::endl;
+    auto const* board_block = reinterpret_cast< A2795DataBlock const * >( nextTile->data );
+    std::cout << "BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
+	<< board_block->header.time_stamp << std::endl;
+
   } while ( iBoard < nBoards_ );
 
   // std::cout << "Go to a new event..." << std::endl;
@@ -177,6 +171,10 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   //give proper event number
   // ++ev_num;
   auto ev_num = newfrag.BoardEventNumber()+1;
+  std::cout << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp() << std::endl;
+  std::cout << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1) << std::endl;
+  std::cout << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "
+            << newfrag.nSamplesPerChannel() << ", nChannelsPerBoard: " << newfrag.nChannelsPerBoard() << std::endl;
   std::cout << "ev_num: " << ev_num << std::endl;
   frags.back()->setSequenceID(ev_num);
 
