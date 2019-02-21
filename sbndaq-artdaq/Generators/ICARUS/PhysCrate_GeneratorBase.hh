@@ -27,7 +27,7 @@ namespace icarus {
     void start() override;
     void stop() override;
 
-    void stopNoMutex() { stop(); }
+    void stopNoMutex() override { stop(); }
     
     uint32_t RunNumber_;
     

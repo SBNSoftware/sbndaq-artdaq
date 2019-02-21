@@ -125,7 +125,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ Initialized data of size %lu",frags.back()->dataSizeBytes());
 
-  PhysCrateFragment newfrag(*frags.back());
+  PhysCrateFragment const& newfrag = *frags.back();
 
   size_t data_size = 0;
   std::cout << "PhysCrate_GeneratorBase::getNext_ : nBoards_: " << nBoards_ << std::endl;
@@ -136,15 +136,15 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     auto const* dt = reinterpret_cast< DataTile const* >(data_ptr);
     //  the Tile Header is at the beginning of the board data:
     auto const* nextTile = dt + data_size;
-    auto const nt_header = nextTile->Header;;
+    auto const nt_header = nextTile->Header;
     uint32_t this_data_size = ntohl( nt_header.packSize );
     if ( this_data_size == 0 ) continue;
     data_size += this_data_size;
     ++iBoard;
-    std::cout << "PhysCrate_GeneratorBase::getNext_ : iBoard: " << iBoard << ", this_data_size: " << this_data_size << ", data_size: " << data_size << std::endl;
+    TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : iBoard: " << iBoard << ", this_data_size: " << this_data_size << ", data_size: " << data_size << std::endl;
 
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( nextTile->data );
-    std::cout << "BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
+    TLOG(TLVL_DEBUG) << "BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
 	<< board_block->header.time_stamp << std::endl;
 
   } while ( iBoard < nBoards_ );
@@ -155,12 +155,12 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   //GAL: metricMan->sendMetric(".GetData.Size.min",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.Size.max",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
   
-  std::cout << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size << std::endl;
+  TLOG(TLVL_DEBUG)  << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size << std::endl;
   std::copy( fCircularBuffer.Buffer().begin(), fCircularBuffer.Buffer().begin() + data_size/sizeof(uint16_t),
              (uint16_t*)( frags.back()->dataBeginBytes() ) );
   // TRACE(42,"42");
 
-  std::cout << "PhysCrate_GeneratorBase::getNext_ : copied the circular buffer to frags." << std::endl;
+  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : copied the circular buffer to frags." << std::endl;
   TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ : Read data size was %lu", (long unsigned int)data_size );
 
   frags.back()->resizeBytes( data_size );
@@ -172,11 +172,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   //give proper event number
   // ++ev_num;
   auto ev_num = newfrag.BoardEventNumber()+1;
-  std::cout << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp() << std::endl;
-  std::cout << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1) << std::endl;
-  std::cout << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "
+  TLOG(TLVL_DEBUG) << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp() << std::endl;
+  TLOG(TLVL_DEBUG) << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1) << std::endl;
+  TLOG(TLVL_DEBUG) << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "
             << newfrag.nSamplesPerChannel() << ", nChannelsPerBoard: " << newfrag.nChannelsPerBoard() << std::endl;
-  std::cout << "ev_num: " << ev_num << std::endl;
+  TLOG(TLVL_DEBUG) << "ev_num: " << ev_num << std::endl;
   frags.back()->setSequenceID(ev_num);
 
   //GAL: metricMan->sendMetric(".getNext.EventNumber.last",(int)ev_num,"events",1,artdaq::MetricMode::LastPoint);

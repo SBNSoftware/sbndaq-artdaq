@@ -228,7 +228,7 @@ int icarus::PhysCrateData::GetData(){
 
     // ++iBoard;
     
-    std::cout << "PhysCrateData: data_size: " << std::dec << data_size << ", this_data_size: " << this_data_size 
+    TLOG(TLVL_DEBUG) << "PhysCrateData: data_size: " << std::dec << data_size << ", this_data_size: " << this_data_size 
               << ", token: " << std::hex << data_ptr->Header.token << ", info1: " << data_ptr->Header.info1 
               << ", info2: " << data_ptr->Header.info2 << ", info3: " << data_ptr->Header.info3 
               << ", timeinfo: " << data_ptr->Header.timeinfo << ", chID: " << data_ptr->Header.chID << std::endl;
@@ -237,7 +237,7 @@ int icarus::PhysCrateData::GetData(){
     TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
     
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( data_ptr->data );
-    std::cout << "PhysCrateData: event_number: " << board_block->header.event_number 
+    TLOG(TLVL_DEBUG) << "PhysCrateData: event_number: " << board_block->header.event_number 
               << ", time_stamp: " << board_block->header.time_stamp << std::endl;
 
     // if ( iBoard == nBoards ) {
