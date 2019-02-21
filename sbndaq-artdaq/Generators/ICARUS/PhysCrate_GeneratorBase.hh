@@ -58,6 +58,8 @@ namespace icarus {
     int      last_status_;
     statpack last_stat_pack_;
 
+    std::vector<int> pcieLinks_;
+    
   protected:
 
     PhysCrateFragmentMetadata metadata_;

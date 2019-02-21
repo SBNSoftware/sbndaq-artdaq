@@ -72,7 +72,7 @@ void icarus::PhysCrateData::VetoOff(){
 
 void icarus::PhysCrateData::InitializeHardware(){
   physCr = std::make_unique<PhysCrate>();
-  physCr->initialize();
+  physCr->initialize(pcieLinks_);
 }
 
 BoardConf icarus::PhysCrateData::GetBoardConf(){

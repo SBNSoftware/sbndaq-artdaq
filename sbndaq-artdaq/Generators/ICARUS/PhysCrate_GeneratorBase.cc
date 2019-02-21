@@ -56,7 +56,8 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
     throw cet::exception("Error in PhysCrate: disallowed combination of throttle_usecs and throttle_usecs_check (see PhysCrate.hh for rules)");
   }
   
-
+  pcieLinks_ = ps_.get< std::vector<int> >("pcieLinks",std::vector<int>());
+  
 }
 
 void icarus::PhysCrate_GeneratorBase::start() {
