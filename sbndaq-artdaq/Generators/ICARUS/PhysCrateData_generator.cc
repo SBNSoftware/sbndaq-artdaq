@@ -1,3 +1,4 @@
+#define TRACE_NAME "PhysCrateData"
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrateData.hh"
 #include "artdaq/Application/GeneratorMacros.hh"
 
@@ -193,7 +194,7 @@ int icarus::PhysCrateData::GetData(){
 
   physCr->ArmTrigger();
 
-  size_t data_size=0;
+  size_t data_size_bytes = 0;
 
   //end loop timer
   _tloop_end = std::chrono::high_resolution_clock::now();
@@ -220,15 +221,16 @@ int icarus::PhysCrateData::GetData(){
     TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : DataAvail!");
     auto data_ptr = physCr->getData();
     
-    size_t const this_data_size = ntohl( data_ptr->Header.packSize );
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data acquired! Size is %lu, with %lu already acquired.",
-        this_data_size, data_size);
+    size_t const this_data_size_bytes = ntohl( data_ptr->Header.packSize );
+    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data acquired! Size is %lu bytes, with %lu bytes already acquired.",
+        this_data_size_bytes, data_size_bytes);
 
-    if( this_data_size == 32 ) continue;
+    if( this_data_size_bytes == 32 ) continue;
 
     // ++iBoard;
     
-    TLOG(TLVL_DEBUG) << "PhysCrateData: data_size: " << std::dec << data_size << ", this_data_size: " << this_data_size 
+    TLOG(TLVL_DEBUG) << "PhysCrateData: data_size_bytes: " << std::dec << data_size_bytes 
+              << ", this_data_size_bytes: " << this_data_size_bytes
               << ", token: " << std::hex << data_ptr->Header.token << ", info1: " << data_ptr->Header.info1 
               << ", info2: " << data_ptr->Header.info2 << ", info3: " << data_ptr->Header.info3 
               << ", timeinfo: " << data_ptr->Header.timeinfo << ", chID: " << data_ptr->Header.chID << std::endl;
@@ -245,15 +247,15 @@ int icarus::PhysCrateData::GetData(){
     //   iBoard = 0;
     //   data_size = 0;
     // }
-    fCircularBuffer.Insert( this_data_size, reinterpret_cast<uint16_t const*>(data_ptr) );
-    data_size += this_data_size;
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data copied! Size was %lu, with %lu now acquired.",
-         this_data_size, data_size);
+    fCircularBuffer.Insert( this_data_size_bytes/sizeof(uint16_t), reinterpret_cast<uint16_t const*>(data_ptr) );
+    data_size_bytes += this_data_size_bytes;
+    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data copied! Size was %lu bytes, with %lu bytes now acquired.",
+         this_data_size_bytes, data_size_bytes);
   }
   
-  TRACEN("PhysCrateData",TLVL_DEBUG,"GetData completed. Status %d, Data size %lu",0,data_size);
+  TRACEN("PhysCrateData",TLVL_DEBUG,"GetData completed. Status %d, Data size %lu bytes",0,data_size_bytes);
 
-  if(data_size==0 && veto_state)
+  if(data_size_bytes==0 && veto_state)
     VetoOff();
 
   return 0;
