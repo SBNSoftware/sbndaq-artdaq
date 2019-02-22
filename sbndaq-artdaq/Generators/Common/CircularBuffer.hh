@@ -135,19 +135,19 @@ namespace sbndaq{
   template <class T>
   T const* sbndaq::CircularBuffer<T>::LinearizeAndGetData(){
 
-    TRACE(TDEBUG,"Linearize circular buffer called. Size is %lu. Is linear? %s",
-          buffer.size(),buffer.is_linearized()?"yes":"no");
+    TRACE(10,"Linearize circular buffer called. Size is %lu. Is linear? %s",
+          buffer.size(),std::string(buffer.is_linearized()?"yes":"no").c_str());
 
     if(buffer.is_linearized())
       return &buffer.front();
 
     std::unique_lock<std::mutex> lock(*(mutexptr));
-    TRACE(TDEBUG,"Obtained circular buffer lock for linearize.");
+    TRACE(10,"Obtained circular buffer lock for linearize.");
 
     T const* data_ptr = buffer.linearize();
 
-    TRACE(TDEBUG,"Circular buffer linearize complete. Size is %lu. Is linear? %s",
-          buffer.size(),buffer.is_linearized()?"yes":"no");
+    TRACE(10,"Circular buffer linearize complete. Size is %lu. Is linear? %s",
+          buffer.size(),std::string(buffer.is_linearized()?"yes":"no").c_str());
 
     return data_ptr;
   }
