@@ -92,7 +92,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData(){
     //usleep(1000);
     //return 0;
     ++wait_count;
-    if( wait_count%1000 == 0 ){
+    if( wait_count%2000 == 0 ){
       std::cout << "\twait count: " << wait_count << std::endl;
     }
   }
