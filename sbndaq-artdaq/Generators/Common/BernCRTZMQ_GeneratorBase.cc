@@ -259,7 +259,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     TRACE(TR_DEBUG,"\tWE DROPPED %lu EVENTS.",nevents-good_events);
   TRACE(TR_DEBUG,"============================================");
   
-  std::cout << "Inserted into buffer on FEB " << (b.id & 0xff) << good_events << " events." << std::endl;
+  std::cout << "Inserted into buffer on FEB " << (b.id & 0xff) << " " << good_events << " events." << std::endl;
 
   return b.buffer.size();
 }
@@ -280,11 +280,15 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
 
   if( GetDataSetup()!=1 ) return false;;
 
+  bool be_verbose=true;
   
   //this fills the data from the ZMQ buffer
   size_t total_events = GetZMQData()/sizeof(BernCRTZMQEvent);
 
   TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() got %lu total events",total_events);
+
+  if(be_verbose) 
+    std::cout << "In GetData() and got " << total_events << " events." << std::endl;
 
   if(total_events>0){
     
@@ -296,8 +300,20 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
     TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() start sorting with mac=0x%lx",prev_mac);
 
     while(i_e<total_events){
+
+      if(be_verbose)
+	std::cout << "\tWorking on event " << i_e << " of " << total_events << std::endl;
       
       auto const& this_event = ZMQBufferUPtr[i_e];
+
+      if(be_verbose) {
+	std::cout << this_event << std::endl;
+	std::cout << "\t\tIsOverflow_TS0() = " << this_event.IsOverflow_TS0() << std::endl;
+	std::cout << "\t\tIsOverflow_TS1() = " << this_event.IsOverflow_TS1() << std::endl;
+	std::cout << "\t\tIsReference_TS0() = " << this_event.IsReference_TS0() << std::endl;
+	std::cout << "\t\tIsReference_TS1() = " << this_event.IsReference_TS1() << std::endl;
+      }
+
       if((prev_mac&0xff)!=this_event.MAC5()){
 
 	TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() found new MAC (0x%x)! prev_mac=0x%lx, iterator=%lu this_events=%lu",
