@@ -89,10 +89,10 @@ size_t sbndaq::BernCRTZMQData::GetZMQData(){
   zmq_msg_init(&feb_data_msg);
   while(zmq_msg_recv(&feb_data_msg,zmq_subscriber_,ZMQ_DONTWAIT)<0){
     //TRACE(TR_GD_DEBUG,"BernCRTZMQData::GetFEBData() called and no data/error.");
-    //usleep(1000);
+    usleep(1000);
     //return 0;
     ++wait_count;
-    if( wait_count%1000 == 0 ){
+    if( wait_count%500 == 0 ){
       std::cout << "\twait count: " << wait_count << std::endl;
     }
   }
