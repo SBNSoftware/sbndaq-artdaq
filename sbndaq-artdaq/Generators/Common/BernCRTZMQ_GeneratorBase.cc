@@ -21,6 +21,8 @@
 #include <sys/time.h>
 #include <sys/timeb.h>
 
+
+
 sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet const & ps)
   :
   CommandableFragmentGenerator(ps),
@@ -28,13 +30,13 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
 {
   TRACE(TR_LOG,"BernFeb constructor called");  
   Initialize();
-  TRACE(TR_LOG,"BernFeb constructor completed");  
+  TRACE(TR_LOG,"BernFeb constructor completed");
 }
 
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
   
   TRACE(TR_LOG,"BernFeb::Initialze() called");
-
+  
   //RunNumber_ = ps_.get<uint32_t>("RunNumber",999);
   RunNumber_ = 0;
   SubrunTimeWindowSize_ = ps_.get<uint64_t>("SubRunTimeWindowSize",60e9); //one minute
