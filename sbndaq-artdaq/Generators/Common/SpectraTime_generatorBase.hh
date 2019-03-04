@@ -12,7 +12,6 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
-#include <boost/circular_buffer.hpp>
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
@@ -33,7 +32,8 @@ namespace sbndaq
     virtual ~SpectraTime_generatorBase();
     enum
     {
-      GPS_MQ = 0xCDF
+      GPS_MQ = 0xCDF,
+      BUFFER_SIZE = 120
     };
 
   protected:
@@ -48,39 +48,31 @@ namespace sbndaq
     // Message queue
     key_t daqMQ;
     int daqID;
-    GPSInfo gpsInfo;
 
     // General
     uint32_t runNumber_;
     std::string device;
     uint32_t SequenceTimeWindowSize_;
     uint32_t eventCounter;
+    uint32_t messageCounter;
     std::atomic_bool running;
+    std::mutex bufferLock;
 
     // SpectraTimeConfiguration config_;
 
     fhicl::ParameterSet const ps_;
 
-    SpectratimeEvent SpectraTimeTemp;
+    struct SpectratimeMessage
+    {
+      long mtype;
+      bool unsent;
+      SpectratimeEvent data;
+    };
+
+    struct SpectratimeMessage buffer[BUFFER_SIZE];
+    uint32_t currentMessage;
 
   private:
-    typedef struct SpectraTimeBuffer
-    {
-      // fill this up once i understand it...
-      //	std::deque<SpectratimeEvent> buffer;
-      boost::circular_buffer<SpectratimeEvent> buffer;
-      size_t   time_resets;
-      int64_t  next_time_start;
-      uint32_t overwritten_counter;
-      int32_t  last_time_counter;
-      SpectraTimeBuffer():buffer(boost::circular_buffer<SpectratimeEvent>(60)),
-			  time_resets(0),
-			  next_time_start(0),
-			  overwritten_counter(0),
-			  last_time_counter(-1){};
-    } SpectraTimeBuffer_t;
-    
-    SpectraTimeBuffer_t SpectraTimeCircularBuffer_;
 
     bool getData();
     bool FillFragment(artdaq::FragmentPtrs &, bool clear_buffer=false);
