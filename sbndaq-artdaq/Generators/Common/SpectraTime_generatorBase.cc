@@ -37,7 +37,6 @@ sbndaq::SpectraTime_generatorBase::~SpectraTime_generatorBase()
 
 void sbndaq::SpectraTime_generatorBase::init()
 {
-  SequenceTimeWindowSize_ = ps_.get<uint32_t>("SequenceTimeWindowSize",1e6); //one ms
   eventCounter = 0;
   messageCounter = 0;
   currentMessage = messageCounter;

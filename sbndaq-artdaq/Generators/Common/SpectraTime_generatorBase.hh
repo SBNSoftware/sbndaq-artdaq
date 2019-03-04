@@ -52,7 +52,6 @@ namespace sbndaq
     // General
     uint32_t runNumber_;
     std::string device;
-    uint32_t SequenceTimeWindowSize_;
     uint32_t eventCounter;
     uint32_t messageCounter;
     std::atomic_bool running;
