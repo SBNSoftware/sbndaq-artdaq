@@ -31,54 +31,77 @@ namespace sbndaq {
   class CAENV1730Dump;
 }
 
-/*****/
+/**************************************************************************************************/
 
 class sbndaq::CAENV1730Dump : public art::EDAnalyzer {
-// sbndaq::CAENV1730Dump means that in the namespace sbndaq I choose the type CAENV1730Dump
-// if I had also 'class Ciao;' I could do sbndaq::Ciao
 
-	public:
- 	 explicit CAENV1730Dump(fhicl::ParameterSet const & pset); // explicit doesn't allow for copy initialization
-  	 virtual ~CAENV1730Dump();
+public:
+  struct Config {
+    //--one atom for each parameter
+    fhicl::Atom<art::InputTag> DataLabel {
+      fhicl::Name("data_label"),
+      fhicl::Comment("Tag for the input data product")
+    };
+  }; //--configuration
+  using Parameters = art::EDAnalyzer::Table<Config>;
 
-  	 virtual void analyze(art::Event const & evt);
+  explicit CAENV1730Dump(Parameters const & pset);
+  virtual ~CAENV1730Dump();
 
-	private:
+  void analyze(const art::Event& evt) override;
+  void beginJob() override;
+  void endJob() override;
 
-	  TH1F*    hEventCounter;
-          TH1F*    hTriggerTimeTag;
-	  
-          TNtuple* nt_header; //Ntuple header
-          //TNtuple* nt_header;
+private:
 
-};
+  //--default values
+  uint32_t nChannels    = 16;
+  uint32_t Ttt_DownSamp =  4; /* the trigger time resolution is 16ns when waveforms are sampled at
+                               * 500MHz sampling. The trigger timestamp is thus
+                               * sampled 4 times slower than input channels*/
+
+  TNtuple* nt_header;
+  
+  TH1F*    hEventCounter;
+  TH1F*    hTriggerTimeTag;
+  TH1F*    h_wvfm_ev0_ch0;
+
+  TTree* fEventTree;
+  int fRun, fEvent;
+  std::vector<uint64_t>  fTicksVec;
+  std::vector< std::vector<uint16_t> >  fWvfmsVec;
+
+  art::InputTag fDataLabel;
+
+}; //--class CAENV1730Dump
 
 
-
-
-
-//Define the constructor
-sbndaq::CAENV1730Dump::CAENV1730Dump(fhicl::ParameterSet const & pset)
-    : EDAnalyzer(pset) //EDAnalyzer (which is a data member of some class) is initialized with pset
+sbndaq::CAENV1730Dump::CAENV1730Dump(CAENV1730Dump::Parameters const& pset): art::EDAnalyzer(pset)
 {
-  art::ServiceHandle<art::TFileService> tfs; //pointer to a file named tfs
-
-  hEventCounter = tfs->make<TH1F>("hEventCounter","Event Counter Histogram",10000,0,10000);
-  //initialize the private element  
-
-
-  // modified by froccati Aug 10th 2017
-
-  hTriggerTimeTag = tfs->make<TH1F>("hTriggerTimeTag","Trigger Time Tag Histogram",10,2000000000,4500000000);
-
-  /**************************************/
-
-  nt_header = tfs->make<TNtuple>("nt_header","CAENV1730 Header Ntuple","art_ev:caen_ev:caenv_ev_tts"); //(tRIGGERtIMEsTAMP) things in "" are just labels!
-  //initialize the private element (an ntuple is like a vector somehow..)
+  fDataLabel = pset().DataLabel();
 }
 
+void sbndaq::CAENV1730Dump::beginJob()
+{
+  art::ServiceHandle<art::TFileService> tfs; 
+  nt_header       = tfs->make<TNtuple>("nt_header","CAENV1730 Header Ntuple","art_ev:caen_ev:caenv_ev_tts"); 
+  /************************************************************************************************/
+  hEventCounter   = tfs->make<TH1F>("hEventCounter","Event Counter Histogram",10000,0,10000);
+  hTriggerTimeTag = tfs->make<TH1F>("hTriggerTimeTag","Trigger Time Tag Histogram",10,2000000000,4500000000);
+  h_wvfm_ev0_ch0  = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",2000,0,2000);  
+  /************************************************************************************************/
+  //--make tree to store the channel waveform info:
+  fEventTree = tfs->make<TTree>("events","waveform tree");
+  fEventTree->Branch("fRun",&fRun,"fRun/I");
+  fEventTree->Branch("fEvent",&fEvent,"fEvent/I");
+  fEventTree->Branch("fTicksVec",&fTicksVec);
+  fEventTree->Branch("fWvfmsVec",&fWvfmsVec);
+}
 
-
+void sbndaq::CAENV1730Dump::endJob()
+{
+  std::cout << "Ending CAENV1730Dump...\n";
+}
 
 
 sbndaq::CAENV1730Dump::~CAENV1730Dump()
@@ -86,94 +109,90 @@ sbndaq::CAENV1730Dump::~CAENV1730Dump()
 }
 
 
-
-
-
-void sbndaq::CAENV1730Dump::analyze(art::Event const & evt)
+void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
 {
-  art::EventNumber_t eventNumber = evt.event();
-  
-  //modified by froccati Aug 10th 2017
 
-  //	art::Timestamp eventTimestamp = evt.time(); // now I say event because event=fragment at the time of this modification
-
-  /****************************************************/
-  art::Handle< std::vector<artdaq::Fragment> > rawFragHandle; // it is a pointer to a vector of art fragments
-  evt.getByLabel("daq","CAENV1730", rawFragHandle); // it says how many fragments are in an event
+  fRun = evt.run();
+  fEvent = evt.event();
+    
+  /************************************************************************************************/
+  art::Handle< std::vector<artdaq::Fragment> > rawFragHandle;
+  //evt.getByLabel("daq","CAENV1730", rawFragHandle); 
+  //evt.getByLabel(fDataLabel,"CAENV1730", rawFragHandle); 
+  //<--std::vector<art::Ptr<artdaq::Fragment>> Frags;
+  if ( !evt.getByLabel(fDataLabel, rawFragHandle) ) {
+//    art::fill_ptr_vector(Frags,rawFragHandle);
+//  }
+//  else {
+    std::cout << "Requested fragments with label : " << fDataLabel << "but none exist\n";
+    return;
+  }
 
   if (rawFragHandle.isValid()) {
 
-    std::cout << "######################################################################" << std::endl;
-    std::cout << std::endl;
-   
+    std::cout << "######################################################################\n";
     std::cout << "Run " << evt.run() << ", subrun " << evt.subRun()
-              << ", event " << eventNumber << " has " << rawFragHandle->size()
-              << " fragment(s)." << std::endl;
+              << ", event " << fEvent << " has " << rawFragHandle->size()
+              << " fragment(s).\n";
 
-    for (size_t idx = 0; idx < rawFragHandle->size(); ++idx) { // loop over the fragments of an event
-	//std::cout << "idx = " << idx <<std::endl;
-      const auto& frag((*rawFragHandle)[idx]); // use this fragment as a refernce to the same data
-	// I could write artdaq::Fragment instead of auto
+    for (size_t idx = 0; idx < rawFragHandle->size(); ++idx) { /*loop over the fragments*/
+      //--use this fragment as a reference to the same data
+      const auto& frag((*rawFragHandle)[idx]); 
       CAENV1730Fragment bb(frag);
-
-	// modified by froccati Aug 10th 2017
-
-        //std::cout << "Timestamp of the " << idx << "th fragment of this event: " << (bb.Event()->Header).triggerTimeTag << std::endl;
-        /*****************************************/
-
-      //CAENV1730FragmentMetadata const* metadata_ptr = bb.Metadata();
+      auto const* md = bb.Metadata();
       CAENV1730Event const* event_ptr = bb.Event();
 
       CAENV1730EventHeader header = event_ptr->Header;
 
-      std::cout << "\tFrom header, event counter is " << header.eventCounter << std::endl;
-      std::cout << "\tFrom header, triggerTimeTag is " << header.triggerTimeTag << std::endl;
-     
+      std::cout << "\tFrom header, event counter is "  << header.eventCounter   << "\n";
+      std::cout << "\tFrom header, triggerTimeTag is " << header.triggerTimeTag << "\n";
+
+      uint32_t t0 = header.triggerTimeTag;
       hEventCounter->Fill(header.eventCounter);
-      hTriggerTimeTag->Fill(header.triggerTimeTag);
-      
-      nt_header->Fill(eventNumber,header.eventCounter,header.triggerTimeTag);// ,eventTimestamp,header.triggerTimeTag);  // I added header.triggerTimeTag
+      hTriggerTimeTag->Fill(t0);
+      nt_header->Fill(fEvent,header.eventCounter,t0);
+      nChannels = md->nChannels;
+      fWvfmsVec.resize(nChannels);
 
+      //--get the number of 32-bit words (quad_bytes) from the header
+      uint32_t ev_size_quad_bytes = header.eventSize;
+      std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
+      uint32_t evt_header_size_quad_bytes = sizeof(CAENV1730EventHeader)/sizeof(uint32_t);
+      uint32_t data_size_double_bytes = 2*(ev_size_quad_bytes - evt_header_size_quad_bytes);
+      uint32_t wfm_length = data_size_double_bytes/nChannels;
 
-	 //only doing this for the first event, 
-      if(eventNumber!=0) continue;
+      //--note, needs to take into account channel mask
+      std::cout << "Channel waveform length = " << wfm_length << "\n";
 
-      //get the number of 32-bit words from the header
-      uint32_t ev_size = header.eventSize;
-      std::cout << "Event size is " << ev_size << std::endl;
-      
-      //use that to get the number of 16-bit words for each channel
-      uint32_t ch_size = 2*(ev_size - sizeof(CAENV1730EventHeader)/sizeof(uint32_t))/16; //fixme
-      // isn't sizeof(CAENV1730EventHeader)/sizeof(uint32_t) == 4? why is this the channel size?
-      std::cout << "Channel size in event is " << ch_size << std::endl;
-      //note, needs to take into account channel mask
+      //--store the tick value for each acquisition 
+      fTicksVec.resize(wfm_length);
 
-      const uint16_t* data = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() + sizeof(CAENV1730EventHeader));
-      //what is this? does it mean that I change the type of frag.dataBeginBytes() to const uint16_t* ?
+      const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() 
+                                 + sizeof(CAENV1730EventHeader));
 
-      //create histogram, only for ch0 for now
-      art::ServiceHandle<art::TFileService> tfs;
-      TH1F* h_wvfm_ev0_ch0;
-      h_wvfm_ev0_ch0 = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",ch_size,0,ch_size);
+      const uint16_t* value_ptr =  data_begin;
+      uint16_t ch_offset = 0;
+      uint16_t value;
+      //--loop over channels
+      for (size_t i_ch=0; i_ch<nChannels; ++i_ch){
+        fWvfmsVec[i_ch].resize(wfm_length);
+        ch_offset = i_ch * wfm_length;
 
-      for(size_t i_t=0; i_t<ch_size; ++i_t){ // why is there this if?
-	if(i_t%2==0) {
-	  h_wvfm_ev0_ch0->SetBinContent(i_t,*(data+i_t+1)); // what is this operator *?
-	  std::cout << "\t\tTick " << i_t << " " << *(data+i_t+1) << std::endl;
-	}
-	else if(i_t%2==1){ 
-	  h_wvfm_ev0_ch0->SetBinContent(i_t,*(data+i_t-1));
-	  std::cout << "\t\tTick " << i_t << " " << *(data+i_t-1) << std::endl;
-	}
-      }
-	
-	
-	
-	
-    }
-  }
+        //--loop over waveform samples
+        for(size_t i_t=0; i_t<wfm_length; ++i_t){ 
+          fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   /*timestamps, event level*/
+          value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
+	  //value_ptr = (i_t%2 == 0) ? (index+1) : (index-1); 
+          value = *(value_ptr);
+          if (i_ch == 0 && fEvent == 0) h_wvfm_ev0_ch0->SetBinContent(i_t,value);
+          fWvfmsVec[i_ch][i_t] = value;
+        } //--end loop samples
+      } //--end loop channels
+    } //--end loop fragments 
+     
+  fEventTree->Fill();
 
+  } //--valid fragments
 }
 
 DEFINE_ART_MODULE(sbndaq::CAENV1730Dump)
-//this is where the name is specified
