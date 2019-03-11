@@ -1,4 +1,4 @@
-events_to_generate: 1
+events_to_generate: 50
 run_number: 100
 
 fragment_receiver: {
@@ -70,6 +70,19 @@ source:{
   module_type: IcarusInput
   waiting_time: 900
   resume_after_timeout: true
+}
+
+metrics:{
+
+  graphite:{
+    level: 5
+    metricPluginType: "graphite" 
+    reporting_interval: 1.0
+    host: "sbn-daq02.fnal.gov" 
+    port: 2003
+    namespace: "artdaqDriver.BernCRTZMQ." 
+  }
+
 }
 
 process_name: Driver

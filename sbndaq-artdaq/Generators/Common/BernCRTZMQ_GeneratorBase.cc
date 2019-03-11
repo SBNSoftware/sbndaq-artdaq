@@ -22,7 +22,6 @@
 #include <sys/timeb.h>
 
 
-
 sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet const & ps)
   :
   CommandableFragmentGenerator(ps),
@@ -33,8 +32,21 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
   TRACE(TR_LOG,"BernFeb constructor completed");
 }
 
+
+/*---------------------------------------------------------------------*/
+
+bool be_verbose_section = true;
+
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
-  
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 1 - INITIALIZE" << std::endl;
+std::cout << "---------------------------" << std::endl;  
+std::cout << std::endl;
+}
+
   TRACE(TR_LOG,"BernFeb::Initialze() called");
   
   //RunNumber_ = ps_.get<uint32_t>("RunNumber",999);
@@ -103,8 +115,18 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
   SeqIDMinimumSec_ = 0;
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 void sbndaq::BernCRTZMQ_GeneratorBase::start() {
 
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 2 - START" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
   TRACE(TR_LOG,"BernFeb::start() called");
 
   RunNumber_ = run_number();
@@ -119,39 +141,105 @@ void sbndaq::BernCRTZMQ_GeneratorBase::start() {
   TRACE(TR_LOG,"BernFeb::start() completed");
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 void sbndaq::BernCRTZMQ_GeneratorBase::stop() {
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 3 - STOP" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
   TRACE(TR_LOG,"BernFeb::stop() called");
   GetData_thread_->stop();
   ConfigureStop();
   TRACE(TR_LOG,"BernFeb::stop() completed");
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 void sbndaq::BernCRTZMQ_GeneratorBase::stopNoMutex() {
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 4 - stopNoMutex" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
+
   TRACE(TR_LOG,"BernFeb::stopNoMutex() called");
   GetData_thread_->stop();
   ConfigureStop();
   TRACE(TR_LOG,"BernFeb::stopNoMutex() completed");
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 void sbndaq::BernCRTZMQ_GeneratorBase::Cleanup(){
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 5 - CLEANUP" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
   TRACE(TR_LOG,"BernFeb::Cleanup() called");
   TRACE(TR_LOG,"BernFeb::Cleanup() completed");
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 sbndaq::BernCRTZMQ_GeneratorBase::~BernCRTZMQ_GeneratorBase(){
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 6 - BernCRTZMQ_GeneratorBase" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
   TRACE(TR_LOG,"BernFeb destructor called");  
   Cleanup();
   TRACE(TR_LOG,"BernFeb destructor completed");  
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 std::string sbndaq::BernCRTZMQ_GeneratorBase::GetFEBIDString(uint64_t const& id) const{
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 7 - GetFEBIDString" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
   std::stringstream ss_id;
   ss_id << "0x" << std::hex << std::setw(12) << std::setfill('0') << (id & 0xffffffffffff);
   return ss_id.str();
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 void sbndaq::BernCRTZMQ_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const& id,
 								    size_t const& ) const { //buffer_size) const {
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 8 - UpdateBufferOccupancyMetrics" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
 
   std::string id_str = GetFEBIDString(id);
   //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTZMQGenerator");    
@@ -160,12 +248,22 @@ void sbndaq::BernCRTZMQ_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t con
   //			 "%",5,true,"BernCRTZMQGenerator");    
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 							      size_t begin_index,
 							      size_t nevents,
 							      size_t total_events){
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 9 - InsertIntoFEBBuffer" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
 
-  std::cout << "Calling insert into buffer on FEB " << (b.id & 0xff) << " (adding " << nevents << " to " << b.buffer.size() << ")" << std::endl;
+  std::cout << "Calling insert into buffer on FEB " << (b.id & 0xff) << " (adding " << nevents << " events" << " to " << b.buffer.size() << " events into buffer" <<")" << std::endl;
 
   
   TRACE(TR_DEBUG,"FEB ID 0x%lx. Current buffer size %lu / %lu. Want to add %lu events.",
@@ -261,13 +359,25 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     TRACE(TR_DEBUG,"\tWE DROPPED %lu EVENTS.",nevents-good_events);
   TRACE(TR_DEBUG,"============================================");
   
-  std::cout << "Inserted into buffer on FEB " << (b.id & 0xff) << good_events << " events." << std::endl;
+  std::cout << "Inserted into buffer on FEB " << (b.id & 0xff) << " " << good_events << " events." << std::endl;
 
   return b.buffer.size();
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & b,
 							     size_t const& nevents){
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 10 - EraseFromFEBBuffer" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
+
   std::unique_lock<std::mutex> lock(*(b.mutexptr));
   b.droppedbuffer.erase_begin(nevents);
   b.timebuffer.erase_begin(nevents);
@@ -276,8 +386,21 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & b,
   return b.buffer.size();
 }
 
+/*-----------------------------------------------------------------------*/
+
 bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
 {
+
+bool be_verbose = false;
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 11 - GETDATA" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
+
   TRACE(TR_GD_LOG,"BernFeb::GetData() called");
 
   if( GetDataSetup()!=1 ) return false;;
@@ -285,6 +408,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
   
   //this fills the data from the ZMQ buffer
   size_t total_events = GetZMQData()/sizeof(BernCRTZMQEvent);
+
 
   TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() got %lu total events",total_events);
 
@@ -300,6 +424,27 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
     while(i_e<total_events){
       
       auto const& this_event = ZMQBufferUPtr[i_e];
+
+      if(be_verbose){
+		//std::cout << "\n\t\ttotal_events " << total_events << std::endl;
+		//std::cout << "\n\t\t----tote------ " << this_event << std::endl;
+		std::cout << "\n\t\tthis_event " << this_event << std::endl;
+		//std::cout << "\n\t\t----thise------ " << this_event << std::endl;
+		std::cout << "\t\tIsOverflow_TS0() " << this_event.IsOverflow_TS0() << std::endl;
+		//std::cout << "\n\t\t----OF TS0------ " << this_event << std::endl;
+		std::cout << "\t\tIsOverflow_TS1() " << this_event.IsOverflow_TS1() << std::endl;
+		//std::cout << "\n\t\t----OF TS1------ " << this_event << std::endl;
+		std::cout << "\t\tIsReference_TS0() " << this_event.IsReference_TS0() << std::endl;
+		//std::cout << "\n\t\t----REFF TS0------ " << this_event << std::endl;
+		std::cout << "\t\tIsReference_TS1() " << this_event.IsReference_TS1() << std::endl;
+		//std::cout << "\n\t\t----REFF TS0------ " << this_event << std::endl;
+		//std::cout << "\t\tTS0() " << this_event.Time_TS0() << std::endl;
+		//std::cout << "\n\t\t----TS0------ " << this_event << std::endl;
+		//std::cout << "\t\tTS1() " << this_event.Time_TS1() << std::endl;
+		//std::cout << "\n\t\t----TS1------ " << this_event << std::endl;
+      }
+
+
       if((prev_mac&0xff)!=this_event.MAC5()){
 
 	TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() found new MAC (0x%x)! prev_mac=0x%lx, iterator=%lu this_events=%lu",
@@ -329,39 +474,62 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
   return false;
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 						     artdaq::FragmentPtrs & frags,
 						     bool clear_buffer)
 {
-  TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment(id=0x%lx,frags,clear=%d) called",feb_id,clear_buffer);
+
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 12 - FILL FRAGMENT" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
+ 
+ TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment(id=0x%lx,frags,clear=%d) called",feb_id,clear_buffer);
 
   auto & feb = (FEBBuffers_[feb_id]);
+  //std::cout << "feb " ; std::cout << typeid(feb).name() << std::endl;
+  //std::cout << "clear_buffer " << clear_buffer << std::endl;
+  //std::cout << "buffer size " << feb.buffer.size() << std::endl;
 
-  if(!clear_buffer && feb.buffer.size()<3) {
+
+  /*if(!clear_buffer && feb.buffer.size()<3) {
     TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() completed, buffer (mostly) empty.");
     return false;
-  }
+  }*/
 
-  size_t buffer_end = feb.buffer.size();
+  size_t buffer_end = feb.buffer.size(); 
+  std::cout << "size_of_buffer_end " << sizeof buffer_end << std::endl;
+  std::cout << "buffer_end " << buffer_end << std::endl;
+  if(metricMan != nullptr) metricMan->sendMetric("feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Average);
 
   TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() : Fragment Searching. Total events in buffer=%lu.",
 	buffer_end);
 
-  int time_correction;
+  int time_correction; 
+  //std::cout << "time_correction " << time_correction << std::endl;
 
   //find GPS pulse and count wraparounds
-  size_t i_gps=buffer_end;
-  size_t n_wraparounds=0;
-  uint32_t last_time =0;
+  size_t i_gps=buffer_end; std::cout << "i_gps " << i_gps << std::endl; 
+  size_t n_wraparounds=0;  std::cout << "n_wraparounds " << n_wraparounds << std::endl;
+  uint32_t last_time =0;   std::cout << "last_time " << last_time << std::endl;
   size_t i_e;
   for(i_e=0; i_e<buffer_end; ++i_e){
 
     auto const& this_event = feb.buffer[i_e];
-    
+    std::cout << this_event << std::endl; //the same as in GETDATA section
+
 
     if(this_event.IsReference_TS0()){
       TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() Found reference pulse at i_e=%lu, time=%u",
 	    i_e,this_event.Time_TS0());
+      if(metricMan != nullptr) metricMan->sendMetric("GPS_Ref_Time", (long int)this_event.Time_TS0() - 1e9, "ns", 5, artdaq::MetricMode::LastPoint);
       i_gps=i_e;
     }
     else if(this_event.Time_TS0()<last_time && this_event.IsOverflow_TS0()){
@@ -371,6 +539,9 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     }
     feb.correctedtimebuffer[i_e] = (this_event.Time_TS0()+(uint64_t)n_wraparounds*0x40000000);
     last_time = this_event.Time_TS0();
+   
+    std::cout << "last_time " << last_time << std::endl;
+
 
     if(i_gps!=buffer_end) break;
   }
@@ -513,7 +684,19 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   return true;
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 void sbndaq::BernCRTZMQ_GeneratorBase::SendMetadataMetrics(BernCRTZMQFragmentMetadata const& m) {
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 13 - SendMetadataMetrics" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
+
   std::string id_str = GetFEBIDString(m.feb_id());
   //metricMan->sendMetric("FragmentLastTime_"+id_str,(uint64_t)(m.time_end_seconds()*1000000000+m.time_end_nanosec()),"ns",5,false,"BernCRTZMQGenerator");
   //metricMan->sendMetric("EventsInFragment_"+id_str,(float)(m.n_events()),"events",5,true,"BernCRTZMQGenerator");
@@ -526,8 +709,19 @@ void sbndaq::BernCRTZMQ_GeneratorBase::SendMetadataMetrics(BernCRTZMQFragmentMet
   //metricMan->sendMetric("Efficiency_"+id_str,eff*100.,"%",5,true,"BernCRTZMQGenerator");
 }
 
+/*-----------------------------------------------------------------------*/
+
+
 bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
-  
+
+if(be_verbose_section){
+std::cout << std::endl;
+std::cout << "---------------------------" << std::endl;
+std::cout << "SECTION 14 - getNext" << "\n";
+std::cout << "---------------------------" << std::endl;
+std::cout << std::endl;
+}
+
   std::cout << "Calling getNext_" << std::endl;
 
   TRACE(TR_FF_LOG,"BernCRTZMQ::getNext_(frags) called");
@@ -563,6 +757,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   return true;
 
 }
+
+/*-----------------------------------------------------------------------*/
 
 // The following macro is defined in artdaq's GeneratorMacros.hh header
 //DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(demo::BernCRTZMQ) 
