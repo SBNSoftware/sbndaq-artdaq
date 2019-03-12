@@ -533,7 +533,7 @@ bool sbndaq::CAENV1730Readout::GetData()
     usleep(fGetNextSleep);
     TLOG(TGETDATA) << "Sending SW trigger..." << TLOG_ENDL;
     retcod = CAEN_DGTZ_SendSWtrigger(fHandle);
-    TLOG(TGETDATA) << "CAEN_DGTZ_SendSWtrigger returned " << retcod;
+    TLOG(TGETDATA) << "CAEN_DGTZ_SendSWtrigger returned " << int{retcod};
   }
 
   // read the data from the buffer of the card
@@ -548,22 +548,51 @@ bool sbndaq::CAENV1730Readout::GetData()
       CAENDecoder::checkError(retcod,"IRQWait",fBoardID);
       if (retcod == CAEN_DGTZ_Success){
         TLOG(TGETDATA) << "Calling ReadData(fHandle="<<
-            fHandle<< ",bufp=" << (void*)bufp << ",&this_data_size="<<&this_data_size<<")";
+            fHandle<< ",bufp=" << (void*)bufp << ",&this_data_size="<<(void*)&this_data_size<<")";
+
         retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                                     bufp, &this_data_size);
+
+        const auto header = reinterpret_cast<CAENV1730EventHeader const *>(bufp);
+
         TLOG(TGETDATA) << "ReadData complete with returned data size "
-                       << this_data_size << " retcod=" << retcod;
+                       << this_data_size << " retcod=" << int{retcod} << ", event size in the header " << header->eventSize * 4;
+
+        if (retcod !=0) {
+          TLOG(TLVL_ERROR) << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcod};
+        }
+        if (this_data_size  != header->eventSize *4u )  {
+           TLOG(TLVL_ERROR) << "Event size in the header does not match the expected size; header/expected "
+						 << header->eventSize*4 << "/" << this_data_size;
+
+        //	 	throw std::runtime_error("Event size in the header does not match the expected size" );
+       }
       }
     }
 
   }
   else{
     TLOG(TGETDATA) << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)bufp
-                   << ",&this_data_size="<<&this_data_size<<")";
+                   << ",&this_data_size="<<(void*)&this_data_size<<")";
     retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                                 bufp, &this_data_size);
     TLOG(TGETDATA) << "ReadData complete with returned data size " << this_data_size
-                   << " retcod=" << retcod;
+                   << " retcod=" << int{retcod};
+
+    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(bufp);
+
+    TLOG(TGETDATA) << "ReadData complete with returned data size "
+                       << this_data_size << " retcod=" << int{retcod} << ", event size in the header " << header->eventSize * 4;
+    if (retcod !=0) {
+        TLOG(TLVL_ERROR) << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcod};
+    }
+
+    if (this_data_size != header->eventSize *4u )  {
+      TLOG(TLVL_ERROR) << "Event size in the header does not match the expected size; header/expected " 
+				<< header->eventSize*4 << "/" << this_data_size;
+
+    //	 	throw std::runtime_error("Event size in the header does not match the expected size" );
+    }
   }
 
   if(this_data_size==0) {
@@ -577,7 +606,7 @@ bool sbndaq::CAENV1730Readout::GetData()
                  <<") is > capacity ("<<fCircularBuffer.Buffer().capacity()<<")";
   if ((fCircularBuffer.Buffer().size()+(this_data_size/sizeof(uint16_t))) > fCircularBuffer.Buffer().capacity())
 	  TLOG(TGETDATA) << "WILL BLOCK -- FIXME WES?BILL";
-  //else	
+  //else
 	  fCircularBuffer.Insert(this_data_size/sizeof(uint16_t),fBuffer);
   
   return true;

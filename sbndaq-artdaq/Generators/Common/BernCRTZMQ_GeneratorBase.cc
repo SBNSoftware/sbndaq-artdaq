@@ -1,7 +1,7 @@
 #include "sbndaq-artdaq/Generators/Common/BernCRTZMQ_GeneratorBase.hh"
 
 //#include "art/Utilities/Exception.h"
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "fhiclcpp/ParameterSet.h"
 //#include "artdaq-core/Utilities/SimpleLookupPolicy.h"
