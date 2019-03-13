@@ -225,6 +225,7 @@ std::cout << std::endl;
 }
   std::stringstream ss_id;
   ss_id << "0x" << std::hex << std::setw(12) << std::setfill('0') << (id & 0xffffffffffff);
+  std::cout << "ss_id.str: " << ss_id.str() << std::endl;
   return ss_id.str();
 }
 
@@ -269,9 +270,12 @@ std::cout << std::endl;
   TRACE(TR_DEBUG,"FEB ID 0x%lx. Current buffer size %lu / %lu. Want to add %lu events.",
 	b.id,b.buffer.size(),b.buffer.capacity(),nevents);
 
-  timeval timenow; gettimeofday(&timenow,NULL);
+  timeval timenow; gettimeofday(&timenow,NULL); 
 
   //don't fill while we wait for available capacity...
+  std::cout << "buffer capacity: " << b.buffer.capacity() << std::endl;
+  std::cout << "buffer size: " << b.buffer.size() << std::endl;
+
   while( (b.buffer.capacity()-b.buffer.size()) < nevents){ usleep(10); }
 
   //obtain the lock
@@ -377,12 +381,16 @@ std::cout << "SECTION 10 - EraseFromFEBBuffer" << "\n";
 std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
+   
+  std::cout << "nevents " << nevents << std::endl; 
+   std::cout << "buffer size before: " << b.buffer.size() << std::endl;
 
   std::unique_lock<std::mutex> lock(*(b.mutexptr));
-  b.droppedbuffer.erase_begin(nevents);
-  b.timebuffer.erase_begin(nevents);
-  b.correctedtimebuffer.erase_begin(nevents);
-  b.buffer.erase_begin(nevents);
+  b.droppedbuffer.erase_begin(nevents); //std::cout << b.droppedbuffer.erase_begin(nevents) << std::endl;
+  b.timebuffer.erase_begin(nevents);    //std::cout << b.timebuffer.erase_begin(nevents) << std::endl;
+  b.correctedtimebuffer.erase_begin(nevents); // std::cout << b.correctedtimebuffer.erase_begin(nevents) << std::endl;
+  b.buffer.erase_begin(nevents); //std::cout << b.buffer.erase_begin(nevents) << std::endl;
+ std::cout << "buffer size after: " << b.buffer.size() << std::endl;
   return b.buffer.size();
 }
 
@@ -524,6 +532,7 @@ std::cout << std::endl;
 
     auto const& this_event = feb.buffer[i_e];
     std::cout << this_event << std::endl; //the same as in GETDATA section
+    //std::cout << feb.buffer[i_e+1] << std::endl; // in principle should be empty
 
 
     if(this_event.IsReference_TS0()){
@@ -570,7 +579,8 @@ std::cout << std::endl;
 	gps_timeval_pair.second.tv_sec,gps_timeval_pair.second.tv_usec);
 
   //report remainder as a metric to watch for
-  std::string id_str = GetFEBIDString(feb_id);
+ // std::string id_str = GetFEBIDString(feb_id);	REMEMBER TO UNCOMMENT
+
   ////metricMan->sendMetric("BoundaryTimeRemainder_"+id_str,(float)(gps_timeval.tv_usec),"microseconds",false,"BernCRTZMQGenerator");
   
   //round the boundary time to the nearest second.
@@ -613,6 +623,20 @@ std::cout << std::endl;
     uint32_t seq_id = (frag_begin_time_s-SeqIDMinimumSec_)*1000 + (frag_begin_time_ns/1000000);
 
     //make metadata object
+	std::cout << std::endl << "METADETA:" << std::endl;
+	std::cout << "frag_begin_time_s " << frag_begin_time_s << std::endl;
+     	std::cout << "frag_begin_time_ns " << frag_begin_time_ns << std::endl;
+	std::cout << "frag_end_time_s " << frag_end_time_s << std::endl;
+	std::cout << "frag_end_time_ns " << frag_end_time_ns << std::endl;
+	std::cout << "time_correction " << time_correction << std::endl;
+	std::cout << "time_offset " << time_offset << std::endl;
+	std::cout << "RunNumber_ " << RunNumber_ << std::endl;
+	std::cout << "seq_id " << seq_id << std::endl;
+	std::cout << "feb_id " << feb_id << std::endl;
+	std::cout << "ReaderID_ " << ReaderID_ << std::endl;
+	std::cout << "nChannels_ " << time_offset << std::endl;
+	std::cout << "nADCBits_ " << time_offset << std::endl;
+
     BernCRTZMQFragmentMetadata metadata(frag_begin_time_s,frag_begin_time_ns,
 				     frag_end_time_s,frag_end_time_ns,
 				     time_correction,time_offset,
@@ -658,6 +682,13 @@ std::cout << std::endl;
 							metadata.sequence_number(),feb_id,
 							sbndaq::detail::FragmentType::BERNCRTZMQ, metadata) );
     std::copy(feb.buffer.begin()+i_b,feb.buffer.begin()+i_e,(BernCRTZMQEvent*)(frags.back()->dataBegin()));
+
+	//for (auto i = frags.begin(); i != frags.end(); ++i)
+    //std::cout << i << ' ';
+	//std::cout << "fragment back " << frags.back()->dataBegin() << std::endl;
+
+    std::cout << std::endl << "frags.size " << frags.size() << std::endl << std::endl;
+	
 
     TRACE(TR_FF_DEBUG,"BernCRTZMQ::FillFragment() : Fragment created. Type %d. First event in fragment: %s",
 	  sbndaq::detail::FragmentType::BERNCRTZMQ,
@@ -725,6 +756,8 @@ std::cout << std::endl;
   std::cout << "Calling getNext_" << std::endl;
 
   TRACE(TR_FF_LOG,"BernCRTZMQ::getNext_(frags) called");
+
+  std::cout << std::endl << "frags.size " << frags.size() << std::endl << std::endl;
   
   //throttling...
   if (throttle_usecs_ > 0) {
