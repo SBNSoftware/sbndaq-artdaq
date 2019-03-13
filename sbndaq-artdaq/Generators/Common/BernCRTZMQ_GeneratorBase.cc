@@ -35,7 +35,7 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
 
 /*---------------------------------------------------------------------*/
 
-bool be_verbose_section = true;
+bool be_verbose_section = false;
 
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
 
@@ -58,7 +58,7 @@ std::cout << std::endl;
   ReaderID_ = ps_.get<uint8_t>("ReaderID",0x1);
   FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
 
-  FragmentCounter_ = 0;
+  FragmentCounter_ = 1;
 
   if(SequenceTimeWindowSize_<1e6)
     throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
@@ -227,7 +227,7 @@ std::cout << std::endl;
 }
   std::stringstream ss_id;
   ss_id << "0x" << std::hex << std::setw(12) << std::setfill('0') << (id & 0xffffffffffff);
-  std::cout << "ss_id.str: " << ss_id.str() << std::endl;
+  //std::cout << "ss_id.str: " << ss_id.str() << std::endl;
   return ss_id.str();
 }
 
@@ -265,6 +265,8 @@ std::cout << "SECTION 9 - InsertIntoFEBBuffer" << "\n";
 std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
+
+	std::cout << "\n---InsertIntoFEBBuffer---\n";
 
   std::cout << "Calling insert into buffer on FEB " << (b.id & 0xff) << " (adding " << nevents << " events" << " to " << b.buffer.size() << " events into buffer" <<")" << std::endl;
 
@@ -384,6 +386,8 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
    
+	std::cout << "\n---EraseFromFEBBuffer---\n" ;
+
   std::cout << "nevents " << nevents << std::endl; 
    std::cout << "buffer size before: " << b.buffer.size() << std::endl;
 
@@ -502,14 +506,10 @@ std::cout << std::endl;
  
  TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment(id=0x%lx,frags) called",feb_id);
 
- std::cout << "STARTING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size() << std::endl;
+ std::cout << "\n STARTING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size() << std::endl;
 
   auto & feb = (FEBBuffers_[feb_id]);
-  //std::cout << "feb " ; std::cout << typeid(feb).name() << std::endl;
-  //std::cout << "clear_buffer " << clear_buffer << std::endl;
-  //std::cout << "buffer size " << feb.buffer.size() << std::endl;
-
-
+  
   /*if(!clear_buffer && feb.buffer.size()<3) {
     TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() completed, buffer (mostly) empty.");
     return false;
@@ -518,19 +518,18 @@ std::cout << std::endl;
   std::string id_str = GetFEBIDString(feb_id);
 
   size_t buffer_end = feb.buffer.size(); 
-  std::cout << "size_of_buffer_end " << sizeof buffer_end << std::endl;
-  std::cout << "buffer_end " << buffer_end << std::endl;
+  //std::cout << "\nsize_of_buffer_end " << sizeof buffer_end << std::endl;
+  std::cout << "\nbuffer_end " << buffer_end << std::endl;
   if(metricMan != nullptr) metricMan->sendMetric("feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Average);
 
   TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() : Fragment Searching. Total events in buffer=%lu.",
 	buffer_end);
 
   int time_correction; 
-  //std::cout << "time_correction " << time_correction << std::endl;
 
   //find GPS pulse and count wraparounds
   size_t i_gps=buffer_end; std::cout << "i_gps " << i_gps << std::endl; 
-  size_t n_wraparounds=0;  std::cout << "n_wraparounds " << n_wraparounds << std::endl;
+  size_t n_wraparounds=0;  //std::cout << "n_wraparounds " << n_wraparounds << std::endl;
   uint32_t last_time =0;   std::cout << "last_time " << last_time << std::endl;
   size_t i_e;
 
@@ -540,7 +539,7 @@ std::cout << std::endl;
     //get this event!
     auto const& this_event = feb.buffer[i_e];
     std::cout << this_event << std::endl; //the same as in GETDATA section
-
+    
     //if reference pulse, let's make a metric!
     if(this_event.IsReference_TS0()){
       TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() Found reference pulse at i_e=%lu, time=%u",
@@ -549,7 +548,8 @@ std::cout << std::endl;
       //i_gps=i_e;
     }
 
-    //std::cout << feb.buffer[i_e+1] << std::endl; // in principle should be empty
+   
+     //std::cout << feb.buffer[i_e+1] << std::endl; // in principle should be empty
 
     /*    
     BernCRTZMQFragmentMetadata metadata(frag_begin_time_s,frag_begin_time_ns,
@@ -570,6 +570,7 @@ std::cout << std::endl;
 					nChannels_,nADCBits_);
     //increment n_events in metadata by 1 (to tell it we have one CRT Hit event!)
     metadata.inc_Events();
+    std::cout << "\ncounter metadata " << metadata.sequence_number() << std::endl;
 
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(sizeof(BernCRTZMQEvent),  
@@ -578,7 +579,8 @@ std::cout << std::endl;
 							0 //timestamp! to be filled!!!!
 							) );
 
-    //cope the BernCRTZMQEvent into the fragment we just created
+    //copy the BernCRTZMQEvent into the fragment we just created
+    std::cout << "\n--copy the event into the fragment--\n";
     std::copy(feb.buffer.begin()+i_e,feb.buffer.begin()+i_e+1,(BernCRTZMQEvent*)(frags.back()->dataBegin()));
 
   }
