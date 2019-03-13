@@ -58,6 +58,8 @@ std::cout << std::endl;
   ReaderID_ = ps_.get<uint8_t>("ReaderID",0x1);
   FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
 
+  FragmentCounter_ = 0;
+
   if(SequenceTimeWindowSize_<1e6)
     throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
       << "Sequence Time Window size is less than 1 ms (1e6 ns). This is not supported.";
@@ -486,8 +488,7 @@ std::cout << std::endl;
 
 
 bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
-						     artdaq::FragmentPtrs & frags,
-						     bool clear_buffer)
+						    artdaq::FragmentPtrs & frags)
 {
 
 
@@ -499,7 +500,9 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
  
- TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment(id=0x%lx,frags,clear=%d) called",feb_id,clear_buffer);
+ TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment(id=0x%lx,frags) called",feb_id);
+
+ std::cout << "STARTING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size() << std::endl;
 
   auto & feb = (FEBBuffers_[feb_id]);
   //std::cout << "feb " ; std::cout << typeid(feb).name() << std::endl;
@@ -511,6 +514,8 @@ std::cout << std::endl;
     TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() completed, buffer (mostly) empty.");
     return false;
   }*/
+
+  std::string id_str = GetFEBIDString(feb_id);
 
   size_t buffer_end = feb.buffer.size(); 
   std::cout << "size_of_buffer_end " << sizeof buffer_end << std::endl;
@@ -528,12 +533,70 @@ std::cout << std::endl;
   size_t n_wraparounds=0;  std::cout << "n_wraparounds " << n_wraparounds << std::endl;
   uint32_t last_time =0;   std::cout << "last_time " << last_time << std::endl;
   size_t i_e;
+
+  //loop over all the CRTHit events in our buffer (for this FEB)
   for(i_e=0; i_e<buffer_end; ++i_e){
 
+    //get this event!
     auto const& this_event = feb.buffer[i_e];
     std::cout << this_event << std::endl; //the same as in GETDATA section
+
+    //if reference pulse, let's make a metric!
+    if(this_event.IsReference_TS0()){
+      TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() Found reference pulse at i_e=%lu, time=%u",
+	    i_e,this_event.Time_TS0());
+      if(metricMan != nullptr) metricMan->sendMetric("GPS_Ref_Time", (long int)this_event.Time_TS0() - 1e9, "ns", 5, artdaq::MetricMode::LastPoint);
+      //i_gps=i_e;
+    }
+
     //std::cout << feb.buffer[i_e+1] << std::endl; // in principle should be empty
 
+    /*    
+    BernCRTZMQFragmentMetadata metadata(frag_begin_time_s,frag_begin_time_ns,
+					frag_end_time_s,frag_end_time_ns,
+					time_correction,time_offset,
+					RunNumber_,
+					seq_id,
+					feb_id, ReaderID_,
+					nChannels_,nADCBits_);
+    */
+    //create metadata!
+    BernCRTZMQFragmentMetadata metadata(0,0,
+					0,0,
+					0,0,
+					RunNumber_,
+					FragmentCounter_++,
+					feb_id, ReaderID_,
+					nChannels_,nADCBits_);
+    //increment n_events in metadata by 1 (to tell it we have one CRT Hit event!)
+    metadata.inc_Events();
+
+    //create our new fragment on the end of the frags vector
+    frags.emplace_back( artdaq::Fragment::FragmentBytes(sizeof(BernCRTZMQEvent),  
+							metadata.sequence_number(),feb_id,
+							sbndaq::detail::FragmentType::BERNCRTZMQ, metadata, 
+							0 //timestamp! to be filled!!!!
+							) );
+
+    //cope the BernCRTZMQEvent into the fragment we just created
+    std::copy(feb.buffer.begin()+i_e,feb.buffer.begin()+i_e+1,(BernCRTZMQEvent*)(frags.back()->dataBegin()));
+
+  }
+
+  //delete from the buffer all the events we've just put into frags
+  TRACE(TR_FF_DEBUG,"BernCRTZMQ::FillFragment() : Buffer size before erase = %lu",feb.buffer.size());
+  size_t new_buffer_size = EraseFromFEBBuffer(feb,buffer_end);
+  TRACE(TR_FF_DEBUG,"BernCRTZMQ::FillFragment() : Buffer size after erase = %lu",feb.buffer.size());
+  
+  //update 
+  metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
+  UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
+
+ std::cout << "ENDING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size() << std::endl;
+
+  return false;
+
+  /*
 
     if(this_event.IsReference_TS0()){
       TRACE(TR_FF_LOG,"BernCRTZMQ::FillFragment() Found reference pulse at i_e=%lu, time=%u",
@@ -712,7 +775,11 @@ std::cout << std::endl;
   //metricMan->sendMetric("FragmentsBuilt_"+id_str,1.0,"events",5,true,"BernCRTZMQGenerator");
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
-  return true;
+  //return true;
+
+  return false;
+  */
+
 }
 
 /*-----------------------------------------------------------------------*/
@@ -757,7 +824,7 @@ std::cout << std::endl;
 
   TRACE(TR_FF_LOG,"BernCRTZMQ::getNext_(frags) called");
 
-  std::cout << std::endl << "frags.size " << frags.size() << std::endl << std::endl;
+  std::cout << std::endl << "STARTING SIZE OF frags.size IN GETNEXT_ IS " << frags.size() << std::endl << std::endl;
   
   //throttling...
   if (throttle_usecs_ > 0) {
@@ -784,7 +851,15 @@ std::cout << std::endl;
 
   TRACE(TR_FF_LOG,"BernCRTZMQ::getNext_(frags) completed");
 
-  //BernCRTZMQFragment bb(*frags.back());
+  std::cout << std::endl << "ENDING SIZE OF frags.size IN GETNEXT_ IS " << frags.size() << std::endl << std::endl;
+  std::cout << "---PRINT OUT FRAGMENT IN GETNEXT_---" << std::endl;
+
+  if(frags.size()!=0){
+    BernCRTZMQFragment bb(*frags.back());
+    std::cout << *(bb.eventdata(0)) << std::endl;
+  }
+
+
   if(frags.size()!=0) TRACE(TR_FF_DEBUG,"BernCRTZMQ::geNext_() : last fragment is: %s",(BernCRTZMQFragment(*frags.back())).c_str());
 
   return true;
