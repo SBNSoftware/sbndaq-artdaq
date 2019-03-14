@@ -144,6 +144,7 @@ namespace sbndaq {
     share::WorkerThreadUPtr GetData_thread_;
 
     size_t FragmentCounter_;
+    size_t GPSCounter_;
   };
 }
 

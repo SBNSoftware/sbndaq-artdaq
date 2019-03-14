@@ -58,7 +58,9 @@ std::cout << std::endl;
   ReaderID_ = ps_.get<uint8_t>("ReaderID",0x1);
   FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
 
-  FragmentCounter_ = 1;
+  FragmentCounter_ = 0;
+  GPSCounter_= 0;
+
 
   if(SequenceTimeWindowSize_<1e6)
     throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
@@ -529,8 +531,8 @@ std::cout << std::endl;
 
   //find GPS pulse and count wraparounds
   size_t i_gps=buffer_end; std::cout << "i_gps " << i_gps << std::endl; 
-  size_t n_wraparounds=0;  //std::cout << "n_wraparounds " << n_wraparounds << std::endl;
-  uint32_t last_time =0;   std::cout << "last_time " << last_time << std::endl;
+  size_t n_wraparounds=0;  
+  uint32_t last_time =0;  
   size_t i_e;
 
   //loop over all the CRTHit events in our buffer (for this FEB)
@@ -539,6 +541,7 @@ std::cout << std::endl;
     //get this event!
     auto const& this_event = feb.buffer[i_e];
     std::cout << this_event << std::endl; //the same as in GETDATA section
+    std::cout << "TS0 of the event: " << this_event.Time_TS0() << std::endl;
     
     //if reference pulse, let's make a metric!
     if(this_event.IsReference_TS0()){
@@ -561,8 +564,8 @@ std::cout << std::endl;
 					nChannels_,nADCBits_);
     */
     //create metadata!
-    BernCRTZMQFragmentMetadata metadata(0,0,
-					0,0,
+    BernCRTZMQFragmentMetadata metadata(GPSCounter_,GPSCounter_*1e9,
+					GPSCounter_+this_event.Time_TS0()/1e9,GPSCounter_*1e9+this_event.Time_TS0(),
 					0,0,
 					RunNumber_,
 					FragmentCounter_++,
@@ -570,7 +573,14 @@ std::cout << std::endl;
 					nChannels_,nADCBits_);
     //increment n_events in metadata by 1 (to tell it we have one CRT Hit event!)
     metadata.inc_Events();
-    std::cout << "\ncounter metadata " << metadata.sequence_number() << std::endl;
+    ++GPSCounter_;
+    std::cout << "\nEventCounter metadata: " << metadata.n_events() << std::endl;
+    std::cout << "\nFragmentCounter metadata: " << metadata.sequence_number() << std::endl;
+    std::cout << "\nTimeStart[ns]: " << metadata.time_start_nanosec() << std::endl;
+    std::cout << "\nTimeEnd[ns]: " << metadata.time_end_nanosec() << std::endl;
+    std::cout << "\nGPSCounter: " << GPSCounter_ << std::endl;
+
+	
 
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(sizeof(BernCRTZMQEvent),  
