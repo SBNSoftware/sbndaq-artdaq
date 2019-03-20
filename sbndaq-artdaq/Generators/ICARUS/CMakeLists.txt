@@ -37,18 +37,18 @@ simple_plugin(PhysCrateData "generator"
   ${CETLIB_EXCEPT}
   )
 
-simple_plugin(PhysCrateFakeData "generator"
-  sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_ICARUS
-  sbndaq-artdaq_Common_Utilities
-  artdaq_Application
-  artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  ${Boost_SYSTEM_LIBRARY}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
-  )
+# simple_plugin(PhysCrateFakeData "generator"
+#   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
+#   sbndaq-artdaq-core_Overlays
+#   sbndaq-artdaq-core_Overlays_ICARUS
+#   sbndaq-artdaq_Common_Utilities
+#   artdaq_Application
+#   artdaq_DAQdata
+#   artdaq-core_Utilities
+#   artdaq-core_Data
+#   ${Boost_SYSTEM_LIBRARY}
+#   ${FHICLCPP}
+#   ${MF_MESSAGELOGGER}
+#   ${CETLIB}
+#   ${CETLIB_EXCEPT}
+#   )
