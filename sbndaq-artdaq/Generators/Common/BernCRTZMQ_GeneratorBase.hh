@@ -132,7 +132,7 @@ namespace sbndaq {
     uint32_t SeqIDMinimumSec_;
 
     bool GetData();
-    bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &,bool clear_buffer=false);
+    bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
     size_t InsertIntoFEBBuffer(FEBBuffer_t &,size_t,size_t,size_t);
     size_t EraseFromFEBBuffer(FEBBuffer_t &, size_t const&);
@@ -143,6 +143,7 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
+    size_t FragmentCounter_;
   };
 }
 
