@@ -2,7 +2,7 @@
 
 #include "art/Utilities/ExceptionMessages.h"
 #include "artdaq/Application/GeneratorMacros.hh"
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "fhiclcpp/ParameterSet.h"
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
