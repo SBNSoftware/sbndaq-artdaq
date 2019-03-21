@@ -35,7 +35,7 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
 
 /*---------------------------------------------------------------------*/
 
-bool be_verbose_section = false;
+bool be_verbose_section = false; //hello
 
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
 
