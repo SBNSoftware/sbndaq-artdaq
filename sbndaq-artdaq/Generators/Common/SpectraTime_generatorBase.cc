@@ -14,6 +14,7 @@
 
 #include "sbndaq-artdaq/Generators/Common/SpectraTime_generatorBase.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
+#include "artdaq/Application/GeneratorMacros.hh"
 #include <fstream>
 #include <iomanip>
 #include <iterator>
@@ -167,4 +168,6 @@ bool sbndaq::SpectraTime_generatorBase::FillFragment(artdaq::FragmentPtrs &frags
 
   return true;
 }
+
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::SpectraTime_generatorBase)
 
