@@ -1,4 +1,4 @@
-events_to_generate: 4
+events_to_generate: 5
 run_number: 100
 
 fragment_receiver: {
@@ -60,7 +60,7 @@ outputs:{
 
   rootout:{
     module_type: RootOutput
-    fileName: "/scratch/wketchum/v1730_driver_test.root"
+    fileName: "/scratch/speranza/crt_test_driver_test_%to.root"
     compressionLevel: 0
   }
 
