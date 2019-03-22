@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include "sbndaq-artdaq-core/Trace/trace_defines.h"
+using namespace std::chrono_literals;
 
 icarus::PhysCrate_GeneratorBase::PhysCrate_GeneratorBase(fhicl::ParameterSet const & ps)
   :
@@ -58,7 +59,8 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   }
   
   pcieLinks_ = ps_.get< std::vector<int> >("pcieLinks",std::vector<int>());
-  
+
+  least_data_block_bytes_ = (size_t)SamplesPerChannel_*(size_t)ChannelsPerBoard_*2+12+32;
 }
 
 void icarus::PhysCrate_GeneratorBase::start() {
@@ -130,6 +132,12 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   uint16_t const* first_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData();
 
   do {
+
+    do {
+      std::this_thread::sleep_for(1us);
+      TLOG(15) << "data_size_bytes/sizeof(uint16_t): " << data_size_bytes/sizeof(uint16_t);
+    } while ( fCircularBuffer.Size() <= least_data_block_bytes_/sizeof(uint16_t)*(size_t)( iBoard + nBoards_ ) );
+
     auto const* first_dt = reinterpret_cast< DataTile const* >(first_dt_begin_ptr);
     //  the Tile Header is at the beginning of the board data:
     auto const* next_dt_begin_ptr = first_dt_begin_ptr + data_size_bytes/sizeof(uint16_t);
@@ -137,7 +145,6 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     auto const nt_header = next_dt->Header;
     uint32_t this_data_size_bytes = ntohl( nt_header.packSize );
     TLOG(15) << "this_data_size_bytes: " << this_data_size_bytes;
-    if ( this_data_size_bytes == 0 ) continue;
     data_size_bytes += this_data_size_bytes;
     ++iBoard;
     TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : iBoard: " << iBoard 
@@ -160,7 +167,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   frags.emplace_back( artdaq::Fragment::FragmentBytes( data_size_bytes,
 						      0, fragment_id(),
 						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_) );
-  TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ Initialized data of size %lu",frags.back()->dataSizeBytes());
+  TRACE(TR_DEBUG,"PhysCrate_GeneratorBase::getNext_ Initialized data of size %lu",frags.back()->dataSizeBytes());
   
   TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size_bytes << std::endl;
   TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : fCircularBuffer.Buffer().front(): " << fCircularBuffer.Buffer().front()
@@ -170,7 +177,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   // TRACE(42,"42");
 
   TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : copied the circular buffer to frags." << std::endl;
-  TRACE(TR_DEBUG,"\tPhysCrate_GeneratorBase::getNext_ : Read data size was %lu", (long unsigned int)data_size_bytes );
+  TRACE(TR_DEBUG,"PhysCrate_GeneratorBase::getNext_ : Read data size was %lu", (long unsigned int)data_size_bytes );
 
   frags.back()->resizeBytes( data_size_bytes );
   TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : resized frags.";
@@ -181,7 +188,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   //give proper event number
   // ++ev_num;
   PhysCrateFragment const& newfrag = *frags.back();
-  auto ev_num = newfrag.BoardEventNumber()+1;
+  auto ev_num = newfrag.BoardEventNumber();
   TLOG(TLVL_DEBUG) << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp() << std::endl;
   TLOG(TLVL_DEBUG) << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1) << std::endl;
   TLOG(TLVL_DEBUG) << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "

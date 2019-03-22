@@ -45,6 +45,7 @@ namespace icarus {
 
     uint32_t current_subrun_;
     size_t event_number_;
+    size_t least_data_block_bytes_;
 
 
     //These functions MUST be defined by the derived classes
