@@ -235,8 +235,8 @@ int icarus::PhysCrateData::GetData(){
               << ", info2: " << data_ptr->Header.info2 << ", info3: " << data_ptr->Header.info3 
               << ", timeinfo: " << data_ptr->Header.timeinfo << ", chID: " << data_ptr->Header.chID << std::endl;
    
-    auto ev_ptr = reinterpret_cast<uint32_t*>(data_ptr->data);    
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
+    // auto ev_ptr = reinterpret_cast<uint32_t*>(data_ptr->data);    
+    // TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
     
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( data_ptr->data );
     TLOG(TLVL_DEBUG) << "PhysCrateData: event_number: " << board_block->header.event_number 
