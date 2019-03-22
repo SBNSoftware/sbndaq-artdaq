@@ -30,6 +30,7 @@ namespace sbndaq{
     size_t Erase(size_t);
     size_t Linearize();
     T const* LinearizeAndGetData();
+    size_t Size();
 
     boost::circular_buffer<T> const& Buffer() const
     { return buffer; }
@@ -152,6 +153,15 @@ namespace sbndaq{
     return data_ptr;
   }
 
+  template <class T>
+  size_t sbndaq::CircularBuffer<T>::Size() {
+
+    std::unique_lock<std::mutex> lock(*(mutexptr));
+    size_t size = buffer.size();
+    TRACE(10, "Obtained the size of the circular buffer: %lu.", size );
+    return size;
+
+  }
 }
 
 #endif
