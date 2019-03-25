@@ -169,5 +169,5 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   return true;
 }
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::SpectraTimeReadut)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::SpectraTimeReadout)
 
