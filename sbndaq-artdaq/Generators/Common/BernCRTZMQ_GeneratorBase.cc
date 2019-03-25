@@ -391,16 +391,10 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
   int time_correction; 
 
-  //find GPS pulse and count wraparounds
-  //size_t i_gps=buffer_end;
-  //size_t n_wraparounds=0;  
-  //uint32_t last_time =0;  
-  //size_t i_e;
+  //find GPS pulse and count events
+ 
 	uint32_t frag_begin_time = 0;
 	uint32_t frag_end_time = 0; 
-	//size_t event_in_clock = 0;  
-	//BernCRTZMQEvent event_before;
-	//BernCRTZMQEvent event_GPS;
 
   //loop over all the CRTHit events in our buffer (for this FEB)
   for(size_t i_e=0; i_e<buffer_end; ++i_e){
@@ -417,15 +411,14 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 	if(this_event.IsReference_TS0()){
 		++GPSCounter_;
 		event_in_clock = 0;  //just a counter over the events within a clock of the FEB
-		GPS_time += 1e9; //this_event.Time_TS0(); //time past from the very beginning
-		//event_GPS = this_event;
-		frag_begin_time = this_event.Time_TS0();//event_GPS.Time_TS0();
-		frag_end_time = this_event.Time_TS0();//event_GPS.Time_TS0();
+		GPS_time += 1e9;  //time past from the very beginning
+		frag_begin_time = this_event.Time_TS0();
+		frag_end_time = this_event.Time_TS0();
 	} 
 	else{
 		++event_in_clock;
-		frag_begin_time = GPS_time;//feb.buffer[i_e-event_in_clock].Time_TS0();
-		frag_end_time = GPS_time + this_event.Time_TS0();//feb.buffer[i_e-event_in_clock].Time_TS0() + this_event.Time_TS0();		
+		frag_begin_time = GPS_time;
+		frag_end_time = GPS_time + this_event.Time_TS0();		
 	}
 
     
@@ -460,14 +453,10 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 					nChannels_,nADCBits_);
     //increment n_events in metadata by 1 (to tell it we have one CRT Hit event!)
     metadata.inc_Events();
-    //std::cout << "\nEventCounter metadata: " << metadata.n_events() << std::endl;
+    
     std::cout << "\nFragmentCounter metadata: " << metadata.sequence_number() << std::endl;
     std::cout << "TimeStart[ns]: " << metadata.time_start_nanosec() << std::endl;
     std::cout << "TimeEnd[ns]: " << metadata.time_end_nanosec() << std::endl;
-    /*if(this_event.flags==5){
-	++GPSCounter_;
-	std::cout << "\nGPSCounter: " << GPSCounter_ << std::endl;
-    }else{std::cout << "This is not a GPS count" << std::endl; ++GPSCounter_; }*/
     
 
 	
