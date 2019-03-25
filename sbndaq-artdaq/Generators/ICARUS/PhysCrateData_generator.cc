@@ -1,3 +1,4 @@
+#define TRACE_NAME "PhysCrateData"
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrateData.hh"
 #include "artdaq/Application/GeneratorMacros.hh"
 
@@ -24,6 +25,12 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
 {
   InitializeHardware();
   InitializeVeto();
+
+  // Set up worker getdata thread.
+  share::ThreadFunctor functor = std::bind(&PhysCrateData::GetData, this);
+  auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
+  auto GetData_worker = share::WorkerThread::createWorkerThread(worker_functor);
+  GetData_thread_.swap(GetData_worker);
 }
 
 void icarus::PhysCrateData::InitializeVeto(){
@@ -65,7 +72,7 @@ void icarus::PhysCrateData::VetoOff(){
 }
 
 void icarus::PhysCrateData::InitializeHardware(){
-  physCr.reset(new PhysCrate());
+  physCr = std::make_unique<PhysCrate>();
   physCr->initialize(pcieLinks_);
 }
 
@@ -117,11 +124,15 @@ void icarus::PhysCrateData::ConfigureStart(){
 
   if(_doVetoTest)
     _vetoTestThread->start();
+
+  GetData_thread_->start();
 }
 
 void icarus::PhysCrateData::ConfigureStop(){
   if(_doVetoTest)
     _vetoTestThread->stop();
+
+  GetData_thread_->stop();
 }
 
 bool icarus::PhysCrateData::Monitor(){ 
@@ -177,13 +188,13 @@ bool icarus::PhysCrateData::VetoTest(){
   return true;
 }
 
-int icarus::PhysCrateData::GetData(size_t & data_size, uint32_t* data_loc){
+int icarus::PhysCrateData::GetData(){
 
   TRACEN("PhysCrateData",TLVL_DEBUG,"GetData called.");
 
   physCr->ArmTrigger();
 
-  data_size=0;
+  size_t data_size_bytes = 0;
 
   //end loop timer
   _tloop_end = std::chrono::high_resolution_clock::now();
@@ -203,29 +214,48 @@ int icarus::PhysCrateData::GetData(size_t & data_size, uint32_t* data_loc){
   //GAL: metricMan->sendMetric(".GetData.WaitTime.last",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.WaitTime.max",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
 
+  // Yun-Tse: ugly and tentative workaround at this moment...  need to change!!
+  // int iBoard = 0, nBoards = 2;
       
   while(physCr->dataAvail()){
     TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : DataAvail!");
     auto data_ptr = physCr->getData();
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data acquired! Size is %u, with %lu already acquired.",
-	  ntohl(data_ptr->Header.packSize),data_size);
     
-    if(ntohl(data_ptr->Header.packSize)==32) continue;
+    size_t const this_data_size_bytes = ntohl( data_ptr->Header.packSize );
+    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data acquired! Size is %lu bytes, with %lu bytes already acquired.",
+        this_data_size_bytes, data_size_bytes);
+
+    if( this_data_size_bytes == 32 ) continue;
+
+    // ++iBoard;
     
-    auto ev_ptr = reinterpret_cast<uint32_t*>(data_ptr->data);    
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
+    TLOG(TLVL_DEBUG) << "PhysCrateData: data_size_bytes: " << std::dec << data_size_bytes 
+              << ", this_data_size_bytes: " << this_data_size_bytes
+              << ", token: " << std::hex << data_ptr->Header.token << ", info1: " << data_ptr->Header.info1 
+              << ", info2: " << data_ptr->Header.info2 << ", info3: " << data_ptr->Header.info3 
+              << ", timeinfo: " << data_ptr->Header.timeinfo << ", chID: " << data_ptr->Header.chID << std::endl;
+   
+    // auto ev_ptr = reinterpret_cast<uint32_t*>(data_ptr->data);    
+    // TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
     
-    std::copy((char*)data_ptr,
-	      (char*)data_ptr+ntohl(data_ptr->Header.packSize),
-	      (char*)data_loc+data_size);
-    data_size += ntohl(data_ptr->Header.packSize);
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data copied! Size was %u, with %lu now acquired.",
-	  ntohl(data_ptr->Header.packSize),data_size);
+    auto const* board_block = reinterpret_cast< A2795DataBlock const * >( data_ptr->data );
+    TLOG(TLVL_DEBUG) << "PhysCrateData: event_number: " << board_block->header.event_number 
+              << ", time_stamp: " << board_block->header.time_stamp << std::endl;
+
+    // if ( iBoard == nBoards ) {
+    //   fCircularBuffer.Insert( data_size, reinterpret_cast<uint16_t const*>(data_ptr) );
+    //   iBoard = 0;
+    //   data_size = 0;
+    // }
+    fCircularBuffer.Insert( this_data_size_bytes/sizeof(uint16_t), reinterpret_cast<uint16_t const*>(data_ptr) );
+    data_size_bytes += this_data_size_bytes;
+    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data copied! Size was %lu bytes, with %lu bytes now acquired.",
+         this_data_size_bytes, data_size_bytes);
   }
   
-  TRACEN("PhysCrateData",TLVL_DEBUG,"GetData completed. Status %d, Data size %lu",0,data_size);
+  TRACEN("PhysCrateData",TLVL_DEBUG,"GetData completed. Status %d, Data size %lu bytes",0,data_size_bytes);
 
-  if(data_size==0 && veto_state)
+  if(data_size_bytes==0 && veto_state)
     VetoOff();
 
   return 0;
