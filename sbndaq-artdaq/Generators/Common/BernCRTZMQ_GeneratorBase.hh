@@ -143,8 +143,11 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
-    size_t FragmentCounter_;
-    size_t GPSCounter_;
+	//my new variable
+    size_t FragmentCounter_; //it counts the fragments in the buffer
+    size_t GPSCounter_; // it counts how many GPS have occurred
+    size_t event_in_clock; // it counts how many events are within a clock of the FEB
+    size_t GPS_time; // time past from the very beginning of the DAQ_BEG - with respect to the GPS-PPS
   };
 }
 
