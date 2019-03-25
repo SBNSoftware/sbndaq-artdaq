@@ -53,6 +53,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
   //new variable added by me (see the header file)
   FragmentCounter_ = 0;
   GPSCounter_= 0;
+  event_in_clock = 0;
+  GPS_time = 0;
 
 
   if(SequenceTimeWindowSize_<1e6)
@@ -390,18 +392,42 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   int time_correction; 
 
   //find GPS pulse and count wraparounds
-  size_t i_gps=buffer_end;
-  size_t n_wraparounds=0;  
-  uint32_t last_time =0;  
-  size_t i_e;
+  //size_t i_gps=buffer_end;
+  //size_t n_wraparounds=0;  
+  //uint32_t last_time =0;  
+  //size_t i_e;
+	uint32_t frag_begin_time = 0;
+	uint32_t frag_end_time = 0; 
+	//size_t event_in_clock = 0;  
+	//BernCRTZMQEvent event_before;
+	//BernCRTZMQEvent event_GPS;
 
   //loop over all the CRTHit events in our buffer (for this FEB)
-  for(i_e=0; i_e<buffer_end; ++i_e){
+  for(size_t i_e=0; i_e<buffer_end; ++i_e){
 
     //get this event!
     auto const& this_event = feb.buffer[i_e];
     std::cout << this_event << std::endl; //the same as in GETDATA section
     std::cout << "TS0 of the event: " << this_event.Time_TS0() << " [ns]" <<std::endl;
+
+
+    //if it is a reference pulse, let's count it!
+    //start to define the beginning and ending time of the fragment as well
+
+	if(this_event.IsReference_TS0()){
+		++GPSCounter_;
+		event_in_clock = 0;  //just a counter over the events within a clock of the FEB
+		GPS_time += 1e9; //this_event.Time_TS0(); //time past from the very beginning
+		//event_GPS = this_event;
+		frag_begin_time = this_event.Time_TS0();//event_GPS.Time_TS0();
+		frag_end_time = this_event.Time_TS0();//event_GPS.Time_TS0();
+	} 
+	else{
+		++event_in_clock;
+		frag_begin_time = GPS_time;//feb.buffer[i_e-event_in_clock].Time_TS0();
+		frag_end_time = GPS_time + this_event.Time_TS0();//feb.buffer[i_e-event_in_clock].Time_TS0() + this_event.Time_TS0();		
+	}
+
     
     
     //if reference pulse, let's make a metric!
@@ -425,8 +451,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 					nChannels_,nADCBits_);
     */
     //create metadata!
-    BernCRTZMQFragmentMetadata metadata(0,0,//GPSCounter_,GPSCounter_*1e9,
-					0,0,//GPSCounter_+this_event.Time_TS0()/1e9,GPSCounter_*1e9+this_event.Time_TS0(),
+    BernCRTZMQFragmentMetadata metadata(frag_begin_time/1e9,frag_begin_time,
+					frag_end_time/1e9,frag_end_time,
 					0,0,
 					RunNumber_,
 					FragmentCounter_++,
@@ -438,10 +464,10 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     std::cout << "\nFragmentCounter metadata: " << metadata.sequence_number() << std::endl;
     std::cout << "TimeStart[ns]: " << metadata.time_start_nanosec() << std::endl;
     std::cout << "TimeEnd[ns]: " << metadata.time_end_nanosec() << std::endl;
-    if(this_event.flags==5){
+    /*if(this_event.flags==5){
 	++GPSCounter_;
 	std::cout << "\nGPSCounter: " << GPSCounter_ << std::endl;
-    }else{std::cout << "This is not a GPS count" << std::endl; ++GPSCounter_; }
+    }else{std::cout << "This is not a GPS count" << std::endl; ++GPSCounter_; }*/
     
 
 	
@@ -450,7 +476,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     frags.emplace_back( artdaq::Fragment::FragmentBytes(sizeof(BernCRTZMQEvent),  
 							metadata.sequence_number(),feb_id,
 							sbndaq::detail::FragmentType::BERNCRTZMQ, metadata, 
-							0 //timestamp! to be filled!!!!
+							0//metadata.time_end_nanosec() //timestamp! to be filled!!!!
 							) );
 
     //copy the BernCRTZMQEvent into the fragment we just created
@@ -458,6 +484,11 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     std::copy(feb.buffer.begin()+i_e,feb.buffer.begin()+i_e+1,(BernCRTZMQEvent*)(frags.back()->dataBegin()));
 
   }
+
+	std::cout << "\nwe've got " << GPSCounter_ << " GPS-PPS" << std::endl;
+	std::cout << "event_in_clock " << event_in_clock << std::endl;
+
+	
 
   //delete from the buffer all the events we've just put into frags
   TRACE(TR_FF_DEBUG,"BernCRTZMQ::FillFragment() : Buffer size before erase = %lu",feb.buffer.size());

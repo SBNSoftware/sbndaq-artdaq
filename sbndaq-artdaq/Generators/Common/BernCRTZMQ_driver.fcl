@@ -1,4 +1,4 @@
-events_to_generate: 5
+events_to_generate: 15
 run_number: 100
 
 fragment_receiver: {
@@ -74,14 +74,14 @@ source:{
 
 metrics:{
 
-  graphite:{
-    level: 5
-    metricPluginType: "graphite" 
-    reporting_interval: 1.0
-    host: "sbn-daq02.fnal.gov" 
-    port: 2003
-    namespace: "artdaqDriver.BernCRTZMQ." 
-  }
+#  graphite:{
+#    level: 5
+#    metricPluginType: "graphite" 
+#    reporting_interval: 1.0
+#    host: "sbn-daq02.fnal.gov" 
+#    port: 2003
+#    namespace: "artdaqDriver.BernCRTZMQ." 
+#  }
 
 }
 
