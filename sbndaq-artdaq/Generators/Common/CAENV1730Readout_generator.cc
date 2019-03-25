@@ -89,7 +89,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
     retcode = CAEN_DGTZ_Reset(fHandle);
     sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
     fOK = true;
-    sleep(1);
+    sleep(2);
     Configure();
   }
 
@@ -186,6 +186,9 @@ void sbndaq::CAENV1730Readout::Configure()
   fOK = (retcode==CAEN_DGTZ_Success);
 
   retcode = CAEN_DGTZ_Reset(fHandle);
+  // The CAENs take ~ 1 second to reset, add one more for contingency
+  // It's important not to address card before the cycle is complete
+  sleep(2);
 
   ConfigureReadout();
   ConfigureRecordFormat();
