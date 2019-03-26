@@ -1,14 +1,17 @@
 //
 // sbnddaq-readout/Generators/SpectraTimeReadout_generator.cc (D.Cianci,W.Badgett)
 //
-// Read from a message queue GPS status messages, buffer them and send them out on request to the EVBs
+// Read from a message queue GPS status messages, buffer them and send them 
+//    out on request to the EVBs
 //
 // Strategery:
 //    GPS status messages arrive shortly after a PPS
 //    Every event should have at least the latest GPS status message
 //    If there are others in the circular buffer, send them, too
-//    Any messages older than two minutes (120 PPS) are discarded -- if we're not taking data, who cares?
-//    The uint32_t timeStamp is the Unix time since the so-called Epoch, Jan 1, 1970 UTC
+//    Any messages older than two minutes (120 PPS) are discarded -- 
+//       -- if we're not taking data, who cares?
+//    The uint32_t timeStamp is the Unix time since the so-called Epoch, 
+//      Jan 1, 1970 UTC
 //      and there should be only one message per second, no more and no less
 //    Note these data are also sent to EPICS and its archiving system
 
@@ -49,8 +52,8 @@ void sbndaq::SpectraTimeReadout::init()
   daqID = msgget(daqMQ,0);
   if ( daqID < 0 )
   {
-    LOG_ERROR("SpectraTime") << "Error on msgget 0x" << std::hex << daqMQ << std::dec 
-				       << " " << strerror(errno);
+    LOG_ERROR("SpectraTime") << "Error on msgget 0x" << 
+      std::hex << daqMQ << std::dec << " " << strerror(errno) << " " << errno;
 
   }
 }
@@ -94,13 +97,15 @@ bool sbndaq::SpectraTimeReadout::getData()
     uint32_t ptr = messageCounter % BUFFER_SIZE;
 
     bufferLock.lock();
-    nBytes = msgrcv(daqID,(void *)&buffer[ptr],sizeof(buffer[ptr]), GPSInfo::GPS_INFO_MTYPE,IPC_NOWAIT);
+    nBytes = msgrcv(daqID,(void *)&buffer[ptr],sizeof(buffer[ptr]), 
+		    GPSInfo::GPS_INFO_MTYPE,IPC_NOWAIT);
     if ( nBytes <= 0 )
     {
-      if ( errno != EAGAIN )
+      if (( errno != EAGAIN ) && ( errno != ENOMSG ))
       {
-	LOG_ERROR("SpectraTime") << "FATAL Error on msgrcv 0x" << std::hex << daqMQ << std::dec << " " << 
-	  strerror(errno);
+	LOG_ERROR("SpectraTime") << "FATAL Error on msgrcv 0x" << 
+	  std::hex << daqMQ << std::dec << " " << 
+	  strerror(errno) << " " << errno ;
       } // Otherwise there was no message in the queue, not a real error
     }
     else
@@ -118,7 +123,8 @@ bool sbndaq::SpectraTimeReadout::getData()
 
 bool sbndaq::SpectraTimeReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
-  //Send our buffer over to fillfrag. If there's nothing there, we'll try again later.
+  //Send our buffer over to fillfrag. If there's nothing there, we'll 
+  // try again later.
   eventCounter++;
   FillFragment(frags);
   usleep(100);
@@ -139,7 +145,7 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
     {
       std::unique_ptr<artdaq::Fragment> fragPtr(artdaq::Fragment::FragmentBytes(bytesWritten,
 										eventCounter, 
-										0,
+										boardId,
 										FragmentType::SpectratimeEvent,
 										SpectratimeFragmentMetadata()));
 
@@ -164,7 +170,10 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   }
   bufferLock.unlock();
 
-  LOG_INFO("SpectraTime") << "Found " << messageCount << " fragments" << std::endl;
+  if ( messageCount > 0 )
+  {
+    LOG_INFO("SpectraTime") << "Found " << messageCount << " fragments" << std::endl;
+  }
 
   return true;
 }
