@@ -125,7 +125,6 @@ bool sbndaq::SpectraTimeReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
   //Send our buffer over to fillfrag. If there's nothing there, we'll 
   // try again later.
-  eventCounter++;
   FillFragment(frags);
   usleep(100);
   return true;
@@ -153,6 +152,7 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
       frags.emplace_back(std::move(fragPtr));
       buffer[i].unsent = false;
       messageCount++;
+      eventCounter++;
     }
   }
 
@@ -167,6 +167,7 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
     memcpy(fragPtr->dataBeginBytes(), (char *)&buffer[currentMessage].data, bytesWritten);
     frags.emplace_back(std::move(fragPtr));
     buffer[currentMessage].unsent = false;
+    eventCounter++;
   }
   bufferLock.unlock();
 
