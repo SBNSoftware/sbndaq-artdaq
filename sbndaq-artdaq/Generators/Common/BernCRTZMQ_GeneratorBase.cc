@@ -412,8 +412,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 		++GPSCounter_;
 		event_in_clock = 0;  //just a counter over the events within a clock of the FEB
 		GPS_time += 1e9;  //time past from the very beginning
-		frag_begin_time = this_event.Time_TS0();
-		frag_end_time = this_event.Time_TS0();
+		frag_begin_time = GPS_time;
+		frag_end_time = GPS_time;
 	} 
 	else{
 		++event_in_clock;
