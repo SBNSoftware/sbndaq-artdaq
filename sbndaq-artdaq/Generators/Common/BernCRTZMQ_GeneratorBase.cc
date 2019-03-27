@@ -636,8 +636,8 @@ std::cout << std::endl;
 		event_in_clock = 0;  //just a counter over the events within a clock of the FEB
 		GPS_time += 1e9; //this_event.Time_TS0(); //time past from the very beginning
 		//event_GPS = this_event;
-		frag_begin_time = this_event.Time_TS0();//event_GPS.Time_TS0();
-		frag_end_time = this_event.Time_TS0();//event_GPS.Time_TS0();
+		frag_begin_time = GPS_time;//this_event.Time_TS0();//event_GPS.Time_TS0();
+		frag_end_time = GPS_time;//this_event.Time_TS0();//event_GPS.Time_TS0();
 	} 
 	else{
 		++event_in_clock;

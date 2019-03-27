@@ -1,4 +1,4 @@
-events_to_generate: 15
+events_to_generate: 23
 run_number: 100
 
 fragment_receiver: {

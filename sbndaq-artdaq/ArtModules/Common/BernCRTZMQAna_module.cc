@@ -41,10 +41,12 @@ public:
   
   virtual void analyze(art::Event const & evt);
   
+
 private:
   
   //sample histogram
   TH1F* fSampleHist;
+  TH1F* fSampleHist_TS0;
   
 };
 
@@ -57,10 +59,12 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   //I do this here in the constructor to setup the histogram just once
   //but you can call the TFileService and make new objects from anywhere
   art::ServiceHandle<art::TFileService> tfs; //pointer to a file named tfs
+  art::ServiceHandle<art::TFileService> tfs_time;
 
   //make the histogram
   //the arguments are the same as what would get passed into ROOT
   fSampleHist = tfs->make<TH1F>("hSampleHist","Sample Hist Title; x axis (units); y axis (units)",100,-50,50);
+  fSampleHist_TS0 = tfs_time->make<TH1F>("hSampleHist_TS0","TS0 distribution; time [ns]; counts",1000,1e8,2e9);
 
 }
 
@@ -70,6 +74,7 @@ sbndaq::BernCRTZMQAna::~BernCRTZMQAna()
 
 void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 {
+
 
   //can get the art event number
   art::EventNumber_t eventNumber = evt.event();
@@ -84,6 +89,11 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 
   //this checks to make sure it's ok
   if (!rawFragHandle.isValid()) return;
+
+
+  //define an ofstream to read the data out in a file
+  //
+  //std::ofstream outputFile("Timestamps.txt",std::ios::app);
   
   std::cout << "######################################################################" << std::endl;
   std::cout << std::endl;  
@@ -115,14 +125,26 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       //we can print this
       std::cout << *evt << std::endl;
 
+      //write all timestamps in an outuputfile
+      //outputFile << evt->Time_TS0() << std::endl;
+
+
       //let's fill our sample hist with the Time_TS0()-1e9 if 
       //it's a GPS reference pulse
-      if(evt->IsReference_TS0())
+      if(evt->IsReference_TS0()){
 	fSampleHist->Fill(evt->Time_TS0()-1e9);
+        //fSampleHist_TS0 -> Fill(evt->Time_TS0());
+       
+      }
+
+	fSampleHist_TS0 -> Fill(evt->Time_TS0());
 
     }//end loop over events in a fragment
   
   }//end loop over fragments
+
+  //just close the output stream
+  //outputFile.close();
 
 }
 
