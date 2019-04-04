@@ -32,8 +32,12 @@ namespace sbndaq
     virtual ~SpectraTimeReadout();
     enum
     {
-      GPS_MQ = 0xCDF,
-      BUFFER_SIZE = 120
+      GPS_MQ         = 0xCDF,
+      BUFFER_SIZE    = 120,
+      READOUT_PUSH   = 1,
+      READOUT_PULL   = 2,
+      STATUS_FULL    = 1,
+      STATUS_MINIMAL = 2
     };
 
   protected:
@@ -45,10 +49,15 @@ namespace sbndaq
     void stopAll();
     void init();
 
+    int readoutMode;
+    int statusMode;
+    int nextSleep;
+    int dataSleep;
+
     // Message queue
     key_t daqMQ;
     int daqID;
-
+    
     // General
     uint32_t runNumber_;
     std::string device;

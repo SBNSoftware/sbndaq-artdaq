@@ -31,6 +31,10 @@ sbndaq::SpectraTimeReadout::SpectraTimeReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
+  readoutMode = ps.get<int>("readoutMode");
+  statusMode  = ps.get<int>("statusMode");
+  nextSleep   = ps.get<int>("nextSleep");
+  dataSleep   = ps.get<int>("dataSleep");
   init();
 }
 
@@ -116,7 +120,7 @@ bool sbndaq::SpectraTimeReadout::getData()
     }
     bufferLock.unlock();
 
-    usleep(100);
+    usleep(dataSleep);
   }
   return(true);
 }
@@ -125,8 +129,16 @@ bool sbndaq::SpectraTimeReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
   //Send our buffer over to fillfrag. If there's nothing there, we'll 
   // try again later.
-  FillFragment(frags);
-  usleep(100);
+  if ( readoutMode == READOUT_PUSH )
+  {
+    while ( FillFragment(frags) == false )
+    { usleep(nextSleep);}
+  }
+  else 
+  {
+    FillFragment(frags);
+    usleep(nextSleep);
+  }
   return true;
 }
 
@@ -136,6 +148,7 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   uint32_t bytesWritten = sizeof(struct sbndaq::SpectratimeEvent);
   
   int messageCount = 0;
+  bool newData = false;
 
   bufferLock.lock();
   for ( int i=0; i<BUFFER_SIZE; ++i)
@@ -153,10 +166,11 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
       buffer[i].unsent = false;
       messageCount++;
       eventCounter++;
+      newData = true;
     }
   }
 
-  if ( messageCount == 0 ) // Always return at least one fragment, here the latest
+  if (( messageCount == 0 ) && ( readoutMode != READOUT_PUSH ))  // Always return at least one fragment, here the latest
   {
     std::unique_ptr<artdaq::Fragment> fragPtr(artdaq::Fragment::FragmentBytes(bytesWritten,
 									      eventCounter, 
@@ -168,6 +182,7 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
     frags.emplace_back(std::move(fragPtr));
     buffer[currentMessage].unsent = false;
     eventCounter++;
+    newData = false;
   }
   bufferLock.unlock();
 
@@ -176,7 +191,7 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
     LOG_INFO("SpectraTime") << "Found " << messageCount << " fragments" << std::endl;
   }
 
-  return true;
+  return newData;
 }
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::SpectraTimeReadout)
