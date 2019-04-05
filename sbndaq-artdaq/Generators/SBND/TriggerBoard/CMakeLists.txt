@@ -1,8 +1,4 @@
-#execute_process(COMMAND xml2-config --libs OUTPUT_VARIABLE LIBXML2_LIBS)
-#MESSAGE( STATUS "LIBXML2_LIBS: " ${LIBXML2_LIBS} "<<<")
-#MESSAGE( STATUS "JSONCPP_LIB: " ${JSONCPP_LIB} "<<<")
-
-include_directories( ${JSONCPP_INC} )
+include_directories( $ENV{JSONCPP_INC} )
 
 art_make( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_TriggerBoard
 	LIB_LIBRARIES
@@ -18,9 +14,7 @@ art_make( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_TriggerBoard
 	sbndaq-artdaq-core_Overlays
 	sbndaq-artdaq-core_Overlays_Common
 	sbndaq-artdaq-core_Overlays_SBND
-	jsoncpp
-	#$ENV{JSONCPP_LIB}/libjsoncpp.so
-	#/usr/lib64/libjsoncpp.so.0
+	$ENV{JSONCPP_LIB}/libjsoncpp.so
 	)
 
 install_headers()

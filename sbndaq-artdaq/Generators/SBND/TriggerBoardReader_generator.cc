@@ -1,9 +1,7 @@
 #include <stdexcept>
 
-//#include "json/json.h"
-//#include "json/reader.h"
-#include <jsoncpp/json/json.h>
-#include <jsoncpp/json/reader.h>
+#include "json/json.h"
+#include "json/reader.h"
 
 #include "sbndaq-artdaq/Generators/SBND/TriggerBoardReader.hh"
 #include "artdaq/Application/GeneratorMacros.hh"
@@ -12,14 +10,14 @@
 #include "artdaq/DAQdata/Globals.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
-#include "sbndaq-artdaq-core/Overlays/SBND/CTB_content.h"
-#include "sbndaq-artdaq-core/Overlays/SBND/CTBFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/SBND/PTB_content.h"
+#include "sbndaq-artdaq-core/Overlays/SBND/PTBFragment.hh"
 
 #include "artdaq/Application/GeneratorMacros.hh"
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
 
 #include "canvas/Utilities/Exception.h"
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 #include "fhiclcpp/ParameterSet.h"
 
 #include <fstream>
@@ -44,18 +42,18 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   const unsigned int control_port = ps.get<uint16_t>("control_port", 8991 ) ;
   const std::string address = ps.get<std::string>( "board_address", "sbnd-ptbmk2-01" );
 
-  TRACEN("TriggerBoardGenerator",TLVL_DEBUG,"control messages sent to %s : %d\n",address,control_port);
+  //  TRACEN("TriggerBoardGenerator",TLVL_DEBUG,"control messages sent to %s : %d\n",address,control_port);
 
   // get options for fragment creation
   _group_size = ps.get<unsigned int>( "group_size", 1 ) ;
-  TRACEN( "TriggerBoardGenerator",TLVL_DEBUG,"Creating fragments with %d packages from the PTB", _group_size);
+  //  TRACEN( "TriggerBoardGenerator",TLVL_DEBUG,"Creating fragments with %d packages from the PTB", _group_size);
 
   unsigned int word_buffer_size = ps.get<unsigned int>( "word_buffer_size", 5000 ) ;
   _max_words_per_frag = word_buffer_size / 5 * 4 ;  // 80 % of the buffer size
 
 
-  //build the ctb_controller
-  _run_controller.reset( new CTB_Controller( address, control_port ) ) ;
+  //build the ptb_controller
+  _run_controller.reset( new PTB_Controller( address, control_port ) ) ;
 
 
   // prepare the receiver
@@ -67,9 +65,9 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   json_stream >> jblob ;
 
   // get the receiver port from the json
-  const unsigned int receiver_port = jblob["ctb"]["sockets"]["receiver"]["port"].asUInt() ;
+  const unsigned int receiver_port = jblob["ptb"]["sockets"]["receiver"]["port"].asUInt() ;
 
-  _rollover = jblob["ctb"]["sockets"]["receiver"]["rollover"].asUInt() ;
+  _rollover = jblob["ptb"]["sockets"]["receiver"]["rollover"].asUInt() ;
 
   const unsigned int timeout_scaling = ps.get<uint16_t>("receiver_timeout_scaling", 2 ) ;
 
@@ -78,8 +76,8 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
 
   _timeout = std::chrono::microseconds( timeout ) ;
 
-  //build the ctb receiver and set its connecting port
-  _receiver.reset( new CTB_Receiver( receiver_port, timeout, word_buffer_size ) ) ;
+  //build the ptb receiver and set its connecting port
+  _receiver.reset( new PTB_Receiver( receiver_port, timeout, word_buffer_size ) ) ;
 
   // if necessary, set the calibration stream
   if ( ps.has_key( "calibration_stream_output") ) {
@@ -99,9 +97,9 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   // with the receiver host which is the machines where the board reader is running
   const std::string receiver_address = boost::asio::ip::host_name() ;
 
-  jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
+  jblob["ptb"]["sockets"]["receiver"]["host"] = receiver_address ;
 
-  TRACEN("TriggerBoardGenerator",TLVL_INFO,"Board packages recieved at %s : %d\n",receiver_address,receiver_port);
+  //  TRACEN("TriggerBoardGenerator",TLVL_INFO,"Board packages recieved at %s : %d\n",receiver_address,receiver_port);
 
   // create the json string
   json_stream.str("");
@@ -114,15 +112,15 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   bool config_status = _run_controller -> send_config( config ) ;
 
  if ( ! config_status ) {
-   TRACEN("TriggerBoardGenerator",TLVL_ERROR,"CTB failed to configure\n");
+   //TRACEN("TriggerBoardGenerator",TLVL_ERROR,"PTB failed to configure\n");
 
    if ( throw_exception_ ) {
-     throw std::runtime_error("CTB failed to configure") ;
+     throw std::runtime_error("PTB failed to configure") ;
     }
   }
 
  // metric parameters configuration
- _metric_TS_max = ps.get<unsigned int>( "metric_TS_interval", (unsigned int) (1. * TriggerBoardReader::CTB_Clock() / _rollover )  ) ; // number of TS words in which integrate the frequencies of the words. Default value the number of TS word in a second
+ _metric_TS_max = ps.get<unsigned int>( "metric_TS_interval", (unsigned int) (1. * TriggerBoardReader::PTB_Clock() / _rollover )  ) ; // number of TS words in which integrate the frequencies of the words. Default value the number of TS word in a second
 
  _cherenkov_coincidence = ps.get<unsigned int>( "cherenkov_coincidence", 25  ) ;
 
@@ -142,9 +140,9 @@ bool sbndaq::TriggerBoardReader::getNext_(artdaq::FragmentPtrs & frags) {
 
   if ( _error_state.load() ||  _receiver -> ErrorState() ) {
     if ( throw_exception_ ) {
-      TRACEN("TriggerBoardGenerator",TLVL_ERROR,"CTB in error state, shutting down.\n");
+      //TRACEN("TriggerBoardGenerator",TLVL_ERROR,"PTB in error state, shutting down.\n");
       stop() ;
-      throw std::runtime_error("CTB sent a feedback word") ;
+      throw std::runtime_error("PTB sent a feedback word") ;
     }
   }
 
@@ -174,8 +172,8 @@ bool sbndaq::TriggerBoardReader::getNext_(artdaq::FragmentPtrs & frags) {
   TLOG( 20, "TriggerBoardReader") << "Sending " << frags.size() <<  " fragments" << std::endl ;
 
   if( artdaq::Globals::metricMan_ ) {
-    artdaq::Globals::metricMan_->sendMetric("CTB_Fragments_Sent", (double) frags.size(), "Fragments", 0, artdaq::MetricMode::Average) ;
-    artdaq::Globals::metricMan_->sendMetric("CTB_Bytes_Sent",     (double) sent_bytes,   "Bytes",     0, artdaq::MetricMode::Average) ;
+    artdaq::Globals::metricMan_->sendMetric("PTB_Fragments_Sent", (double) frags.size(), "Fragments", 0, artdaq::MetricMode::Average) ;
+    artdaq::Globals::metricMan_->sendMetric("PTB_Bytes_Sent",     (double) sent_bytes,   "Bytes",     0, artdaq::MetricMode::Average) ;
   }
 
   return ! _error_state.load() ;
@@ -229,10 +227,10 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  // publish the dedicated metrics
 	  if ( artdaq::Globals::metricMan_ ) {
 	    
-	    artdaq::Globals::metricMan_->sendMetric("CTB_Spill_H0L0", (double) _metric_spill_h0l0_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
-	    artdaq::Globals::metricMan_->sendMetric("CTB_Spill_H0L1", (double) _metric_spill_h0l1_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
-	    artdaq::Globals::metricMan_->sendMetric("CTB_Spill_H1L0", (double) _metric_spill_h1l0_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
-	    artdaq::Globals::metricMan_->sendMetric("CTB_Spill_H1L1", (double) _metric_spill_h1l1_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H0L0", (double) _metric_spill_h0l0_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H0L1", (double) _metric_spill_h0l1_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H1L0", (double) _metric_spill_h1l0_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H1L1", (double) _metric_spill_h1l1_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
 	    
 	  } // if there is a metric manager      
 	  
@@ -242,7 +240,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       
     } // if we were in a beam spill
     
-    if ( CTB_Receiver::IsTSWord( temp_word ) ) {
+    if ( PTB_Receiver::IsTSWord( temp_word ) ) {
       
       --(_receiver -> N_TS_Words()) ;
       ++group_counter ;
@@ -264,31 +262,31 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	
 	if( artdaq::Globals::metricMan_ ) {
 	  // evaluate word rates
-	  double word_rate = _metric_Word_counter * TriggerBoardReader::CTB_Clock() / _metric_TS_max / _rollover ;
-	  double hlt_rate  = _metric_HLT_counter * TriggerBoardReader::CTB_Clock() / _metric_TS_max / _rollover ;
-	  double llt_rate  = _metric_LLT_counter * TriggerBoardReader::CTB_Clock() / _metric_TS_max / _rollover ;
+	  double word_rate = _metric_Word_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
+	  double hlt_rate  = _metric_HLT_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
+	  double llt_rate  = _metric_LLT_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 
-	  double beam_rate = _metric_beam_trigger_counter * TriggerBoardReader::CTB_Clock() / _metric_TS_max / _rollover ;
-	  double good_part_rate = _metric_good_particle_counter * TriggerBoardReader::CTB_Clock() / _metric_TS_max / _rollover ;
+	  double beam_rate = _metric_beam_trigger_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
+	  double good_part_rate = _metric_good_particle_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 	  double beam_eff = _metric_good_particle_counter != 0 ? _metric_beam_trigger_counter / (double) _metric_good_particle_counter : 1. ;
 
-	  double cs_rate   = _metric_CS_counter  * TriggerBoardReader::CTB_Clock() / _metric_TS_max / _rollover ;
+	  double cs_rate   = _metric_CS_counter  * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 
 	  // publish metrics
-	  artdaq::Globals::metricMan_->sendMetric("CTB_Word_rate", word_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Word_rate", word_rate, "Hz", 0, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("CTB_HLT_rate", hlt_rate, "Hz", 0, artdaq::MetricMode::Average) ;
-	  artdaq::Globals::metricMan_->sendMetric("CTB_LLT_rate", llt_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_HLT_rate", hlt_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_LLT_rate", llt_rate, "Hz", 0, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("CTB_Beam_Trig_rate", beam_rate, "Hz", 0, artdaq::MetricMode::Average) ;
-	  artdaq::Globals::metricMan_->sendMetric("CTB_Good_Part_rate", good_part_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Trig_rate", beam_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Good_Part_rate", good_part_rate, "Hz", 0, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("CTB_Beam_Eff", beam_eff, "ratio", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Eff", beam_eff, "ratio", 0, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("CTB_CS_rate",  cs_rate,  "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_CS_rate",  cs_rate,  "Hz", 0, artdaq::MetricMode::Average) ;
 
 	  for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
-	    double temp_rate = _metric_HLT_counters[i] * TriggerBoardReader::CTB_Clock() / _metric_TS_max / _rollover ;
+	    double temp_rate = _metric_HLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 	    artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 0, artdaq::MetricMode::Average) ;
 	  }
 
@@ -387,15 +385,15 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
     else if (  temp_word.word_type == ptb::content::word::t_ch )
       ++ _metric_CS_counter ;
 
-    else if ( CTB_Receiver::IsFeedbackWord( temp_word ) ) {
-      TRACEN("TriggerBoardGenerator",TLVL_ERROR,"CTB issued a feedback word\n");
+    else if ( PTB_Receiver::IsFeedbackWord( temp_word ) ) {
+      // TRACEN("TriggerBoardGenerator",TLVL_ERROR,"PTB issued a feedback word\n");
       _error_state.store( true ) ;
     }
 
   }
 
   fragptr -> resizeBytes( word_counter * word_bytes ) ;
-  fragptr -> setUserType( detail::FragmentType::CTB ) ;
+  fragptr -> setUserType( detail::FragmentType::PTB ) ;
   fragptr -> setSequenceID( ev_counter() ) ;
   fragptr -> setFragmentID( fragment_id() ) ;
 
@@ -424,7 +422,7 @@ int sbndaq::TriggerBoardReader::_FragmentGenerator() {
       temp_ptr = CreateFragment() ;
 
       while ( ! _fragment_buffer.push( temp_ptr ) ) {
-	TRACEN("TriggerBoardGenerator",TLVL_WARNING,"Fragment Buffer full: does not accept more fragments\n");
+	//	TRACEN("TriggerBoardGenerator",TLVL_WARNING,"Fragment Buffer full: does not accept more fragments\n");
 	std::this_thread::sleep_for( _timeout ) ;
       }
 
@@ -493,7 +491,7 @@ void sbndaq::TriggerBoardReader::stop() {
 
   if ( _frag_future.valid() ) {
     _frag_future.wait() ;
-    TRACEN("TriggerBoardGenerator",TLVL_INFO,"Created %d fragments\n",_frag_future.get());
+    //    TRACEN("TriggerBoardGenerator",TLVL_INFO,"Created %d fragments\n",_frag_future.get());
   }
 
   ResetBuffer() ;

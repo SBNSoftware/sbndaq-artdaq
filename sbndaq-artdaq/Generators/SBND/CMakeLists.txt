@@ -1,4 +1,5 @@
 add_subdirectory(TriggerBoard)
+include_directories($ENV{JSONCPP_INC})
 include_directories(./TriggerBoard)
 
 simple_plugin(TriggerBoardReader "generator"
@@ -19,7 +20,7 @@ simple_plugin(TriggerBoardReader "generator"
   ${MF_MESSAGELOGGER}
   ${CETLIB}
   ${CETLIB_EXCEPT}
-  jsoncpp
+  $ENV{JSONCPP_LIB}/libjsoncpp.so
   )
 
 #original from ProtoDUNE:
