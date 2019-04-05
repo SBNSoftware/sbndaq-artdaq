@@ -1,6 +1,8 @@
 #execute_process(COMMAND xml2-config --libs OUTPUT_VARIABLE LIBXML2_LIBS)
 #MESSAGE( STATUS "LIBXML2_LIBS: " ${LIBXML2_LIBS} "<<<")
-MESSAGE( STATUS "JSONCPP_LIB: " ${JSONCPP_LIB} "<<<")
+#MESSAGE( STATUS "JSONCPP_LIB: " ${JSONCPP_LIB} "<<<")
+
+include_directories( ${JSONCPP_INC} )
 
 art_make( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_TriggerBoard
 	LIB_LIBRARIES

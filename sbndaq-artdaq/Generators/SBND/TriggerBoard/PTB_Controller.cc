@@ -9,10 +9,10 @@
 //#include "json/json.h"
 //#include "json/reader.h"
 
-//#include <json/json.h>
-//#include <json/reader.h>
-#include <jsoncpp/json/json.h>
-#include <jsoncpp/json/reader.h>
+#include <json/json.h>
+#include <json/reader.h>
+//#include <jsoncpp/json/json.h>
+//#include <jsoncpp/json/reader.h>
 
 
 PTB_Controller::PTB_Controller( const std::string & host, const uint16_t & port ) :
