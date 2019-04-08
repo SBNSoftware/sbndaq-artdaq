@@ -1,7 +1,6 @@
 
 #include "PTB_Receiver.hh"
-
-//#include "dune-artdaq/DAQLogger/DAQLogger.hh" //replaced by TRACE
+#define TNAME "PTB_Receiver"
 #include "sbndaq-artdaq-core/Trace/trace_defines.h"
 #include "sbndaq-artdaq-core/Overlays/SBND/PTB_content.h"
 
@@ -64,15 +63,15 @@ int PTB_Receiver::_word_receiver() {
   const size_t header_size = sizeof( ptb::content::tcp_header_t ) ;
   const size_t word_size = ptb::content::word::word_t::size_bytes ;
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "Header size: " << header_size << std::endl
-	///				    << "Word size: " << word_size << std::endl ;
+  TLOG_INFO(TNAME) << "Header size: " << header_size << TLOG_ENDL
+		   << "Word size: " << word_size << TLOG_ENDL ;
 
   //connect to socket
   boost::asio::io_service io_service;
   boost::asio::ip::tcp::acceptor acceptor(io_service, boost::asio::ip::tcp::endpoint( boost::asio::ip::tcp::v4(), _port ) );
   boost::asio::ip::tcp::socket socket(io_service);
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "Watiting for an incoming connection on port " << _port << std::endl;
+  TLOG_INFO(TNAME) << "Watiting for an incoming connection on port " << _port << TLOG_ENDL;
 
   std::future<void> accepting = async( std::launch::async, [&]{ acceptor.accept(socket) ; } ) ;
 
@@ -81,7 +80,7 @@ int PTB_Receiver::_word_receiver() {
       break ;
   }
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "Connection received: start reading" << std::endl;
+  TLOG_INFO(TNAME) << "Connection received: start reading" << TLOG_ENDL;
 
   ptb::content::tcp_header_t head ;
   ptb::content::word::word_t temp_word ;
@@ -99,7 +98,7 @@ int PTB_Receiver::_word_receiver() {
     }
 
     n_bytes = head.packet_size ;
-    //    sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "Package size "  << n_bytes << std::endl ;
+    TLOG_INFO(TNAME) << "Package size "  << n_bytes << TLOG_ENDL ;
 
     // extract n_words
     n_words = n_bytes / word_size ;
@@ -118,7 +117,7 @@ int PTB_Receiver::_word_receiver() {
 
         _calibration_file.write( reinterpret_cast<const char*>( & temp_word ), word_size ) ;
 	_calibration_file.flush() ;
-        //sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "Word Type: " << temp_word.frame.word_type << std::endl ;
+        TLOG_INFO(TNAME) << "Word Type: " << temp_word.word_type << TLOG_ENDL ;
 
       } 	 // word printing in calibration stream
 
@@ -130,20 +129,20 @@ int PTB_Receiver::_word_receiver() {
 	_error_state.store( true ) ;
         ptb::content::word::feedback_t * feedback = reinterpret_cast<ptb::content::word::feedback_t*>( & temp_word ) ;
 
-/*        ///sbndaq::DAQLogger::LogError("PTB_Receiver") << "Feedback word: " << std::endl
+/*        TLOG_ERROR(TNAME) << "Feedback word: " << TLOG_ENDL
 						  << std::hex 
-						  << " \t Type -> " << feedback -> word_type << std::endl 
-						  << " \t TS -> " << feedback -> timestamp << std::endl
-						  << " \t Code -> " << feedback -> code << std::endl
-						  << " \t Source -> " << feedback -> source << std::endl
-						  << " \t Padding -> " << feedback -> padding << std::dec << std::endl ;
+						  << " \t Type -> " << feedback -> word_type << TLOG_ENDL 
+						  << " \t TS -> " << feedback -> timestamp << TLOG_ENDL
+						  << " \t Code -> " << feedback -> code << TLOG_ENDL
+						  << " \t Source -> " << feedback -> source << TLOG_ENDL
+						  << " \t Padding -> " << feedback -> padding << std::dec << TLOG_ENDL ;
 */
       }
 
 
       // push the word
       while ( ! _word_buffer.push( temp_word ) && ! _stop_requested.load() ) {
-        ///sbndaq::DAQLogger::LogWarning("PTB_Receiver") << "Word Buffer full and cannot store more" << std::endl ;
+        TLOG_WARNING(TNAME) << "Word Buffer full and cannot store more" << TLOG_ENDL ;
       }
 
       if ( _stop_requested.load() ) break ;
@@ -160,16 +159,16 @@ int PTB_Receiver::_word_receiver() {
   if ( _error_state.load() ) {
     socket.shutdown( boost::asio::ip::tcp::socket::shutdown_send, closing_error );
     if ( closing_error ) {
-      ///sbndaq::DAQLogger::LogError("PTB_Receiver") << "Error in shutdown: " << closing_error.message() << std::endl ;
+      TLOG_ERROR(TNAME) << "Error in shutdown: " << closing_error.message() << TLOG_ENDL ;
     }
   }
 
   socket.close( closing_error ) ;
   if ( closing_error ) {
-    ///sbndaq::DAQLogger::LogError("PTB_Receiver") << "Socket closing failed: " << closing_error.message() << std::endl ;
+    TLOG_ERROR(TNAME) << "Socket closing failed: " << closing_error.message() << TLOG_ENDL ;
   }
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "Connection closed: stop receiving data from the PTB" << std::endl ;
+  TLOG_INFO(TNAME) << "Connection closed: stop receiving data from the PTB" << TLOG_ENDL ;
   // return because _stop_requested
   return 0 ;
 }
@@ -196,7 +195,7 @@ bool PTB_Receiver::SetCalibrationStream( const std::string & string_dir,
 
 bool PTB_Receiver::IsTSWord( const ptb::content::word::word_t & w ) noexcept {
 
-  //sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "word type " <<  w.frame.word_type  << std::endl ;
+  TLOG_INFO(TNAME) << "word type " <<  w.word_type  << TLOG_ENDL ;
 
   if ( w.word_type == ptb::content::word::t_ts ) {
 
@@ -246,7 +245,7 @@ void PTB_Receiver::_init_calibration_file() {
   // _calibration_file.setf ( std::ios::hex, std::ios::basefield );
   // _calibration_file.unsetf ( std::ios::showbase );
 
-  ///sbndaq::DAQLogger::LogDebug("PTB_Receiver") << "New Calibration Stream file: " << global_name << std::endl ;
+  TLOG_DEBUG(TNAME) << "New Calibration Stream file: " << global_name << TLOG_ENDL ;
 
 }
 
@@ -291,12 +290,12 @@ bool PTB_Receiver::_read( T & obj , boost::asio::ip::tcp::socket & socket ) {
 
   if ( receiving_error == boost::asio::error::eof) {
 
-    ///sbndaq::DAQLogger::LogInfo("PTB_Receiver") << "Socket closed: "<< receiving_error.message()  << std::endl ;
+    TLOG_INFO(TNAME) << "Socket closed: "<< receiving_error.message()  << TLOG_ENDL ;
     return false ;
   }
   
   if ( receiving_error ) {
-    ///sbndaq::DAQLogger::LogError("PTB_Receiver") <<"Read failure: " << receiving_error.message() << std::endl ;
+    TLOG_ERROR(TNAME) <<"Read failure: " << receiving_error.message() << TLOG_ENDL ;
     return false ;
   }
 

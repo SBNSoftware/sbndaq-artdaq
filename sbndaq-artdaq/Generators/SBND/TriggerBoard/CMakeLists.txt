@@ -1,4 +1,5 @@
 include_directories( $ENV{JSONCPP_INC} )
+include_directories( $ENV{TRACE_INC} )
 
 art_make( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_TriggerBoard
 	LIB_LIBRARIES

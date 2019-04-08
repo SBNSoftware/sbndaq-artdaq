@@ -1,5 +1,6 @@
 add_subdirectory(TriggerBoard)
 include_directories($ENV{JSONCPP_INC})
+include_directories($ENV{TRACE_INC})
 include_directories(./TriggerBoard)
 
 simple_plugin(TriggerBoardReader "generator"

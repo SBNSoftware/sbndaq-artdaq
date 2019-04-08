@@ -1,3 +1,5 @@
+#define TNAME "TriggerBoard"
+
 #include <stdexcept>
 
 #include "json/json.h"
@@ -5,8 +7,8 @@
 
 #include "sbndaq-artdaq/Generators/SBND/TriggerBoardReader.hh"
 #include "artdaq/Application/GeneratorMacros.hh"
-//#include "dune-artdaq/DAQLogger/DAQLogger.hh" //replaced by TRACEs
-#include "sbndaq-artdaq-core/Trace/trace_defines.h"
+#include "messagefacility/MessageLogger/MessageLogger.h"
+#include "trace.h"
 #include "artdaq/DAQdata/Globals.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
@@ -37,16 +39,14 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   _fragment_buffer( ps.get<unsigned int>( "data_buffer_depth_fragments", 1000 ) ),
   throw_exception_(ps.get<bool>("throw_exception",true) )
 {
-
   //get board address and control port from the fhicl file
   const unsigned int control_port = ps.get<uint16_t>("control_port", 8991 ) ;
   const std::string address = ps.get<std::string>( "board_address", "sbnd-ptbmk2-01" );
-
-  //  TRACEN("TriggerBoardGenerator",TLVL_DEBUG,"control messages sent to %s : %d\n",address,control_port);
+  TLOG_INFO(TNAME) << "PTB at " << control_port << "@" << address << TLOG_ENDL;
 
   // get options for fragment creation
   _group_size = ps.get<unsigned int>( "group_size", 1 ) ;
-  //  TRACEN( "TriggerBoardGenerator",TLVL_DEBUG,"Creating fragments with %d packages from the PTB", _group_size);
+  TLOG_INFO(TNAME) << "Creating fragments with " << _group_size << TLOG_ENDL;
 
   unsigned int word_buffer_size = ps.get<unsigned int>( "word_buffer_size", 5000 ) ;
   _max_words_per_frag = word_buffer_size / 5 * 4 ;  // 80 % of the buffer size
@@ -99,7 +99,7 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
 
   jblob["ptb"]["sockets"]["receiver"]["host"] = receiver_address ;
 
-  //  TRACEN("TriggerBoardGenerator",TLVL_INFO,"Board packages recieved at %s : %d\n",receiver_address,receiver_port);
+  TLOG_INFO(TNAME) << "Board packages recieved at " << receiver_port << "@" << receiver_address;
 
   // create the json string
   json_stream.str("");
@@ -112,7 +112,7 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   bool config_status = _run_controller -> send_config( config ) ;
 
  if ( ! config_status ) {
-   //TRACEN("TriggerBoardGenerator",TLVL_ERROR,"PTB failed to configure\n");
+   TLOG_ERROR(TNAME) << "PTB failed to configure" << TLOG_ENDL;
 
    if ( throw_exception_ ) {
      throw std::runtime_error("PTB failed to configure") ;
@@ -140,7 +140,7 @@ bool sbndaq::TriggerBoardReader::getNext_(artdaq::FragmentPtrs & frags) {
 
   if ( _error_state.load() ||  _receiver -> ErrorState() ) {
     if ( throw_exception_ ) {
-      //TRACEN("TriggerBoardGenerator",TLVL_ERROR,"PTB in error state, shutting down.\n");
+      TLOG_ERROR(TNAME) << "PTB in error state, shutting down" << TLOG_ENDL;
       stop() ;
       throw std::runtime_error("PTB sent a feedback word") ;
     }
@@ -386,7 +386,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       ++ _metric_CS_counter ;
 
     else if ( PTB_Receiver::IsFeedbackWord( temp_word ) ) {
-      // TRACEN("TriggerBoardGenerator",TLVL_ERROR,"PTB issued a feedback word\n");
+      TLOG_ERROR(TNAME) << "PTB issued a feedback word" << TLOG_ENDL;
       _error_state.store( true ) ;
     }
 
@@ -422,7 +422,7 @@ int sbndaq::TriggerBoardReader::_FragmentGenerator() {
       temp_ptr = CreateFragment() ;
 
       while ( ! _fragment_buffer.push( temp_ptr ) ) {
-	//	TRACEN("TriggerBoardGenerator",TLVL_WARNING,"Fragment Buffer full: does not accept more fragments\n");
+	TLOG_WARNING(TNAME) << "Fragment Buffer full: does not accept more fragments" << TLOG_ENDL;
 	std::this_thread::sleep_for( _timeout ) ;
       }
 
@@ -491,7 +491,7 @@ void sbndaq::TriggerBoardReader::stop() {
 
   if ( _frag_future.valid() ) {
     _frag_future.wait() ;
-    //    TRACEN("TriggerBoardGenerator",TLVL_INFO,"Created %d fragments\n",_frag_future.get());
+    TLOG_INFO(TNAME) << "Created " << _frag_future.get() << " fragments" << TLOG_ENDL;
   }
 
   ResetBuffer() ;

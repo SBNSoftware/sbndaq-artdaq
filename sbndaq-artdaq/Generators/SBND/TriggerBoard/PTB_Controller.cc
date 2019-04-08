@@ -1,19 +1,11 @@
 #include "PTB_Controller.hh"
+#define TNAME "PTB_Controller"
 
 #include <sstream>
 
-//#include "dune-artdaq/DAQLogger/DAQLogger.hh" //replaced by traces
-//#include "sbndaq-artdaq/DAQLogger/DAQLogger.hh" //replaced by traces
 #include "sbndaq-artdaq-core/Trace/trace_defines.h"
-
-//#include "json/json.h"
-//#include "json/reader.h"
-
 #include <json/json.h>
 #include <json/reader.h>
-//#include <jsoncpp/json/json.h>
-//#include <jsoncpp/json/reader.h>
-
 
 PTB_Controller::PTB_Controller( const std::string & host, const uint16_t & port ) :
   _ios(),
@@ -50,7 +42,7 @@ PTB_Controller::~PTB_Controller() {
 
 bool PTB_Controller::send_reset() {
 
-  //sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Sending a reset" << std::endl;
+  TLOG_INFO(TNAME) << "Sending a reset" << TLOG_ENDL;
 
   bool ret = send_message( "{\"command\":\"HardReset\"}" ) ;
 
@@ -66,11 +58,11 @@ bool PTB_Controller::send_reset() {
 bool PTB_Controller::send_start() {
 
   if (! is_conf_) {
-    ///sbndaq::DAQLogger::LogError("PTB_Controller") << "ERROR: Can't start a run without configuring first" << std::endl;
+    TLOG_ERROR(TNAME) << "ERROR: Can't start a run without configuring first" << TLOG_ENDL;
     return false ;
   }
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Sending a start run" << std::endl;
+  TLOG_INFO(TNAME) << "Sending a start run" << TLOG_ENDL;
 
   if ( send_message( "{\"command\":\"StartRun\"}" )  ) {
     
@@ -85,11 +77,11 @@ bool PTB_Controller::send_start() {
 bool PTB_Controller::send_stop() {
 
   if ( ! is_running_.load() ) {
-    ///sbndaq::DAQLogger::LogWarning("PTB_Controller") << "Stop requested while not runninng" ;
+    TLOG_WARNING(TNAME) << "Stop requested while not runninng" ;
     return true ;
   }
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Sending a stop run" << std::endl;
+  TLOG_INFO(TNAME) << "Sending a stop run" << TLOG_ENDL;
 
   bool ret = send_message( "{\"command\":\"StopRun\"}" ) ;
 
@@ -104,11 +96,11 @@ bool PTB_Controller::send_stop() {
 bool PTB_Controller::send_config( const std::string & config ) {
   
   if ( is_conf_ ) {
-    ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Resetting before configuring" << std::endl;
+    TLOG_INFO(TNAME) << "Resetting before configuring" << TLOG_ENDL;
     send_reset();
   }
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Sending config" << std::endl;
+  TLOG_INFO(TNAME) << "Sending config" << TLOG_ENDL;
 
   if ( send_message( config ) ) {
 
@@ -127,7 +119,7 @@ bool PTB_Controller::send_message( const std::string & msg ) {
   //add error options                                                                                                
   boost::system::error_code error;
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Sending message: " << msg << std::endl;
+  TLOG_INFO(TNAME) << "Sending message: " << msg << TLOG_ENDL;
   
   boost::asio::write( _socket, boost::asio::buffer( msg ), error ) ;
 
@@ -137,14 +129,14 @@ bool PTB_Controller::send_message( const std::string & msg ) {
 
   std::stringstream raw_answer( std::string(reply_buf .begin(), reply_buf .end() ) ) ;
   
-  ///sbndaq::DAQLogger::LogDebug("PTB_Controller") << "Unformatted answer: " << std::endl << raw_answer.str() << std::endl; 
+  TLOG_DEBUG(TNAME)  << "Unformatted answer: " << TLOG_ENDL << raw_answer.str() << TLOG_ENDL; 
 
   Json::Value answer ;
   raw_answer >> answer ;
 
   Json::Value & messages = answer["feedback"] ;
 
-  ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Received messages: " << messages.size() << std::endl;
+  TLOG_INFO(TNAME) << "Received messages: " << messages.size() << TLOG_ENDL;
 
   bool ret = true ;
 
@@ -153,19 +145,19 @@ bool PTB_Controller::send_message( const std::string & msg ) {
     std::string type = messages[i]["type"].asString() ;
     
     if ( type.find("error") != std::string::npos || type.find("Error") != std::string::npos || type.find("ERROR") != std::string::npos ) {
-     /// sbndaq::DAQLogger::LogError("PTB_Controller") << "Error from the Board: " << messages[i]["message"].asString() << std::endl ;
+      TLOG_ERROR(TNAME) << "Error from the Board: " << messages[i]["message"].asString() << TLOG_ENDL ;
       ret = false ;
     }
     else if ( type.find("warning") != std::string::npos || type.find("Warning") != std::string::npos || type.find("WARNING") != std::string::npos ) {
-      ///sbndaq::DAQLogger::LogWarning("PTB_Controller") << "Warning from the Board: " << messages[i]["message"].asString() << std::endl;
+      TLOG_WARNING(TNAME) << "Warning from the Board: " << messages[i]["message"].asString() << TLOG_ENDL;
     }
     else if ( type.find("info") != std::string::npos || type.find("Info") != std::string::npos || type.find("INFO") != std::string::npos) {
-      ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Info from the board: " << messages[i]["message"].asString() << std::endl;
+      TLOG_INFO(TNAME) << "Info from the board: " << messages[i]["message"].asString() << TLOG_ENDL;
     }
     else {
       std::stringstream blob;
       blob << messages[i] ;
-      ///sbndaq::DAQLogger::LogInfo("PTB_Controller") << "Unformatted from the board: " << blob.str() << std::endl;
+      TLOG_INFO(TNAME) << "Unformatted from the board: " << blob.str() << TLOG_ENDL;
     }
   }
   
