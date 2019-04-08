@@ -543,6 +543,7 @@ bool sbndaq::CAENV1730Readout::GetData()
   // this_data_size is the size of the acq window
   char *bufp = (char*)(fBuffer.get());
   if(fCAEN.interruptLevel > 0){
+
     retcod = CAEN_DGTZ_RearmInterrupt(fHandle);
     CAENDecoder::checkError(retcod,"RearmInterrupt",fBoardID);
 
@@ -572,37 +573,35 @@ bool sbndaq::CAENV1730Readout::GetData()
        }
       }
     }
-
   }
   else{
     TLOG(TGETDATA) << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)bufp
                    << ",&this_data_size="<<(void*)&this_data_size<<")";
     retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                                 bufp, &this_data_size);
-    TLOG(TGETDATA) << "ReadData complete with returned data size " << this_data_size
-                   << " retcod=" << int{retcod};
+
+
+    if(this_data_size==0) {
+      TLOG(TGETDATA) << "No data. Sleep for " << fGetNextSleep << " us and return.";
+      usleep(fGetNextSleep);
+      return false;
+    }
 
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(bufp);
+    const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
 
     TLOG(TGETDATA) << "ReadData complete with returned data size "
-                       << this_data_size << " retcod=" << int{retcod} << ", event size in the header " << header->eventSize * 4;
-    if (retcod !=0) {
+                       << this_data_size << " retcod=" << int{retcod} << ", event size in the header " << header_event_size;
+    if (retcod !=CAEN_DGTZ_Success) {
         TLOG(TLVL_ERROR) << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcod};
     }
 
-    if (this_data_size != header->eventSize *4u )  {
-      TLOG(TLVL_ERROR) << "Event size in the header does not match the expected size; header/expected " 
-				<< header->eventSize*4 << "/" << this_data_size;
-
-    //	 	throw std::runtime_error("Event size in the header does not match the expected size" );
+    if (this_data_size != header_event_size )  {
+      TLOG(TLVL_ERROR) << "Event size in the header does not match the expected size; expected/header " 
+				<< header_event_size << "/" << this_data_size;
     }
   }
 
-  if(this_data_size==0) {
-    TLOG(TGETDATA) << "No data. Sleep for " << fGetNextSleep << " us and return.";
-    usleep(fGetNextSleep);
-    return false;
-  }
 
   TLOG(TGETDATA) << "checking if size()="<<fCircularBuffer.Buffer().size()
                  << " + this_data_size ("<<this_data_size/sizeof(uint16_t)
