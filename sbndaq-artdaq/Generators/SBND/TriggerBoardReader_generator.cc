@@ -65,9 +65,9 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   json_stream >> jblob ;
 
   // get the receiver port from the json
-  const unsigned int receiver_port = jblob["ptb"]["sockets"]["receiver"]["port"].asUInt() ;
+  const unsigned int receiver_port = jblob["ctb"]["sockets"]["receiver"]["port"].asUInt() ;
 
-  _rollover = jblob["ptb"]["sockets"]["receiver"]["rollover"].asUInt() ;
+  _rollover = jblob["ctb"]["sockets"]["receiver"]["rollover"].asUInt() ;
 
   const unsigned int timeout_scaling = ps.get<uint16_t>("receiver_timeout_scaling", 2 ) ;
 
@@ -97,7 +97,7 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   // with the receiver host which is the machines where the board reader is running
   const std::string receiver_address = boost::asio::ip::host_name() ;
 
-  jblob["ptb"]["sockets"]["receiver"]["host"] = receiver_address ;
+  jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
 
   TLOG_INFO(TNAME) << "Board packages recieved at " << receiver_port << "@" << receiver_address;
 
