@@ -117,7 +117,7 @@ void icarus::PhysCrateViewer::analyze(art::Event const & evt)
 		    << idx << ","
 		    << i_b << ");Channel;Time";
       ss_hist_name << "h_"
-		   << evt.run() <<"_"
+	//<< evt.run() <<"_"
 		   << eventNumber << "_"
 		   << idx << "_"
 		   << i_b;
