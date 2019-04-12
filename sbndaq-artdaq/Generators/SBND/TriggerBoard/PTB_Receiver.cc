@@ -129,14 +129,14 @@ int PTB_Receiver::_word_receiver() {
 	_error_state.store( true ) ;
         ptb::content::word::feedback_t * feedback = reinterpret_cast<ptb::content::word::feedback_t*>( & temp_word ) ;
 
-/*        TLOG_ERROR(TNAME) << "Feedback word: " << TLOG_ENDL
+        TLOG_ERROR(TNAME) << "Feedback word: " << TLOG_ENDL
 						  << std::hex 
 						  << " \t Type -> " << feedback -> word_type << TLOG_ENDL 
 						  << " \t TS -> " << feedback -> timestamp << TLOG_ENDL
 						  << " \t Code -> " << feedback -> code << TLOG_ENDL
-						  << " \t Source -> " << feedback -> source << TLOG_ENDL
-						  << " \t Padding -> " << feedback -> padding << std::dec << TLOG_ENDL ;
-*/
+						  << " \t Source -> " << feedback -> source << TLOG_ENDL;
+						  //<< " \t Padding -> " << feedback -> padding << std::dec << TLOG_ENDL ;
+
       }
 
 
