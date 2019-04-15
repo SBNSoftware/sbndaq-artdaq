@@ -1,9 +1,9 @@
 //
-// sbnddaq-readout/Generators/SpectraTime_generatorBase.hh
+// sbnddaq-readout/Generators/SpectraTimeReadout_generator.hh
 //
 
-#ifndef sbndaq_artdaq_Generators_Common_SpectraTime_generatorBase
-#define sbndaq_artdaq_Generators_Common_SpectraTime_generatorBase
+#ifndef sbndaq_artdaq_Generators_Common_SpectraTimeReadout_generator
+#define sbndaq_artdaq_Generators_Common_SpectraTimeReadout_generator
 
 #include <memory>
 #include <atomic>
@@ -25,15 +25,19 @@
 
 namespace sbndaq
 {
-  class SpectraTime_generatorBase: public artdaq::CommandableFragmentGenerator
+  class SpectraTimeReadout: public artdaq::CommandableFragmentGenerator
   {
   public:
-    explicit SpectraTime_generatorBase(fhicl::ParameterSet const & ps);
-    virtual ~SpectraTime_generatorBase();
+    explicit SpectraTimeReadout(fhicl::ParameterSet const & ps);
+    virtual ~SpectraTimeReadout();
     enum
     {
-      GPS_MQ = 0xCDF,
-      BUFFER_SIZE = 120
+      GPS_MQ         = 0xCDF,
+      BUFFER_SIZE    = 120,
+      READOUT_PUSH   = 1,
+      READOUT_PULL   = 2,
+      STATUS_FULL    = 1,
+      STATUS_MINIMAL = 2
     };
 
   protected:
@@ -45,10 +49,15 @@ namespace sbndaq
     void stopAll();
     void init();
 
+    int readoutMode;
+    int statusMode;
+    int nextSleep;
+    int dataSleep;
+
     // Message queue
     key_t daqMQ;
     int daqID;
-
+    
     // General
     uint32_t runNumber_;
     std::string device;

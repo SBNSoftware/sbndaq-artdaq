@@ -14,6 +14,7 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		         CircularBuffer.cc
 		  LIBRARIES 
 		    	 pthread
+			 artdaq_DAQdata
 		    	 ${MF_MESSAGELOGGER}
 			 ${Boost_SYSTEM_LIBRARY}
 		)
@@ -41,7 +42,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 )
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
-		  SOURCE SpectraTime_generatorBase.cc
+		  SOURCE SpectraTimeReadout_generator.cc
 		  	 GPS/GPSInfo.cc
 		  LIBRARIES
 			artdaq_DAQdata
@@ -83,7 +84,7 @@ simple_plugin(CAENV1730Readout "generator"
   ${CAENCOMM}
   )
 
-simple_plugin(SpectraTimeData "generator"
+simple_plugin(SpectraTimeReadout "generator"
   sbndaq-artdaq_Common_SpectraTime_GeneratorBase
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common

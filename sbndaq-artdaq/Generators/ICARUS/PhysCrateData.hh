@@ -14,19 +14,29 @@ namespace icarus {
   public:
     
     explicit PhysCrateData(fhicl::ParameterSet const & ps);
+
+    enum TestPulseType{
+      kDisable = 0,
+      kExternal = 1,
+      kInternal_Even = 2,
+      kInternal_Odd = 3
+    };
     
   private:
     
     void ConfigureStart(); //called in start()
     void ConfigureStop();  //called in stop()
 
-    int  GetData(size_t&,uint32_t*);       //called in getNext_()
+    int  GetData();
     void FillStatPack(statpack&);
     bool Monitor();
 
     void InitializeHardware();
     BoardConf GetBoardConf();
     TrigConf GetTrigConf();
+
+    void SetTestPulse();
+    void SetDCOffset();
 
     std::unique_ptr<PhysCrate> physCr;
     
@@ -52,7 +62,8 @@ namespace icarus {
     bool         _doVetoTest;
     unsigned int _vetoTestPeriod;
     share::WorkerThreadUPtr _vetoTestThread;
-    
+    share::WorkerThreadUPtr GetData_thread_;
+
  };
 }
 

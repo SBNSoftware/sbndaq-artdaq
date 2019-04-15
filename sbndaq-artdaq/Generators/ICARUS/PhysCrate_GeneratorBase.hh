@@ -10,6 +10,7 @@
 #include <vector>
 #include <atomic>
 
+#include "sbndaq-artdaq/Generators/Common/CircularBuffer.hh"
 #include "sbndaq-artdaq/Generators/Common/workerThread.hh"
 
 namespace icarus {    
@@ -26,7 +27,7 @@ namespace icarus {
     void start() override;
     void stop() override;
 
-    void stopNoMutex() { stop(); }
+    void stopNoMutex() override { stop(); }
     
     uint32_t RunNumber_;
     
@@ -44,12 +45,13 @@ namespace icarus {
 
     uint32_t current_subrun_;
     size_t event_number_;
+    size_t least_data_block_bytes_;
 
 
     //These functions MUST be defined by the derived classes
     virtual void ConfigureStart() = 0; //called in start()
     virtual void ConfigureStop() = 0;  //called in stop()
-    virtual int  GetData(size_t&,uint32_t*) = 0;       //called in getNext_()
+    virtual int  GetData() = 0;
     virtual void FillStatPack(statpack&) = 0; //called in getNext_()
     virtual bool Monitor() = 0; //called as separate thread
 
@@ -67,6 +69,9 @@ namespace icarus {
     //These functions could be overwritten by the derived class
     virtual void Initialize();     //called in constructor
     virtual void Cleanup();        //called in destructor
+
+    sbndaq::CircularBuffer<uint16_t> fCircularBuffer;
+    size_t fCircularBufferSize;
 
   private:
     

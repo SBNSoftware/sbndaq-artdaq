@@ -1,3 +1,12 @@
+include_directories( ${CAENCOMM_INC} )
+#include_directories( ${CAENVME_INC} )
+#include_directories( ${CAENDIGITIZER_INC} )
+
+#cet_find_library( CAENDIGITIZER    NAMES CAENDigitizer    PATHS ENV CAENDIGITIZER_LIB   NO_DEFAULT_PATH )
+#cet_find_library( CAEN_VME         NAMES CAENVME          PATHS ENV CAENVME_LIB         NO_DEFAULT_PATH )
+cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB        NO_DEFAULT_PATH )
+
+
 art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 		  SOURCE PhysCrate_GeneratorBase.cc
 		  LIBRARIES
@@ -35,20 +44,21 @@ simple_plugin(PhysCrateData "generator"
   ${MF_MESSAGELOGGER}
   ${CETLIB}
   ${CETLIB_EXCEPT}
+  ${CAENCOMM}
   )
 
-simple_plugin(PhysCrateFakeData "generator"
-  sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_ICARUS
-  sbndaq-artdaq_Common_Utilities
-  artdaq_Application
-  artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  ${Boost_SYSTEM_LIBRARY}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
-  )
+# simple_plugin(PhysCrateFakeData "generator"
+#   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
+#   sbndaq-artdaq-core_Overlays
+#   sbndaq-artdaq-core_Overlays_ICARUS
+#   sbndaq-artdaq_Common_Utilities
+#   artdaq_Application
+#   artdaq_DAQdata
+#   artdaq-core_Utilities
+#   artdaq-core_Data
+#   ${Boost_SYSTEM_LIBRARY}
+#   ${FHICLCPP}
+#   ${MF_MESSAGELOGGER}
+#   ${CETLIB}
+#   ${CETLIB_EXCEPT}
+#   )

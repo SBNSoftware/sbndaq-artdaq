@@ -109,8 +109,7 @@ void icarus::PhysCrateViewer::analyze(art::Event const & evt)
     const auto& frag((*raw_data)[idx]);
     
     PhysCrateFragment bb(frag);
-    // for(size_t i_b=0; i_b < bb.nBoards(); ++i_b){
-    for(size_t i_b=0; i_b < 1; ++i_b){
+    for(size_t i_b=0; i_b < bb.nBoards(); ++i_b){
       std::stringstream ss_hist_title,ss_hist_name;
       ss_hist_title << "(Run,Event,Fragment,Board)=("
 		    << evt.run() <<","
@@ -118,7 +117,7 @@ void icarus::PhysCrateViewer::analyze(art::Event const & evt)
 		    << idx << ","
 		    << i_b << ");Channel;Time";
       ss_hist_name << "h_"
-		   << evt.run() <<"_"
+	//<< evt.run() <<"_"
 		   << eventNumber << "_"
 		   << idx << "_"
 		   << i_b;

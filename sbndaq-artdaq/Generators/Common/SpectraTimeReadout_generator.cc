@@ -1,19 +1,23 @@
 //
-// sbnddaq-readout/Generators/SpectraTime_generatorBase.cc (D.Cianci,W.Badgett)
+// sbnddaq-readout/Generators/SpectraTimeReadout_generator.cc (D.Cianci,W.Badgett)
 //
-// Read from a message queue GPS status messages, buffer them and send them out on request to the EVBs
+// Read from a message queue GPS status messages, buffer them and send them 
+//    out on request to the EVBs
 //
 // Strategery:
 //    GPS status messages arrive shortly after a PPS
 //    Every event should have at least the latest GPS status message
 //    If there are others in the circular buffer, send them, too
-//    Any messages older than two minutes (120 PPS) are discarded -- if we're not taking data, who cares?
-//    The uint32_t timeStamp is the Unix time since the so-called Epoch, Jan 1, 1970 UTC
+//    Any messages older than two minutes (120 PPS) are discarded -- 
+//       -- if we're not taking data, who cares?
+//    The uint32_t timeStamp is the Unix time since the so-called Epoch, 
+//      Jan 1, 1970 UTC
 //      and there should be only one message per second, no more and no less
 //    Note these data are also sent to EPICS and its archiving system
 
-#include "sbndaq-artdaq/Generators/Common/SpectraTime_generatorBase.hh"
+#include "sbndaq-artdaq/Generators/Common/SpectraTimeReadout_generator.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
+#include "artdaq/Application/GeneratorMacros.hh"
 #include <fstream>
 #include <iomanip>
 #include <iterator>
@@ -23,19 +27,23 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-sbndaq::SpectraTime_generatorBase::SpectraTime_generatorBase(fhicl::ParameterSet const & ps):
+sbndaq::SpectraTimeReadout::SpectraTimeReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
+  readoutMode = ps.get<int>("readoutMode");
+  statusMode  = ps.get<int>("statusMode");
+  nextSleep   = ps.get<int>("nextSleep");
+  dataSleep   = ps.get<int>("dataSleep");
   init();
 }
 
-sbndaq::SpectraTime_generatorBase::~SpectraTime_generatorBase()
+sbndaq::SpectraTimeReadout::~SpectraTimeReadout()
 {
   stopAll();
 }
 
-void sbndaq::SpectraTime_generatorBase::init()
+void sbndaq::SpectraTimeReadout::init()
 {
   eventCounter = 0;
   messageCounter = 0;
@@ -48,16 +56,16 @@ void sbndaq::SpectraTime_generatorBase::init()
   daqID = msgget(daqMQ,0);
   if ( daqID < 0 )
   {
-    LOG_ERROR("SpectraTime_generator") << "Error on msgget 0x" << std::hex << daqMQ << std::dec 
-				       << " " << strerror(errno);
+    LOG_ERROR("SpectraTime") << "Error on msgget 0x" << 
+      std::hex << daqMQ << std::dec << " " << strerror(errno) << " " << errno;
 
   }
 }
 
-void sbndaq::SpectraTime_generatorBase::start()
+void sbndaq::SpectraTimeReadout::start()
 {
   // Magically start worker getdata thread.
-  share::ThreadFunctor functor = std::bind(&SpectraTime_generatorBase::getData,this);
+  share::ThreadFunctor functor = std::bind(&SpectraTimeReadout::getData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
   auto getData_worker = share::WorkerThread::createWorkerThread(worker_functor);
   GetData_thread_.swap(getData_worker);
@@ -66,7 +74,7 @@ void sbndaq::SpectraTime_generatorBase::start()
   running = true;
 }
 
-void sbndaq::SpectraTime_generatorBase::stopAll()
+void sbndaq::SpectraTimeReadout::stopAll()
 {
   if ( running )
   {
@@ -75,17 +83,17 @@ void sbndaq::SpectraTime_generatorBase::stopAll()
   }
 }
 
-void sbndaq::SpectraTime_generatorBase::stop()
+void sbndaq::SpectraTimeReadout::stop()
 {
   stopAll();
 }
 
-void sbndaq::SpectraTime_generatorBase::stopNoMutex()
+void sbndaq::SpectraTimeReadout::stopNoMutex()
 {
   stopAll();
 }
 
-bool sbndaq::SpectraTime_generatorBase::getData()
+bool sbndaq::SpectraTimeReadout::getData()
 {
   ssize_t nBytes = 1;
   while ( ( nBytes > 0 ) && running )
@@ -93,13 +101,15 @@ bool sbndaq::SpectraTime_generatorBase::getData()
     uint32_t ptr = messageCounter % BUFFER_SIZE;
 
     bufferLock.lock();
-    nBytes = msgrcv(daqID,(void *)&buffer[ptr],sizeof(buffer[ptr]), GPSInfo::GPS_INFO_MTYPE,IPC_NOWAIT);
+    nBytes = msgrcv(daqID,(void *)&buffer[ptr],sizeof(buffer[ptr]), 
+		    GPSInfo::GPS_INFO_MTYPE,IPC_NOWAIT);
     if ( nBytes <= 0 )
     {
-      if ( errno != EAGAIN )
+      if (( errno != EAGAIN ) && ( errno != ENOMSG ))
       {
-	LOG_ERROR("SpectraTime_generator") << "FATAL Error on msgrcv 0x" << std::hex << daqMQ << std::dec << " " << 
-	  strerror(errno);
+	LOG_ERROR("SpectraTime") << "FATAL Error on msgrcv 0x" << 
+	  std::hex << daqMQ << std::dec << " " << 
+	  strerror(errno) << " " << errno ;
       } // Otherwise there was no message in the queue, not a real error
     }
     else
@@ -110,26 +120,35 @@ bool sbndaq::SpectraTime_generatorBase::getData()
     }
     bufferLock.unlock();
 
-    usleep(100);
+    usleep(dataSleep);
   }
   return(true);
 }
 
-bool sbndaq::SpectraTime_generatorBase::getNext_(artdaq::FragmentPtrs & frags)
+bool sbndaq::SpectraTimeReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
-  //Send our buffer over to fillfrag. If there's nothing there, we'll try again later.
-  eventCounter++;
-  FillFragment(frags);
-  usleep(100);
+  //Send our buffer over to fillfrag. If there's nothing there, we'll 
+  // try again later.
+  if ( readoutMode == READOUT_PUSH )
+  {
+    while ( FillFragment(frags) == false )
+    { usleep(nextSleep);}
+  }
+  else 
+  {
+    FillFragment(frags);
+    usleep(nextSleep);
+  }
   return true;
 }
 
-bool sbndaq::SpectraTime_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, bool)
+bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
 {
   uint32_t boardId=0;
   uint32_t bytesWritten = sizeof(struct sbndaq::SpectratimeEvent);
   
   int messageCount = 0;
+  bool newData = false;
 
   bufferLock.lock();
   for ( int i=0; i<BUFFER_SIZE; ++i)
@@ -138,7 +157,7 @@ bool sbndaq::SpectraTime_generatorBase::FillFragment(artdaq::FragmentPtrs &frags
     {
       std::unique_ptr<artdaq::Fragment> fragPtr(artdaq::Fragment::FragmentBytes(bytesWritten,
 										eventCounter, 
-										0,
+										boardId,
 										FragmentType::SpectratimeEvent,
 										SpectratimeFragmentMetadata()));
 
@@ -146,10 +165,12 @@ bool sbndaq::SpectraTime_generatorBase::FillFragment(artdaq::FragmentPtrs &frags
       frags.emplace_back(std::move(fragPtr));
       buffer[i].unsent = false;
       messageCount++;
+      eventCounter++;
+      newData = true;
     }
   }
 
-  if ( messageCount == 0 ) // Always return at least one fragment, here the latest
+  if (( messageCount == 0 ) && ( readoutMode != READOUT_PUSH ))  // Always return at least one fragment, here the latest
   {
     std::unique_ptr<artdaq::Fragment> fragPtr(artdaq::Fragment::FragmentBytes(bytesWritten,
 									      eventCounter, 
@@ -160,11 +181,18 @@ bool sbndaq::SpectraTime_generatorBase::FillFragment(artdaq::FragmentPtrs &frags
     memcpy(fragPtr->dataBeginBytes(), (char *)&buffer[currentMessage].data, bytesWritten);
     frags.emplace_back(std::move(fragPtr));
     buffer[currentMessage].unsent = false;
+    eventCounter++;
+    newData = false;
   }
   bufferLock.unlock();
 
-  LOG_INFO("SpectraTime") << "Found " << messageCount << " fragments" << std::endl;
+  if ( messageCount > 0 )
+  {
+    LOG_INFO("SpectraTime") << "Found " << messageCount << " fragments" << std::endl;
+  }
 
-  return true;
+  return newData;
 }
+
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::SpectraTimeReadout)
 
