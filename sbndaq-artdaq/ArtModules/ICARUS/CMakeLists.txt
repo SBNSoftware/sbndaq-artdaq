@@ -48,6 +48,13 @@ simple_plugin(PhysCrateViewer "module"
 	      art_Framework_Services_Registry
 	      art_Framework_Services_Optional_TFileService_service
 	      ${ROOT_BASIC_LIB_LIST} )
+simple_plugin(PhysCrateSimpleAna "module"
+              sbndaq-artdaq-core_Overlays
+              sbndaq-artdaq-core_Overlays_ICARUS
+	      art_Framework_Services_Optional
+	      art_Framework_Services_Registry
+	      art_Framework_Services_Optional_TFileService_service
+	      ${ROOT_BASIC_LIB_LIST} )
 
 # Subdirectories.
 #add_subdirectory(DQM)

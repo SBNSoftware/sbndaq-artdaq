@@ -15,6 +15,7 @@
 
 #include "icarus-artdaq-base/PhysCrate.h"
 #include "icarus-artdaq-base/A2795.h"
+#include "CAENComm.h"
 
 icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   :
@@ -31,6 +32,10 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
   auto GetData_worker = share::WorkerThread::createWorkerThread(worker_functor);
   GetData_thread_.swap(GetData_worker);
+
+  //some config things ...
+  SetDCOffset();
+  SetTestPulse();
 }
 
 void icarus::PhysCrateData::InitializeVeto(){
@@ -47,6 +52,54 @@ void icarus::PhysCrateData::InitializeVeto(){
     auto veto_worker = share::WorkerThread::createWorkerThread(worker_functor);
     _vetoTestThread.swap(veto_worker);
   }
+}
+
+void icarus::PhysCrateData::SetDCOffset()
+{
+  uint16_t dc_offset_a = ps_.get<uint16_t>("DCOffsetA",0x0000);
+  uint16_t dc_offset_b = ps_.get<uint16_t>("DCOffsetB",0x0000);
+  uint16_t dc_offset_c = ps_.get<uint16_t>("DCOffsetC",0x0000);
+  uint16_t dc_offset_d = ps_.get<uint16_t>("DCOffsetD",0x0000);
+
+  for(int ib=0; ib<physCr->NBoards(); ++ib){
+    auto bdhandle = physCr->BoardHandle(ib);
+    
+    CAENComm_Write32(bdhandle, A_DAC_A, 0x00070000 | dc_offset_a);
+    CAENComm_Write32(bdhandle, A_DAC_B, 0x00070000 | dc_offset_b);
+    CAENComm_Write32(bdhandle, A_DAC_C, 0x00070000 | dc_offset_c);
+    CAENComm_Write32(bdhandle, A_DAC_D, 0x00070000 | dc_offset_d);
+  }
+}
+
+void icarus::PhysCrateData::SetTestPulse()
+{
+  //TestPulseType tp_config = ps_.get<TestPulseType>("TestPulseType",TestPulseType::kDisable);
+  int tp_config = ps_.get<int>("TestPulseType",0);
+  uint16_t dc_offset = ps_.get<uint16_t>("DCOffsetTestPulse",0x0000);
+
+  for(int ib=0; ib<physCr->NBoards(); ++ib){
+    auto bdhandle = physCr->BoardHandle(ib);
+
+    if(tp_config==0)
+      CAENComm_Write32(bdhandle, A_RELE, RELE_TP_DIS);
+    else if (tp_config==1)
+      CAENComm_Write32(bdhandle, A_RELE, RELE_TP_EXT);
+    else if (tp_config==2){
+      CAENComm_Write32(bdhandle, A_RELE, RELE_TP_INT);
+      sleep(1);
+      CAENComm_Write32(bdhandle, A_RELE, RELE_TP_EVEN);
+    }
+    else if (tp_config==3){
+      CAENComm_Write32(bdhandle, A_RELE, RELE_TP_INT);
+      sleep(1);
+      CAENComm_Write32(bdhandle, A_RELE, RELE_TP_ODD);
+    }
+    
+    //set the test pulse dc offset
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00070000 | dc_offset);
+  
+  }
+
 }
   
 void icarus::PhysCrateData::VetoOn(){

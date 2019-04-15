@@ -14,6 +14,13 @@ namespace icarus {
   public:
     
     explicit PhysCrateData(fhicl::ParameterSet const & ps);
+
+    enum TestPulseType{
+      kDisable = 0,
+      kExternal = 1,
+      kInternal_Even = 2,
+      kInternal_Odd = 3
+    };
     
   private:
     
@@ -27,6 +34,9 @@ namespace icarus {
     void InitializeHardware();
     BoardConf GetBoardConf();
     TrigConf GetTrigConf();
+
+    void SetTestPulse();
+    void SetDCOffset();
 
     std::unique_ptr<PhysCrate> physCr;
     
