@@ -14,6 +14,7 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		         CircularBuffer.cc
 		  LIBRARIES 
 		    	 pthread
+			 artdaq_DAQdata
 		    	 ${MF_MESSAGELOGGER}
 			 ${Boost_SYSTEM_LIBRARY}
 		)
