@@ -132,7 +132,7 @@ namespace sbndaq {
     uint32_t SeqIDMinimumSec_;
 
     bool GetData();
-    bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &,bool clear_buffer=false);
+    bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
     size_t InsertIntoFEBBuffer(FEBBuffer_t &,size_t,size_t,size_t);
     size_t EraseFromFEBBuffer(FEBBuffer_t &, size_t const&);
@@ -143,6 +143,11 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
+	//my new variable
+    size_t FragmentCounter_; //it counts the fragments in the buffer
+    size_t GPSCounter_; // it counts how many GPS have occurred
+    size_t event_in_clock; // it counts how many events are within a clock of the FEB
+    size_t GPS_time; // time past from the very beginning of the DAQ_BEG - with respect to the GPS-PPS
   };
 }
 
