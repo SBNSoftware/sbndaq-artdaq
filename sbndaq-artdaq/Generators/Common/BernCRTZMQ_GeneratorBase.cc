@@ -37,6 +37,7 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
 
 bool be_verbose_section = false;
 
+
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
 
 if(be_verbose_section){
@@ -135,6 +136,14 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
   TRACE(TR_LOG,"BernFeb::start() called");
+
+  std::cout << std::endl << "--- START ---" << std::endl;
+  
+  timeval start_time; gettimeofday(&start_time,NULL);
+  start_time_metadata_s = start_time.tv_sec;
+  start_time_metadata_ns = start_time.tv_usec*1000;
+  std::cout<<"start_time [s]: " << start_time.tv_sec << "\n";
+  std::cout<<"start_time [micros]: " << start_time.tv_usec << "\n" << "\n" ;
 
   RunNumber_ = run_number();
   current_subrun_ = 0;
@@ -308,10 +317,25 @@ std::cout << std::endl;
 	// ---------------------//
 
 	//some timestamp
-	//timeval timenow; gettimeofday(&timenow,NULL); std::cout<<"timenow " << timenow << std::endl;
-	//timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
-	//std::cout<<"time_poll_finished " << time_poll_finished << std::endl;
+	//here I define the times since the last poll has started and finished
+	//timeval time_last_poll_start;//,time_last_poll_finished;
+	//time_last_poll_start.tv_sec;//, time_last_poll_finished.tv_sec = 0;
+	//std::cout << "time last poll start : " << time_last_poll_start.tv_sec << std::endl << "\n";
 
+	timeval time_poll_start; gettimeofday(&time_poll_start,NULL);
+	
+	time_poll_start_metadata_s = time_poll_start.tv_sec;
+ 	time_poll_start_metadata_ns = time_poll_start.tv_usec*1000;
+
+	std::cout<<"time_poll_start [s] " << time_poll_start.tv_sec << std::endl;
+	std::cout<<"time_poll_start [micros] " << time_poll_start.tv_usec << std::endl;
+	std::cout<<"time_last_poll_start [s] " << time_last_poll_start.tv_sec << std::endl;
+        std::cout<<"time_last_poll_start [micros] " << time_last_poll_start.tv_usec << std::endl;
+
+	time_last_poll_start_metadata_s = time_poll_start.tv_sec;
+	time_last_poll_start_metadata_ns = time_poll_start.tv_usec*1000;
+	
+	
 	size_t good_events = 1;
 	while(good_events<nevents){
 		++good_events;
@@ -331,11 +355,33 @@ std::cout << std::endl;
 
 	std::cout << "\nInserted into buffer on FEB " << (b.id & 0xff) << " " << good_events << " events." << std::endl;
 
-	//let's print out the content of the buffer
+
+	//Time at the poll has finished
+
+	//timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
+	//std::cout<<"time_poll_finished " << time_poll_finished.time << std::endl <<"\n";
+	timeval time_poll_finished; gettimeofday(&time_poll_finished,NULL);
+	time_poll_finish_metadata_s = time_poll_finished.tv_sec;
+ 	time_poll_finish_metadata_ns = time_poll_finished.tv_usec*1000;	
+
+	std::cout<<"time_poll_finish [s] " << time_poll_finished.tv_sec << std::endl;
+	std::cout<<"time_poll_finish [micros] " << time_poll_finished.tv_usec << std::endl;
+	std::cout<<"time_last_poll_finished [s] " << time_last_poll_finished.tv_sec << std::endl;
+        std::cout<<"time_last_poll_finished [micros] " << time_last_poll_finished.tv_usec << std::endl;
+
+	time_last_poll_finish_metadata_s = time_poll_finished.tv_sec;
+	time_last_poll_finish_metadata_ns = time_poll_finished.tv_usec*1000;
+	
+	
+
+	//let's print out the content of the buffer and count the event in the feb
 	for(size_t i_e=0; i_e<b.buffer.size(); ++i_e){
-		std::cout << i_e << ". Timestamp " << b.buffer.at(i_e).Time_TS0();
-		std::cout << std::setw(10) << " --- IsRefTS0? " <<b.buffer.at(i_e).IsReference_TS0() << std::endl;
+		//std::cout << i_e << ". Timestamp " << b.buffer.at(i_e).Time_TS0();
+		//std::cout << std::setw(10) << " --- IsRefTS0? " <<b.buffer.at(i_e).IsReference_TS0() << std::endl;
+		feb_event_count = i_e+1;
 	}
+	
+	std::cout << "feb_event_count: " << feb_event_count << std::endl;
 	std::cout << std::endl;
   return b.buffer.size();
 
@@ -501,6 +547,7 @@ std::cout << std::endl;
   
   //this fills the data from the ZMQ buffer
   size_t total_events = GetZMQData()/sizeof(BernCRTZMQEvent);
+  std::cout << "TOTAL EVENTS GET DATA " << total_events << "\n";
 
 
   TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() got %lu total events",total_events);
@@ -613,8 +660,8 @@ std::cout << std::endl;
   //size_t n_wraparounds=0;  
   //uint32_t last_time =0;  
   //size_t i_e;
-	uint32_t frag_begin_time = 0;
-	uint32_t frag_end_time = 0; 
+	//uint32_t frag_begin_time = 0;
+	//uint32_t frag_end_time = 0; 
 	//size_t event_in_clock = 0;  
 	//BernCRTZMQEvent event_before;
 	//BernCRTZMQEvent event_GPS;
@@ -624,8 +671,8 @@ std::cout << std::endl;
 
     //get this event!
     auto const& this_event = feb.buffer[i_e];
-    std::cout << this_event << std::endl; //the same as in GETDATA section
-    std::cout << "TS0 of the event: " << this_event.Time_TS0() << " [ns]" <<std::endl;
+    //	 std::cout << this_event << std::endl; //the same as in GETDATA section
+    //	 std::cout << "TS0 of the event: " << this_event.Time_TS0() << " [ns]" <<std::endl;
 
 
     //if it is a reference pulse, let's count it!
@@ -636,13 +683,13 @@ std::cout << std::endl;
 		event_in_clock = 0;  //just a counter over the events within a clock of the FEB
 		GPS_time += 1e9; //this_event.Time_TS0(); //time past from the very beginning
 		//event_GPS = this_event;
-		frag_begin_time = GPS_time;//this_event.Time_TS0();//event_GPS.Time_TS0();
-		frag_end_time = GPS_time;//this_event.Time_TS0();//event_GPS.Time_TS0();
+		//frag_begin_time = GPS_time;//this_event.Time_TS0();//event_GPS.Time_TS0();
+		//frag_end_time = GPS_time;//this_event.Time_TS0();//event_GPS.Time_TS0();
 	} 
 	else{
 		++event_in_clock;
-		frag_begin_time = GPS_time;//feb.buffer[i_e-event_in_clock].Time_TS0();
-		frag_end_time = GPS_time + this_event.Time_TS0();//feb.buffer[i_e-event_in_clock].Time_TS0() + this_event.Time_TS0();		
+		//frag_begin_time = GPS_time;//feb.buffer[i_e-event_in_clock].Time_TS0();
+		//frag_end_time = GPS_time + this_event.Time_TS0();//feb.buffer[i_e-event_in_clock].Time_TS0() + this_event.Time_TS0();		
 	}
 
     
@@ -654,11 +701,17 @@ std::cout << std::endl;
       if(metricMan != nullptr) metricMan->sendMetric("GPS_Ref_Time", (long int)this_event.Time_TS0() - 1e9, "ns", 5, artdaq::MetricMode::LastPoint);
       //i_gps=i_e;
     }
+	
 
-   
-  
+	timeval fragment_fill_time; gettimeofday(&fragment_fill_time,NULL);
+	fragment_fill_time_metadata_s = fragment_fill_time.tv_sec;
+	fragment_fill_time_metadata_ns = fragment_fill_time.tv_usec*1000;
 
-    /*    
+	std::cout<<"fragment_fill_time [s] " << fragment_fill_time.tv_sec << std::endl;
+	std::cout<<"fragment_fill_time [micros] " << fragment_fill_time.tv_usec << std::endl << "\n";
+
+
+	/*    
     BernCRTZMQFragmentMetadata metadata(frag_begin_time_s,frag_begin_time_ns,
 					frag_end_time_s,frag_end_time_ns,
 					time_correction,time_offset,
@@ -668,42 +721,47 @@ std::cout << std::endl;
 					nChannels_,nADCBits_);
     */
     //create metadata!
-    BernCRTZMQFragmentMetadata metadata(frag_begin_time/1e9,frag_begin_time,
-					frag_end_time/1e9,frag_end_time,
-					0,0,
-					RunNumber_,
-					FragmentCounter_++,
-					feb_id, ReaderID_,
-					nChannels_,nADCBits_);
+    BernCRTZMQFragmentMetadata metadata(start_time_metadata_s,start_time_metadata_ns,
+					time_poll_start_metadata_s,time_poll_start_metadata_ns,
+					time_poll_finish_metadata_s,time_poll_finish_metadata_ns,
+					time_last_poll_start_metadata_s,time_last_poll_start_metadata_ns,
+ 					time_last_poll_finish_metadata_s,time_last_poll_finish_metadata_ns,
+					fragment_fill_time_metadata_s, fragment_fill_time_metadata_ns,
+					feb_event_count,GPSCounter_,0);
     //increment n_events in metadata by 1 (to tell it we have one CRT Hit event!)
     metadata.inc_Events();
+    std::cout << metadata << std::endl;
     //std::cout << "\nEventCounter metadata: " << metadata.n_events() << std::endl;
-    std::cout << "\nFragmentCounter metadata: " << metadata.sequence_number() << std::endl;
-    std::cout << "TimeStart[ns]: " << metadata.time_start_nanosec() << std::endl;
-    std::cout << "TimeEnd[ns]: " << metadata.time_end_nanosec() << std::endl;
+    //std::cout << "\nFragmentCounter metadata: " << metadata.sequence_number() << std::endl;
+    //std::cout << "TimeStart[ns]: " << metadata.time_start_nanosec() << std::endl;
+    //std::cout << "TimeEnd[ns]: " << metadata.time_end_nanosec() << std::endl;
     /*if(this_event.flags==5){
 	++GPSCounter_;
 	std::cout << "\nGPSCounter: " << GPSCounter_ << std::endl;
     }else{std::cout << "This is not a GPS count" << std::endl; ++GPSCounter_; }*/
-    
 
-	
+
+
 
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(sizeof(BernCRTZMQEvent),  
-							metadata.sequence_number(),feb_id,
+							/*metadata.sequence_number()*/0,feb_id,
 							sbndaq::detail::FragmentType::BERNCRTZMQ, metadata, 
 							0//metadata.time_end_nanosec() //timestamp! to be filled!!!!
 							) );
 
     //copy the BernCRTZMQEvent into the fragment we just created
-    std::cout << "\n--Copy events into the fragment--\n";
+  //  std::cout << "\n--Copy events into the fragment--\n";
     std::copy(feb.buffer.begin()+i_e,feb.buffer.begin()+i_e+1,(BernCRTZMQEvent*)(frags.back()->dataBegin()));
+
 
   }
 
 	std::cout << "\nwe've got " << GPSCounter_ << " GPS-PPS" << std::endl;
 	std::cout << "event_in_clock " << event_in_clock << std::endl;
+
+
+
 
 	
 
@@ -909,7 +967,7 @@ std::cout << std::endl;
 /*-----------------------------------------------------------------------*/
 
 
-void sbndaq::BernCRTZMQ_GeneratorBase::SendMetadataMetrics(BernCRTZMQFragmentMetadata const& m) {
+void sbndaq::BernCRTZMQ_GeneratorBase::SendMetadataMetrics(BernCRTZMQFragmentMetadata const& /*m*/) {
 
 if(be_verbose_section){
 std::cout << std::endl;
@@ -919,7 +977,10 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
 
-  std::string id_str = GetFEBIDString(m.feb_id());
+//  std::string id_str = GetFEBIDString(m.feb_id());
+
+
+
   //metricMan->sendMetric("FragmentLastTime_"+id_str,(uint64_t)(m.time_end_seconds()*1000000000+m.time_end_nanosec()),"ns",5,false,"BernCRTZMQGenerator");
   //metricMan->sendMetric("EventsInFragment_"+id_str,(float)(m.n_events()),"events",5,true,"BernCRTZMQGenerator");
   //metricMan->sendMetric("MissedEvents_"+id_str,     (float)(m.missed_events()),     "events",5,true,"BernCRTZMQGenerator");

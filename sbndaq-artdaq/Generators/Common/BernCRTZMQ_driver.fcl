@@ -1,4 +1,4 @@
-events_to_generate: 23
+events_to_generate: 50
 run_number: 100
 
 fragment_receiver: {
@@ -51,7 +51,7 @@ physics:{
   producers: {}
   filters:   {}
 
-  outstream: [ rootout ]
+  outstream: [rootout ]
   end_paths: [ outstream ]
 
 }
@@ -60,11 +60,33 @@ outputs:{
 
   rootout:{
     module_type: RootOutput
-    fileName: "/scratch/speranza/crt_test_driver_test_%to.root"
+   # fileName: "/scratch/speranza/crt_test_metadata_%to_%#.root"
+    fileName: "/scratch/speranza/crt_test_metadata.root"
     compressionLevel: 0
+ 
+    #fileProperties:{
+
+    # maxEvents: 100
+	
+   # }
+
+
   }
 
 }
+
+
+  out:{
+
+    module_type: RootOutput
+    filename: "/scratch/speranza/crt_test_driver_test_100evt%to_%#.root"
+
+    fileProperties:{
+    	
+	maxEvents: 10  
+    }
+
+ }
 
 source:{
   module_type: IcarusInput

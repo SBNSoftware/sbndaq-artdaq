@@ -148,6 +148,23 @@ namespace sbndaq {
     size_t GPSCounter_; // it counts how many GPS have occurred
     size_t event_in_clock; // it counts how many events are within a clock of the FEB
     size_t GPS_time; // time past from the very beginning of the DAQ_BEG - with respect to the GPS-PPS
+
+    timeval time_last_poll_start;
+    timeval time_last_poll_finished;
+
+    uint32_t feb_event_count;
+    uint32_t start_time_metadata_s;
+    uint32_t start_time_metadata_ns;
+    uint32_t time_poll_start_metadata_s;
+    uint32_t time_poll_start_metadata_ns;
+    uint32_t time_poll_finish_metadata_s;
+    uint32_t time_poll_finish_metadata_ns;
+    uint32_t time_last_poll_start_metadata_s;
+    uint32_t time_last_poll_start_metadata_ns;
+    uint32_t time_last_poll_finish_metadata_s;
+    uint32_t time_last_poll_finish_metadata_ns;
+    uint32_t fragment_fill_time_metadata_s;
+    uint32_t fragment_fill_time_metadata_ns;
   };
 }
 
