@@ -97,7 +97,7 @@ namespace sbndaq {
 
 
     // total trigger counter
-    unsigned long _run_gool_part_counter = 0;
+    //<--unsigned long _run_gool_part_counter = 0;
     unsigned long _run_HLT_counter = 0;
     unsigned long _run_HLT_counters[8] = {0};
 

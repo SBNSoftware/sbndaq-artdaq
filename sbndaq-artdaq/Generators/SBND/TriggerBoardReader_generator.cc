@@ -95,11 +95,36 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
 
   // complete the json configuration
   // with the receiver host which is the machines where the board reader is running
-  const std::string receiver_address = boost::asio::ip::host_name() ;
+  boost::asio::io_service io_service;
+  boost::asio::ip::tcp::resolver resolver(io_service);
+  //const std::string receiver_address = boost::asio::ip::host_name() ;
+  std::string receiver_address = boost::asio::ip::host_name() ;
+  //std::string priv_receiver_address; 
+
+  // require the private hostname
+  std::string priv ("-priv");
+
+  if (receiver_address.find(priv) == std::string::npos) {
+    TLOG_INFO(TNAME) << "Requesting a private connection for host: " << receiver_address << TLOG_ENDL;
+    //priv_receiver_address += priv; 
+    receiver_address += priv; 
+  } 
+//  else {
+//    priv_receiver_address = receiver_address; 
+//    priv_receiver_address = receiver_address; 
+//  }
+ 
+  TLOG_INFO(TNAME) << "Host name is " << receiver_address << TLOG_ENDL;
+
+  TLOG_INFO(TNAME) << "IP addresses are: " << TLOG_ENDL;
+  std::for_each(resolver.resolve({receiver_address, ""}), {}, [](const auto& re) {
+      TLOG_INFO(TNAME) << re.endpoint().address() << TLOG_ENDL;
+  });
 
   jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
+  //jblob["ctb"]["sockets"]["receiver"]["host"] = "sbnd-daq33-priv" ;
 
-  TLOG_INFO(TNAME) << "Board packages recieved at " << receiver_port << "@" << receiver_address;
+  TLOG_INFO(TNAME) << "Board packages recieved at " << receiver_address << ", port:" << receiver_port << TLOG_ENDL;
 
   // create the json string
   json_stream.str("");
@@ -254,7 +279,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  timestamp = _last_timestamp ;
 	}
       }
-      
+
       // increment _metric TS counters
       ++ _metric_TS_counter ;
       
@@ -294,7 +319,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	}  // if there is a metric manager
 
 	// transfer HLT counters to run counters
-	_run_gool_part_counter += _metric_good_particle_counter ;
+	//<--_run_gool_part_counter += _metric_good_particle_counter ;
 	_run_HLT_counter += _metric_HLT_counter ; 
 	
 	// reset counters
@@ -453,7 +478,7 @@ void sbndaq::TriggerBoardReader::start() {
   _hp_TSs.clear() ;
   _lp_TSs.clear() ;
 
-  _run_gool_part_counter = 0 ;
+  //<--_run_gool_part_counter = 0 ;
   _run_HLT_counter = 0 ;
   for ( unsigned int i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
     _run_HLT_counters[i] = 0 ; 
@@ -560,8 +585,7 @@ bool sbndaq::TriggerBoardReader::store_run_trigger_counters( unsigned int run_nu
   out_name << _run_trigger_dir << prefix << "run_" << run_number << "_triggers.txt";
   std::ofstream out( out_name.str() ) ;
 
-  out << "Good Part\t " << _run_gool_part_counter << std::endl 
-      << "Total HLT\t " << _run_HLT_counter << std::endl ;
+  out << "Total \t " << _run_HLT_counter << std::endl ;
   for ( unsigned int i = 0; i < _metric_HLT_names.size() ; ++i ) {
     out << "HLT " << i << " \t " << _run_HLT_counters[i] << std::endl ;
   }
