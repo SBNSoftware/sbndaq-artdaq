@@ -10,7 +10,8 @@
 
 #include "CAENDecoder.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
-
+#include <algorithm> 
+using namespace sbndaq;
 // constructor of the CAENV1730Readout. It wants the param set 
 // which means the fhicl paramters in CAENV1730Readout.hh
 sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) : 
@@ -20,54 +21,18 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 {
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "CAENV1730Readout()" << TLOG_ENDL;
+  TLOG(TCONFIG) << fCAEN;
+	loadConfiguration(ps);
 
-  // initialize the fhicl parameters (see CAENV1730Readout.hh)
-  // the obj ps has a member method that gets he private members
-  // fVerbosity, etc.. are priv memb in CAENV1730Readout.hh
-  //
-  // wes, 16Jan2018: disabling default parameters
-  ///
-  fVerbosity = ps.get<int>("Verbosity"); //-1
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Verbosity=" << fVerbosity << TLOG_ENDL;
-
-  fBoardChainNumber = ps.get<int>("BoardChainNumber"); //0
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "BoardChainNumber=" << fBoardChainNumber << TLOG_ENDL;
-
-  fInterruptLevel = ps.get<uint8_t>("InterruptLevel"); //1
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "InterruptLevel=" << fInterruptLevel << TLOG_ENDL;
-
-  fInterruptStatusID = ps.get<uint32_t>("InterruptStatusID"); //0
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "InterruptStatusID=" << fInterruptStatusID << TLOG_ENDL;
-
-  fInterruptEventNumber = ps.get<uint16_t>("InterruptEventNumber"); //1
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "InterruptEventNumber=" << fInterruptEventNumber << TLOG_ENDL;
-  fSWTrigger = ps.get<bool>("SWTrigger"); //false
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SWTrigger=" << fSWTrigger << TLOG_ENDL;
-
-  fGetNextSleep = ps.get<uint32_t>("GetNextSleep"); //1000000
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "GetNextSleep=" << fGetNextSleep << TLOG_ENDL;
-
-  fCircularBufferSize = ps.get<uint32_t>("CircularBufferSize"); //1000000
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "CircularBufferSize=" << fCircularBufferSize << TLOG_ENDL;
-
-  fCombineReadoutWindows = ps.get<bool>("CombineReadoutWindows");
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "CombineReadoutWindows=" << fCombineReadoutWindows << TLOG_ENDL;
-
-  fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig",false);
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "CalibrateOnConfig=" << fCalibrateOnConfig << TLOG_ENDL;
-
-
+last_rcvd_rwcounter=0xFFFFFFFF;
+last_sent_rwcounter=0xFFFFFFFF;
   CAEN_DGTZ_ErrorCode retcode;
 
-  if(fVerbosity>0)
-    TLOG_INFO("CAENV1730Readout") << fCAEN << TLOG_ENDL;
-  
-  TLOG_ARB(TCONFIG,TRACE_NAME) << fCAEN << TLOG_ENDL;
 
   fNChannels = fCAEN.nChannels;
   fBoardID = fCAEN.boardId;
 
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Using BoardID=" << fBoardID << " with NChannels=" << fNChannels  << TLOG_ENDL;
+  TLOG(TCONFIG) << ": Using BoardID=" << fBoardID << " with NChannels=" << fNChannels;
 
   retcode = CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_OpticalLink,
 				    fCAEN.link,
@@ -75,51 +40,101 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 				    0,
 				    &fHandle);
 
-  fOK=false;
+  fOK=true;
 
   if(retcode != CAEN_DGTZ_Success){
-    TLOG_ERROR("CAENV1730Readout")
-      << "*** Fatal error opening CAEN board at "
-      << fCAEN.link << ", " << fBoardChainNumber << TLOG_ENDL;
     sbndaq::CAENDecoder::checkError(retcode,"OpenDigitizer",fBoardID);
+		CAEN_DGTZ_CloseDigitizer(fHandle);
     fHandle = -1;
     fOK = false;
-  }
-  else{
-    retcode = CAEN_DGTZ_Reset(fHandle);
-    sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
-    fOK = true;
-    sleep(2);
-    Configure();
-  }
+    TLOG(TLVL_ERROR) << ": Fatal error configuring CAEN board at " << fCAEN.link << ", " << fBoardChainNumber;
+		TLOG(TLVL_ERROR) << __func__ << ": Terminating process";
+	 	abort();
+	}
 
-  CAEN_DGTZ_EnaDis_t  state;
-  uint8_t             interruptLevel;
-  uint32_t            statusId;
-  uint16_t            eventNumber;
-  CAEN_DGTZ_IRQMode_t mode;
+  retcode = CAEN_DGTZ_Reset(fHandle);
+  sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
+  
+	sleep(1);
+  Configure();
+   
+//<--  configureInterrupts();
 
-  CAEN_DGTZ_EnaDis_t  stateOut;
-  uint8_t             interruptLevelOut;
-  uint32_t            statusIdOut;
-  uint16_t            eventNumberOut;
-  CAEN_DGTZ_IRQMode_t modeOut;
+	if(!fOK){
+		CAEN_DGTZ_CloseDigitizer(fHandle);
+    TLOG(TLVL_ERROR) << ": Fatal error configuring CAEN board at " << fCAEN.link << ", " << fBoardChainNumber;
+		TLOG(TLVL_ERROR) << __func__ << ": Terminating process";
+	 	abort();
+	}
 
-  if(fInterruptLevel>0){
+  // Set up worker getdata thread.
+  share::ThreadFunctor functor = std::bind(&CAENV1730Readout::GetData,this);
+  auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
+  auto GetData_worker = share::WorkerThread::createWorkerThread(worker_functor);
+  GetData_thread_.swap(GetData_worker);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "GetData worker thread setup." << TLOG_ENDL;
+
+  TLOG(TCONFIG) << "Configuration complete with OK=" << fOK << TLOG_ENDL;
+
+}
+
+
+void sbndaq::CAENV1730Readout::configureInterrupts() {
+  CAEN_DGTZ_EnaDis_t  state,stateOut;
+  uint8_t             interruptLevel,interruptLevelOut;
+  uint32_t            statusId __attribute__((unused)),statusIdOut __attribute__((unused));
+ //uint32_t            statusIdOut;
+  uint16_t            eventNumber,eventNumberOut;
+  CAEN_DGTZ_IRQMode_t mode,modeOut;
+
+  fInterruptLevel =1; //FIXME:GAL remove this line
+
+	if(fInterruptLevel>0){
     state           = CAEN_DGTZ_ENABLE;
-    interruptLevel  = fInterruptLevel;
-    statusId        = 0;
+    interruptLevel  = 1;
+    statusId        = 1;
     eventNumber     = 1;
-    mode            = CAEN_DGTZ_IRQ_MODE_ROAK; // Default mode
+    mode            = CAEN_DGTZ_IRQ_MODE_RORA; 
   }
   else{
     state           = CAEN_DGTZ_DISABLE;
-    interruptLevel  = fInterruptLevel;
+    interruptLevel  = 0;
     statusId        = 0;
-    eventNumber     = 1;
+    eventNumber     = 0;
     mode            = CAEN_DGTZ_IRQ_MODE_ROAK; // Default mode
   }
 
+	uint32_t readback=0;
+  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_ReadRegister(fHandle,0xef00,&readback);
+  CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
+  TLOG(TLVL_INFO) << "CAEN_DGTZ_ReadRegiste reg=0xef00 value=" <<  std::bitset<32>(readback) ;
+
+	retcode = CAEN_DGTZ_GetInterruptConfig (fHandle,
+                                          &stateOut,
+                                          &interruptLevelOut,
+                                          &statusIdOut,
+                                          &eventNumberOut,
+                                          &modeOut);
+  CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
+#if 1
+  uint32_t bitmask = (uint32_t)(0x1FF);
+	//uint32_t data = (uint32_t)(0x44); //RORA,irq link enabled,vme baseaddress relocation enabled
+	//uint32_t data = (uint32_t)(0x55); //RORA,irq link enabled,vme baseaddress relocation enabled,VME Bus error enabled,level 1
+	//uint32_t data = (uint32_t)(0x15); //RORA,irq link enabled,vme baseaddress relocation disabled,VME Bus error enabled,level 1
+	uint32_t data = (uint32_t)(0x9); //RORA,irq link enabled,vme baseaddress relocation disabled,VME Bus error enabled,level 1
+  uint32_t addr = 0xEF00;
+	uint32_t value = 0;
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+	TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister prior to overwrite of addr=" << std::hex << addr << ", returned value=" << std::bitset<32>(value) ; 
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Setting I/O control register 0x811C " << TLOG_ENDL;
+  retcode = sbndaq::CAENV1730Readout::WriteRegisterBitmask(fHandle,addr,data,bitmask);
+  sbndaq::CAENDecoder::checkError(retcode,"SetIOControl",fBoardID);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+	TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister addr=" << std::hex << addr << " and bitmask=" << std::bitset<32>(bitmask) << ", returned value=" << std::bitset<32>(value); 
+#endif
+	TLOG(TLVL_INFO)  << "state=" << uint32_t{ stateOut} <<", interruptLevel="<< uint32_t{interruptLevelOut} 
+		               <<", statusId=" << uint32_t{statusIdOut} <<", eventNumber=" << uint32_t{eventNumberOut}<<", mode="<< int32_t{modeOut};	
+/*
   retcode = CAEN_DGTZ_SetInterruptConfig(fHandle,
                                         state,
                                         interruptLevel,
@@ -127,6 +142,11 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
                                         eventNumber,
                                         mode);
   CAENDecoder::checkError(retcode,"SetInterruptConfig",fBoardID);
+	*/
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,0xef00,&readback);
+  CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
+  TLOG(TLVL_INFO) << "CAEN_DGTZ_ReadRegiste reg=0xef00 value=" <<  std::bitset<32>(readback) ;
+
 
   retcode = CAEN_DGTZ_GetInterruptConfig (fHandle,
                                           &stateOut,
@@ -138,29 +158,66 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   
   if (state != stateOut){
     TLOG_WARNING("CAENV1730Readout")
-      << "Interrupt State was not setup properly." << TLOG_ENDL;
+      << "Interrupt State was not setup properly, state write/read="<< int32_t{ state} <<"/"<< int32_t{ stateOut};
   }
   if (interruptLevel != interruptLevelOut){
     TLOG_WARNING("CAENV1730Readout")
-      << "Interrupt State was not setup properly." << TLOG_ENDL;
+      << "Interrupt State was not setup properly, interruptLevel write/read=" << uint32_t{interruptLevel}<< "/" << uint32_t{interruptLevelOut};
   }
   if (eventNumber != eventNumberOut){
     TLOG_WARNING("CAENV1730Readout")
-      << "Interrupt State was not setup properly." << TLOG_ENDL;
+      << "Interrupt State was not setup properly, eventNumber write/read=" << uint32_t {eventNumber} <<"/"<< uint32_t {eventNumberOut};
   }
   if (mode != modeOut){
     TLOG_WARNING("CAENV1730Readout")
-      << "Interrupt State was not setup properly." << TLOG_ENDL;
+      << "Interrupt State was not setup properly, mode write/read=" <<int32_t { mode }<< "/"<<int32_t { modeOut };
   }
 
-  // Set up worker getdata thread.
-  share::ThreadFunctor functor = std::bind(&CAENV1730Readout::GetData,this);
-  auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
-  auto GetData_worker = share::WorkerThread::createWorkerThread(worker_functor);
-  GetData_thread_.swap(GetData_worker);
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "GetData worker thread setup." << TLOG_ENDL;
+}
 
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Configuration complete with OK=" << fOK << TLOG_ENDL;
+void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps){
+  // initialize the fhicl parameters (see CAENV1730Readout.hh)
+  // the obj ps has a member method that gets he private members
+  // fVerbosity, etc.. are priv memb in CAENV1730Readout.hh
+  //
+  // wes, 16Jan2018: disabling default parameters
+  ///
+	fFragmentID = ps.get<uint32_t>("fragment_id");
+  TLOG(TCONFIG)<< __func__ << ": fFragmentID=" << fFragmentID;
+
+  fVerbosity = ps.get<int>("Verbosity"); //-1
+  TLOG(TCONFIG) << __func__<< ": Verbosity=" << fVerbosity;
+
+  fBoardChainNumber = ps.get<int>("BoardChainNumber"); //0
+  TLOG(TCONFIG)<<__func__ << ": BoardChainNumber=" << fBoardChainNumber;
+
+  fInterruptLevel = ps.get<uint8_t>("InterruptLevel"); //1
+  TLOG(TCONFIG) << __func__ << ": InterruptLevel=" << fInterruptLevel;
+
+  fInterruptStatusID = ps.get<uint32_t>("InterruptStatusID"); //0
+  TLOG(TCONFIG) << __func__ << ": InterruptStatusID=" << fInterruptStatusID;
+
+  fInterruptEventNumber = ps.get<uint16_t>("InterruptEventNumber"); //1
+  TLOG(TCONFIG) << __func__<< ": InterruptEventNumber=" << fInterruptEventNumber;
+
+  fSWTrigger = ps.get<bool>("SWTrigger"); //false
+  TLOG(TCONFIG)<<__func__ << ": SWTrigger=" << fSWTrigger ;
+
+  fGetNextSleep = ps.get<uint32_t>("GetNextSleep"); //1000000
+  TLOG(TCONFIG) << __func__<< ": GetNextSleep=" << fGetNextSleep;
+
+  fCircularBufferSize = ps.get<uint32_t>("CircularBufferSize"); //1000000
+  TLOG(TCONFIG) << __func__<< ": CircularBufferSize=" << fCircularBufferSize;
+
+  fCombineReadoutWindows = ps.get<bool>("CombineReadoutWindows");
+  TLOG(TCONFIG) <<__func__ << ": CombineReadoutWindows=" << fCombineReadoutWindows;
+
+  fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig",false);
+  TLOG(TCONFIG) <<__func__ <<": CalibrateOnConfig=" << fCalibrateOnConfig;
+
+  fGetNextFragmentBunchSize  = ps.get<uint32_t>("fGetNextFragmentBunchSize",20);
+  TLOG(TCONFIG) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
+
 }
 
 void sbndaq::CAENV1730Readout::Configure()
@@ -186,9 +243,7 @@ void sbndaq::CAENV1730Readout::Configure()
   fOK = (retcode==CAEN_DGTZ_Success);
 
   retcode = CAEN_DGTZ_Reset(fHandle);
-  // The CAENs take ~ 1 second to reset, add one more for contingency
-  // It's important not to address card before the cycle is complete
-  sleep(2);
+	sleep(2);
 
   ConfigureReadout();
   ConfigureRecordFormat();
@@ -201,6 +256,7 @@ void sbndaq::CAENV1730Readout::Configure()
   }
 
   ConfigureAcquisition();
+	configureInterrupts();
 
   if(fCalibrateOnConfig)
     RunADCCalibration();
@@ -266,6 +322,53 @@ sbndaq::CAENV1730Readout::~CAENV1730Readout()
   TLOG_ARB(TCONFIG,TRACE_NAME) << "~CAENV1730Readout() done." << TLOG_ENDL;
 }
 
+
+//Taken from wavedump
+//  handle : Digitizer handle
+//  address: register address
+//  data   : value to write to register
+//  bitmask: bitmask to override only the bits that need to change while leaving the rest unchanged
+CAEN_DGTZ_ErrorCode	sbndaq::CAENV1730Readout::WriteRegisterBitmask(int32_t handle, uint32_t address, uint32_t data, uint32_t bitmask) {
+
+	//int32_t ret = CAEN_DGTZ_Success;
+	CAEN_DGTZ_ErrorCode	ret = CAEN_DGTZ_Success;
+  uint32_t d32 = 0xFFFFFFFF;
+	uint32_t d32Out;
+
+  ret = CAEN_DGTZ_ReadRegister(handle, address, &d32);
+  if(ret != CAEN_DGTZ_Success){
+		TLOG(TLVL_ERROR) << __func__ << ": Failed reading a register; address=0x" << std::hex << address;
+    abort();
+	}
+
+  data &= bitmask;
+  d32 &= ~bitmask;
+  d32 |= data;
+  ret = CAEN_DGTZ_WriteRegister(handle, address, d32);
+
+  if(ret != CAEN_DGTZ_Success) {
+		TLOG(TLVL_ERROR) << __func__ << ": Failed writing a register; address=0x" << std::hex << address;
+    abort();
+	}
+
+  ret = CAEN_DGTZ_ReadRegister(handle, address, &d32Out);
+  if(ret != CAEN_DGTZ_Success){
+		TLOG(TLVL_ERROR) << __func__ << ": Failed reading a register; address=0x" << std::hex << address
+			<< ", value=" << std::bitset<32>(d32) << ", bitmask=" << std::bitset<32>(bitmask);
+    abort();
+	}
+
+	if( d32 != d32Out ) {
+		TLOG(TLVL_ERROR) << __func__ << ": Read and write values disagree; address=0x" << std::hex << address
+			<<", read value=" << std::bitset<32>(d32Out) << ", write value="<< std::bitset<32>(d32)
+			<< ", bitmask="<< std::bitset<32>(bitmask);
+    abort();
+	}
+
+
+  return ret;
+}
+
 void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
 {
   TLOG_ARB(TSTART,TRACE_NAME) << "ConfigureDataBuffer()" << TLOG_ENDL;
@@ -285,11 +388,8 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
   sbndaq::CAENDecoder::checkError(retcode,"FreeReadoutBuffer",fBoardID);
 
   TLOG_ARB(TSTART,TRACE_NAME) << "Configuring Circular Buffer of size " << fCircularBufferSize << TLOG_ENDL;
-  fCircularBuffer = sbndaq::CircularBuffer<uint16_t>(fCircularBufferSize/sizeof(uint16_t)); 
-  TLOG_ARB(TSTART,TRACE_NAME) << "Created Circular Buffer of size " 
-			      << fCircularBuffer.Buffer().capacity()*sizeof(uint16_t) 
-			      << std::endl << TLOG_ENDL;
-  
+	fPoolBuffer.allocate(fBufferSize,fCircularBufferSize,true);
+	fPoolBuffer.debugInfo();
 }
 
 void sbndaq::CAENV1730Readout::ConfigureTrigger()
@@ -375,6 +475,30 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   retcode = CAEN_DGTZ_GetIOLevel(fHandle,(CAEN_DGTZ_IOLevel_t *)&readback);
   CheckReadback("SetIOLevel", fBoardID,fCAEN.ioLevel,readback);
 
+  //uint32_t bitmask = (uint32_t)(0x6C0000);
+  //uint32_t bitmask = (uint32_t)(0x7F0000);
+  //uint32_t bitmask = (uint32_t)(0x7F0800);
+  uint32_t bitmask = (uint32_t)(0x7F0C00);
+	//uint32_t data = (uint32_t)(0x40000);
+	//uint32_t data = (uint32_t)(0x50000); //output the clock
+	uint32_t data = (uint32_t)(0x50800); //output the clock, and bypass motherboard
+	//uint32_t data = (uint32_t)(0x90000); //output the phase
+	//uint32_t data = (uint32_t)(0x60000); //output the clock, and select mezzanine virtual probes
+	//uint32_t data = (uint32_t)(0x60800); //output the clock, and select mezzanine virtual probes, and bypass motherboard
+	//uint32_t data = (uint32_t)(0xA0000); //output the phase, and select mezzanine virtual probes
+	//uint32_t data = (uint32_t)(0xA0800); //output the phase, and select mezzanine virtual probes, and bypass motherboard
+	//uint32_t data = (uint32_t)(0x90800); //output the phase, and bypass motherboard
+	//uint32_t data = (uint32_t)(0x90C00); //output the phase, trig-in is synchornized for the whole duration of trig in
+	//uint32_t data = (uint32_t)(0x30000); //output the the reset (1pps) signal
+  addr = 0x811C;
+	uint32_t value = 0;
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+	TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister prior to overwrite of addr=" << std::hex << addr << ", returned value=" << std::bitset<32>(value) ; 
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Setting I/O control register 0x811C " << TLOG_ENDL;
+  retcode = sbndaq::CAENV1730Readout::WriteRegisterBitmask(fHandle,addr,data,bitmask);
+  sbndaq::CAENDecoder::checkError(retcode,"SetIOControl",fBoardID);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+	TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister addr=" << std::hex << addr << " and bitmask=" << std::bitset<32>(bitmask) << ", returned value=" << std::bitset<32>(value); 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureTrigger() done." << TLOG_ENDL;
 }
 
@@ -401,13 +525,39 @@ void sbndaq::CAENV1730Readout::ConfigureReadout()
   retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,mask);
   sbndaq::CAENDecoder::checkError(retcode,"SetTestPattern",fBoardID);
 
+	//Global Registers
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetDyanmicRange " << fCAEN.dynamicRange << TLOG_ENDL;
   mask = (uint32_t)(fCAEN.dynamicRange);
   addr = 0x8028;
   retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,mask);
   sbndaq::CAENDecoder::checkError(retcode,"SetDynamicRange",fBoardID);
 
-  for(uint32_t ch=0; ch<fNChannels; ++ch){
+/*	
+  uint32_t bitmask = (uint32_t)(0x6C0000);
+	uint32_t data = (uint32_t)(0x40000);
+  addr = 0x811C;
+	uint32_t value = 0;
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+	TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister prior to overwrite of addr=" << std::hex << addr << ", returned value=" << std::bitset<32>(value) ; 
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Setting I/O control register 0x811C " << TLOG_ENDL;
+  retcode = sbndaq::CAENV1730Readout::WriteRegisterBitmask(fHandle,addr,data,bitmask);
+  sbndaq::CAENDecoder::checkError(retcode,"SetIOControl",fBoardID);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+	TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister addr=" << std::hex << addr << " and bitmask=" << std::bitset<32>(bitmask) << ", returned value=" << std::bitset<32>(value); 
+*/
+
+  addr = 0x8100;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,uint32_t{0x28});
+  sbndaq::CAENDecoder::checkError(retcode,"SetTriggerMode",fBoardID);
+
+  addr = 0x8100;
+	uint32_t value =0;
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+  sbndaq::CAENDecoder::checkError(retcode,"GetTriggerMode",fBoardID);
+
+	TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister addr=" << std::hex << addr << ", returned value=" << std::bitset<32>(value) ; 
+
+	for(uint32_t ch=0; ch<fNChannels; ++ch){
     TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channel " << ch << " DC offset to " << fCAEN.pedestal[ch] << TLOG_ENDL;
     retcode = CAEN_DGTZ_SetChannelDCOffset(fHandle,ch,fCAEN.pedestal[ch]);
     sbndaq::CAENDecoder::checkError(retcode,"SetChannelDCOffset",fBoardID);
@@ -475,7 +625,7 @@ void sbndaq::CAENV1730Readout::start()
 
   ConfigureDataBuffer();
   total_data_size = 0;
-  prev_rwcounter = -1;
+  last_sent_rwcounter = -1;
 
   if((CAEN_DGTZ_AcqMode_t)(fCAEN.acqMode)==CAEN_DGTZ_AcqMode_t::CAEN_DGTZ_SW_CONTROLLED)
     {
@@ -527,9 +677,8 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
 bool sbndaq::CAENV1730Readout::GetData()
 {
-  TLOG(TGETDATA) << "Begin of GetData()" << TLOG_ENDL;
+  TLOG(TGETDATA)<< __func__ << ": Begin of GetData()";
 
-  uint32_t this_data_size=0;  // define this to then pass its adress to the function that reads data
   CAEN_DGTZ_ErrorCode retcod;
 
   if(fSWTrigger) {
@@ -541,9 +690,11 @@ bool sbndaq::CAENV1730Readout::GetData()
 
   // read the data from the buffer of the card
   // this_data_size is the size of the acq window
-  char *bufp = (char*)(fBuffer.get());
   if(fCAEN.interruptLevel > 0){
-
+		
+#if 0		
+  uint32_t this_data_size=0;  // define this to then pass its adress to the function that reads data
+  char *bufp = (char*)(fBuffer.get());
     retcod = CAEN_DGTZ_RearmInterrupt(fHandle);
     CAENDecoder::checkError(retcod,"RearmInterrupt",fBoardID);
 
@@ -573,47 +724,104 @@ bool sbndaq::CAENV1730Readout::GetData()
        }
       }
     }
+#endif
   }
-  else{
-    TLOG(TGETDATA) << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)bufp
-                   << ",&this_data_size="<<(void*)&this_data_size<<")";
-    retcod = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
-                                bufp, &this_data_size);
-
-
-    if(this_data_size==0) {
-      TLOG(TGETDATA) << "No data. Sleep for " << fGetNextSleep << " us and return.";
-      usleep(fGetNextSleep);
-      return false;
-    }
-
-    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(bufp);
-    const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
-
-    TLOG(TGETDATA) << "ReadData complete with returned data size "
-                       << this_data_size << " retcod=" << int{retcod} << ", event size in the header " << header_event_size;
-    if (retcod !=CAEN_DGTZ_Success) {
-        TLOG(TLVL_ERROR) << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcod};
-    }
-
-    if (this_data_size != header_event_size )  {
-      TLOG(TLVL_ERROR) << "Event size in the header does not match the expected size; expected/header " 
-				<< header_event_size << "/" << this_data_size;
-    }
+  else {
+   return readSingleWindowDataBlock();
   }
 
-
-  TLOG(TGETDATA) << "checking if size()="<<fCircularBuffer.Buffer().size()
-                 << " + this_data_size ("<<this_data_size/sizeof(uint16_t)
-                 <<") is > capacity ("<<fCircularBuffer.Buffer().capacity()<<")";
-  if ((fCircularBuffer.Buffer().size()+(this_data_size/sizeof(uint16_t))) > fCircularBuffer.Buffer().capacity())
-	  TLOG(TGETDATA) << "WILL BLOCK -- FIXME WES?BILL";
-  //else
-	  fCircularBuffer.Insert(this_data_size/sizeof(uint16_t),fBuffer);
-  
   return true;
 }// CAENV1730Readout::GetData()
 
+
+bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock()
+{
+    TLOG(TGETDATA) << __func__<< ": Begin of readSingleWindowDataBlock()";
+
+    metricMan->sendMetric("Free DataBlocks",fPoolBuffer.freeBlockCount(),"fragments",1,artdaq::MetricMode::LastPoint);
+		CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, 500);
+
+    if (retcode == CAEN_DGTZ_Timeout) {
+      TLOG(TGETDATA) << __func__ <<  ": Exiting after a timeout";
+			return true;
+		}else	if (retcode !=CAEN_DGTZ_Success) {
+        TLOG(TLVL_ERROR) << __func__ << ": CAEN_DGTZ_IRQWait returned non zero return code; return code=" << int{retcode};
+				std::this_thread::yield();
+        return false;
+    }
+
+	  auto fragment_count=fGetNextFragmentBunchSize;
+
+    while (--fragment_count) {
+
+		auto block =  fPoolBuffer.takeFreeBlock();
+
+    if(!block) {
+        TLOG(TLVL_ERROR) << __func__ <<": PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
+				TLOG(TLVL_ERROR) << __func__ <<": PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount() <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
+	  		TLOG(TLVL_ERROR) << __func__ <<": Critical error; aborting boardreader process....";				
+	//		throw std::runtime_error( "PoolBuffer is empty"  );
+	  		abort();
+			
+			std::this_thread::yield();
+      return false;
+    }
+
+    TLOG(TGETDATA) << __func__ << ": Got a free DataBlock from PoolBuffer";
+
+    uint32_t read_data_size =0;
+
+    TLOG(TGETDATA) << __func__ << ": Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
+                   << ",&block.size="<<(void*)&(block->size) << ")";
+
+    retcode = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
+                                (char*)block->begin,&read_data_size);
+
+    block->verify_redzone();
+    block->data_size= read_data_size;
+
+    if (retcode !=CAEN_DGTZ_Success) {
+        TLOG(TLVL_ERROR) << __func__ << ": CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
+        fPoolBuffer.returnFreeBlock(block);
+				std::this_thread::yield();
+        return false;
+    }
+
+    TLOG(TGETDATA) << __func__ <<  ": CAEN_DGTZ_ReadData complete with returned data size " << block->data_size
+                   << " retcod=" << int{retcode};
+
+    if (block->data_size == 0) { 
+      TLOG(TGETDATA)<< __func__ << ": CAEN_DGTZ_ReadData returned zero data size";
+      fPoolBuffer.returnFreeBlock(block);
+			std::this_thread::yield();
+      return false;
+    }
+
+    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(block->begin);
+    const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
+    if(block->data_size != header_event_size ) {
+      TLOG(TLVL_ERROR)<<__func__ << ": Wrong event size; returned="
+                       << block->data_size << ", header=" << header_event_size;
+    }
+
+
+		auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
+
+		if( readoutwindow_trigger_counter_gap > 1u ){
+  	  TLOG (TLVL_ERROR) << __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
+      << readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
+			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
+		}
+
+    last_rcvd_rwcounter = uint32_t{header->eventCounter};
+    fPoolBuffer.returnActiveBlock(block);
+    
+    TLOG(TGETDATA) <<__func__ << ": CAEN_DGTZ_ReadData returned DataBlock header.eventCounter=" 
+			<< header->eventCounter << ", header.eventSize=" << header_event_size;
+		}
+
+    return true;
+}
 
 
 // this is really the DAQ part where the server reads data from 
@@ -621,225 +829,101 @@ bool sbndaq::CAENV1730Readout::GetData()
 bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
 {
 	return fCombineReadoutWindows ? readCombinedWindowFragments(fragments): readSingleWindowFragments(fragments);
-
-#if 0	
-  TLOG_ARB(TGETNEXT,TRACE_NAME) << "Begin of getNext_()" << TLOG_ENDL;
- 
-  uint32_t event_size =0;	
-  uint32_t this_data_size=0;  // define this to then pass its adress to the function that reads data
-  struct timespec zeit;	      // keine anung
-
-  clock_gettime(CLOCK_REALTIME,&zeit);
-  
-  this_data_size = fCircularBuffer.Buffer().size()*sizeof(uint16_t);
-
-  // if there's no data keep calling getNext_
-  if(this_data_size==0){
-    TLOG_ARB(TGETNEXT,TRACE_NAME) << "No data. Sleep for " << fGetNextSleep << " us and return." << TLOG_ENDL;
-    usleep(fGetNextSleep);
-    return true;
-  }
-
-  TLOG_ARB(TGETDATA,TRACE_NAME) << "Circular buffer size is " << this_data_size << TLOG_ENDL;
-
-  // I initialize this metadata object
-  // because its expected size is = to the size of a rw
-  CAENV1730FragmentMetadata metadata(fNChannels,fCAEN.recordLength,
-				     zeit.tv_sec,zeit.tv_nsec,
-				     ch_temps);
-  TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created metadata with metadata.ExpectedDataSize() = " 
-				 << metadata.ExpectedDataSize() << TLOG_ENDL;
-
-  n_readout_windows = this_data_size/metadata.ExpectedDataSize();
-
-  // this_data_size has to be an integer multiple of metadata.ExpectedDataSize()
-  // precisely by a factor of nevents
-  if(this_data_size != n_readout_windows*metadata.ExpectedDataSize()){
-    TLOG_WARNING("CAENV1730Readout")
-      << "Total data size is " << this_data_size 
-      << " and n_readout_windows is " << n_readout_windows
-      << ", but this does not match per-event size if " << metadata.ExpectedDataSize()
-      << ". Sleep for " << fGetNextSleep << " us and return." << TLOG_ENDL;
-    usleep(fGetNextSleep);
-    return true;
-  }
-
-  fCircularBuffer.Linearize();
-
-  // I loop over the readout windows of the acq window
-  for(size_t i_rw=0; i_rw<n_readout_windows; ++i_rw){
-    
-	char * buf_begin = (char*)(&(*fCircularBuffer.Buffer().begin()));
-	TLOG(TMAKEFRAG) << "Get Readout Window number - i_rw=" << i_rw
-					<< " Buffer().begin()=" << (void*)buf_begin 
-					<< " metadata.ExpectedDataSize()="<< metadata.ExpectedDataSize();
-    
-	// I scan the rw's ponting at them with eventptr
-	char* rwptr;
-	if(fCombineReadoutWindows)
-		rwptr = buf_begin + i_rw*metadata.ExpectedDataSize();
-	else
-		rwptr = buf_begin;// + i_rw*metadata.ExpectedDataSize();
-    //char* rwptr = (char*)(&(*(fCircularBuffer.Buffer().begin())) + i_rw*metadata.ExpectedDataSize()/sizeof(uint16_t));
-    //if ((ulong)rwptr > (ulong)(&(*fCircularBuffer.Buffer().end()))) {
-    //    TLOG (TMAKEFRAG) << "CAENV1730Readout rwptr beyond end of Buffer() FIXME - should never happen. If it does, give up on life";
-	//		event_size += metadata.ExpectedDataSize();
-	//	fCircularBuffer.Erase(event_size/sizeof(uint16_t));
-	//	return true;
-    //}
-    
-    TLOG (TMAKEFRAG) << "First 4 bytes from CAENV1730Readout header " <<   *((uint32_t*)rwptr);
-
-    CAENV1730EventHeader* header = reinterpret_cast<CAENV1730EventHeader*>(rwptr);
-    uint32_t rwcounter = header->eventCounter; // I get the eventcounter for the i_e^th readout window	
-
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "rwcounter = " << rwcounter 
-			  << ".  prev_rwcounter (before if) = " << prev_rwcounter << TLOG_ENDL;	
-    
-    // I update the total size of an event (acq window)
-    event_size += metadata.ExpectedDataSize();
-
-    // if the data are not enough to build one event increase the event size							       	
-    if(fCombineReadoutWindows && ((int32_t)rwcounter > prev_rwcounter)){
-      
-      // now, as I loop through the rw's, at some point the 
-      // eventcounter will be reset to zero (because the rw belongs 
-      // to an other acq wind). So if I keep track of the # of rw's 
-      // with prev_eventcounter, when evcounter will be again 0
-      // I break the loop and I generate an Event (i.e. smthg that 
-      // corresponds to an acq wind)
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "i am in the if" << TLOG_ENDL;
-      
-      prev_rwcounter = rwcounter;
-      total_data_size += metadata.ExpectedDataSize();
-      
-      // here I place memory to store the fragment in the end	
-      
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "event_size = " << event_size
-				     << " total_data_size = " << total_data_size
-				     << " i_rw*metadata.ExpectedDataSize() = " << i_rw*metadata.ExpectedDataSize()
-				     << " prev_eventcounter = " << prev_rwcounter << TLOG_ENDL;
-    }//end if event counter increasing
-    else{ 																// now I am ready to build the artdaq fragm
-      TLOG(TMAKEFRAG) << "i am in the else\n" 
-				     << "event_size = " << event_size 
-				     << " total_data_size = " << total_data_size 		
-				     << " i_rw*metadata.ExpectedDataSize() = " << i_rw*metadata.ExpectedDataSize() 
-				     << " eventptr - fBuffer = " << rwptr - (char*)&*(fCircularBuffer.Buffer().begin())
-				     << TLOG_ENDL;
-      // fragments is a vector of fragments. 
-      // emplace is simuilar to push_back, but it doesn't
-      // copy. I don't need to construct an object and put
-      // it back. With emplace I construct it AS I push_back
-      
-      // also, at this point a fragment is a whole event
-      // that is why I use the fEvCounter
-      fragments.emplace_back( artdaq::Fragment::FragmentBytes(event_size,
-							      fEvCounter,fBoardID,
-							      sbndaq::detail::FragmentType::CAENV1730,
-							      metadata) );
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created fragment " << fBoardID << "," << fEvCounter << TLOG_ENDL;
-      std::copy(fCircularBuffer.Buffer().begin(),
-		fCircularBuffer.Buffer().begin()+event_size/sizeof(uint16_t),
-		(uint16_t*)(fragments.back()->dataBeginBytes())); // funziona (by Wes)
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Fragment data copied for event " << fEvCounter << "." << TLOG_ENDL;
-      fEvCounter++;
-      
-      //std::copy(eventptr , eventptr + (nevents - i_e)*metadata.ExpectedDataSize(), fBuffer);        
-      fCircularBuffer.Erase(event_size/sizeof(uint16_t));
-      //TLOG_ARB(TMAKEFRAG,TRACE_NAME) <<"There are " << nevents << " rw(s) left to analyze. Shifted to front of buffer" << TLOG_ENDL;
-      
-      if(fCombineReadoutWindows)
-	event_size = metadata.ExpectedDataSize();
-      else
-	event_size = 0;
-      prev_rwcounter = 0;
-    }
-  }
-
-  TLOG_ARB(TGETNEXT,TRACE_NAME) << "Finished processing readout windows." << TLOG_ENDL;
-
-  total_data_size = 0;
-  usleep(fGetNextSleep);
-
-  TLOG_ARB(TGETNEXT,TRACE_NAME) << "getNext_() done." << TLOG_ENDL;
-  return true;
-#endif
 }
 
 
 bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & fragments){
-  TLOG_ARB(TGETNEXT,TRACE_NAME) << "Begin of readSingleWindowFragments()" << TLOG_ENDL;
+  TLOG(TGETNEXT) <<__func__ << ": Begin of readSingleWindowFragments()" ;
 
-  constexpr auto sizeof_unit16_t = sizeof(uint16_t);
-  const auto available_datasize_bytes= fCircularBuffer.Buffer().size()*sizeof_unit16_t;
+	static auto start= std::chrono::steady_clock::now();
 
-  if(! available_datasize_bytes ){
-    TLOG_ARB(TGETNEXT,TRACE_NAME) << "CircularBuffer is empty. Sleep for " << fGetNextSleep << " us and return." << TLOG_ENDL;
+ 	std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
+
+  if (delta.count() >0.005*fGetNextFragmentBunchSize) {
+     metricMan->sendMetric("Laggy getNext",1,"count",1,artdaq::MetricMode::Accumulate);
+     TLOG (TLVL_DEBUG) << __func__ << ": Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_rwcounter;
+   }
+
+  if(fPoolBuffer.activeBlockCount() == 0){
+    TLOG(TGETNEXT) << __func__ << ": PoolBuffer has no data.  Laast last seen fragment sequenceID=" <<last_sent_rwcounter
+                   << "; Sleep for " << fGetNextSleep << " us and return.";
     ::usleep(fGetNextSleep);
+    start= std::chrono::steady_clock::now();
     return true;
   }
 
-  TLOG_ARB(TGETDATA,TRACE_NAME) << "CircularBuffer has " <<  available_datasize_bytes << " bytes of new data."<< TLOG_ENDL;
-
+  double max_fragment_create_time=0.0;
+	double min_fragment_create_time=10000.0;
   struct timespec now;
   clock_gettime(CLOCK_REALTIME,&now);
   const auto metadata = CAENV1730FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec,ch_temps);
   const auto fragment_datasize_bytes = metadata.ExpectedDataSize();
-  TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created CAENV1730FragmentMetadata with expected data size of " << fragment_datasize_bytes << " bytes." TLOG_ENDL;
+  TLOG(TMAKEFRAG)<< __func__ << ": Created CAENV1730FragmentMetadata with expected data size of " << fragment_datasize_bytes << " bytes.";
 
-  if( available_datasize_bytes % fragment_datasize_bytes ){
-    TLOG_WARNING("CAENV1730Readout") << "Last readout window is not fully transferred into CircularBuffer; Will retry after " << fGetNextSleep << " us." << TLOG_ENDL;
-    ::usleep(fGetNextSleep);
-    return true;
-  }
+	auto fragment_count=fGetNextFragmentBunchSize;
 
-  fCircularBuffer.Linearize();
+  while(--fragment_count && fPoolBuffer.activeBlockCount()){
+		
+	  start= std::chrono::steady_clock::now();
+//    TLOG(21) << __func__ << ": b4 FragmentBytes";
+    auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,fEvCounter,fFragmentID,sbndaq::detail::FragmentType::CAENV1730,metadata);
 
-  const auto available_readoutwindow_count = available_datasize_bytes / fragment_datasize_bytes ;
-  int remaining_readoutwindow_count = available_readoutwindow_count;
 
-  while (remaining_readoutwindow_count--){
-    const auto readoutwindow_begin = fCircularBuffer.Buffer().begin();
-    TLOG(TMAKEFRAG) << "Get Readout Window number " << available_readoutwindow_count - remaining_readoutwindow_count << " of "
-      << available_readoutwindow_count << " readoutwindow_begin=" << (void*) &*readoutwindow_begin;
+    using sbndaq::PoolBuffer;
+    PoolBuffer::DataRange<decltype(artdaq::Fragment())> range{fragment_uptr->dataBegin(),fragment_uptr->dataEnd()};
 
-    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(&*readoutwindow_begin);
-    const auto readoutwindow_event_counter = header->eventCounter;
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Readout window event counters current / gap  = " << readoutwindow_event_counter  << " / "
-      << readoutwindow_event_counter - prev_rwcounter  << TLOG_ENDL;
+//	TLOG(21) << __func__ << ": b4 fPoolBuffer.read(range)";
+    if(!fPoolBuffer.read(range)) break;
 
-    auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,fEvCounter,fBoardID,sbndaq::detail::FragmentType::CAENV1730,metadata);
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created fragment " << fBoardID << " for event " << fEvCounter << TLOG_ENDL;
-    //testing.. get time again so fragments have unique times 
+    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(fragment_uptr->dataBeginBytes());
+    const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
+    fragment_uptr->setSequenceID(readoutwindow_event_counter);
+
+    struct timespec now;
     clock_gettime(CLOCK_REALTIME,&now);
     artdaq::Fragment::timestamp_t ts = ((now.tv_sec * 1000000000 ) + now.tv_nsec); //in 1ns ticks
     fragment_uptr->setTimestamp( ts );
-    ///
-    const auto fragment_datasize_words = fragment_datasize_bytes/sizeof_unit16_t;
-    const auto readoutwindow_end = readoutwindow_begin + fragment_datasize_words ;
-    auto fragment_buffer_begin = reinterpret_cast<uint16_t*> (fragment_uptr->dataBeginBytes());
 
-    std::copy(readoutwindow_begin,readoutwindow_end,fragment_buffer_begin);
-    fCircularBuffer.Erase(fragment_datasize_words);
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Fragment data copied for event " << fEvCounter << "." << TLOG_ENDL;
+    //const auto fragment_datasize_words = fragment_datasize_bytes/sizeof_unit16_t;
+    //const auto readoutwindow_end = readoutwindow_begin + fragment_datasize_words ;
+
+    auto readoutwindow_event_counter_gap= readoutwindow_event_counter - last_sent_rwcounter;
+
+    TLOG(TMAKEFRAG)<<__func__ << ": Created fragment " << fFragmentID << " for event " << readoutwindow_event_counter
+                   << " triggerTimeTag " << header->triggerTimeTag ;
+//    TLOG(TMAKEFRAG) <<__func__ <<": Readout window event counters current / gap  = " << readoutwindow_event_counter  << " / "
+//      << readoutwindow_event_counter_gap;
+
+
+          
+		if( readoutwindow_event_counter_gap > 1u ){
+		  TLOG (TLVL_ERROR) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
+      << readoutwindow_event_counter_gap;
+		}
 
     fragments.emplace_back(nullptr);
     std::swap(fragments.back(),fragment_uptr);
 
     fEvCounter++;
-    prev_rwcounter = readoutwindow_event_counter;
+    last_sent_rwcounter = readoutwindow_event_counter;
+		delta = std::chrono::steady_clock::now()-start;
+
+		min_fragment_create_time=std::min(delta.count(),min_fragment_create_time);
+		max_fragment_create_time=std::max(delta.count(),max_fragment_create_time);
+
+    if (delta.count() >0.0005 ) {
+     metricMan->sendMetric("Laggy Fragments",1,"frags",1,artdaq::MetricMode::AccumulateAndRate);
+		  TLOG (TLVL_DEBUG) << __func__ << ": Creating a fragment with setSequenceID=" << last_sent_rwcounter <<  " took " << delta.count()*1000 << " ms";
+//	    TRACE_CNTL("modeM", 0);
+    }
   }
 
-  const auto actual_readout_bytes  = std::accumulate( fragments.begin(), fragments.end(), 0ul,[](auto& a, auto const& f){return a+f->dataSizeBytes();});
-  if (actual_readout_bytes != available_datasize_bytes) {
-    TLOG_ARB(TGETNEXT,TRACE_NAME) << "Error in readSingleWindowFragments actual_readout_bytes != available_datasize_bytes "
-      << actual_readout_bytes << " / " << available_datasize_bytes << TLOG_ENDL;
-  }
+  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
+ // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
 
-  ::usleep(fGetNextSleep);
-  TLOG_ARB(TGETNEXT,TRACE_NAME) << "End of readSingleWindowFragments()"
-    << std::string(fragments.size() != available_readoutwindow_count ? "Error: fragment count != readout window count!":"") << TLOG_ENDL;
+  TLOG(TGETNEXT) << __func__<< ": End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
+
+  start= std::chrono::steady_clock::now();
 
   return true;
 }
