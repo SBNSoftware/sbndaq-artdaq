@@ -5,14 +5,14 @@
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh" 
 #include "artdaq/Application/CommandableFragmentGenerator.hh"
-
 #include "CAENDigitizer.h"
 #include "CAENDigitizerType.h"
 #include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
 
 #include "CAENConfiguration.hh"
 
-#include "CircularBuffer.hh"
+//#include "CircularBuffer.hh"
+#include "PoolBuffer.hh"
 #include "workerThread.hh"
 
 #include <string>
@@ -36,8 +36,12 @@ namespace sbndaq
 
   private:
     bool readSingleWindowFragments(artdaq::FragmentPtrs &);
+	  bool readSingleWindowDataBlock();
+	
 		bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
 		
+		void loadConfiguration(fhicl::ParameterSet const& ps);
+		void configureInterrupts();
 
     typedef enum 
     { 
@@ -94,16 +98,19 @@ namespace sbndaq
     uint16_t fInterruptEventNumber;
     uint32_t fInterruptStatusID;
     uint32_t fGetNextSleep;
+		uint32_t fGetNextFragmentBunchSize;
     bool     fSWTrigger;
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
+		uint32_t fFragmentID;
 
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
     bool     fOK;
     uint32_t fEvCounter; // set to zero at the beginning
-    int32_t  prev_rwcounter;
+    uint32_t last_rcvd_rwcounter;
+		uint32_t last_sent_rwcounter;
     uint32_t total_data_size;
     //uint32_t event_size;	
     uint32_t n_readout_windows;
@@ -123,11 +130,13 @@ namespace sbndaq
     bool WaitForTrigger();
     bool GetData();
     share::WorkerThreadUPtr GetData_thread_;
-    sbndaq::CircularBuffer<uint16_t> fCircularBuffer;
+    sbndaq::PoolBuffer fPoolBuffer; 		
     size_t fCircularBufferSize;
     std::unique_ptr<uint16_t[]> fBuffer;
 
     void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
+
+		CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address, uint32_t data, uint32_t bitmask); 
     
   };
 

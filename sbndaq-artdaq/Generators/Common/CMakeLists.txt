@@ -12,9 +12,12 @@ cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		  SOURCE workerThread.cpp 
 		         CircularBuffer.cc
+			 PoolBuffer.cc
 		  LIBRARIES 
 		    	 pthread
 			 artdaq_DAQdata
+			 ${MF_UTILITIES}
+			 ${TRACE}
 		    	 ${MF_MESSAGELOGGER}
 			 ${Boost_SYSTEM_LIBRARY}
 		)
@@ -73,6 +76,7 @@ simple_plugin(CAENV1730Readout "generator"
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-core_Data
+  artdaq-utilities_Plugins
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
