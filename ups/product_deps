@@ -26,7 +26,7 @@ caendigitizer	      v2_12_0
 pqxx		      v6_2_5a
 epics                 v3_16_1c
 jsoncpp		      v1_7_7c
-wibtools	      v0_0_40
+wibtools	      v0_0_04
 cetbuildtools         v7_02_01     -       only_for_build
 libxml2               v2_9_5       -
 icarus_artdaq_base    v0_06_06     -
