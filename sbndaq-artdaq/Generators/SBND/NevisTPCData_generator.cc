@@ -1,11 +1,11 @@
 //
-// sbnddaq-readout/Generators/NevisTPCData_generator.cc
+// sbndaq-readout/Generators/NevisTPCData_generator.cc
 //
 
 #define TRACE_NAME "NevisTPCGeneratorData"
 #include "artdaq/DAQdata/Globals.hh"
 
-#include "sbnddaq-readout/Generators/NevisTPCData.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPCData.hh"
 #include "artdaq/Application/GeneratorMacros.hh"
 
 #include <iomanip>
@@ -15,19 +15,19 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-sbnddaq::NevisTPCData::NevisTPCData(fhicl::ParameterSet const & ps): NevisTPC_generatorBase(ps){
+sbndaq::NevisTPCData::NevisTPCData(fhicl::ParameterSet const & ps): NevisTPC_generatorBase(ps){
 
   TRACE(TINFO,"NevisTPCData constructor called");
   TRACE(TINFO,"NevisTPCData constructor completed");
 }
 
-sbnddaq::NevisTPCData::~NevisTPCData(){
+sbndaq::NevisTPCData::~NevisTPCData(){
 
   TRACE(TINFO,"NevisTPCData destructor called");
   TRACE(TINFO,"NevisTPCData destructor completed");
 }
 
-void sbnddaq::NevisTPCData::ConfigureStart(){
+void sbndaq::NevisTPCData::ConfigureStart(){
 
   TRACE(TINFO,"NevisTPCData::ConfigureStart() called");
   
@@ -41,7 +41,7 @@ void sbnddaq::NevisTPCData::ConfigureStart(){
   
 }
 
-size_t sbnddaq::NevisTPCData::GetFEMCrateData(){
+size_t sbndaq::NevisTPCData::GetFEMCrateData(){
 
   usleep(data_wait_time_);
   
@@ -135,4 +135,4 @@ size_t sbnddaq::NevisTPCData::GetFEMCrateData(){
   return 0;
 }
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbnddaq::NevisTPCData)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::NevisTPCData)

@@ -5,13 +5,13 @@
 #ifndef _sbnddaq_readout_Generators_NevisTPCData_generator
 #define _sbnddaq_readout_Generators_NevisTPCData_generator
 
-#include "sbnddaq-readout/Generators/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC_generatorBase.hh"
 
 #include <random>
 
-namespace sbnddaq {
+namespace sbndaq {
 
-	class NevisTPCData : public sbnddaq::NevisTPC_generatorBase {
+	class NevisTPCData : public sbndaq::NevisTPC_generatorBase {
 		public:
 
 			explicit NevisTPCData(fhicl::ParameterSet const & ps);

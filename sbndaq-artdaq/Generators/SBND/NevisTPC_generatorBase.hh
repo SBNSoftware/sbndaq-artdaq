@@ -14,13 +14,13 @@
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Application/CommandableFragmentGenerator.hh"
-#include "workerThread.hh"
-#include "sbnddaq-datatypes/Overlays/NevisTPCFragment.hh"
+#include "sbndaq-artdaq/Generators/Common/workerThread.hh"
+#include "sbndaq-artdaq-core/Overlays/SBND/NevisTPCFragment.hh"
 #include <unistd.h>
 #include <vector>
 
 
-namespace sbnddaq
+namespace sbndaq
 {
   class NevisTPC_generatorBase: public artdaq::CommandableFragmentGenerator
   {
@@ -95,7 +95,7 @@ namespace sbnddaq
     uint32_t CircularBufferSizeBytes_;
     CircularBuffer_t CircularBuffer_;
     bool GetData();
-    WorkerThreadUPtr GetData_thread_;
+    share::WorkerThreadUPtr GetData_thread_;
     
     bool FillFragment(artdaq::FragmentPtrs &,bool clear_buffer=false);
     

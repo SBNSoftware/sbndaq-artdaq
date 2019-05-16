@@ -1,11 +1,11 @@
 //
-// sbnddaq-readout/Generators/NevisTPC_generatorBase.cc (D.Cianci,W.Badgett)
+// sbndaq-readout/Generators/NevisTPC_generatorBase.cc (D.Cianci,W.Badgett)
 //
 #define TRACE_NAME "NevisTPCGenerator"
 #include "artdaq/DAQdata/Globals.hh"
 
-#include "sbnddaq-readout/Generators/NevisTPC_generatorBase.hh"
-#include "sbnddaq-datatypes/Overlays/FragmentType.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include <fstream>
 #include <iomanip>
@@ -16,17 +16,17 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-sbnddaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
+sbndaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
 	
 	Initialize();
 }
 
-sbnddaq::NevisTPC_generatorBase::~NevisTPC_generatorBase(){
+sbndaq::NevisTPC_generatorBase::~NevisTPC_generatorBase(){
 
 	stopAll();
 }
 
-void sbnddaq::NevisTPC_generatorBase::Initialize(){
+void sbndaq::NevisTPC_generatorBase::Initialize(){
   
   // Read out stuff from fhicl
   FEMIDs_ = ps_.get< std::vector<uint64_t> >("FEMIDs",{0});
@@ -48,7 +48,7 @@ void sbnddaq::NevisTPC_generatorBase::Initialize(){
   GetData_thread_.swap(GetData_worker);
 }
 
-void sbnddaq::NevisTPC_generatorBase::start(){
+void sbndaq::NevisTPC_generatorBase::start(){
   
   current_subrun_ = 0;
   events_seen_ = 0;
@@ -63,22 +63,22 @@ void sbnddaq::NevisTPC_generatorBase::start(){
   GetData_thread_->start();
 }
 
-void sbnddaq::NevisTPC_generatorBase::stopAll(){
+void sbndaq::NevisTPC_generatorBase::stopAll(){
   
   GetData_thread_->stop();
 }
 
-void sbnddaq::NevisTPC_generatorBase::stop(){
+void sbndaq::NevisTPC_generatorBase::stop(){
   
   stopAll();
 }
 
-void sbnddaq::NevisTPC_generatorBase::stopNoMutex(){
+void sbndaq::NevisTPC_generatorBase::stopNoMutex(){
   
   stopAll();
 }
 
-size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
+size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
   
   TRACE(TDEBUG,"Inserting %lu words. Currently %lu/%lu in buffer.",
 	n_words,buffer.size(),buffer.capacity());
@@ -95,7 +95,7 @@ size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, s
   return buffer.size();
 }
 
-size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
+size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
   
   TRACE(TDEBUG,"Erasing %lu words. Currently %lu/%lu in buffer.",
 	n_words,buffer.size(),buffer.capacity());
@@ -110,7 +110,7 @@ size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
   return buffer.size();	
 }
 
-bool sbnddaq::NevisTPC_generatorBase::GetData(){
+bool sbndaq::NevisTPC_generatorBase::GetData(){
   
   TRACE(TGETDATA,"GetData() called");
   
@@ -126,7 +126,7 @@ bool sbnddaq::NevisTPC_generatorBase::GetData(){
   return true;
 }
 
-bool sbnddaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
+bool sbndaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
   
   while(true)
     if(!FillFragment(frags)) break;
@@ -134,7 +134,7 @@ bool sbnddaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
   return true;
 }
 
-bool sbnddaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer){
+bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer){
   
   size_t new_buffer_size=0;
 
