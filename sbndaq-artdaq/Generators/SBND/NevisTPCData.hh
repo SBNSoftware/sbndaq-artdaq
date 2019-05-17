@@ -1,5 +1,5 @@
 //
-// sbnddaq-readout/Generators/NevisTPCData_generator.hh
+// sbndaq-artdaq/Generators/SBND/NevisTPCData_generator.hh
 //
 
 #ifndef _sbnddaq_readout_Generators_NevisTPCData_generator

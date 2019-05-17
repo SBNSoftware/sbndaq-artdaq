@@ -42,9 +42,9 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   CircularBuffer_ = CircularBuffer(CircularBufferSizeBytes_/sizeof(uint16_t));
   
   // Set up worker getdata thread.
-  ThreadFunctor functor = std::bind(&NevisTPC_generatorBase::GetData,this);
-  auto worker_functor = WorkerThreadFunctorUPtr(new WorkerThreadFunctor(functor,"GetDataWorkerThread"));
-  auto GetData_worker = WorkerThread::createWorkerThread(worker_functor);
+  share::ThreadFunctor functor = std::bind(&NevisTPC_generatorBase::GetData,this);
+  auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
+  auto GetData_worker = share::WorkerThread::createWorkerThread(worker_functor);
   GetData_thread_.swap(GetData_worker);
 }
 
@@ -134,7 +134,7 @@ bool sbndaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
   return true;
 }
 
-bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer){
+bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags){
   
   size_t new_buffer_size=0;
 
@@ -191,10 +191,11 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   // Sweet, now, let's actually fill stuff
   if(events_seen_%EventsPerSubrun_==0)
     ++current_subrun_;
-  
-  metadata_ = NevisTPCFragmentMetadata(RunNumber_,current_subrun_,header->getEventNum());
+
+  // To do: last boolean here is compression flag -- take from FHICL
+  metadata_ = NevisTPCFragmentMetadata(RunNumber_,current_subrun_,header->getEventNum(),true);
   frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,  
-                                                      metadata_.event_number(),
+                                                      metadata_.EventNumber(),
                                                       (2&0xffff)+((1&0xffff)<16),
                                                       detail::FragmentType::NevisTPC, metadata_) );
   std::copy(CircularBuffer_.buffer.begin(),

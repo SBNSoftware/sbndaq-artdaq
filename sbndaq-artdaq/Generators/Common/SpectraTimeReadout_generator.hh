@@ -1,5 +1,5 @@
 //
-// sbnddaq-readout/Generators/SpectraTimeReadout_generator.hh
+// sbndaq-artdaq/Generators/Common/SpectraTimeReadout_generator.hh
 //
 
 #ifndef sbndaq_artdaq_Generators_Common_SpectraTimeReadout_generator

@@ -1,5 +1,5 @@
 //
-// sbnddaq-readout/Generators/NevisTPC_generatorBase.hh
+// sbndaq-artdaq/Generators/SBND/NevisTPC_generatorBase.hh
 //
 
 #ifndef _sbnddaq_readout_Generators_NevisTPC_generatorBase
@@ -97,7 +97,8 @@ namespace sbndaq
     bool GetData();
     share::WorkerThreadUPtr GetData_thread_;
     
-    bool FillFragment(artdaq::FragmentPtrs &,bool clear_buffer=false);
+    //    bool FillFragment(artdaq::FragmentPtrs &,bool clear_buffer=false);
+    bool FillFragment(artdaq::FragmentPtrs &);
     
   };
 }
