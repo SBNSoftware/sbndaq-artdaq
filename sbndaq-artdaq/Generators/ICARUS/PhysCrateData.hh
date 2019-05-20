@@ -37,6 +37,8 @@ namespace icarus {
 
     void SetTestPulse();
     void SetDCOffset();
+    void ForceClear();
+    void ForceReset();
 
     std::unique_ptr<PhysCrate> physCr;
     
