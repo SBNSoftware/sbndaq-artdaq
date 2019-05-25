@@ -6,6 +6,7 @@ include_directories(./TriggerBoard)
 cet_make_library(LIBRARY_NAME sbndaq-artdaq_Generator_SBND_NevisTPCBase 
                  SOURCE NevisTPC_generatorBase.cc
                  LIBRARIES 
+			artdaq_Generators
 			artdaq_Application
 			artdaq_DAQdata
 			artdaq-core_Utilities
@@ -26,6 +27,7 @@ simple_plugin(TriggerBoardReader "generator"
   sbndaq-artdaq_Generators_SBND_TriggerBoard
   sbndaq-artdaq_Common_Utilities
   artdaq-core_Data
+  artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
   artdaq-core_Utilities
@@ -47,6 +49,7 @@ simple_plugin(NevisTPCData "generator"
   sbndaq-artdaq_Common_Utilities
   sbndaq-artdaq_Generator_SBND_NevisTPCBase
   artdaq-core_Data
+  artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
   artdaq-core_Utilities

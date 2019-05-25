@@ -13,6 +13,7 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 			sbndaq-artdaq-core_Overlays
 			sbndaq-artdaq-core_Overlays_ICARUS
 			sbndaq-artdaq_Common_Utilities
+			artdaq_Generators
 			artdaq_Application
 			artdaq_DAQdata
 			artdaq-core_Utilities
@@ -35,6 +36,7 @@ simple_plugin(PhysCrateData "generator"
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_ICARUS
   sbndaq-artdaq_Common_Utilities
+  artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
   artdaq-core_Utilities

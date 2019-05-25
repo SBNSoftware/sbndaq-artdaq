@@ -6,7 +6,7 @@
 #include "json/reader.h"
 
 #include "sbndaq-artdaq/Generators/SBND/TriggerBoardReader.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "trace.h"
 #include "artdaq/DAQdata/Globals.hh"
@@ -15,7 +15,6 @@
 #include "sbndaq-artdaq-core/Overlays/SBND/PTB_content.h"
 #include "sbndaq-artdaq-core/Overlays/SBND/PTBFragment.hh"
 
-#include "artdaq/Application/GeneratorMacros.hh"
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
 
 #include "canvas/Utilities/Exception.h"
@@ -121,7 +120,7 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
       TLOG_INFO(TNAME) << re.endpoint().address() << TLOG_ENDL;
   });
 
-  jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
+  //jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
   //jblob["ctb"]["sockets"]["receiver"]["host"] = "sbnd-daq33-priv" ;
 
   TLOG_INFO(TNAME) << "Board packages recieved at " << receiver_address << ", port:" << receiver_port << TLOG_ENDL;

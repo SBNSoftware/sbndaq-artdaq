@@ -1,6 +1,6 @@
 #define TRACE_NAME "PhysCrateData"
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrateData.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 
 #include <cerrno>
 #include <iomanip>

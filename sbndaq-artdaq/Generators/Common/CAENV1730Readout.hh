@@ -4,7 +4,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh" 
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
 
 #include "CAENDigitizer.h"
 #include "CAENDigitizerType.h"

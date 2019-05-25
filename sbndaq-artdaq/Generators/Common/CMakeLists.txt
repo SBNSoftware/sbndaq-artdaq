@@ -3,6 +3,7 @@ add_subdirectory(GPS)
 include_directories( ${CAENCOMM_INC} )
 include_directories( ${CAENVME_INC} )
 include_directories( ${CAENDIGITIZER_INC} )
+include_directories( ${ARTDAQ_INC} )
 include_directories( ./GPS )
 
 cet_find_library( CAENDIGITIZER    NAMES CAENDigitizer    PATHS ENV CAENDIGITIZER_LIB   NO_DEFAULT_PATH )
@@ -26,6 +27,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 			 CAENException.cc
 		  LIBRARIES
 			artdaq_DAQdata
+			artdaq_Generators
   			artdaq-core_Utilities
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
@@ -42,14 +44,11 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 )
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
-		  SOURCE SpectraTimeReadout_generator.cc
-		  	 GPS/GPSInfo.cc
+		  SOURCE  GPS/GPSInfo.cc
 		  LIBRARIES
 			artdaq_DAQdata
+			artdaq_Generators
   			artdaq-core_Utilities
-			artdaq_Application
-			artdaq-utilities_Plugins
-			artdaq-core_Data
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
@@ -69,6 +68,7 @@ simple_plugin(CAENV1730Readout "generator"
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
+  artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
   artdaq-core_Utilities
@@ -89,6 +89,7 @@ simple_plugin(SpectraTimeReadout "generator"
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
+  artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
   artdaq-core_Utilities
@@ -106,7 +107,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
 		  LIBRARIES
   		        sbndaq-artdaq-core_Overlays
   			sbndaq-artdaq-core_Overlays_Common
-  			sbndaq-artdaq_Common_Utilities
+  			sbndaq-artdaq_Common_Utilities	
+			artdaq_Generators
 			artdaq_Application
 			artdaq_DAQdata
 			artdaq-core_Utilities
@@ -124,6 +126,7 @@ simple_plugin(BernCRTZMQData "generator"
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   zmq
+  artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
   artdaq-core_Utilities
