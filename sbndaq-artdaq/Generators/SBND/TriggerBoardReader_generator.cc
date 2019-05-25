@@ -120,7 +120,7 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
       TLOG_INFO(TNAME) << re.endpoint().address() << TLOG_ENDL;
   });
 
-  //jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
+  jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
   //jblob["ctb"]["sockets"]["receiver"]["host"] = "sbnd-daq33-priv" ;
 
   TLOG_INFO(TNAME) << "Board packages recieved at " << receiver_address << ", port:" << receiver_port << TLOG_ENDL;
