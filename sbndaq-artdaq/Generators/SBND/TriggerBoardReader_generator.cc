@@ -97,29 +97,36 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   // with the receiver host which is the machines where the board reader is running
   boost::asio::io_service io_service;
   boost::asio::ip::tcp::resolver resolver(io_service);
-  //const std::string receiver_address = boost::asio::ip::host_name() ;
   std::string receiver_address = boost::asio::ip::host_name() ;
-  //std::string priv_receiver_address; 
 
   // require the private hostname
   std::string priv ("-priv");
 
-  if (receiver_address.find(priv) == std::string::npos) {
+  if (receiver_address.find(priv) == std::string::npos) { //not a private connection
+
     TLOG_INFO(TNAME) << "Requesting a private connection for host: " << receiver_address << TLOG_ENDL;
-    //priv_receiver_address += priv; 
-    receiver_address += priv; 
-  } 
-//  else {
-//    priv_receiver_address = receiver_address; 
-//    priv_receiver_address = receiver_address; 
-//  }
+    std::string domain (".fnal.gov");
+    std::string FQPDN = priv + domain; // "-priv.fnal.gov"
+    TLOG_INFO(TNAME) << "Fully Qualified Private Domain Name : " << FQPDN << TLOG_ENDL;
+
+    //check for domain name
+    std::size_t domain_pos = receiver_address.find(domain);
+    if (domain_pos != std::string::npos) { //host name contains domain name
+      receiver_address.insert(domain_pos,priv); //insert priv 
+    } else { //host name does not contain the domain name
+
+    //receiver_address += priv; 
+    receiver_address += FQPDN;
+    //receiver_address = "sbnd-daq33-priv.fnal.gov"; 
+    }
+  }
  
   TLOG_INFO(TNAME) << "Host name is " << receiver_address << TLOG_ENDL;
-
   TLOG_INFO(TNAME) << "IP addresses are: " << TLOG_ENDL;
   std::for_each(resolver.resolve({receiver_address, ""}), {}, [](const auto& re) {
       TLOG_INFO(TNAME) << re.endpoint().address() << TLOG_ENDL;
   });
+
 
   jblob["ctb"]["sockets"]["receiver"]["host"] = receiver_address ;
   //jblob["ctb"]["sockets"]["receiver"]["host"] = "sbnd-daq33-priv" ;
