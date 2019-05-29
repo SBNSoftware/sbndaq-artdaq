@@ -29,7 +29,7 @@ jsoncpp		      v1_7_7c
 # wibtools	      v0_00_04
 cetbuildtools         v7_02_01     -       only_for_build
 libxml2               v2_9_5       -
-icarus_artdaq_base    v0_08_00     -
+icarus_artdaq_base    v0_06_06     -
 cetbuildtools         v7_02_01     -       only_for_build
 smc_compiler	      v6_6_0		-nq-	only_for_build
 end_product_list
