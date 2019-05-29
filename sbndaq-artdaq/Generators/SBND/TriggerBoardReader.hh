@@ -7,7 +7,7 @@
 
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh" 
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include <boost/lockfree/spsc_queue.hpp>
@@ -97,7 +97,7 @@ namespace sbndaq {
 
 
     // total trigger counter
-    unsigned long _run_gool_part_counter = 0;
+    //<--unsigned long _run_gool_part_counter = 0;
     unsigned long _run_HLT_counter = 0;
     unsigned long _run_HLT_counters[8] = {0};
 

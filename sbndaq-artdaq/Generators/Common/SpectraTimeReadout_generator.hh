@@ -1,5 +1,5 @@
 //
-// sbnddaq-readout/Generators/SpectraTimeReadout_generator.hh
+// sbndaq-artdaq/Generators/Common/SpectraTimeReadout_generator.hh
 //
 
 #ifndef sbndaq_artdaq_Generators_Common_SpectraTimeReadout_generator
@@ -15,7 +15,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
 #include "workerThread.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/SpectratimeEventFragment.hh"
 #include "sbndaq-artdaq/Generators/Common/GPS/GPSInfo.hh"

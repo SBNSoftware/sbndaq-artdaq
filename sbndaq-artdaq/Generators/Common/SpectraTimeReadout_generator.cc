@@ -1,5 +1,6 @@
 //
-// sbnddaq-readout/Generators/SpectraTimeReadout_generator.cc (D.Cianci,W.Badgett)
+// sbndaq-artdaq/Generators/Common/SpectraTimeReadout_generator.cc 
+//  (D.Cianci,W.Badgett)
 //
 // Read from a message queue GPS status messages, buffer them and send them 
 //    out on request to the EVBs
@@ -17,7 +18,7 @@
 
 #include "sbndaq-artdaq/Generators/Common/SpectraTimeReadout_generator.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 #include <fstream>
 #include <iomanip>
 #include <iterator>
