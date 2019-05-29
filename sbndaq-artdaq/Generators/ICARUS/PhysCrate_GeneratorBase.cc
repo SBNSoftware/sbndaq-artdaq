@@ -45,13 +45,6 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs", 100000);
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check", 10000);
   fCircularBufferSize = ps_.get<size_t>("CircularBufferSize", 1e9);
-  metadata_ = PhysCrateFragmentMetadata(RunNumber_,
-					nBoards_,
-					ChannelsPerBoard_,
-					SamplesPerChannel_,
-					nADCBits_,
-					CompressionScheme_,
-					BoardIDs_);
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
 			      throttle_usecs_ % throttle_usecs_check_ != 0) ) {
@@ -64,7 +57,17 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
 }
 
 void icarus::PhysCrate_GeneratorBase::start() {
+
+
   current_subrun_ = 0;
+
+  metadata_ = PhysCrateFragmentMetadata(RunNumber_,
+					nBoards_,
+					ChannelsPerBoard_,
+					SamplesPerChannel_,
+					nADCBits_,
+					CompressionScheme_,
+					BoardIDs_);
 
   fCircularBuffer = sbndaq::CircularBuffer<uint16_t>(fCircularBufferSize/sizeof(uint16_t));
 
