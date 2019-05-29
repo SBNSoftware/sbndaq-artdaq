@@ -2,7 +2,7 @@
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrate_GeneratorBase.hh"
 
 #include "art/Utilities/ExceptionMessages.h"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 #include "cetlib_except/exception.h"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "fhiclcpp/ParameterSet.h"

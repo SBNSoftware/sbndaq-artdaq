@@ -1,5 +1,5 @@
 #include "sbndaq-artdaq/Generators/Common/BernCRTZMQData.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 
 #include <iomanip>
 #include <iterator>

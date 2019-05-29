@@ -1,5 +1,5 @@
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrateFakeData.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 #include "artdaq/DAQdata/Globals.hh"
 #include <iomanip>
 #include <iterator>

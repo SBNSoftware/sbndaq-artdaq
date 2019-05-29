@@ -6,7 +6,7 @@
 #include "json/reader.h"
 
 #include "sbndaq-artdaq/Generators/SBND/TriggerBoardReader.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "trace.h"
 #include "artdaq/DAQdata/Globals.hh"
@@ -15,7 +15,6 @@
 #include "sbndaq-artdaq-core/Overlays/SBND/PTB_content.h"
 #include "sbndaq-artdaq-core/Overlays/SBND/PTBFragment.hh"
 
-#include "artdaq/Application/GeneratorMacros.hh"
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
 
 #include "canvas/Utilities/Exception.h"

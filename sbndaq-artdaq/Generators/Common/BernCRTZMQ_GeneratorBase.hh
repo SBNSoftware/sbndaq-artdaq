@@ -1,6 +1,6 @@
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh" 
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
 
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"

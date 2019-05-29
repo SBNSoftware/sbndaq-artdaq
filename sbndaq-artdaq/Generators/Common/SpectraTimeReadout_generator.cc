@@ -18,7 +18,7 @@
 
 #include "sbndaq-artdaq/Generators/Common/SpectraTimeReadout_generator.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 #include <fstream>
 #include <iomanip>
 #include <iterator>
