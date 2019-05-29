@@ -6,7 +6,7 @@
 #include "artdaq/DAQdata/Globals.hh"
 
 #include "sbndaq-artdaq/Generators/SBND/NevisTPCData.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 
 #include <iomanip>
 #include <iterator>

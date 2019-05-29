@@ -10,6 +10,7 @@ art_make_exec(NAME artdaqDriver
 	SOURCE
 	$ENV{ARTDAQ_DIR}/source/proto/driver.cc
   LIBRARIES
+  artdaq_Generators
   artdaq_Application # needed for messagefacility
   artdaq_DAQrate
   artdaq_DAQdata
@@ -30,6 +31,7 @@ art_make_exec(NAME boardreader
 	SOURCE
 	$ENV{ARTDAQ_DIR}/source/proto/boardreader.cc
   LIBRARIES
+  artdaq_Generators
   artdaq_Application # needed for messagefacility
   artdaq_BuildInfo
   artdaq_DAQrate

@@ -2,7 +2,7 @@
 #include "artdaq/DAQdata/Globals.hh"
 
 #include "sbndaq-artdaq/Generators/Common/CAENV1730Readout.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 
 #include <iostream>
 #include <sstream>

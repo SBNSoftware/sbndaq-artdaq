@@ -15,7 +15,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
 #include "workerThread.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/SpectratimeEventFragment.hh"
 #include "sbndaq-artdaq/Generators/Common/GPS/GPSInfo.hh"

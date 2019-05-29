@@ -13,7 +13,7 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
 #include "sbndaq-artdaq/Generators/Common/workerThread.hh"
 #include "sbndaq-artdaq-core/Overlays/SBND/NevisTPCFragment.hh"
 #include <unistd.h>

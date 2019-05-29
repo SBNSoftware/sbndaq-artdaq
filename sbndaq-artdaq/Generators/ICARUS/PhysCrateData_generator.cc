@@ -1,6 +1,6 @@
 #define TRACE_NAME "PhysCrateData"
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrateData.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 
 #include <cerrno>
 #include <iomanip>
@@ -27,6 +27,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   InitializeHardware();
   InitializeVeto();
 
+  this->nBoards_ = (uint16_t)(physCr->NBoards());
+
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&PhysCrateData::GetData, this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
@@ -51,6 +53,22 @@ void icarus::PhysCrateData::InitializeVeto(){
     auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"VetoTestWorkerThread"));
     auto veto_worker = share::WorkerThread::createWorkerThread(worker_functor);
     _vetoTestThread.swap(veto_worker);
+  }
+}
+
+void icarus::PhysCrateData::ForceReset()
+{
+  for(int ib=0; ib<physCr->NBoards(); ++ib){
+    auto bdhandle = physCr->BoardHandle(ib);
+    CAENComm_Write32(bdhandle, A_Signals, 0x1);
+  }
+}
+
+void icarus::PhysCrateData::ForceClear()
+{
+  for(int ib=0; ib<physCr->NBoards(); ++ib){
+    auto bdhandle = physCr->BoardHandle(ib);
+    CAENComm_Write32(bdhandle, A_Signals, 0x2);
   }
 }
 
@@ -127,6 +145,7 @@ void icarus::PhysCrateData::VetoOff(){
 void icarus::PhysCrateData::InitializeHardware(){
   physCr = std::make_unique<PhysCrate>();
   physCr->initialize(pcieLinks_);
+  ForceReset();
 }
 
 BoardConf icarus::PhysCrateData::GetBoardConf(){
@@ -173,6 +192,9 @@ void icarus::PhysCrateData::ConfigureStart(){
   //physCr->configureTrig(GetTrigConf());
   //physCr->configure(GetBoardConf());
   //VetoOff();
+
+  ForceClear();
+
   physCr->start();
 
   if(_doVetoTest)
