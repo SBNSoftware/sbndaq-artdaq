@@ -1,11 +1,11 @@
 //
-// sbnddaq-readout/Generators/NevisTPC_generatorBase.cc (D.Cianci,W.Badgett)
+// sbndaq-artdaq/Generators/SBND/NevisTPC_generatorBase.cc (D.Cianci,W.Badgett)
 //
 #define TRACE_NAME "NevisTPCGenerator"
 #include "artdaq/DAQdata/Globals.hh"
 
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPC_generatorBase.hh"
-#include "sbnddaq-datatypes/Overlays/FragmentType.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include <fstream>
 #include <iomanip>
@@ -16,17 +16,17 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-sbnddaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
+sbndaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
 	
 	Initialize();
 }
 
-sbnddaq::NevisTPC_generatorBase::~NevisTPC_generatorBase(){
+sbndaq::NevisTPC_generatorBase::~NevisTPC_generatorBase(){
 
 	stopAll();
 }
 
-void sbnddaq::NevisTPC_generatorBase::Initialize(){
+void sbndaq::NevisTPC_generatorBase::Initialize(){
   use_xmit_ = true;
   look_for_xmit_header_ = true;
 
@@ -56,7 +56,7 @@ void sbnddaq::NevisTPC_generatorBase::Initialize(){
   GetData_thread_.swap(GetData_worker);
 }
 
-void sbnddaq::NevisTPC_generatorBase::start(){
+void sbndaq::NevisTPC_generatorBase::start(){
   
   current_subrun_ = 0;
   events_seen_ = 0;
@@ -74,22 +74,22 @@ void sbnddaq::NevisTPC_generatorBase::start(){
   GetData_thread_->start();
 }
 
-void sbnddaq::NevisTPC_generatorBase::stopAll(){
+void sbndaq::NevisTPC_generatorBase::stopAll(){
   
   GetData_thread_->stop();
 }
 
-void sbnddaq::NevisTPC_generatorBase::stop(){
+void sbndaq::NevisTPC_generatorBase::stop(){
   ConfigureStop();  
   stopAll();
 }
 
-void sbnddaq::NevisTPC_generatorBase::stopNoMutex(){
+void sbndaq::NevisTPC_generatorBase::stopNoMutex(){
   
   stopAll();
 }
 
-size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
+size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
   
   TRACE(TDEBUG,"Inserting %lu words. Currently %lu/%lu in buffer.",
 	n_words,buffer.size(),buffer.capacity());
@@ -106,7 +106,7 @@ size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, s
   return buffer.size();
 }
 
-size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
+size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
   
   TRACE(TDEBUG,"Erasing %lu words. Currently %lu/%lu in buffer.",
 	n_words,buffer.size(),buffer.capacity());
@@ -121,7 +121,7 @@ size_t sbnddaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
   return buffer.size();	
 }
 
-bool sbnddaq::NevisTPC_generatorBase::GetData(){
+bool sbndaq::NevisTPC_generatorBase::GetData(){
   
   TRACE(TGETDATA,"GetData() called");
   
@@ -137,7 +137,7 @@ bool sbnddaq::NevisTPC_generatorBase::GetData(){
   return true;
 }
 
-bool sbnddaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
+bool sbndaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
   
   while(true)
     if(!FillFragment(frags)) break;
@@ -145,7 +145,7 @@ bool sbnddaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
   return true;
 }
 
-bool sbnddaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer[[gnu::unused]]){
+bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer[[gnu::unused]]){
 
   int wiggle_room = 5;	// How many words before and after ADC count to correctly identify ending of data packet
   size_t new_buffer_size=0;

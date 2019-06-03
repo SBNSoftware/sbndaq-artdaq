@@ -1,5 +1,5 @@
-#ifndef _sbnddaq_readout_Generators_NevisTPCNUXMIT_generator
-#define _sbnddaq_readout_Generators_NevisTPCNUXMIT_generator
+#ifndef _sbndaq_readout_Generators_NevisTPCNUXMIT_generator
+#define _sbndaq_readout_Generators_NevisTPCNUXMIT_generator
 
 /**
  * Nevis TPC NU XMIT data generator
@@ -9,16 +9,16 @@
  * Author: J. I. Crespo-Anadón  <jcrespo@nevis.columbia.edu>, 2018/05/08
  */
 
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPC_generatorBase.hh"
-#include "sbnddaq-readout/Generators/NevisTPC/nevishwutils/ControllerModule.h"
-#include "sbnddaq-readout/Generators/NevisTPC/nevishwutils/Crate.h"
-#include "sbnddaq-readout/Generators/NevisTPC/nevishwutils/XMITReader.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/ControllerModule.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/Crate.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
 
 #include <fstream> // temp
 
-namespace sbnddaq {
+namespace sbndaq {
 
-  class NevisTPCNUXMIT : public sbnddaq::NevisTPC_generatorBase {
+  class NevisTPCNUXMIT : public sbndaq::NevisTPC_generatorBase {
   public:
     explicit NevisTPCNUXMIT(fhicl::ParameterSet const& _p) :
       NevisTPC_generatorBase(_p),
@@ -56,7 +56,7 @@ namespace sbnddaq {
 
   };
   
-}  // namespace sbnddaq
+}  // namespace sbndaq
 
-#endif // _sbnddaq_readout_Generators_NevisTPCNUXMIT_generator
+#endif // _sbndaq_readout_Generators_NevisTPCNUXMIT_generator
 

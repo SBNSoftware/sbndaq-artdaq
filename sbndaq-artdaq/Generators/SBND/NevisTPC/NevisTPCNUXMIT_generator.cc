@@ -1,13 +1,13 @@
 #define TRACE_NAME "NevisTPCGeneratorNUXMIT"
 
 #include "artdaq/DAQdata/Globals.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPCNUXMIT.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPCNUXMIT.hh"
 
 #include <chrono>
 #include <ctime>
 
-void sbnddaq::NevisTPCNUXMIT::ConfigureStart() {
+void sbndaq::NevisTPCNUXMIT::ConfigureStart() {
   TLOG(TLVL_INFO) << "ConfigureStart";
 
   fChunkSize = ps_.get<int>("ChunkSize", 1000000);
@@ -36,7 +36,7 @@ void sbnddaq::NevisTPCNUXMIT::ConfigureStart() {
   time_t t = time(0);
   struct tm ltm = *localtime( &t );
   sprintf(binFileName, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_NevisTPCNUXMIT.dat",
-	  fDumpBinaryDir.c_str(), sbnddaq::NevisTPC_generatorBase::run_number(), 
+	  fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
 	  ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
 
   if( fDumpBinary ){
@@ -47,7 +47,7 @@ void sbnddaq::NevisTPCNUXMIT::ConfigureStart() {
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
 }
 
-void sbnddaq::NevisTPCNUXMIT::ConfigureStop() {
+void sbndaq::NevisTPCNUXMIT::ConfigureStop() {
   MonitorCrate_thread_->stop();
 
   if( fDumpBinary ){
@@ -58,7 +58,7 @@ void sbnddaq::NevisTPCNUXMIT::ConfigureStop() {
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
 }
 
-bool sbnddaq::NevisTPCNUXMIT::MonitorCrate() {
+bool sbndaq::NevisTPCNUXMIT::MonitorCrate() {
   static std::chrono::steady_clock::time_point next_monitor_cycle_time{ std::chrono::steady_clock::now() };
 
   if( next_monitor_cycle_time > std::chrono::steady_clock::now() ) return false;
@@ -71,7 +71,7 @@ bool sbnddaq::NevisTPCNUXMIT::MonitorCrate() {
   return true;
 }
 
-size_t sbnddaq::NevisTPCNUXMIT::GetFEMCrateData() {
+size_t sbndaq::NevisTPCNUXMIT::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
 
@@ -98,12 +98,12 @@ size_t sbnddaq::NevisTPCNUXMIT::GetFEMCrateData() {
 }
 
 // Reimplement function to be able to cerate subruns using hardware inputs
-bool sbnddaq::NevisTPCNUXMIT::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer[[gnu::unused]]){
+bool sbndaq::NevisTPCNUXMIT::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer[[gnu::unused]]){
   static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fSubrunCheckPeriod_us)};
   static nevistpc::TriggerModuleGPSStamp lastGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister();
 
   // Call the base function first
-  bool status = sbnddaq::NevisTPC_generatorBase::FillFragment(frags, clear_buffer);
+  bool status = sbndaq::NevisTPC_generatorBase::FillFragment(frags, clear_buffer);
 
   // Make artdaq create a new subrun if a new $30 was received
 
@@ -131,7 +131,7 @@ bool sbnddaq::NevisTPCNUXMIT::FillFragment(artdaq::FragmentPtrs &frags, bool cle
     artdaq::FragmentPtr endOfSubrunFrag(new artdaq::Fragment(static_cast<size_t>(ceil(sizeof(my_rank) / static_cast<double>(sizeof(artdaq::Fragment::value_type))))));
     endOfSubrunFrag->setSystemType(artdaq::Fragment::EndOfSubrunFragmentType);
     // Use the event number from the base class
-    endOfSubrunFrag->setSequenceID(sbnddaq::NevisTPC_generatorBase::_this_event);
+    endOfSubrunFrag->setSequenceID(sbndaq::NevisTPC_generatorBase::_this_event);
     *endOfSubrunFrag->dataBegin() = my_rank;
     frags.emplace_back(std::move(endOfSubrunFrag));
     // end of artdaq snippet to create a new subrun
@@ -141,4 +141,4 @@ bool sbnddaq::NevisTPCNUXMIT::FillFragment(artdaq::FragmentPtrs &frags, bool cle
   return status;
 }
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbnddaq::NevisTPCNUXMIT)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::NevisTPCNUXMIT)

@@ -1,5 +1,5 @@
-#ifndef _sbnddaq_readout_Generators_NevisTPCFile_generator
-#define _sbnddaq_readout_Generators_NevisTPCFile_generator
+#ifndef _sbndaq_readout_Generators_NevisTPCFile_generator
+#define _sbndaq_readout_Generators_NevisTPCFile_generator
 
 /**
  * Nevis TPC File data generator
@@ -12,11 +12,11 @@
  */
 
 #include <fstream>
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC_generatorBase.hh"
 
-namespace sbnddaq {
+namespace sbndaq {
 
-class NevisTPCFile : public sbnddaq::NevisTPC_generatorBase {
+class NevisTPCFile : public sbndaq::NevisTPC_generatorBase {
 public:
   explicit NevisTPCFile(fhicl::ParameterSet const& _p) : NevisTPC_generatorBase(_p) {}
   virtual ~NevisTPCFile() {}
@@ -32,7 +32,7 @@ private:
   std::ifstream fInputFile;  //!< Input file
 };
 
-}  // namespace sbnddaq
+}  // namespace sbndaq
 
-#endif  // _sbnddaq_readout_Generators_NevisTPCFile_generator
+#endif  // _sbndaq_readout_Generators_NevisTPCFile_generator
 

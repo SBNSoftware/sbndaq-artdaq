@@ -1,13 +1,13 @@
 #define TRACE_NAME "NevisTPCGeneratorCALIB"
 
 #include "artdaq/DAQdata/Globals.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPCCALIB.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPCCALIB.hh"
 
 #include <chrono>
 #include <ctime>
 
-void sbnddaq::NevisTPCCALIB::ConfigureStart() {
+void sbndaq::NevisTPCCALIB::ConfigureStart() {
   TLOG(TLVL_INFO)<< "ConfigureStart";
 
   fChunkSize = ps_.get<int>("ChunkSize", 1000000);
@@ -44,7 +44,7 @@ void sbnddaq::NevisTPCCALIB::ConfigureStart() {
   time_t t = time(0);
   struct tm ltm = *localtime( &t );
   sprintf(binFileName, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_NevisTPCCALIB.dat",
-	  fDumpBinaryDir.c_str(), sbnddaq::NevisTPC_generatorBase::run_number(), 
+	  fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
 	  ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
 
   if( fDumpBinary ){
@@ -55,7 +55,7 @@ void sbnddaq::NevisTPCCALIB::ConfigureStart() {
   TLOG(TLVL_INFO) << "Successful " << __func__ ;
 }
 
-void sbnddaq::NevisTPCCALIB::ConfigureStop() {
+void sbndaq::NevisTPCCALIB::ConfigureStop() {
   FireCALIB_thread_->stop();
   MonitorCrate_thread_->stop();
 
@@ -67,7 +67,7 @@ void sbnddaq::NevisTPCCALIB::ConfigureStop() {
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
 }
 
-bool sbnddaq::NevisTPCCALIB::FireCALIB() {
+bool sbndaq::NevisTPCCALIB::FireCALIB() {
   static int fCALIBPeriod_us = 1./fCALIBFreq * 1e6;
   static std::chrono::steady_clock::time_point next_trigger_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fCALIBPeriod_us)};
   if( next_trigger_time > std::chrono::steady_clock::now() ) return false;
@@ -81,7 +81,7 @@ bool sbnddaq::NevisTPCCALIB::FireCALIB() {
   return true;
 }
 
-bool sbnddaq::NevisTPCCALIB::MonitorCrate() {
+bool sbndaq::NevisTPCCALIB::MonitorCrate() {
   static std::chrono::steady_clock::time_point next_monitor_cycle_time{ std::chrono::steady_clock::now() };
 
   if( next_monitor_cycle_time > std::chrono::steady_clock::now() ) return false;
@@ -95,7 +95,7 @@ bool sbnddaq::NevisTPCCALIB::MonitorCrate() {
   return true;
 }
 
-size_t sbnddaq::NevisTPCCALIB::GetFEMCrateData() {
+size_t sbndaq::NevisTPCCALIB::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
 
@@ -122,12 +122,12 @@ size_t sbnddaq::NevisTPCCALIB::GetFEMCrateData() {
 }
 
 // Reimplement function to be able to cerate subruns using hardware inputs
-bool sbnddaq::NevisTPCCALIB::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer[[gnu::unused]]){
+bool sbndaq::NevisTPCCALIB::FillFragment(artdaq::FragmentPtrs &frags, bool clear_buffer[[gnu::unused]]){
   static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fSubrunCheckPeriod_us)};
   static nevistpc::TriggerModuleGPSStamp lastGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister();
 
   // Call the base function first
-  bool status = sbnddaq::NevisTPC_generatorBase::FillFragment(frags, clear_buffer);
+  bool status = sbndaq::NevisTPC_generatorBase::FillFragment(frags, clear_buffer);
 
   // Make artdaq create a new subrun if a new $30 was received
 
@@ -155,7 +155,7 @@ bool sbnddaq::NevisTPCCALIB::FillFragment(artdaq::FragmentPtrs &frags, bool clea
     artdaq::FragmentPtr endOfSubrunFrag(new artdaq::Fragment(static_cast<size_t>(ceil(sizeof(my_rank) / static_cast<double>(sizeof(artdaq::Fragment::value_type))))));
     endOfSubrunFrag->setSystemType(artdaq::Fragment::EndOfSubrunFragmentType);
     // Use the event number from the base class
-    endOfSubrunFrag->setSequenceID(sbnddaq::NevisTPC_generatorBase::_this_event);
+    endOfSubrunFrag->setSequenceID(sbndaq::NevisTPC_generatorBase::_this_event);
     *endOfSubrunFrag->dataBegin() = my_rank;
     frags.emplace_back(std::move(endOfSubrunFrag));
     // end of artdaq snippet to create a new subrun
@@ -165,5 +165,5 @@ bool sbnddaq::NevisTPCCALIB::FillFragment(artdaq::FragmentPtrs &frags, bool clea
   return status;
 }
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbnddaq::NevisTPCCALIB)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::NevisTPCCALIB)
 

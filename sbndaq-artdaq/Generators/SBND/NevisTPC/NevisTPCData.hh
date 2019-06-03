@@ -1,17 +1,17 @@
 //
-// sbnddaq-readout/Generators/NevisTPCData_generator.hh
+// sbndaq-artdaq/Generators/SBND/NevisTPCData_generator.hh
 //
 
-#ifndef _sbnddaq_readout_Generators_NevisTPCData_generator
-#define _sbnddaq_readout_Generators_NevisTPCData_generator
+#ifndef _sbndaq_readout_Generators_NevisTPCData_generator
+#define _sbndaq_readout_Generators_NevisTPCData_generator
 
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC_generatorBase.hh"
 
 #include <random>
 
-namespace sbnddaq {
+namespace sbndaq {
 
-	class NevisTPCData : public sbnddaq::NevisTPC_generatorBase {
+	class NevisTPCData : public sbndaq::NevisTPC_generatorBase {
 		public:
 
 			explicit NevisTPCData(fhicl::ParameterSet const & ps);

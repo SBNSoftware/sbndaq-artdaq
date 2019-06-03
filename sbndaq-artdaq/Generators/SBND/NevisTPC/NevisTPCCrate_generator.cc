@@ -4,12 +4,12 @@
 #include <exception>
 
 #include "artdaq/DAQdata/Globals.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPCCrate.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPCCrate.hh"
 
 #include "NevisTPCCrate.hh"
 
-void sbnddaq::NevisTPCCrate::ConfigureStart() {
+void sbndaq::NevisTPCCrate::ConfigureStart() {
 
 	TLOG(TLVL_INFO)<< "ConfigureStart";
 	
@@ -21,11 +21,11 @@ void sbnddaq::NevisTPCCrate::ConfigureStart() {
 
 }
 
-void sbnddaq::NevisTPCCrate::ConfigureStop() {
+void sbndaq::NevisTPCCrate::ConfigureStop() {
 }
 
 
-size_t sbnddaq::NevisTPCCrate::GetFEMCrateData() {
+size_t sbndaq::NevisTPCCrate::GetFEMCrateData() {
 
 
 	TRACE(TGETDATA, "GetFEMCrateData");
@@ -45,5 +45,5 @@ size_t sbnddaq::NevisTPCCrate::GetFEMCrateData() {
   	return bytesRead;
 }
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbnddaq::NevisTPCCrate)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::NevisTPCCrate)
 

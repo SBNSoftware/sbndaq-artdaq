@@ -1,13 +1,13 @@
-#ifndef _sbnddaq_readout_Generators_NevisTPCFile_generator
-#define _sbnddaq_readout_Generators_NevisTPCFile_generator 1
+#ifndef _sbndaq_readout_Generators_NevisTPCFile_generator
+#define _sbndaq_readout_Generators_NevisTPCFile_generator 1
 
 
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPC_generatorBase.hh"
-#include "sbnddaq-readout/Generators/NevisTPC/nevishwutils/Crate.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/Crate.h"
 
-namespace sbnddaq {
+namespace sbndaq {
 
-class NevisTPCCrate : public sbnddaq::NevisTPC_generatorBase {
+class NevisTPCCrate : public sbndaq::NevisTPC_generatorBase {
 	public:
 		explicit NevisTPCCrate(fhicl::ParameterSet const& _p) : NevisTPC_generatorBase(_p), fControllerModule( new nevistpc::ControllerModule(_p) ), fNUXMITReader(new nevistpc::XMITReader("nu_xmit_reader", _p) ) {}
   		virtual ~NevisTPCCrate() {}
@@ -24,7 +24,7 @@ class NevisTPCCrate : public sbnddaq::NevisTPC_generatorBase {
 		uint32_t fChunkSize;
 };
 
-}  // namespace sbnddaq
+}  // namespace sbndaq
 
-#endif  // _sbnddaq_readout_Generators_NevisTPCCrate_generator
+#endif  // _sbndaq_readout_Generators_NevisTPCCrate_generator
 

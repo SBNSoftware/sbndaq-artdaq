@@ -1,5 +1,5 @@
-#ifndef _sbnddaq_readout_Generators_NevisTPCCALIB_generator
-#define _sbnddaq_readout_Generators_NevisTPCCALIB_generator
+#ifndef _sbndaq_readout_Generators_NevisTPCCALIB_generator
+#define _sbndaq_readout_Generators_NevisTPCCALIB_generator
 
 /**
  * Nevis TPC CALIB data generator
@@ -9,16 +9,16 @@
  * Author: J. I. Crespo-Anadón  <jcrespo@nevis.columbia.edu>, 2018/05/17
  */
 
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPC_generatorBase.hh"
-#include "sbnddaq-readout/Generators/NevisTPC/nevishwutils/ControllerModule.h"
-#include "sbnddaq-readout/Generators/NevisTPC/nevishwutils/Crate.h"
-#include "sbnddaq-readout/Generators/NevisTPC/nevishwutils/XMITReader.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC_generatorBase.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/ControllerModule.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/Crate.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
 
 #include <fstream> // temp
 
-namespace sbnddaq {
+namespace sbndaq {
 
-  class NevisTPCCALIB : public sbnddaq::NevisTPC_generatorBase {
+  class NevisTPCCALIB : public sbndaq::NevisTPC_generatorBase {
   public:
     explicit NevisTPCCALIB(fhicl::ParameterSet const& _p) :
       NevisTPC_generatorBase(_p),
@@ -60,7 +60,7 @@ namespace sbnddaq {
 
   };
   
-}  // namespace sbnddaq
+}  // namespace sbndaq
 
-#endif // _sbnddaq_readout_Generators_NevisTPCCALIB_generator
+#endif // _sbndaq_readout_Generators_NevisTPCCALIB_generator
 

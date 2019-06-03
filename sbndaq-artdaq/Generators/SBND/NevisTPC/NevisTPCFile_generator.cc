@@ -6,10 +6,10 @@
 #include <iostream>
 
 #include "artdaq/DAQdata/Globals.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
-#include "sbnddaq-readout/Generators/NevisTPC/NevisTPCFile.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPCFile.hh"
 
-void sbnddaq::NevisTPCFile::ConfigureStart() {
+void sbndaq::NevisTPCFile::ConfigureStart() {
   TLOG(TLVL_INFO)<< "ConfigureStart";
   
   std::string inputFilename = ps_.get<std::string>("InputFilename");
@@ -24,7 +24,7 @@ void sbnddaq::NevisTPCFile::ConfigureStart() {
 }
 
 
-void sbnddaq::NevisTPCFile::ConfigureStop() {
+void sbndaq::NevisTPCFile::ConfigureStop() {
   // Close the input file
   if (fInputFile.is_open()) {
     fInputFile.close();
@@ -32,7 +32,7 @@ void sbnddaq::NevisTPCFile::ConfigureStop() {
 }
 
 
-size_t sbnddaq::NevisTPCFile::GetFEMCrateData() {
+size_t sbndaq::NevisTPCFile::GetFEMCrateData() {
   usleep(fWaitTime);
   
   TRACE(TGETDATA, "GetFEMCrateData");
@@ -54,5 +54,5 @@ size_t sbnddaq::NevisTPCFile::GetFEMCrateData() {
   return 0;
 }
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbnddaq::NevisTPCFile)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::NevisTPCFile)
 

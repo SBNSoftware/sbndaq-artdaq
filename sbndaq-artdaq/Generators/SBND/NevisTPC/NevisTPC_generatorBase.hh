@@ -1,9 +1,9 @@
 //
-// sbnddaq-readout/Generators/NevisTPC_generatorBase.hh
+// sbndaq-artdaq/Generators/SBND/NevisTPC_generatorBase.hh
 //
 
-#ifndef _sbnddaq_readout_Generators_NevisTPC_generatorBase
-#define _sbnddaq_readout_Generators_NevisTPC_generatorBase
+#ifndef _sbndaq_readout_Generators_NevisTPC_generatorBase
+#define _sbndaq_readout_Generators_NevisTPC_generatorBase
 
 #include <memory>
 #include <atomic>
@@ -13,14 +13,14 @@
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
-#include "sbnddaq-readout/Generators/workerThread.hh"
-#include "sbnddaq-datatypes/Overlays/NevisTPCFragment.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
+#include "sbndaq-artdaq/Generators/Common/workerThread.hh"
+#include "sbndaq-artdaq-core/Overlays/SBND/NevisTPCFragment.hh"
 #include <unistd.h>
 #include <vector>
 
 
-namespace sbnddaq
+namespace sbndaq
 {
   class NevisTPC_generatorBase: public artdaq::CommandableFragmentGenerator
   {
