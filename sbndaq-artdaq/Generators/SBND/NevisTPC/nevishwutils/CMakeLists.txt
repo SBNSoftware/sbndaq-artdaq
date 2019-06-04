@@ -36,7 +36,7 @@ cet_make( LIBRARY_NAME sbndaq-artdaq_nevishwutils
                   LIBRARIES
                         ${CETLIB}
                         ${CETLIB_EXCEPT}
-			${WINDRIVER_LIB}
+			${WINDRIVERLIB}
 			${TRACE}
 			${FHICLCPP}
                         ${MF_MESSAGELOGGER}
