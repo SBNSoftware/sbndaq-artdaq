@@ -49,6 +49,9 @@ e17:prof:icarus		e17:s67:prof      e17:prof:icarus     -nq-    -nq-     -nq-    
 e17:debug:icarus	e17:s67:debug     e17:debug:icarus    -nq-    -nq-     -nq-          -       e17:debug		  e17:p2714b:debug   e17   e17:debug -
 e17:prof:sbnd		e17:s67:prof      e17:prof:sbnd       -nq-    -nq-     -nq-          prof    -			  e17:p2714b:prof    e17   e17:prof  e17
 e17:debug:sbnd  	e17:s67:debug     e17:debug:sbnd      -nq-    -nq-     -nq-          debug   -			  e17:p2714b:debug   e17   e17:debug e17
+
+e17:prof:s82		e17:s82:prof      e17:prof:s82        -nq-    -nq-     -nq-          prof    e17:prof		  e17:p2714b:prof    e17   e17:prof  e17
+e17:debug:s82		e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          debug   e17:debug		  e17:p2714b:debug   e17   e17:debug e17
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
