@@ -242,17 +242,17 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
     ++_metric_Word_counter ;
 
     if ( _close_to_good_part ) {
-      if ( temp_word.timestamp != 0 ) {
-	update_cherenkov_counter( temp_word.timestamp ) ;
+      if ( temp_word.timestamp_ns() != 0 ) {
+	update_cherenkov_counter( temp_word.timestamp_ns() ) ;
       }
     }
 
     if ( _is_beam_spill ) {
     
-      if ( temp_word.timestamp != 0 ) {
+      if ( temp_word.timestamp_ns() != 0 ) {
 	
-	if ( temp_word.timestamp > _spill_start + _spill_width ) {
-	  TLOG( 20, "TriggerBoardReader") << "End of a beam spill at: " <<  temp_word.timestamp << " => Started at " << _spill_start << std::endl ;
+	if ( temp_word.timestamp_ns() > _spill_start + _spill_width ) {
+	  TLOG( 20, "TriggerBoardReader") << "End of a beam spill at: " <<  temp_word.timestamp_ns() << " => Started at " << _spill_start << std::endl ;
 	  _is_beam_spill = false ; 
 	  
 	  // publish the dedicated metrics
@@ -276,8 +276,8 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       --(_receiver -> N_TS_Words()) ;
       ++group_counter ;
       
-      if ( temp_word.timestamp != 0 ) {
-	_last_timestamp = temp_word.timestamp ;
+      if ( temp_word.timestamp_ns() != 0 ) {
+	_last_timestamp = temp_word.timestamp_ns() ;
 	_has_last_TS = true ;
 	
 	if ( ! has_TS ) {
