@@ -7,3 +7,5 @@ ENDIF()
 IF(SBND_BUILD)
 add_subdirectory(SBND)
 ENDIF()
+
+add_subdirectory(Toy)
