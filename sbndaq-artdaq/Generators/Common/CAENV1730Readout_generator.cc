@@ -866,7 +866,7 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
     text << " " << label << 
       " ReadBack error BoardId " << boardID << channelLabel.str() 
 	 << " wrote " << wrote << " read " << readback;
-    LOG_ERROR("CAENLightReadout") << text.str();
+    TLOG_ERROR("CAENLightReadout") << text.str();
 
     //sbndaq::CAENException e(CAEN_DGTZ_DigitizerNotReady,
     //			     text.str(), boardId);

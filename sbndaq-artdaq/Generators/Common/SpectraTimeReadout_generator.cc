@@ -57,7 +57,7 @@ void sbndaq::SpectraTimeReadout::init()
   daqID = msgget(daqMQ,0);
   if ( daqID < 0 )
   {
-    LOG_ERROR("SpectraTime") << "Error on msgget 0x" << 
+    TLOG_ERROR("SpectraTime") << "Error on msgget 0x" << 
       std::hex << daqMQ << std::dec << " " << strerror(errno) << " " << errno;
 
   }
@@ -108,7 +108,7 @@ bool sbndaq::SpectraTimeReadout::getData()
     {
       if (( errno != EAGAIN ) && ( errno != ENOMSG ))
       {
-	LOG_ERROR("SpectraTime") << "FATAL Error on msgrcv 0x" << 
+	TLOG_ERROR("SpectraTime") << "FATAL Error on msgrcv 0x" << 
 	  std::hex << daqMQ << std::dec << " " << 
 	  strerror(errno) << " " << errno ;
       } // Otherwise there was no message in the queue, not a real error
@@ -189,7 +189,7 @@ bool sbndaq::SpectraTimeReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
 
   if ( messageCount > 0 )
   {
-    LOG_INFO("SpectraTime") << "Found " << messageCount << " fragments" << std::endl;
+    TLOG_INFO("SpectraTime") << "Found " << messageCount << " fragments" << std::endl;
   }
 
   return newData;
