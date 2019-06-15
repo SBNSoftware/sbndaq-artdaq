@@ -813,7 +813,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Created fragment " << fBoardID << " for event " << fEvCounter << TLOG_ENDL;
     //testing.. get time again so fragments have unique times 
     clock_gettime(CLOCK_REALTIME,&now);
-    artdaq::Fragment::timestamp_t ts = ((now.tv_sec * 1000000000 ) + now.tv_nsec)/20; //in 50MHz ticks
+    artdaq::Fragment::timestamp_t ts = ((now.tv_sec * 1000000000 ) + now.tv_nsec); //in 1ns ticks
     fragment_uptr->setTimestamp( ts );
     ///
     const auto fragment_datasize_words = fragment_datasize_bytes/sizeof_unit16_t;
@@ -866,7 +866,7 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
     text << " " << label << 
       " ReadBack error BoardId " << boardID << channelLabel.str() 
 	 << " wrote " << wrote << " read " << readback;
-    LOG_ERROR("CAENLightReadout") << text.str();
+    TLOG_ERROR("CAENLightReadout") << text.str();
 
     //sbndaq::CAENException e(CAEN_DGTZ_DigitizerNotReady,
     //			     text.str(), boardId);
