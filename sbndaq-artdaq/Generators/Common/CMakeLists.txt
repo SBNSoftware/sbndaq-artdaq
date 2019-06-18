@@ -12,15 +12,15 @@ cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		  SOURCE workerThread.cpp 
-		         CircularBuffer.cc
-			 PoolBuffer.cc
+		  CircularBuffer.cc
+		  PoolBuffer.cc
 		  LIBRARIES 
-		    	 pthread
-			 artdaq_DAQdata
-			 ${MF_UTILITIES}
-			 ${TRACE}
-		    	 ${MF_MESSAGELOGGER}
-			 ${Boost_SYSTEM_LIBRARY}
+		  pthread
+		  artdaq_DAQdata
+		  ${MF_UTILITIES}
+		  ${TRACE}
+		  ${MF_MESSAGELOGGER}
+		  ${Boost_SYSTEM_LIBRARY}
 		)
 
 		  
@@ -47,11 +47,14 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 )
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
-		  SOURCE  GPS/GPSInfo.cc
+                  SOURCE  SpectraTimeReadout_generator.cc
+                          GPS/GPSInfo.cc
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
   			artdaq-core_Utilities
+                        artdaq-utilities_Plugins
+                        artdaq-core_Data
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}

@@ -109,6 +109,7 @@ namespace sbndaq
     size_t   fNChannels;
     uint32_t fBoardID;
     bool     fOK;
+    bool     fail_GetNext;
     uint32_t fEvCounter; // set to zero at the beginning
     uint32_t last_rcvd_rwcounter;
 		uint32_t last_sent_rwcounter;
