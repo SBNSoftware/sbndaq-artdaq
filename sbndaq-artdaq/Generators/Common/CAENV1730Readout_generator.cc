@@ -714,9 +714,9 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
       TLOG(TLVL_ERROR) << __func__ <<": PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
                        <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
       TLOG(TLVL_ERROR) << __func__ <<": Critical error; aborting boardreader process....";				
-      //		throw std::runtime_error( "PoolBuffer is empty"  );
-      abort();
-			
+
+      fail_GetNext = true;
+
       std::this_thread::yield();
       return false;
     }
@@ -902,7 +902,7 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
     text << " " << label << 
       " ReadBack error BoardId " << boardID << channelLabel.str() 
 	 << " wrote " << wrote << " read " << readback;
-    TLOG_ERROR("CAENLightReadout") << text.str();
+    TLOG(TLVL_ERROR ) << __func__ <<": " << text.str();
 
     //sbndaq::CAENException e(CAEN_DGTZ_DigitizerNotReady,
     //			     text.str(), boardId);
