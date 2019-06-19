@@ -39,6 +39,7 @@ namespace icarus {
 
     uint8_t  CrateID_;
     std::vector<PhysCrateFragmentMetadata::id_t> BoardIDs_;
+    bool doCheckNBoards_;
 
     std::size_t throttle_usecs_;        // Sleep at start of each call to getNext_(), in us
     std::size_t throttle_usecs_check_;  // Period between checks for stop/pause during the sleep (must be less than, and an integer divisor of, throttle_usecs_)
