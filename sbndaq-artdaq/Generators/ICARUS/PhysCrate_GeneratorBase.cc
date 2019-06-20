@@ -37,9 +37,10 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   SamplesPerChannel_ = ps_.get<uint32_t>("SamplesPerChannel",3000);
   nADCBits_ = ps_.get<uint8_t>("nADCBits",12);
   ChannelsPerBoard_ = ps_.get<uint16_t>("ChannelsPerBoard",16);
+  nBoards_ = ps_.get<uint16_t>("nBoards",9);
   CrateID_ = ps_.get<uint8_t>("CrateID",0x1);
-  doCheckNBoards_ = ps_.get<bool>("CheckNBoards", true);
-  BoardIDs_ = ps_.get< std::vector<PhysCrateFragmentMetadata::id_t> >("BoardIDs");
+  assignBoardID_ = ps_.get<bool>("AssignBoardID", false);
+  if ( assignBoardID_ ) BoardIDs_ = ps_.get< std::vector<PhysCrateFragmentMetadata::id_t> >("BoardIDs");
   CompressionScheme_ = ps_.get<uint32_t>("CompressionScheme",0);
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs", 100000);
@@ -67,8 +68,7 @@ void icarus::PhysCrate_GeneratorBase::start() {
 					SamplesPerChannel_,
 					nADCBits_,
 					CompressionScheme_,
-					BoardIDs_,
-                                        doCheckNBoards_);
+					BoardIDs_);
 
   fCircularBuffer = sbndaq::CircularBuffer<uint16_t>(fCircularBufferSize/sizeof(uint16_t));
 
