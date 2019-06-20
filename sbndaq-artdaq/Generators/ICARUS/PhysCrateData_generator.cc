@@ -28,6 +28,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   InitializeVeto();
 
   this->nBoards_ = (uint16_t)(physCr->NBoards());
+  assignBoardID_ = ps.get<bool>("AssignBoardID", false);
+  if ( !assignBoardID_ ) BoardIDs_.assign( physCr->getBoardIDs().begin(), physCr->getBoardIDs().end() );
 
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&PhysCrateData::GetData, this);
