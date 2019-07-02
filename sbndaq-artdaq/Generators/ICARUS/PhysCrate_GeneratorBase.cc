@@ -148,7 +148,8 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     auto const* next_dt = reinterpret_cast< DataTile const* >(next_dt_begin_ptr);
     auto const nt_header = next_dt->Header;
     uint32_t this_data_size_bytes = ntohl( nt_header.packSize );
-    TLOG(15) << "this_data_size_bytes: " << this_data_size_bytes;
+    TLOG(20) << "PhysCrate_GeneratorBase::getNext_ : Board ID: " << (nt_header.info2 & 0x0000000F);
+    TLOG(20) << "this_data_size_bytes: " << this_data_size_bytes;
     data_size_bytes += this_data_size_bytes;
     ++iBoard;
     TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : iBoard: " << iBoard 
@@ -171,16 +172,16 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   frags.emplace_back( artdaq::Fragment::FragmentBytes( data_size_bytes,
 						      0, fragment_id(),
 						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_) );
-  TRACE(TR_DEBUG,"PhysCrate_GeneratorBase::getNext_ Initialized data of size %lu",frags.back()->dataSizeBytes());
+  TLOG(20) << "PhysCrate_GeneratorBase::getNext_ Initialized data of size " << frags.back()->dataSizeBytes();
   
-  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size_bytes << std::endl;
-  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : fCircularBuffer.Buffer().front(): " << fCircularBuffer.Buffer().front()
-                   << ", fCircularBuffer.Buffer().back(): " << fCircularBuffer.Buffer().back() << std::endl;
+  TLOG(20) << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size_bytes;
+  TLOG(20) << "PhysCrate_GeneratorBase::getNext_ : fCircularBuffer.Buffer().front(): " << fCircularBuffer.Buffer().front()
+                   << ", fCircularBuffer.Buffer().back(): " << fCircularBuffer.Buffer().back();
   std::copy( first_dt_begin_ptr, first_dt_begin_ptr + data_size_bytes/sizeof(uint16_t),
              (uint16_t*)( frags.back()->dataBeginBytes() ) );
   // TRACE(42,"42");
 
-  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : copied the circular buffer to frags." << std::endl;
+  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : copied the circular buffer to frags.";
   TRACE(TR_DEBUG,"PhysCrate_GeneratorBase::getNext_ : Read data size was %lu", (long unsigned int)data_size_bytes );
 
   frags.back()->resizeBytes( data_size_bytes );
@@ -193,11 +194,21 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   // ++ev_num;
   PhysCrateFragment const& newfrag = *frags.back();
   auto ev_num = newfrag.BoardEventNumber();
-  TLOG(TLVL_DEBUG) << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp() << std::endl;
-  TLOG(TLVL_DEBUG) << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1) << std::endl;
+  TLOG(TLVL_DEBUG) << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp();
+  TLOG(TLVL_DEBUG) << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1);
   TLOG(TLVL_DEBUG) << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "
-            << newfrag.nSamplesPerChannel() << ", nChannelsPerBoard: " << newfrag.nChannelsPerBoard() << std::endl;
-  TLOG(TLVL_DEBUG) << "ev_num: " << ev_num << std::endl;
+            << newfrag.nSamplesPerChannel() << ", nChannelsPerBoard: " << newfrag.nChannelsPerBoard();
+  TLOG(TLVL_DEBUG) << "ev_num: " << ev_num;
+  TLOG(20) << "PhysCrate_GeneratorBase: event number: " << ev_num << ", DataPayloadSize: " << newfrag.DataPayloadSize();
+
+  for ( uint16_t jBoard = 1; jBoard < nBoards_; ++jBoard ) {
+    if ( newfrag.BoardEventNumber(jBoard) != ev_num ) {
+      for ( uint16_t kB = 0; kB < nBoards_; ++kB )
+        TLOG(20) << "PhysCrate_GeneratorBase: Board " << kB << " event number: " << newfrag.BoardEventNumber(kB) << ", timestamp: " << newfrag.BoardTimeStamp(kB) << ", DataTileHeaderLocation: " << newfrag.DataTileHeaderLocation(kB);
+
+      throw cet::exception("PhysCrate_GeneratorBase") << "Inconsistent event numbers in one fragment: Event " << ev_num << " in Board 0 while Event " << newfrag.BoardEventNumber(jBoard) << " in Board " << jBoard;
+    }
+  }
   frags.back()->setSequenceID(ev_num);
 
   //GAL: metricMan->sendMetric(".getNext.EventNumber.last",(int)ev_num,"events",1,artdaq::MetricMode::LastPoint);
