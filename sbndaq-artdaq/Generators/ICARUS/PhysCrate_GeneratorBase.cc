@@ -172,10 +172,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   frags.emplace_back( artdaq::Fragment::FragmentBytes( data_size_bytes,
 						      0, fragment_id(),
 						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_) );
-  TLOG(20) << "PhysCrate_GeneratorBase::getNext_ Initialized data of size " << frags.back()->dataSizeBytes();
+  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ Initialized data of size " << frags.back()->dataSizeBytes();
   
-  TLOG(20) << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size_bytes;
-  TLOG(20) << "PhysCrate_GeneratorBase::getNext_ : fCircularBuffer.Buffer().front(): " << fCircularBuffer.Buffer().front()
+  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : Read data size was " << data_size_bytes;
+  TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : fCircularBuffer.Buffer().front(): " 
+                   << fCircularBuffer.Buffer().front()
                    << ", fCircularBuffer.Buffer().back(): " << fCircularBuffer.Buffer().back();
   std::copy( first_dt_begin_ptr, first_dt_begin_ptr + data_size_bytes/sizeof(uint16_t),
              (uint16_t*)( frags.back()->dataBeginBytes() ) );
@@ -199,7 +200,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   TLOG(TLVL_DEBUG) << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "
             << newfrag.nSamplesPerChannel() << ", nChannelsPerBoard: " << newfrag.nChannelsPerBoard();
   TLOG(TLVL_DEBUG) << "ev_num: " << ev_num;
-  TLOG(20) << "PhysCrate_GeneratorBase: event number: " << ev_num << ", DataPayloadSize: " << newfrag.DataPayloadSize();
+  // TLOG(20) << "PhysCrate_GeneratorBase: event number: " << ev_num << ", DataPayloadSize: " << newfrag.DataPayloadSize();
 
   for ( uint16_t jBoard = 1; jBoard < nBoards_; ++jBoard ) {
     if ( newfrag.BoardEventNumber(jBoard) != ev_num ) {
