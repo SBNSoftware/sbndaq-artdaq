@@ -38,8 +38,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   GetData_thread_.swap(GetData_worker);
 
   //some config things ...
-  SetDCOffset();
-  SetTestPulse();
+  // SetDCOffset();
+  // SetTestPulse();
 }
 
 void icarus::PhysCrateData::InitializeVeto(){
@@ -100,10 +100,18 @@ void icarus::PhysCrateData::SetDCOffset()
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto bdhandle = physCr->BoardHandle(ib);
     
-    CAENComm_Write32(bdhandle, A_DAC_A, 0x00070000 | dc_offset_a[ib]);
-    CAENComm_Write32(bdhandle, A_DAC_B, 0x00070000 | dc_offset_b[ib]);
-    CAENComm_Write32(bdhandle, A_DAC_C, 0x00070000 | dc_offset_c[ib]);
-    CAENComm_Write32(bdhandle, A_DAC_D, 0x00070000 | dc_offset_d[ib]);
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00000000 | (dc_offset_a[ib] & 0xFFFF));
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00010000 | (dc_offset_b[ib] & 0xFFFF));
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00020000 | (dc_offset_c[ib] & 0xFFFF));
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00030000 | (dc_offset_d[ib] & 0xFFFF));
+    // uint32_t offset_c, offset_d;
+    // int res1, res2;
+    // res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
+    // res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
+    // std::cout << "Board " << ib << std::endl;
+    // std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << std::hex << offset_c << std::endl;
+    // std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << std::hex << offset_d << std::endl;
+
   }
 }
 
@@ -225,6 +233,21 @@ void icarus::PhysCrateData::ConfigureStart(){
     _vetoTestThread->start();
 
   GetData_thread_->start();
+
+  SetDCOffset();
+  /* 
+  for(int ib=0; ib<physCr->NBoards(); ++ib){
+    auto bdhandle = physCr->BoardHandle(ib);
+    uint32_t offset_c, offset_d;
+    int res1, res2;
+    res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
+    res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
+    std::cout << "ConfigureStart(): Board " << ib << std::endl;
+    std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << offset_c << std::endl;
+    std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << offset_d << std::endl;
+  }
+  */
+  SetTestPulse();
 }
 
 void icarus::PhysCrateData::ConfigureStop(){
@@ -325,9 +348,6 @@ int icarus::PhysCrateData::GetData(){
                      << data_size_bytes << " bytes already acquired.";
 
     if( this_data_size_bytes == 32 ) continue;
-    if ( this_data_size_bytes < 1000 ) {
-      TLOG(20) << "PhysCrateData::GetData: this_data_size_bytes: " << this_data_size_bytes;
-    }
 
     // ++iBoard;
     
