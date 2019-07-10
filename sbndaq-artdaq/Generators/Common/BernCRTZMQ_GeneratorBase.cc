@@ -139,11 +139,12 @@ std::cout << std::endl;
 
   std::cout << std::endl << "--- START ---" << std::endl;
   
+  //get the time of the day when the run starts
   timeval start_time; gettimeofday(&start_time,NULL);
   start_time_metadata_s = start_time.tv_sec;
   start_time_metadata_ns = start_time.tv_usec*1000;
   std::cout<<"start_time [s]: " << start_time.tv_sec << "\n";
-  std::cout<<"start_time [micros]: " << start_time.tv_usec << "\n" << "\n" ;
+  std::cout<<"start_time [ns]: " << start_time.tv_usec*1000 << "\n" << "\n" ;
 
   RunNumber_ = run_number();
   current_subrun_ = 0;
@@ -287,6 +288,7 @@ std::cout << std::endl;
 	TRACE(TR_DEBUG,"FEB ID 0x%lx. Current buffer size %lu / %lu. Want to add %lu events.",
 	b.id,b.buffer.size(),b.buffer.capacity(),nevents);
 
+	std::cout << "Buffer Capacity: " << std::setw(5) << b.buffer.capacity() << std::endl;
 	//don't fill while we wait for available capacity...
 	while( (b.buffer.capacity()-b.buffer.size()) < nevents){ std::cout<< "no available capacity!"; usleep(10); }
 	std::cout << "\nCheck the buffer: " << std::endl;	
@@ -324,17 +326,17 @@ std::cout << std::endl;
 
 	timeval time_poll_start; gettimeofday(&time_poll_start,NULL);
 	
+
+	//for the moment, to delete after
+
 	time_poll_start_metadata_s = time_poll_start.tv_sec;
- 	time_poll_start_metadata_ns = time_poll_start.tv_usec*1000;
+	time_poll_start_metadata_ns = time_poll_start.tv_usec*1000;
+
+	//time_last_poll_start_metadata_s = time_poll_start.tv_sec;
+	//time_last_poll_start_metadata_ns = time_poll_start.tv_usec*1000;
 
 	std::cout<<"time_poll_start [s] " << time_poll_start.tv_sec << std::endl;
-	std::cout<<"time_poll_start [micros] " << time_poll_start.tv_usec << std::endl;
-	std::cout<<"time_last_poll_start [s] " << time_last_poll_start.tv_sec << std::endl;
-        std::cout<<"time_last_poll_start [micros] " << time_last_poll_start.tv_usec << std::endl;
-
-	time_last_poll_start_metadata_s = time_poll_start.tv_sec;
-	time_last_poll_start_metadata_ns = time_poll_start.tv_usec*1000;
-	
+	std::cout<<"time_poll_start [ns] " << time_poll_start.tv_usec*1000 << std::endl;
 	
 	size_t good_events = 1;
 	while(good_events<nevents){
@@ -356,31 +358,54 @@ std::cout << std::endl;
 	std::cout << "\nInserted into buffer on FEB " << (b.id & 0xff) << " " << good_events << " events." << std::endl;
 
 
-	//Time at the poll has finished
+	//Time the poll has finished
 
 	//timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
-	//std::cout<<"time_poll_finished " << time_poll_finished.time << std::endl <<"\n";
+	
 	timeval time_poll_finished; gettimeofday(&time_poll_finished,NULL);
-	time_poll_finish_metadata_s = time_poll_finished.tv_sec;
- 	time_poll_finish_metadata_ns = time_poll_finished.tv_usec*1000;	
 
 	std::cout<<"time_poll_finish [s] " << time_poll_finished.tv_sec << std::endl;
-	std::cout<<"time_poll_finish [micros] " << time_poll_finished.tv_usec << std::endl;
-	std::cout<<"time_last_poll_finished [s] " << time_last_poll_finished.tv_sec << std::endl;
-        std::cout<<"time_last_poll_finished [micros] " << time_last_poll_finished.tv_usec << std::endl;
+	std::cout<<"time_poll_finish [ns] " << time_poll_finished.tv_usec*1000 << std::endl << "\n";
 
-	time_last_poll_finish_metadata_s = time_poll_finished.tv_sec;
-	time_last_poll_finish_metadata_ns = time_poll_finished.tv_usec*1000;
-	
+	time_poll_finish_metadata_s = time_poll_finished.tv_sec ;
+        time_poll_finish_metadata_ns = time_poll_finished.tv_usec*1000;
 	
 
 	//let's print out the content of the buffer and count the event in the feb
+
 	for(size_t i_e=0; i_e<b.buffer.size(); ++i_e){
 		//std::cout << i_e << ". Timestamp " << b.buffer.at(i_e).Time_TS0();
 		//std::cout << std::setw(10) << " --- IsRefTS0? " <<b.buffer.at(i_e).IsReference_TS0() << std::endl;
 		feb_event_count = i_e+1;
+		
+		time_poll_start_store_sec.push_back(time_poll_start_metadata_s/*time_poll_start.tv_sec*/);
+		time_poll_start_store_nanosec.push_back(time_poll_start_metadata_ns/*time_poll_start.tv_usec*1000*/);
+		time_poll_finish_store_sec.push_back(time_poll_finish_metadata_s/*time_poll_finished.tv_sec*/);
+		time_poll_finish_store_nanosec.push_back(time_poll_finish_metadata_ns/*time_poll_finished.tv_usec*1000*/);
+
+		/*std::cout << "start_" << i_e << " " << time_poll_start_store_sec[i_e] << " fin_" << i_e << " " << 	time_poll_finish_store_sec[i_e] << " [s] " << "\n";
+		std::cout << "start_" << i_e << " " << time_poll_start_store_nanosec[i_e] << " fin_" << i_e << " " << time_poll_finish_store_nanosec[i_e] << " [ns] " << "\n";*/
+		
 	}
 	
+
+	for(size_t i_e=0; i_e<b.buffer.size(); ++i_e){
+		std::cout << "start_" << i_e << " " << time_poll_start_store_sec[i_e] << " fin_" << i_e << " " << 	time_poll_finish_store_sec[i_e] << " [s] " << "\n";
+		std::cout << "start_" << i_e << " " << time_poll_start_store_nanosec[i_e] << " fin_" << i_e << " " << time_poll_finish_store_nanosec[i_e] << " [ns] " << "\n";
+	}
+
+
+
+	std::cout << "\n";
+		
+
+	/*for(unsigned i=0; i< b.buffer.size();i++){
+
+		std::cout << "start_" << i << " " << time_poll_start_store_sec[i] << " fin_" << i << " " << time_poll_finish_store_sec[i] << " [s] ""\n";
+		std::cout << "start_" << i << " " << time_poll_start_store_nanosec[i] << " fin_" << i << " " << time_poll_finish_store_nanosec[i] << " [ns] " "\n";
+
+	}*/
+
 	std::cout << "feb_event_count: " << feb_event_count << std::endl;
 	std::cout << std::endl;
   return b.buffer.size();
@@ -707,8 +732,8 @@ std::cout << std::endl;
 	fragment_fill_time_metadata_s = fragment_fill_time.tv_sec;
 	fragment_fill_time_metadata_ns = fragment_fill_time.tv_usec*1000;
 
-	std::cout<<"fragment_fill_time [s] " << fragment_fill_time.tv_sec << std::endl;
-	std::cout<<"fragment_fill_time [micros] " << fragment_fill_time.tv_usec << std::endl << "\n";
+	//std::cout<<"fragment_fill_time [s] " << fragment_fill_time_metadata_s/*fragment_fill_time.tv_sec*/ << std::endl;
+	//std::cout<<"fragment_fill_time [micros] " << fragment_fill_time.tv_usec << std::endl << "\n";
 
 
 	/*    
@@ -720,17 +745,29 @@ std::cout << std::endl;
 					feb_id, ReaderID_,
 					nChannels_,nADCBits_);
     */
+
+    if(time_poll_start_store_nanosec[i_e+1]!=time_poll_start_store_nanosec[i_e]){
+	
+	time_last_poll_start_metadata_s = time_poll_start_store_sec[i_e];
+	time_last_poll_start_metadata_ns = time_poll_start_store_nanosec[i_e];
+	time_last_poll_finish_metadata_s = time_poll_finish_store_sec[i_e];
+	time_last_poll_finish_metadata_ns = time_poll_finish_store_nanosec[i_e];
+    }
+
+
     //create metadata!
     BernCRTZMQFragmentMetadata metadata(start_time_metadata_s,start_time_metadata_ns,
-					time_poll_start_metadata_s,time_poll_start_metadata_ns,
-					time_poll_finish_metadata_s,time_poll_finish_metadata_ns,
+					time_poll_start_store_sec[i_e],time_poll_start_store_nanosec[i_e],
+					time_poll_finish_store_sec[i_e],time_poll_finish_store_nanosec[i_e],
 					time_last_poll_start_metadata_s,time_last_poll_start_metadata_ns,
  					time_last_poll_finish_metadata_s,time_last_poll_finish_metadata_ns,
 					fragment_fill_time_metadata_s, fragment_fill_time_metadata_ns,
-					feb_event_count,GPSCounter_,0);
+					feb_event_count,GPSCounter_,0,FragmentCounter_++);
+
     //increment n_events in metadata by 1 (to tell it we have one CRT Hit event!)
     metadata.inc_Events();
     std::cout << metadata << std::endl;
+    std::cout << "event " << i_e << std::endl;
     //std::cout << "\nEventCounter metadata: " << metadata.n_events() << std::endl;
     //std::cout << "\nFragmentCounter metadata: " << metadata.sequence_number() << std::endl;
     //std::cout << "TimeStart[ns]: " << metadata.time_start_nanosec() << std::endl;
@@ -745,7 +782,7 @@ std::cout << std::endl;
 
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(sizeof(BernCRTZMQEvent),  
-							/*metadata.sequence_number()*/0,feb_id,
+							metadata.sequence_number(),feb_id,
 							sbndaq::detail::FragmentType::BERNCRTZMQ, metadata, 
 							0//metadata.time_end_nanosec() //timestamp! to be filled!!!!
 							) );
@@ -760,9 +797,6 @@ std::cout << std::endl;
 	std::cout << "\nwe've got " << GPSCounter_ << " GPS-PPS" << std::endl;
 	std::cout << "event_in_clock " << event_in_clock << std::endl;
 
-
-
-
 	
 
   //delete from the buffer all the events we've just put into frags
@@ -775,6 +809,20 @@ std::cout << std::endl;
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
  std::cout << "ENDING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size() << std::endl;
+
+ time_poll_start_store_sec.clear();
+ time_poll_start_store_nanosec.clear();
+ time_poll_finish_store_sec.clear();
+ time_poll_finish_store_nanosec.clear();
+
+ if(!time_poll_start_store_sec.empty()){std::cout << "time vector not empty" << "\n";}
+
+ time_poll_start_store_sec.push_back(time_poll_start_metadata_s/*time_poll_start.tv_sec*/);
+		time_poll_start_store_nanosec.push_back(time_poll_start_metadata_ns/*time_poll_start.tv_usec*1000*/);
+		time_poll_finish_store_sec.push_back(time_poll_finish_metadata_s/*time_poll_finished.tv_sec*/);
+		time_poll_finish_store_nanosec.push_back(time_poll_finish_metadata_ns/*time_poll_finished.tv_usec*1000*/);
+
+
 
   return false;
 

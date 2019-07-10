@@ -165,6 +165,15 @@ namespace sbndaq {
     uint32_t time_last_poll_finish_metadata_ns;
     uint32_t fragment_fill_time_metadata_s;
     uint32_t fragment_fill_time_metadata_ns;
+
+    std::vector<uint32_t> time_poll_start_store_sec;
+    std::vector<uint32_t> time_poll_start_store_nanosec;
+    std::vector<uint32_t> time_poll_finish_store_sec;
+    std::vector<uint32_t> time_poll_finish_store_nanosec;
+    std::vector<uint32_t> time_last_poll_start_store_sec;
+    std::vector<uint32_t> time_last_poll_start_store_nanosec;
+    std::vector<uint32_t> time_last_poll_finish_store_sec;
+    std::vector<uint32_t> time_last_poll_finish_store_nanosec;
   };
 }
 
