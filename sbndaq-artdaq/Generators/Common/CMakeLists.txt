@@ -12,12 +12,15 @@ cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		  SOURCE workerThread.cpp 
-		         CircularBuffer.cc
+		  CircularBuffer.cc
+		  PoolBuffer.cc
 		  LIBRARIES 
-		    	 pthread
-			 artdaq_DAQdata
-		    	 ${MF_MESSAGELOGGER}
-			 ${Boost_SYSTEM_LIBRARY}
+		  pthread
+		  artdaq_DAQdata
+		  ${MF_UTILITIES}
+		  ${TRACE}
+		  ${MF_MESSAGELOGGER}
+		  ${Boost_SYSTEM_LIBRARY}
 		)
 
 		  
@@ -44,11 +47,14 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 )
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
-		  SOURCE  GPS/GPSInfo.cc
+                  SOURCE  SpectraTimeReadout_generator.cc
+                          GPS/GPSInfo.cc
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
   			artdaq-core_Utilities
+                        artdaq-utilities_Plugins
+                        artdaq-core_Data
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
@@ -73,6 +79,7 @@ simple_plugin(CAENV1730Readout "generator"
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-core_Data
+  artdaq-utilities_Plugins
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -113,6 +120,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
 			artdaq_DAQdata
 			artdaq-core_Utilities
 			artdaq-core_Data
+			artdaq-utilities_Plugins
+			#${ARTDAQ_UTILITIES}
 			${ART_UTILITIES}
 			${FHICLCPP}
 			${MF_MESSAGELOGGER}
@@ -131,6 +140,8 @@ simple_plugin(BernCRTZMQData "generator"
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-core_Data
+  artdaq-utilities_Plugins
+ # ${ARTDAQ_UTILITIES}
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}

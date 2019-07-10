@@ -28,6 +28,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   InitializeVeto();
 
   this->nBoards_ = (uint16_t)(physCr->NBoards());
+  assignBoardID_ = ps.get<bool>("AssignBoardID", false);
+  if ( !assignBoardID_ ) BoardIDs_.assign( physCr->getBoardIDs().begin(), physCr->getBoardIDs().end() );
 
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&PhysCrateData::GetData, this);
@@ -36,8 +38,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   GetData_thread_.swap(GetData_worker);
 
   //some config things ...
-  SetDCOffset();
-  SetTestPulse();
+  // SetDCOffset();
+  // SetTestPulse();
 }
 
 void icarus::PhysCrateData::InitializeVeto(){
@@ -74,26 +76,56 @@ void icarus::PhysCrateData::ForceClear()
 
 void icarus::PhysCrateData::SetDCOffset()
 {
-  uint16_t dc_offset_a = ps_.get<uint16_t>("DCOffsetA",0x0000);
-  uint16_t dc_offset_b = ps_.get<uint16_t>("DCOffsetB",0x0000);
-  uint16_t dc_offset_c = ps_.get<uint16_t>("DCOffsetC",0x0000);
-  uint16_t dc_offset_d = ps_.get<uint16_t>("DCOffsetD",0x0000);
+  size_t nBoards = (size_t)physCr->NBoards();
+
+  std::vector< uint16_t > dc_offset_a = ps_.get< std::vector< uint16_t > >("TestPulseAmpODD", std::vector< uint16_t >( nBoards, 0x8000 ) );
+  std::vector< uint16_t > dc_offset_b = ps_.get< std::vector< uint16_t > >("TestPulseAmpEVEN", std::vector< uint16_t >( nBoards, 0x8000 ) );
+  std::vector< uint16_t > dc_offset_c = ps_.get< std::vector< uint16_t > >("DACOffset1", std::vector< uint16_t >( nBoards, 0x8000 ) );
+  std::vector< uint16_t > dc_offset_d = ps_.get< std::vector< uint16_t > >("DACOffset2", std::vector< uint16_t >( nBoards, 0x8000 ) );
+
+  if ( dc_offset_a.size() < nBoards )
+    throw cet::exception("PhysCrateData") << "Ask to set Internal Test Pulse Amplitude ODD for " << dc_offset_a.size() 
+            << " boards while " << nBoards << " boards registered.";
+  if ( dc_offset_b.size() < nBoards )
+    throw cet::exception("PhysCrateData") << "Ask to set Internal Test Pulse Amplitude EVEN for " << dc_offset_b.size() 
+            << " boards while " << nBoards << " boards registered.";
+  if ( dc_offset_c.size() < nBoards )
+    throw cet::exception("PhysCrateData") << "Ask to set DAC offset CH[31..0] for " << dc_offset_c.size() << " boards while "
+            << nBoards << " boards registered.";
+  if ( dc_offset_d.size() < nBoards )
+    throw cet::exception("PhysCrateData") << "Ask to set DAC offset CH[63..32] for " << dc_offset_d.size() << " boards while "
+            << nBoards << " boards registered.";
+
 
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto bdhandle = physCr->BoardHandle(ib);
     
-    CAENComm_Write32(bdhandle, A_DAC_A, 0x00070000 | dc_offset_a);
-    CAENComm_Write32(bdhandle, A_DAC_B, 0x00070000 | dc_offset_b);
-    CAENComm_Write32(bdhandle, A_DAC_C, 0x00070000 | dc_offset_c);
-    CAENComm_Write32(bdhandle, A_DAC_D, 0x00070000 | dc_offset_d);
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00000000 | (dc_offset_a[ib] & 0xFFFF));
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00010000 | (dc_offset_b[ib] & 0xFFFF));
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00020000 | (dc_offset_c[ib] & 0xFFFF));
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00030000 | (dc_offset_d[ib] & 0xFFFF));
+    // uint32_t offset_c, offset_d;
+    // int res1, res2;
+    // res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
+    // res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
+    // std::cout << "Board " << ib << std::endl;
+    // std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << std::hex << offset_c << std::endl;
+    // std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << std::hex << offset_d << std::endl;
+
   }
 }
 
 void icarus::PhysCrateData::SetTestPulse()
 {
+  size_t nBoards = (size_t)physCr->NBoards();
+
   //TestPulseType tp_config = ps_.get<TestPulseType>("TestPulseType",TestPulseType::kDisable);
   int tp_config = ps_.get<int>("TestPulseType",0);
-  uint16_t dc_offset = ps_.get<uint16_t>("DCOffsetTestPulse",0x0000);
+  std::vector< uint16_t > dc_offset = ps_.get< std::vector< uint16_t > >("DACSetting", std::vector< uint16_t >( nBoards, 0x8000 ) );
+
+  if ( dc_offset.size() < nBoards )
+    throw cet::exception("PhysCrateData") << "Ask to set DAC for " << dc_offset.size() 
+            << " boards while " << nBoards << " boards registered.";
 
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto bdhandle = physCr->BoardHandle(ib);
@@ -114,7 +146,7 @@ void icarus::PhysCrateData::SetTestPulse()
     }
     
     //set the test pulse dc offset
-    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00070000 | dc_offset);
+    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00070000 | dc_offset[ib]);
   
   }
 
@@ -201,6 +233,21 @@ void icarus::PhysCrateData::ConfigureStart(){
     _vetoTestThread->start();
 
   GetData_thread_->start();
+
+  SetDCOffset();
+  /* 
+  for(int ib=0; ib<physCr->NBoards(); ++ib){
+    auto bdhandle = physCr->BoardHandle(ib);
+    uint32_t offset_c, offset_d;
+    int res1, res2;
+    res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
+    res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
+    std::cout << "ConfigureStart(): Board " << ib << std::endl;
+    std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << offset_c << std::endl;
+    std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << offset_d << std::endl;
+  }
+  */
+  SetTestPulse();
 }
 
 void icarus::PhysCrateData::ConfigureStop(){
@@ -297,8 +344,8 @@ int icarus::PhysCrateData::GetData(){
     auto data_ptr = physCr->getData();
     
     size_t const this_data_size_bytes = ntohl( data_ptr->Header.packSize );
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data acquired! Size is %lu bytes, with %lu bytes already acquired.",
-        this_data_size_bytes, data_size_bytes);
+    TLOG(TLVL_DEBUG) << "PhysCrateData::GetData : Data acquired! Size is " << this_data_size_bytes << " bytes, with " 
+                     << data_size_bytes << " bytes already acquired.";
 
     if( this_data_size_bytes == 32 ) continue;
 
@@ -308,14 +355,14 @@ int icarus::PhysCrateData::GetData(){
               << ", this_data_size_bytes: " << this_data_size_bytes
               << ", token: " << std::hex << data_ptr->Header.token << ", info1: " << data_ptr->Header.info1 
               << ", info2: " << data_ptr->Header.info2 << ", info3: " << data_ptr->Header.info3 
-              << ", timeinfo: " << data_ptr->Header.timeinfo << ", chID: " << data_ptr->Header.chID << std::endl;
+              << ", timeinfo: " << data_ptr->Header.timeinfo << ", chID: " << data_ptr->Header.chID;
    
     // auto ev_ptr = reinterpret_cast<uint32_t*>(data_ptr->data);    
     // TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
     
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( data_ptr->data );
     TLOG(TLVL_DEBUG) << "PhysCrateData: event_number: " << board_block->header.event_number 
-              << ", time_stamp: " << board_block->header.time_stamp << std::endl;
+              << ", time_stamp: " << board_block->header.time_stamp;
 
     // if ( iBoard == nBoards ) {
     //   fCircularBuffer.Insert( data_size, reinterpret_cast<uint16_t const*>(data_ptr) );
@@ -324,8 +371,8 @@ int icarus::PhysCrateData::GetData(){
     // }
     fCircularBuffer.Insert( this_data_size_bytes/sizeof(uint16_t), reinterpret_cast<uint16_t const*>(data_ptr) );
     data_size_bytes += this_data_size_bytes;
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data copied! Size was %lu bytes, with %lu bytes now acquired.",
-         this_data_size_bytes, data_size_bytes);
+    TLOG(TLVL_DEBUG) << "PhysCrateData::GetData: Data copied! Size was " << this_data_size_bytes << " bytes, with "
+                     << data_size_bytes << " bytes now acquired.";
   }
   
   TRACEN("PhysCrateData",TLVL_DEBUG,"GetData completed. Status %d, Data size %lu bytes",0,data_size_bytes);
