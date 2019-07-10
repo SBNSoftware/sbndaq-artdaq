@@ -6,17 +6,17 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
  	       sbndaq-artdaq-core_Overlays_ICARUS #icarus-artdaq_Products
 )
 
-#simple_plugin(IcarusArtdaqBuildInfo "module"
-#  artdaq_DAQdata
-#  artdaq_BuildInfo
-#  artdaq-core_BuildInfo
-#  sbndaq-artdaq_BuildInfo
-#  sbndaq-artdaq-core_BuildInfo
-#  ${MF_MESSAGELOGGER}
-#  ${FHICLCPP}
-#  ${CETLIB}
-#  ${CETLIB_EXCEPT}
-#)
+simple_plugin(IcarusArtdaqBuildInfo "module"
+  artdaq_DAQdata
+  artdaq_BuildInfo
+  artdaq-core_BuildInfo
+  sbndaq-artdaq_BuildInfo
+  sbndaq-artdaq-core_BuildInfo
+  ${MF_MESSAGELOGGER}
+  ${FHICLCPP}
+  ${CETLIB}
+  ${CETLIB_EXCEPT}
+)
 
 simple_plugin(IcarusInput "source"
   sbndaq-artdaq-core_Overlays
@@ -36,26 +36,26 @@ simple_plugin(IcarusInput "source"
   MF_MessageLogger
   ${CETLIB_EXCEPT}
 )
-#simple_plugin(PhysCrateDump "module"
-#              sbndaq-artdaq-core_Overlays
-#              sbndaq-artdaq-core_Overlays_ICARUS)
-#simple_plugin(PhysCrateWriteICARUSDataFile "module"
-#              sbndaq-artdaq-core_Overlays
-#              sbndaq-artdaq-core_Overlays_ICARUS)
-#simple_plugin(PhysCrateViewer "module"
-#              sbndaq-artdaq-core_Overlays
-#              sbndaq-artdaq-core_Overlays_ICARUS
-#	      art_Framework_Services_Optional
-#	      art_Framework_Services_Registry
-#	      art_Framework_Services_Optional_TFileService_service
-#	      ${ROOT_BASIC_LIB_LIST} )
-#simple_plugin(PhysCrateSimpleAna "module"
-#              sbndaq-artdaq-core_Overlays
-#              sbndaq-artdaq-core_Overlays_ICARUS
-#	      art_Framework_Services_Optional
-#	      art_Framework_Services_Registry
-#	      art_Framework_Services_Optional_TFileService_service
-#	      ${ROOT_BASIC_LIB_LIST} )
-#
+simple_plugin(PhysCrateDump "module"
+              sbndaq-artdaq-core_Overlays
+              sbndaq-artdaq-core_Overlays_ICARUS)
+simple_plugin(PhysCrateWriteICARUSDataFile "module"
+              sbndaq-artdaq-core_Overlays
+              sbndaq-artdaq-core_Overlays_ICARUS)
+simple_plugin(PhysCrateViewer "module"
+              sbndaq-artdaq-core_Overlays
+              sbndaq-artdaq-core_Overlays_ICARUS
+	      art_root_io_tfile_support ${ROOT_CORE}
+	      art_Framework_Services_Registry
+	      art_root_io_TFileService_service
+	      ${ROOT_BASIC_LIB_LIST} )
+simple_plugin(PhysCrateSimpleAna "module"
+              sbndaq-artdaq-core_Overlays
+              sbndaq-artdaq-core_Overlays_ICARUS
+	      art_root_io_tfile_support ${ROOT_CORE}
+	      art_Framework_Services_Registry
+	      art_root_io_TFileService_service
+	      ${ROOT_BASIC_LIB_LIST} )
+
 # Subdirectories.
 #add_subdirectory(DQM)
