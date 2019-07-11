@@ -120,6 +120,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
 			artdaq_DAQdata
 			artdaq-core_Utilities
 			artdaq-core_Data
+			artdaq-utilities_Plugins
+			#${ARTDAQ_UTILITIES}
 			${ART_UTILITIES}
 			${FHICLCPP}
 			${MF_MESSAGELOGGER}
@@ -138,6 +140,8 @@ simple_plugin(BernCRTZMQData "generator"
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-core_Data
+  artdaq-utilities_Plugins
+ # ${ARTDAQ_UTILITIES}
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}

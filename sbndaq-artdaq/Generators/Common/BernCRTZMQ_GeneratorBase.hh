@@ -132,7 +132,7 @@ namespace sbndaq {
     uint32_t SeqIDMinimumSec_;
 
     bool GetData();
-    bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &,bool clear_buffer=false);
+    bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
     size_t InsertIntoFEBBuffer(FEBBuffer_t &,size_t,size_t,size_t);
     size_t EraseFromFEBBuffer(FEBBuffer_t &, size_t const&);
@@ -143,6 +143,37 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
+	//my new variable
+    size_t FragmentCounter_; //it counts the fragments in the buffer
+    size_t GPSCounter_; // it counts how many GPS have occurred
+    size_t event_in_clock; // it counts how many events are within a clock of the FEB
+    size_t GPS_time; // time past from the very beginning of the DAQ_BEG - with respect to the GPS-PPS
+
+    timeval time_last_poll_start;
+    timeval time_last_poll_finished;
+
+    uint32_t feb_event_count;
+    uint32_t start_time_metadata_s;
+    uint32_t start_time_metadata_ns;
+    uint32_t time_poll_start_metadata_s;
+    uint32_t time_poll_start_metadata_ns;
+    uint32_t time_poll_finish_metadata_s;
+    uint32_t time_poll_finish_metadata_ns;
+    uint32_t time_last_poll_start_metadata_s;
+    uint32_t time_last_poll_start_metadata_ns;
+    uint32_t time_last_poll_finish_metadata_s;
+    uint32_t time_last_poll_finish_metadata_ns;
+    uint32_t fragment_fill_time_metadata_s;
+    uint32_t fragment_fill_time_metadata_ns;
+
+    std::vector<uint32_t> time_poll_start_store_sec;
+    std::vector<uint32_t> time_poll_start_store_nanosec;
+    std::vector<uint32_t> time_poll_finish_store_sec;
+    std::vector<uint32_t> time_poll_finish_store_nanosec;
+    std::vector<uint32_t> time_last_poll_start_store_sec;
+    std::vector<uint32_t> time_last_poll_start_store_nanosec;
+    std::vector<uint32_t> time_last_poll_finish_store_sec;
+    std::vector<uint32_t> time_last_poll_finish_store_nanosec;
   };
 }
 

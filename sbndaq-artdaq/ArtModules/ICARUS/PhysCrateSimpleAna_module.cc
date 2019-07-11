@@ -18,7 +18,7 @@
 #include "icarus-artdaq-base/common.h"
 
 
-#include "art/Framework/Services/Optional/TFileService.h"
+#include "art_root_io/TFileService.h"
 
 #include <algorithm>
 #include <cassert>
