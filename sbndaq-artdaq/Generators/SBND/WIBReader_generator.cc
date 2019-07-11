@@ -1,9 +1,8 @@
 #include "WIBReader.hh"
-#include "artdaq/Application/GeneratorMacros.hh"
-#include "dune-artdaq/DAQLogger/DAQLogger.hh"
+#include "artdaq/Generators/GeneratorMacros.hh"
 #include "cetlib/exception.h"
 
-#include "BUException/ExceptionBase.hh"
+#include "WIBException/ExceptionBase.hh"
 #include "WIB/WIBException.hh"
 #include "WIB/BNL_UDP_Exception.hh"
 
@@ -18,54 +17,56 @@
 // not averaged or summed, just the last value
 #define sendRegMetric(name,level) artdaq::Globals::metricMan_->sendMetric(name,   (long unsigned int) wib->Read(name), "", level, artdaq::MetricMode::LastPoint, "WIB");
 
-namespace wibdaq {
+namespace wibdaq 
+{
 
 // "initialize" transition
-WIBReader::WIBReader(fhicl::ParameterSet const& ps) :
-    CommandableFragmentGenerator(ps) {
+WIBReader::WIBReader(fhicl::ParameterSet const& ps) :   CommandableFragmentGenerator(ps) 
+{
 
-  const std::string identification = "wibdaq::WIBReader::WIBReader";
+  const std::string identification = "WIBReader";
 
   auto configuration_tries = ps.get<unsigned>("WIB.config.configuration_tries");
-
+  
   bool success = false;
-  for (unsigned iTry=1; iTry <= configuration_tries; iTry++) {
+  for (unsigned iTry=1; iTry <= configuration_tries; iTry++) 
+  {
     try
     {
       setupWIB(ps);
       success = true;
       break;
     }
-    catch (const BUException::BAD_REPLY & exc)
+    catch (const WIBException::BAD_REPLY & exc)
     {
-      dune::DAQLogger::LogWarning(identification) << "WIB communication error: "
-          << exc.what();
+      TLOG_WARNING(identification) << "WIB communication error: "
+				   << exc.what() << TLOG_ENDL;
     }
-    catch (const BUException::WIB_DTS_ERROR & exc)
+    catch (const WIBException::WIB_DTS_ERROR & exc)
     {
-      dune::DAQLogger::LogWarning(identification) << "WIB timing config error: "
-          << exc.what();
+      TLOG_WARNING(identification) << "WIB timing config error: "
+						  << exc.what() << TLOG_ENDL;
     }
-    catch (const BUException::exBase & exc)
+    catch (const WIBException::exBase & exc)
     {
       // Try to un-set DIM do-not-disturb no matter what happened
       try
       {
-        if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
+	if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
       }
-      catch (const BUException::exBase & exc)
+      catch (const WIBException::exBase & exc)
       {
-        // best effort, don't care if it doesn't succeed
+	// best effort, don't care if it doesn't succeed
       }
 
       cet::exception excpt(identification);
-      excpt << "Unhandled BUException: "
-          << exc.what()
-          << ": "
-          << exc.Description();
+      excpt << "Unhandled WIBException: "
+	    << exc.what()
+	    << ": "
+	    << exc.Description();
       throw excpt;
     }
-    dune::DAQLogger::LogInfo(identification) << "Configuraton try  " << iTry << " failed. Trying again...";
+    TLOG_INFO(identification) << "Configuraton try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
   } // for iRetry
 
   // Try to un-set DIM do-not-disturb no matter what happened
@@ -73,7 +74,7 @@ WIBReader::WIBReader(fhicl::ParameterSet const& ps) :
   {
     if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
   }
-  catch (const BUException::exBase & exc)
+  catch (const WIBException::exBase & exc)
   {
     // best effort, don't care if it doesn't succeed
   }
@@ -86,7 +87,8 @@ WIBReader::WIBReader(fhicl::ParameterSet const& ps) :
   }
 }
 
-void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
+void WIBReader::setupWIB(fhicl::ParameterSet const& ps) 
+{
 
   const std::string identification = "wibdaq::WIBReader::setupWIB";
 
@@ -139,7 +141,7 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
     throw excpt;
   }
 
-  dune::DAQLogger::LogInfo(identification) << "Connecting to WIB at " <<  wib_address;
+  TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
   wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
 
   // Set DIM do-not-disturb
@@ -155,14 +157,14 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
   wib->SetContinueIfListOfFEMBClockPhasesDontSync(continueIfListOfFEMBClockPhasesDontSync);
   
   // Check if WIB firmware is for RCE or FELIX DAQ
-  dune::DAQLogger::LogDebug(identification) << "N DAQ Links: "  << wib->Read("SYSTEM.DAQ_LINK_COUNT");
-  dune::DAQLogger::LogDebug(identification) << "N FEMB Ports: "  << wib->Read("SYSTEM.FEMB_COUNT");
+  TLOG_DEBUG(identification) << "N DAQ Links: "  << wib->Read("SYSTEM.DAQ_LINK_COUNT") << TLOG_ENDL;
+  TLOG_DEBUG(identification) << "N FEMB Ports: "  << wib->Read("SYSTEM.FEMB_COUNT") << TLOG_ENDL;
   WIB::WIB_DAQ_t daqMode = wib->GetDAQMode();
   uint32_t expected_wib_fw_version = 0;
   
   if (daqMode == WIB::RCE)
   {
-    dune::DAQLogger::LogInfo(identification) << "WIB Firmware setup for RCE DAQ Mode";
+    TLOG_INFO(identification) << "WIB Firmware setup for RCE DAQ Mode" << TLOG_ENDL;
     if(expected_daq_mode != "RCE" &&
        expected_daq_mode != "rce" && 
        expected_daq_mode != "ANY" && 
@@ -177,7 +179,7 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
   }
   else if (daqMode == WIB::FELIX)
   {
-    dune::DAQLogger::LogInfo(identification) << "WIB Firmware setup for FELIX DAQ Mode";
+    TLOG_INFO(identification) << "WIB Firmware setup for FELIX DAQ Mode" << TLOG_ENDL;
     if(expected_daq_mode != "FELIX" && 
        expected_daq_mode != "felix" &&
        expected_daq_mode != "ANY" &&
@@ -195,20 +197,20 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
     cet::exception excpt(identification);
     excpt << "WIB Firmware DAQ setup UNKNOWN";
     throw excpt;
-    //dune::DAQLogger::LogInfo(identification) << "WIB Firmware DAQ setup UNKNOWN";
+    //TLOG_INFO(identification) << "WIB Firmware DAQ setup UNKNOWN" << TLOG_ENDL;
   }
   else
   {
     cet::exception excpt(identification);
     excpt << "Bogus WIB firmware DAQ mode "<< ((unsigned) daqMode);
     throw excpt;
-    //dune::DAQLogger::LogInfo(identification) << "Bogus WIB firmware DAQ mode "<< ((unsigned) daqMode);
+    //TLOG_INFO(identification) << "Bogus WIB firmware DAQ mode "<< ((unsigned) daqMode) << TLOG_ENDL;
   }
 
   // Check and print firmware version
   uint32_t wib_fw_version = wib->Read("SYSTEM.FW_VERSION");
   
-  dune::DAQLogger::LogInfo(identification) << "WIB Firmware Version: 0x" 
+  TLOG_INFO(identification) << "WIB Firmware Version: 0x" 
         << std::hex << std::setw(8) << std::setfill('0')
         <<  wib_fw_version
         << " Synthesized: " 
@@ -225,7 +227,7 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
         << std::hex << std::setw(2) << std::setfill('0')
         << wib->Read("SYSTEM.SYNTH_TIME.MINUTE") << ":"
         << std::hex << std::setw(2) << std::setfill('0')
-        << wib->Read("SYSTEM.SYNTH_TIME.SECOND");
+        << wib->Read("SYSTEM.SYNTH_TIME.SECOND")  << TLOG_ENDL;
   
   if (expected_wib_fw_version != wib_fw_version)
   {
@@ -241,16 +243,19 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
   }
 
   // Reset and setup clock
-  if(force_full_reset){
-    dune::DAQLogger::LogInfo(identification) << "Running Full Reset on the WIB";
+  if(force_full_reset)
+  {
+    TLOG_INFO(identification) << "Running Full Reset on the WIB" << TLOG_ENDL;
     wib->ResetWIBAndCfgDTS(local_clock,partition_number,DTS_source);
   }
-  else{
-    dune::DAQLogger::LogInfo(identification) << "Running Checked Reset on the WIB";
+  else
+  {
+    TLOG_INFO(identification) << "Running Checked Reset on the WIB" << TLOG_ENDL;
     wib->CheckedResetWIBAndCfgDTS(local_clock,partition_number,DTS_source);    
-    dune::DAQLogger::LogInfo(identification) << "Finished Checked Reset on the WIB";
-    if (daqMode == WIB::FELIX){                                                  
-      dune::DAQLogger::LogInfo(identification) << "SI5342 Status: " << wib->Read("DAQ.SI5342.ENABLE");
+    TLOG_INFO(identification) << "Finished Checked Reset on the WIB" << TLOG_ENDL;
+    if (daqMode == WIB::FELIX)
+    {                                                  
+      TLOG_INFO(identification) << "SI5342 Status: " << wib->Read("DAQ.SI5342.ENABLE") << TLOG_ENDL;
     }                                               
   }
   std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -264,12 +269,12 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
   }
   
   // Configure WIB fake data enable and mode
-  dune::DAQLogger::LogInfo(identification) << "Configuring WIB Fake Data";
-  dune::DAQLogger::LogInfo(identification) << "Is Fake:"
+  TLOG_INFO(identification) << "Configuring WIB Fake Data" << TLOG_ENDL;
+  TLOG_INFO(identification) << "Is Fake:"
                                         << " FEMB1: " << use_WIB_fake_data.at(0)
                                         << " FEMB2: " << use_WIB_fake_data.at(1)
                                         << " FEMB3: " << use_WIB_fake_data.at(2)
-                                        << " FEMB4: " << use_WIB_fake_data.at(3);
+                                        << " FEMB4: " << use_WIB_fake_data.at(3) << TLOG_ENDL;
   wib->ConfigWIBFakeData(use_WIB_fake_data.at(0),
                          use_WIB_fake_data.at(1),
                          use_WIB_fake_data.at(2),
@@ -286,33 +291,35 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps) {
 
       if(enable_FEMB_fake_data)
       {
-        dune::DAQLogger::LogInfo(identification) << "Setting up FEMB "<<iFEMB<<" for fake data";
+        TLOG_INFO(identification) << "Setting up FEMB "<<iFEMB<<" for fake data" << TLOG_ENDL;
         setupFEMBFakeData(iFEMB,FEMB_config,continueOnFEMBRegReadError);
       }
       else
       {
-        dune::DAQLogger::LogInfo(identification) << "Setting up FEMB"<<iFEMB;
+        TLOG_INFO(identification) << "Setting up FEMB"<<iFEMB << TLOG_ENDL;
         setupFEMB(iFEMB,FEMB_config,continueOnFEMBRegReadError);
       }
     }
     else
     {
-      dune::DAQLogger::LogInfo(identification) << "FEMB"<<iFEMB<<" not enabled";
+      TLOG_INFO(identification) << "FEMB"<<iFEMB<<" not enabled" << TLOG_ENDL;
     }
   }
 
 //  if (daqMode != WIB::FELIX){// don't enable links yet if FELIX, do it in start
-    dune::DAQLogger::LogInfo(identification) << "Enabling DAQ links";
+    TLOG_INFO(identification) << "Enabling DAQ links" << TLOG_ENDL;
     wib->StartStreamToDAQ();
 //  }
   
   // Un-set DIM do-not-disturb
   wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
 
-  dune::DAQLogger::LogInfo(identification) << "Configured WIB";
+  TLOG_INFO(identification) << "Configured WIB" << TLOG_ENDL;
 }
 
-void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, bool continueOnFEMBRegReadError) {
+void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
+				  bool continueOnFEMBRegReadError) 
+{
   // Don't forget to disable WIB fake data
 
   const std::string identification = "wibdaq::WIBReader::setupFEMBFakeData";
@@ -321,8 +328,11 @@ void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_
   sleep(5);
 
   if(wib->ReadFEMB(iFEMB,"VERSION_ID") == wib->ReadFEMB(iFEMB,"SYS_RESET")) { // can't read register if equal
-    if(continueOnFEMBRegReadError){
-      dune::DAQLogger::LogWarning(identification) << "Warning: Can't read registers from FEMB " << int(iFEMB) << ". Powering it down and continuing on to others";
+    if(continueOnFEMBRegReadError)
+    {
+      TLOG_WARNING(identification) << "Warning: Can't read registers from FEMB " 
+				   << int(iFEMB) 
+				   << ". Powering it down and continuing on to others" << TLOG_ENDL;
       wib->FEMBPower(iFEMB,0);
       return;
     }
@@ -397,7 +407,8 @@ void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_
   wib->ConfigFEMBFakeData(iFEMB,fake_mode,fake_word,femb_number,fake_waveform);
 }
 
-void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, bool continueOnFEMBRegReadError){
+void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, bool continueOnFEMBRegReadError)
+{
   // Don't forget to disable WIB fake data
 
   const std::string identification = "wibdaq::WIBReader::setupFEMB";
@@ -546,8 +557,10 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
   sleep(5);
 
   if(wib->ReadFEMB(iFEMB,"VERSION_ID") == wib->ReadFEMB(iFEMB,"SYS_RESET")) { // can't read register if equal
-    if(continueOnFEMBRegReadError){
-      dune::DAQLogger::LogWarning(identification) << "Warning: Can't read registers from FEMB " << int(iFEMB) << ". Powering it down and continuing on to others";
+    if(continueOnFEMBRegReadError)
+    {
+      TLOG_WARNING(identification) << "Warning: Can't read registers from FEMB " << int(iFEMB) 
+				   << ". Powering it down and continuing on to others" << TLOG_ENDL;
       wib->FEMBPower(iFEMB,0);
       return;
     }
@@ -575,18 +588,18 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
   }
 
   std::vector<uint32_t> fe_config = {gain,shape,baselineHigh,leakHigh,leak10X,acCouple,buffer,extClk};
-
   wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
-
 }
 
 // "shutdown" transition
-WIBReader::~WIBReader() {
+WIBReader::~WIBReader() 
+{
 
 }
 
 // "start" transition
-void WIBReader::start() {
+void WIBReader::start() 
+{
   const std::string identification = "wibdaq::WIBReader::start";
   if (!wib) 
   {
@@ -596,7 +609,7 @@ void WIBReader::start() {
   }
   /*
   if (wib->GetDAQMode() == WIB::FELIX){// otherwise we did this during configure
-    dune::DAQLogger::LogInfo(identification) << "Enabling DAQ links";
+    TLOG_INFO(identification) << "Enabling DAQ links" << TLOG_ENDL;
 
     unsigned start_run_tries = 5;
     bool success = false;
@@ -608,31 +621,31 @@ void WIBReader::start() {
         success = true;
         break;
       }
-      catch (const BUException::BAD_REPLY & exc)
+      catch (const WIBException::BAD_REPLY & exc)
       {
-        dune::DAQLogger::LogWarning(identification) << "WIB communication error: "
-            << exc.what();
+        TLOG_WARNING(identification) << "WIB communication error: "
+            << exc.what() << TLOG_ENDL;
       }
-      catch (const BUException::exBase & exc)
+      catch (const WIBException::exBase & exc)
       {
         // Try to un-set DIM do-not-disturb no matter what happened
         try
         {
           if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
         }
-        catch (const BUException::exBase & exc)
+        catch (const WIBException::exBase & exc)
         {
           // best effort, don't care if it doesn't succeed
         }
 
         cet::exception excpt(identification);
-        excpt << "Unhandled BUException: "
+        excpt << "Unhandled WIBException: "
             << exc.what()
             << ": "
             << exc.Description();
         throw excpt;
       }
-      dune::DAQLogger::LogInfo(identification) << "Run start try  " << iTry << " failed. Trying again...";
+      TLOG_INFO(identification) << "Run start try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
     } // for iRetry
 
     // Try to un-set DIM do-not-disturb no matter what happened
@@ -640,7 +653,7 @@ void WIBReader::start() {
     {
       if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
     }
-    catch (const BUException::exBase & exc)
+    catch (const WIBException::exBase & exc)
     {
       // best effort, don't care if it doesn't succeed
     }
@@ -656,7 +669,8 @@ void WIBReader::start() {
 }
 
 // "stop" transition
-void WIBReader::stop() {
+void WIBReader::stop() 
+{
   const std::string identification = "wibdaq::WIBReader::stop";
   if (!wib) 
   {
@@ -666,7 +680,7 @@ void WIBReader::stop() {
   }
   /*
   if (wib->GetDAQMode() == WIB::FELIX){// otherwise don't need to do this
-    dune::DAQLogger::LogInfo(identification) << "Disabling DAQ links";
+    TLOG_INFO(identification) << "Disabling DAQ links" << TLOG_ENDL;
 
     unsigned stop_run_tries = 5;
     bool success = false;
@@ -681,31 +695,31 @@ void WIBReader::stop() {
         success = true;
         break;
       }
-      catch (const BUException::BAD_REPLY & exc)
+      catch (const WIBException::BAD_REPLY & exc)
       {
-        dune::DAQLogger::LogWarning(identification) << "WIB communication error: "
-            << exc.what();
+        TLOG_WARNING(identification) << "WIB communication error: "
+            << exc.what() << TLOG_ENDL;
       }
-      catch (const BUException::exBase & exc)
+      catch (const WIBException::exBase & exc)
       {
         // Try to un-set DIM do-not-disturb no matter what happened
         try
         {
           if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
         }
-        catch (const BUException::exBase & exc)
+        catch (const WIBException::exBase & exc)
         {
           // best effort, don't care if it doesn't succeed
         }
 
         cet::exception excpt(identification);
-        excpt << "Unhandled BUException: "
+        excpt << "Unhandled WIBException: "
             << exc.what()
             << ": "
             << exc.Description();
         throw excpt;
       }
-      dune::DAQLogger::LogInfo(identification) << "Run stop try  " << iTry << " failed. Trying again...";
+      TLOG_INFO(identification) << "Run stop try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
     } // for iRetry
 
     // Try to un-set DIM do-not-disturb no matter what happened
@@ -713,7 +727,7 @@ void WIBReader::stop() {
     {
       if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
     }
-    catch (const BUException::exBase & exc)
+    catch (const WIBException::exBase & exc)
     {
       // best effort, don't care if it doesn't succeed
     }
@@ -729,7 +743,8 @@ void WIBReader::stop() {
 }
 
 // Called by BoardReaderMain in a loop between "start" and "stop"
-bool WIBReader::getNext_(artdaq::FragmentPtrs& /*frags*/) {
+bool WIBReader::getNext_(artdaq::FragmentPtrs& /*frags*/) 
+{
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   return (! should_stop()); // returning false before should_stop makes all other BRs stop
 }

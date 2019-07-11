@@ -1,12 +1,13 @@
 
 #include "artdaq-core/Data/Fragment.hh"
-#include "artdaq/Application/CommandableFragmentGenerator.hh"
+#include "artdaq/Generators/CommandableFragmentGenerator.hh"
 
 #include "WIB/WIB.hh"
 
 namespace wibdaq {
 
-class WIBReader : public artdaq::CommandableFragmentGenerator {
+class WIBReader : public artdaq::CommandableFragmentGenerator 
+{
 public:
   WIBReader();
   // "initialize" transition
@@ -27,7 +28,6 @@ private:
   void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, bool continueOnFEMBRegReadError);
 
   std::unique_ptr<WIB> wib;
-
 };
 
 }
