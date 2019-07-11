@@ -4,7 +4,8 @@
 
 #include "WIB/WIB.hh"
 
-namespace wibdaq {
+namespace sbndaq 
+{
 
 class WIBReader : public artdaq::CommandableFragmentGenerator 
 {

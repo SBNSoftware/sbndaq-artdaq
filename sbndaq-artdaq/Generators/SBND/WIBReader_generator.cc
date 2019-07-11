@@ -1,6 +1,6 @@
 #include "WIBReader.hh"
 #include "artdaq/Generators/GeneratorMacros.hh"
-#include "cetlib/exception.h"
+#include "cetlib_except/exception.h"
 
 #include "WIBException/ExceptionBase.hh"
 #include "WIB/WIBException.hh"
@@ -17,7 +17,7 @@
 // not averaged or summed, just the last value
 #define sendRegMetric(name,level) artdaq::Globals::metricMan_->sendMetric(name,   (long unsigned int) wib->Read(name), "", level, artdaq::MetricMode::LastPoint, "WIB");
 
-namespace wibdaq 
+namespace sbndaq 
 {
 
 // "initialize" transition
@@ -751,4 +751,4 @@ bool WIBReader::getNext_(artdaq::FragmentPtrs& /*frags*/)
 
 } // namespace
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(wibdaq::WIBReader)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::WIBReader)
