@@ -1,3 +1,9 @@
+//
+//  sbndaq-artdaq/Generators/SBND/WIBReader_generator.cc
+//
+//  Ported from protoDUNE and extensively modifed for SBND use
+//
+
 #include "WIBReader.hh"
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "cetlib_except/exception.h"
