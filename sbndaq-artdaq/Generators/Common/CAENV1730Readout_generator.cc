@@ -162,7 +162,8 @@ void sbndaq::CAENV1730Readout::configureInterrupts() {
 
 }
 
-void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps){
+void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
+{
   // initialize the fhicl parameters (see CAENV1730Readout.hh)
   // the obj ps has a member method that gets he private members
   // fVerbosity, etc.. are priv memb in CAENV1730Readout.hh

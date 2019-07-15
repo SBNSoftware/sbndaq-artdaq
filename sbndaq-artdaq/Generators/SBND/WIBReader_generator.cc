@@ -32,7 +32,7 @@ WIBReader::WIBReader(fhicl::ParameterSet const& ps) :   CommandableFragmentGener
 
   const std::string identification = "WIBReader";
 
-  auto configuration_tries = ps.get<unsigned>("WIB.config.configuration_tries");
+  auto configuration_tries = ps.get<unsigned>("WIB.configuration_tries");
   
   bool success = false;
   for (unsigned iTry=1; iTry <= configuration_tries; iTry++) 
@@ -55,16 +55,6 @@ WIBReader::WIBReader(fhicl::ParameterSet const& ps) :   CommandableFragmentGener
     }
     catch (const WIBException::exBase & exc)
     {
-      // Try to un-set DIM do-not-disturb no matter what happened
-      try
-      {
-	if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
-      }
-      catch (const WIBException::exBase & exc)
-      {
-	// best effort, don't care if it doesn't succeed
-      }
-
       cet::exception excpt(identification);
       excpt << "Unhandled WIBException: "
 	    << exc.what()
@@ -74,16 +64,6 @@ WIBReader::WIBReader(fhicl::ParameterSet const& ps) :   CommandableFragmentGener
     }
     TLOG_INFO(identification) << "Configuraton try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
   } // for iRetry
-
-  // Try to un-set DIM do-not-disturb no matter what happened
-  try
-  {
-    if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
-  }
-  catch (const WIBException::exBase & exc)
-  {
-    // best effort, don't care if it doesn't succeed
-  }
 
   if (!success)
   {
@@ -96,47 +76,47 @@ WIBReader::WIBReader(fhicl::ParameterSet const& ps) :   CommandableFragmentGener
 void WIBReader::setupWIB(fhicl::ParameterSet const& ps) 
 {
 
-  const std::string identification = "wibdaq::WIBReader::setupWIB";
+  const std::string identification = "WIBReader::setupWIB";
 
   auto wib_address = ps.get<std::string>("WIB.address");
 
-  auto wib_table = ps.get<std::string>("WIB.config.wib_table");
-  auto femb_table = ps.get<std::string>("WIB.config.femb_table");
+  auto wib_table = ps.get<std::string>("WIB.wib_table");
+  auto femb_table = ps.get<std::string>("WIB.femb_table");
 
-  auto expected_wib_fw_version_rce = ps.get<unsigned>("WIB.config.expected_wib_fw_version_rce");
-  auto expected_wib_fw_version_felix = ps.get<unsigned>("WIB.config.expected_wib_fw_version_felix");
-  auto expected_daq_mode = ps.get<std::string>("WIB.config.expected_daq_mode");
+  auto expected_wib_fw_version_rce = ps.get<unsigned>("WIB.expected_wib_fw_version_rce");
+  auto expected_wib_fw_version_felix = ps.get<unsigned>("WIB.expected_wib_fw_version_felix");
+  auto expected_daq_mode = ps.get<std::string>("WIB.expected_daq_mode");
 
-  auto use_WIB_fake_data = ps.get<std::vector<bool> >("WIB.config.use_WIB_fake_data");
-  auto use_WIB_fake_data_counter = ps.get<bool>("WIB.config.use_WIB_fake_data_counter"); // false SAMPLES, true COUNTER
+  auto use_WIB_fake_data = ps.get<std::vector<bool> >("WIB.use_WIB_fake_data");
+  auto use_WIB_fake_data_counter = ps.get<bool>("WIB.use_WIB_fake_data_counter"); // false SAMPLES, true COUNTER
 
-  auto local_clock = ps.get<bool>("WIB.config.local_clock"); // use local clock if true, else DTS
-  auto DTS_source = ps.get<unsigned>("WIB.config.DTS_source"); // 0 back plane, 1 front panel
-  auto partition_number = ps.get<unsigned>("WIB.config.partition_number"); // partition or timing group number
+  auto local_clock = ps.get<bool>("WIB.local_clock"); // use local clock if true, else DTS
+  auto DTS_source = ps.get<unsigned>("WIB.DTS_source"); // 0 back plane, 1 front panel
+  auto partition_number = ps.get<unsigned>("WIB.partition_number"); // partition or timing group number
 
   // If these are true, will continue on error, if false, will raise an exception
-  auto continueOnFEMBRegReadError = ps.get<bool>("WIB.config.continueOnError.FEMBRegReadError");
-  auto continueOnFEMBSPIError = ps.get<bool>("WIB.config.continueOnError.FEMBSPIError");
-  auto continueOnFEMBSyncError = ps.get<bool>("WIB.config.continueOnError.FEMBSyncError");
-  auto continueIfListOfFEMBClockPhasesDontSync = ps.get<bool>("WIB.config.continueOnError.ListOfFEMBClockPhasesDontSync");
+  auto continueOnFEMBRegReadError = ps.get<bool>("WIB.continueOnError.FEMBRegReadError");
+  auto continueOnFEMBSPIError = ps.get<bool>("WIB.continueOnError.FEMBSPIError");
+  auto continueOnFEMBSyncError = ps.get<bool>("WIB.continueOnError.FEMBSyncError");
+  auto continueIfListOfFEMBClockPhasesDontSync = ps.get<bool>("WIB.continueOnError.ListOfFEMBClockPhasesDontSync");
 
-  auto enable_FEMBs = ps.get<std::vector<bool> >("WIB.config.enable_FEMBs");
-  auto FEMB_configs = ps.get<std::vector<fhicl::ParameterSet> >("WIB.config.FEMBs");
+  auto enable_FEMBs = ps.get<std::vector<bool> >("WIB.enable_FEMBs");
+  auto FEMB_configs = ps.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
 
-  auto force_full_reset = ps.get<bool>("WIB.config.force_full_reset");
-  auto dnd_wait_time = ps.get<unsigned>("WIB.config.dnd_wait_time");
+  auto force_full_reset = ps.get<bool>("WIB.force_full_reset");
+  auto dnd_wait_time = ps.get<unsigned>("WIB.dnd_wait_time");
 
   if (use_WIB_fake_data.size() != 4)
   {
     cet::exception excpt(identification);
-    excpt << "Length of WIB.config.use_WIB_fake_data must be 4, not: " << use_WIB_fake_data.size();
+    excpt << "Length of WIB.use_WIB_fake_data must be 4, not: " << use_WIB_fake_data.size();
     throw excpt;
   }
 
   if (FEMB_configs.size() != 4)
   {
     cet::exception excpt(identification);
-    excpt << "Length of WIB.config.FEMBs must be 4, not: " << FEMB_configs.size();
+    excpt << "Length of WIB.FEMBs must be 4, not: " << FEMB_configs.size();
     throw excpt;
   }
 
@@ -147,13 +127,9 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
     throw excpt;
   }
 
-  TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
+  TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address 
+			    << TLOG_ENDL;
   wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
-
-  // Set DIM do-not-disturb
-  wib->Write("SYSTEM.SLOW_CONTROL_DND",1);
-  // makes sure monitoring notices DND before configuring
-  std::this_thread::sleep_for(std::chrono::seconds(dnd_wait_time));
 
 
   // Set whether to continue on errors
@@ -162,56 +138,13 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
   wib->SetContinueOnFEMBSyncError(continueOnFEMBSyncError);
   wib->SetContinueIfListOfFEMBClockPhasesDontSync(continueIfListOfFEMBClockPhasesDontSync);
   
-  // Check if WIB firmware is for RCE or FELIX DAQ
-  TLOG_DEBUG(identification) << "N DAQ Links: "  << wib->Read("SYSTEM.DAQ_LINK_COUNT") << TLOG_ENDL;
-  TLOG_DEBUG(identification) << "N FEMB Ports: "  << wib->Read("SYSTEM.FEMB_COUNT") << TLOG_ENDL;
+  // For SBND, number of FEMBs is fixed
+  TLOG_DEBUG(identification) << "N DAQ Links:  "  << FEMB_COUNT << TLOG_ENDL;
+  TLOG_DEBUG(identification) << "N FEMB Ports: "  << FEMB_COUNT << TLOG_ENDL;
   WIB::WIB_DAQ_t daqMode = wib->GetDAQMode();
   uint32_t expected_wib_fw_version = 0;
   
-  if (daqMode == WIB::RCE)
-  {
-    TLOG_INFO(identification) << "WIB Firmware setup for RCE DAQ Mode" << TLOG_ENDL;
-    if(expected_daq_mode != "RCE" &&
-       expected_daq_mode != "rce" && 
-       expected_daq_mode != "ANY" && 
-       expected_daq_mode != "any"
-      )
-    {
-        cet::exception excpt(identification);
-        excpt << "WIB Firmware setup in RCE mode, but expect '"<< expected_daq_mode <<"' mode in fcl";
-        throw excpt;
-    }
-    expected_wib_fw_version = expected_wib_fw_version_rce;
-  }
-  else if (daqMode == WIB::FELIX)
-  {
-    TLOG_INFO(identification) << "WIB Firmware setup for FELIX DAQ Mode" << TLOG_ENDL;
-    if(expected_daq_mode != "FELIX" && 
-       expected_daq_mode != "felix" &&
-       expected_daq_mode != "ANY" &&
-       expected_daq_mode != "any"
-      )
-    {
-        cet::exception excpt(identification);
-        excpt << "WIB Firmware setup in FELIX mode, but expect '"<< expected_daq_mode <<"' mode in fcl";
-        throw excpt;
-    }
-    expected_wib_fw_version = expected_wib_fw_version_felix;
-  }
-  else if (daqMode == WIB::UNKNOWN)
-  {
-    cet::exception excpt(identification);
-    excpt << "WIB Firmware DAQ setup UNKNOWN";
-    throw excpt;
-    //TLOG_INFO(identification) << "WIB Firmware DAQ setup UNKNOWN" << TLOG_ENDL;
-  }
-  else
-  {
-    cet::exception excpt(identification);
-    excpt << "Bogus WIB firmware DAQ mode "<< ((unsigned) daqMode);
-    throw excpt;
-    //TLOG_INFO(identification) << "Bogus WIB firmware DAQ mode "<< ((unsigned) daqMode) << TLOG_ENDL;
-  }
+  // Need to check firmware version here
 
   // Check and print firmware version
   uint32_t wib_fw_version = wib->Read("SYSTEM.FW_VERSION");
@@ -312,14 +245,9 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
     }
   }
 
-//  if (daqMode != WIB::FELIX){// don't enable links yet if FELIX, do it in start
-    TLOG_INFO(identification) << "Enabling DAQ links" << TLOG_ENDL;
-    wib->StartStreamToDAQ();
-//  }
+  TLOG_INFO(identification) << "Enabling DAQ links" << TLOG_ENDL;
+  wib->StartStreamToDAQ();
   
-  // Un-set DIM do-not-disturb
-  wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
-
   TLOG_INFO(identification) << "Configured WIB" << TLOG_ENDL;
 }
 
@@ -333,7 +261,8 @@ void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_
   wib->FEMBPower(iFEMB,1);
   sleep(5);
 
-  if(wib->ReadFEMB(iFEMB,"VERSION_ID") == wib->ReadFEMB(iFEMB,"SYS_RESET")) { // can't read register if equal
+  if(wib->ReadFEMB(iFEMB,"VERSION_ID") == wib->ReadFEMB(iFEMB,"SYS_RESET")) // can't read register if equal
+  { 
     if(continueOnFEMBRegReadError)
     {
       TLOG_WARNING(identification) << "Warning: Can't read registers from FEMB " 
@@ -613,65 +542,6 @@ void WIBReader::start()
     excpt << "WIB object pointer NULL";
     throw excpt;
   }
-  /*
-  if (wib->GetDAQMode() == WIB::FELIX){// otherwise we did this during configure
-    TLOG_INFO(identification) << "Enabling DAQ links" << TLOG_ENDL;
-
-    unsigned start_run_tries = 5;
-    bool success = false;
-    for (unsigned iTry=1; iTry <= start_run_tries; iTry++) {
-      try
-      {
-        wib->Write("SYSTEM.SLOW_CONTROL_DND",1);
-        wib->StartStreamToDAQ();
-        success = true;
-        break;
-      }
-      catch (const WIBException::BAD_REPLY & exc)
-      {
-        TLOG_WARNING(identification) << "WIB communication error: "
-            << exc.what() << TLOG_ENDL;
-      }
-      catch (const WIBException::exBase & exc)
-      {
-        // Try to un-set DIM do-not-disturb no matter what happened
-        try
-        {
-          if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
-        }
-        catch (const WIBException::exBase & exc)
-        {
-          // best effort, don't care if it doesn't succeed
-        }
-
-        cet::exception excpt(identification);
-        excpt << "Unhandled WIBException: "
-            << exc.what()
-            << ": "
-            << exc.Description();
-        throw excpt;
-      }
-      TLOG_INFO(identification) << "Run start try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
-    } // for iRetry
-
-    // Try to un-set DIM do-not-disturb no matter what happened
-    try
-    {
-      if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
-    }
-    catch (const WIBException::exBase & exc)
-    {
-      // best effort, don't care if it doesn't succeed
-    }
-
-    if (!success)
-    {
-      cet::exception excpt(identification);
-      excpt << "Failed to start run after " << start_run_tries << " tries";
-      throw excpt;
-    }
-  } // if felix
-*/
 }
 
 // "stop" transition
@@ -684,68 +554,6 @@ void WIBReader::stop()
     excpt << "WIB object pointer NULL";
     throw excpt;
   }
-  /*
-  if (wib->GetDAQMode() == WIB::FELIX){// otherwise don't need to do this
-    TLOG_INFO(identification) << "Disabling DAQ links" << TLOG_ENDL;
-
-    unsigned stop_run_tries = 5;
-    bool success = false;
-    for (unsigned iTry=1; iTry <= stop_run_tries; iTry++) {
-      try
-      {
-        wib->Write("SYSTEM.SLOW_CONTROL_DND",1);
-        wib->Write("DAQ_LINK_1.CONTROL.ENABLE",0);
-        wib->Write("DAQ_LINK_2.CONTROL.ENABLE",0);
-        //wib->Write("DAQ_LINK_1.CONTROL.ENABLE_CDA_STREAM",0);
-        //wib->Write("DAQ_LINK_2.CONTROL.ENABLE_CDA_STREAM",0);
-        success = true;
-        break;
-      }
-      catch (const WIBException::BAD_REPLY & exc)
-      {
-        TLOG_WARNING(identification) << "WIB communication error: "
-            << exc.what() << TLOG_ENDL;
-      }
-      catch (const WIBException::exBase & exc)
-      {
-        // Try to un-set DIM do-not-disturb no matter what happened
-        try
-        {
-          if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
-        }
-        catch (const WIBException::exBase & exc)
-        {
-          // best effort, don't care if it doesn't succeed
-        }
-
-        cet::exception excpt(identification);
-        excpt << "Unhandled WIBException: "
-            << exc.what()
-            << ": "
-            << exc.Description();
-        throw excpt;
-      }
-      TLOG_INFO(identification) << "Run stop try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
-    } // for iRetry
-
-    // Try to un-set DIM do-not-disturb no matter what happened
-    try
-    {
-      if (wib) wib->Write("SYSTEM.SLOW_CONTROL_DND",0);
-    }
-    catch (const WIBException::exBase & exc)
-    {
-      // best effort, don't care if it doesn't succeed
-    }
-
-    if (!success)
-    {
-      cet::exception excpt(identification);
-      excpt << "Failed to stop run after " << stop_run_tries << " tries";
-      throw excpt;
-    }
-  } // if felix
-*/
 }
 
 // Called by BoardReaderMain in a loop between "start" and "stop"
