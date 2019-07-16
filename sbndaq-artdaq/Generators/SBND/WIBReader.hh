@@ -10,10 +10,6 @@ namespace sbndaq
 class WIBReader : public artdaq::CommandableFragmentGenerator 
 {
 public:
-  enum
-  {
-    FEMB_COUNT = 4 // Fixed for SBND
-  };
 
   WIBReader();
   // "initialize" transition
