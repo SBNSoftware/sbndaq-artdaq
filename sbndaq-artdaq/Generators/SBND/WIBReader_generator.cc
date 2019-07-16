@@ -19,21 +19,15 @@
 #include <chrono>
 #include <thread>
 
-// sends metric of register value at <register name> named WIB.<register name> with <level>
-// not averaged or summed, just the last value
-#define sendRegMetric(name,level) artdaq::Globals::metricMan_->sendMetric(name,   (long unsigned int) wib->Read(name), "", level, artdaq::MetricMode::LastPoint, "WIB");
-
 namespace sbndaq 
 {
 
 // "initialize" transition
-WIBReader::WIBReader(fhicl::ParameterSet const& ps) :   CommandableFragmentGenerator(ps) 
+WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps) 
 {
-
   const std::string identification = "WIBReader";
 
   auto configuration_tries = ps.get<unsigned>("WIB.configuration_tries");
-  
   bool success = false;
   for (unsigned iTry=1; iTry <= configuration_tries; iTry++) 
   {
@@ -51,14 +45,13 @@ WIBReader::WIBReader(fhicl::ParameterSet const& ps) :   CommandableFragmentGener
     catch (const WIBException::WIB_DTS_ERROR & exc)
     {
       TLOG_WARNING(identification) << "WIB timing config error: "
-						  << exc.what() << TLOG_ENDL;
+				   << exc.what() << TLOG_ENDL;
     }
     catch (const WIBException::exBase & exc)
     {
       cet::exception excpt(identification);
       excpt << "Unhandled WIBException: "
-	    << exc.what()
-	    << ": "
+	    << exc.what() << ": "
 	    << exc.Description();
       throw excpt;
     }
@@ -77,34 +70,30 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
 {
 
   const std::string identification = "WIBReader::setupWIB";
+  auto wib_address                = ps.get<std::string>("WIB.address");
+  auto wib_table                  = ps.get<std::string>("WIB.wib_table");
+  auto femb_table                 = ps.get<std::string>("WIB.femb_table");
+  auto expected_wib_fw_version    = ps.get<unsigned>("WIB.expected_wib_fw_version");
 
-  auto wib_address = ps.get<std::string>("WIB.address");
+  auto use_WIB_fake_data          = ps.get<std::vector<bool> >("WIB.use_WIB_fake_data");
+  // false SAMPLES, true COUNTER
+  auto use_WIB_fake_data_counter  = ps.get<bool>("WIB.use_WIB_fake_data_counter");
 
-  auto wib_table = ps.get<std::string>("WIB.wib_table");
-  auto femb_table = ps.get<std::string>("WIB.femb_table");
-
-  auto expected_wib_fw_version_rce = ps.get<unsigned>("WIB.expected_wib_fw_version_rce");
-  auto expected_wib_fw_version_felix = ps.get<unsigned>("WIB.expected_wib_fw_version_felix");
-  auto expected_daq_mode = ps.get<std::string>("WIB.expected_daq_mode");
-
-  auto use_WIB_fake_data = ps.get<std::vector<bool> >("WIB.use_WIB_fake_data");
-  auto use_WIB_fake_data_counter = ps.get<bool>("WIB.use_WIB_fake_data_counter"); // false SAMPLES, true COUNTER
-
-  auto local_clock = ps.get<bool>("WIB.local_clock"); // use local clock if true, else DTS
-  auto DTS_source = ps.get<unsigned>("WIB.DTS_source"); // 0 back plane, 1 front panel
-  auto partition_number = ps.get<unsigned>("WIB.partition_number"); // partition or timing group number
+  auto local_clock                = ps.get<bool>("WIB.local_clock"); // use local clock if true, else DTS
+  auto DTS_source                 = ps.get<unsigned>("WIB.DTS_source"); // 0 back plane, 1 front panel
+  auto partition_number           = ps.get<unsigned>("WIB.partition_number"); // partition or timing group number
 
   // If these are true, will continue on error, if false, will raise an exception
   auto continueOnFEMBRegReadError = ps.get<bool>("WIB.continueOnError.FEMBRegReadError");
-  auto continueOnFEMBSPIError = ps.get<bool>("WIB.continueOnError.FEMBSPIError");
-  auto continueOnFEMBSyncError = ps.get<bool>("WIB.continueOnError.FEMBSyncError");
+  auto continueOnFEMBSPIError     = ps.get<bool>("WIB.continueOnError.FEMBSPIError");
+  auto continueOnFEMBSyncError    = ps.get<bool>("WIB.continueOnError.FEMBSyncError");
   auto continueIfListOfFEMBClockPhasesDontSync = ps.get<bool>("WIB.continueOnError.ListOfFEMBClockPhasesDontSync");
 
-  auto enable_FEMBs = ps.get<std::vector<bool> >("WIB.enable_FEMBs");
-  auto FEMB_configs = ps.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
+  auto enable_FEMBs               = ps.get<std::vector<bool> >("WIB.enable_FEMBs");
+  auto FEMB_configs               = ps.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
 
-  auto force_full_reset = ps.get<bool>("WIB.force_full_reset");
-  auto dnd_wait_time = ps.get<unsigned>("WIB.dnd_wait_time");
+  auto force_full_reset           = ps.get<bool>("WIB.force_full_reset");
+  auto dnd_wait_time              = ps.get<unsigned>("WIB.dnd_wait_time");
 
   if (use_WIB_fake_data.size() != 4)
   {
@@ -127,8 +116,7 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
     throw excpt;
   }
 
-  TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address 
-			    << TLOG_ENDL;
+  TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
   wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
 
 
@@ -142,7 +130,6 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
   TLOG_DEBUG(identification) << "N DAQ Links:  "  << FEMB_COUNT << TLOG_ENDL;
   TLOG_DEBUG(identification) << "N FEMB Ports: "  << FEMB_COUNT << TLOG_ENDL;
   WIB::WIB_DAQ_t daqMode = wib->GetDAQMode();
-  uint32_t expected_wib_fw_version = 0;
   
   // Need to check firmware version here
 
@@ -256,7 +243,7 @@ void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_
 {
   // Don't forget to disable WIB fake data
 
-  const std::string identification = "wibdaq::WIBReader::setupFEMBFakeData";
+  const std::string identification = "WIBReader::setupFEMBFakeData";
   
   wib->FEMBPower(iFEMB,1);
   sleep(5);
@@ -348,25 +335,22 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
 
   const std::string identification = "wibdaq::WIBReader::setupFEMB";
   
-  const auto gain = FEMB_config.get<uint32_t>("gain");
-  const auto shape = FEMB_config.get<uint32_t>("shape");
+  const auto gain         = FEMB_config.get<uint32_t>("gain");
+  const auto shape        = FEMB_config.get<uint32_t>("shape");
   const auto baselineHigh = FEMB_config.get<uint32_t>("baselineHigh");
-  const auto leakHigh = FEMB_config.get<uint32_t>("leakHigh");
-  const auto leak10X = FEMB_config.get<uint32_t>("leak10X");
-  const auto acCouple = FEMB_config.get<uint32_t>("acCouple");
-  const auto buffer = FEMB_config.get<uint32_t>("buffer");
-  const auto extClk = FEMB_config.get<uint32_t>("extClk");
-
-  const auto clk_phases = FEMB_config.get<std::vector<uint16_t> >("clk_phases");
-  const auto pls_mode = FEMB_config.get<uint32_t>("pls_mode");
-  const auto pls_dac_val = FEMB_config.get<uint32_t>("pls_dac_val");
+  const auto leakHigh     = FEMB_config.get<uint32_t>("leakHigh");
+  const auto leak10X      = FEMB_config.get<uint32_t>("leak10X");
+  const auto acCouple     = FEMB_config.get<uint32_t>("acCouple");
+  const auto buffer       = FEMB_config.get<uint32_t>("buffer");
+  const auto extClk       = FEMB_config.get<uint32_t>("extClk");
+  const auto clk_phases   = FEMB_config.get<std::vector<uint16_t> >("clk_phases");
+  const auto pls_mode     = FEMB_config.get<uint32_t>("pls_mode");
+  const auto pls_dac_val  = FEMB_config.get<uint32_t>("pls_dac_val");
 
   const auto start_frame_mode_sel = FEMB_config.get<uint32_t>("start_frame_mode_sel");
-  const auto start_frame_swap = FEMB_config.get<uint32_t>("start_frame_swap");
+  const auto start_frame_swap     = FEMB_config.get<uint32_t>("start_frame_swap");
 
   const auto expected_femb_fw_version = FEMB_config.get<uint32_t>("expected_femb_fw_version");
-
-  //////////////////////
 
   if (gain > 3)
   {
@@ -377,6 +361,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << gain;
     throw excpt;
   }
+
   if (shape > 3)
   {
     cet::exception excpt(identification);
@@ -386,6 +371,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << shape;
     throw excpt;
   }
+
   if (baselineHigh > 2)
   {
     cet::exception excpt(identification);
@@ -395,6 +381,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << baselineHigh;
     throw excpt;
   }
+
   if (leakHigh > 1)
   {
     cet::exception excpt(identification);
@@ -404,6 +391,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << leakHigh;
     throw excpt;
   }
+
   if (leak10X > 1)
   {
     cet::exception excpt(identification);
@@ -413,6 +401,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << leak10X;
     throw excpt;
   }
+
   if (acCouple > 1)
   {
     cet::exception excpt(identification);
@@ -422,6 +411,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << acCouple;
     throw excpt;
   }
+
   if (buffer > 1)
   {
     cet::exception excpt(identification);
@@ -431,6 +421,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << buffer;
     throw excpt;
   }
+
   if (extClk > 1)
   {
     cet::exception excpt(identification);
@@ -440,6 +431,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << extClk;
     throw excpt;
   }
+
   if (clk_phases.size() == 0)
   {
     cet::exception excpt(identification);
@@ -448,6 +440,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << " clk_phases size should be > 0 ";
     throw excpt;
   }
+
   if (pls_mode > 2)
   {
     cet::exception excpt(identification);
@@ -457,6 +450,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << pls_mode;
     throw excpt;
   }
+
   if ((pls_mode == 1 && pls_dac_val > 63) || (pls_mode == 2 && pls_dac_val > 31))
   {
     cet::exception excpt(identification);
@@ -467,6 +461,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
         << " pls_dac_val is " << pls_dac_val;
     throw excpt;
   }
+
   if (start_frame_mode_sel > 1)
   {
     cet::exception excpt(identification);
@@ -477,6 +472,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
     throw excpt;
   }
   if (start_frame_swap > 1)
+
   {
     cet::exception excpt(identification);
     excpt << "setupFEMB: FEMB "
@@ -486,12 +482,12 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, 
     throw excpt;
   }
 
-  ///////////////////////////////////////
 
   wib->FEMBPower(iFEMB,1);
   sleep(5);
 
-  if(wib->ReadFEMB(iFEMB,"VERSION_ID") == wib->ReadFEMB(iFEMB,"SYS_RESET")) { // can't read register if equal
+  if(wib->ReadFEMB(iFEMB,"VERSION_ID") == wib->ReadFEMB(iFEMB,"SYS_RESET")) // can't read register if equal
+  { 
     if(continueOnFEMBRegReadError)
     {
       TLOG_WARNING(identification) << "Warning: Can't read registers from FEMB " << int(iFEMB) 
@@ -535,7 +531,7 @@ WIBReader::~WIBReader()
 // "start" transition
 void WIBReader::start() 
 {
-  const std::string identification = "wibdaq::WIBReader::start";
+  const std::string identification = "WIBReader::start";
   if (!wib) 
   {
     cet::exception excpt(identification);
@@ -547,7 +543,7 @@ void WIBReader::start()
 // "stop" transition
 void WIBReader::stop() 
 {
-  const std::string identification = "wibdaq::WIBReader::stop";
+  const std::string identification = "WIBReader::stop";
   if (!wib) 
   {
     cet::exception excpt(identification);
