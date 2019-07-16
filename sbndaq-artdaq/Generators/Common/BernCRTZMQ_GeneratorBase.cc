@@ -48,7 +48,7 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
 
-  TRACE(TR_LOG,"BernFeb::Initialze() called");
+  TRACE(TR_LOG,"BernFeb::Initialize() called");
   
   //RunNumber_ = ps_.get<uint32_t>("RunNumber",999);
   RunNumber_ = 0;
@@ -84,7 +84,7 @@ std::cout << std::endl;
       MaxTimeDiffs_ = std::vector<uint32_t>(FEBIDs_.size(),size);
     }
     else{
-      throw cet::exception("BernCRTZMQ_GeneratorBase::Iniitalize")
+      throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
 	<< "MaxTimeDiffs must be same size as ZMQIDs in config!";
     }
   }
