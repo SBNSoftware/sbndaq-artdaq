@@ -162,7 +162,8 @@ void sbndaq::CAENV1730Readout::configureInterrupts() {
 
 }
 
-void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps){
+void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
+{
   // initialize the fhicl parameters (see CAENV1730Readout.hh)
   // the obj ps has a member method that gets he private members
   // fVerbosity, etc.. are priv memb in CAENV1730Readout.hh
@@ -832,20 +833,27 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
     fragment_uptr->setSequenceID(readoutwindow_event_counter);
 
-    struct timespec now;
-    clock_gettime(CLOCK_REALTIME,&now);
-    artdaq::Fragment::timestamp_t ts = ((now.tv_sec * 1000000000 ) + now.tv_nsec); //in 1ns ticks
-    fragment_uptr->setTimestamp( ts );
+    const auto TTT = uint32_t {header->triggerTimeTag};
 
-    //const auto fragment_datasize_words = fragment_datasize_bytes/sizeof_unit16_t;
-    //const auto readoutwindow_end = readoutwindow_begin + fragment_datasize_words ;
+    using namespace boost::gregorian;
+    using namespace boost::posix_time;
+
+    ptime t_now(second_clock::universal_time());
+    ptime time_t_epoch(date(1970,1,1));
+    time_duration diff = t_now - time_t_epoch;
+    uint32_t t_offset_s = diff.total_seconds();
+    uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+    uint64_t t_truetriggertime = t_offset_ticks + TTT;
+    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+
+    artdaq::Fragment::timestamp_t ts = (t_truetriggertime*8); //in 1ns ticks
+    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
+    fragment_uptr->setTimestamp( ts );
 
     auto readoutwindow_event_counter_gap= readoutwindow_event_counter - last_sent_rwcounter;
 
     TLOG(TMAKEFRAG)<<__func__ << ": Created fragment " << fFragmentID << " for event " << readoutwindow_event_counter
                    << " triggerTimeTag " << header->triggerTimeTag ;
-//    TLOG(TMAKEFRAG) <<__func__ <<": Readout window event counters current / gap  = " << readoutwindow_event_counter  << " / "
-//      << readoutwindow_event_counter_gap;
 
 
     if( readoutwindow_event_counter_gap > 1u ){
