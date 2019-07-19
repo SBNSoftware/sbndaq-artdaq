@@ -1,0 +1,2 @@
+xterm -geometry 120x10+0+0 -T "crt01:5557" -e ./febmon tcp://sbnd-prod-crt01:5557 &
+xterm -geometry 120x30+0+200  -T "crt02:5557" -e ./febmon tcp://sbnd-prod-crtevb:5557 &
