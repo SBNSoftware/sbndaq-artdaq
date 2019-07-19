@@ -9,8 +9,8 @@
 #include "cetlib_except/exception.h"
 
 #include "WIBException/ExceptionBase.hh"
-#include "WIB/WIBException.hh"
-#include "WIB/BNL_UDP_Exception.hh"
+#include "WIBException.hh"
+#include "BNL_UDP_Exception.hh"
 
 #include <sstream>
 #include <vector>
@@ -26,7 +26,7 @@ namespace sbndaq
 WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps) 
 {
   const std::string identification = "WIBReader";
-
+  TLOG_INFO(identification) << "WIBReader constructor" << TLOG_ENDL;
   auto configuration_tries = ps.get<unsigned>("WIB.configuration_tries");
   bool success = false;
   for (unsigned iTry=1; iTry <= configuration_tries; iTry++) 
