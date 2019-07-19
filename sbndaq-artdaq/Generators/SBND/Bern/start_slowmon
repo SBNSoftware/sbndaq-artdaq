@@ -1,0 +1,2 @@
+./febinfluxdb tcp://sbnd-prod-crt01.fnal.gov:5558 127.0.0.1 3 >/dev/null &
+./febinfluxdb tcp://sbnd-prod-crtevb.fnal.gov:5558 127.0.0.1 3 >/dev/null &

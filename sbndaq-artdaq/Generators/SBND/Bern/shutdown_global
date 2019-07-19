@@ -1,0 +1,6 @@
+./febctl tcp://sbnd-prod-crtevb.fnal.gov:5555 DAQ_END
+./febctl tcp://sbnd-prod-crt01.fnal.gov:5555 DAQ_END
+./febctl tcp://sbnd-prod-crtevb.fnal.gov:5555 BIAS_OF
+./febctl tcp://sbnd-prod-crt01.fnal.gov:5555 BIAS_OF
+
+

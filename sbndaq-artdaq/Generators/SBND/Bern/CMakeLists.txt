@@ -1,8 +1,10 @@
 
-include_directories( $ENV{SBNDAQ_ARTDAQ_CORE_INC} )
 include_directories( . )
 
-cet_make_exec(febdrv 
-		SOURCE febdrv.c
+SET_SOURCE_FILES_PROPERTIES(febdrv.cc PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-unused-but-set-variable -Wno-pointer-arith")
+
+cet_make_exec(febdrv
+		SOURCE febdrv.cc
 		LIBRARIES zmq
 		       )
+
