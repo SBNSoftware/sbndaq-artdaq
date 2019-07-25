@@ -12,7 +12,7 @@ void usage()
  printf("Usage: ");
  printf("febctl <socket> <CMD> <FEB S/N>\n");
  printf("Socket string, example: tcp://localhost:5555 \n");
- printf("<CMD> can be chosen from:\nBIAS_OF\nBIAS_ON\nDAQ_BEG\nDAQ_END\n");
+ printf("<CMD> can be chosen from:\nBIAS_OF\nBIAS_ON\nDAQ_BEG\nDAQ_END\nGETINFO\n");
  printf("<FEB S/N> can be 255 or omitted, in this case command is broadcast for all connected FEBs\n");
 
 }

@@ -1,5 +1,7 @@
 #include <time.h>
 
+#define FEB_MAX_CHAIN 256
+
     // Ethernet switch register r/w
 #define FEB_RD_SR 0x0001
 #define FEB_WR_SR 0x0002

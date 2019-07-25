@@ -8,3 +8,8 @@ cet_make_exec(febdrv
 		LIBRARIES zmq
 		       )
 
+cet_make_exec(febctl
+		SOURCE febctl.cc
+		LIBRARIES zmq
+		       )
+
