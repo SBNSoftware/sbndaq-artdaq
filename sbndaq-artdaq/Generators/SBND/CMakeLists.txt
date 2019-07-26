@@ -1,6 +1,5 @@
 add_subdirectory(TriggerBoard)
 add_subdirectory(NevisTPC)
-add_subdirectory(Bern)
 
 include_directories($ENV{JSONCPP_INC})
 include_directories($ENV{TRACE_INC})
