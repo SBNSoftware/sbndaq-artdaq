@@ -13,3 +13,19 @@ cet_make_exec(febctl
 		LIBRARIES zmq
 		       )
 
+cet_make_exec(febconf
+		SOURCE febconf.cc
+		LIBRARIES zmq
+		       )
+
+
+cet_make_exec(confsetbias
+		SOURCE confsetbias.cc
+		LIBRARIES zmq
+		       )
+
+cet_make_exec(confsetgain
+		SOURCE confsetgain.cc
+		LIBRARIES zmq
+		       )
+
