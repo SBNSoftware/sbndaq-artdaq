@@ -8,39 +8,43 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "BernCRT_TRACE_defines.h"
 
 #include <zmq.h>
 
+#define id "BernCRT"
+
 sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   :
   BernCRTZMQ_GeneratorBase(ps)  
 {
-  //setenv("TRACE_LVLS","-1",1);
-  //TRACE(TR_LOG,"BernCRTZMQData constructor called");  
+  TLOG_INFO(id) << "BernCRTZMQData constructor called" << TLOG_ENDL;  
 
   zmq_data_pub_port_           = ps_.get<std::string>("zmq_data_pub_port");
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
 
-  TRACE(TR_LOG,"BernCRTZMQData constructor : Calling zmq subscriber with port %s",zmq_data_pub_port_.c_str());  
+  TLOG_INFO(id) << "BernCRTZMQData constructor : Calling zmq subscriber with port " << zmq_data_pub_port_.c_str() << TLOG_ENDL;
   
   zmq_context_    = zmq_ctx_new();
 
-  TRACE(TR_LOG,"BernCRTZMQData constructor completed");  
+  TLOG_INFO(id) << "BernCRTZMQData constructor completed" << TLOG_ENDL;  
 }
 
-sbndaq::BernCRTZMQData::~BernCRTZMQData(){
-  TRACE(TR_LOG,"BernCRTZMQData destructor called");  
+sbndaq::BernCRTZMQData::~BernCRTZMQData()
+{
+  TLOG_INFO(id) << "BernCRTZMQData destructor called" << TLOG_ENDL;  
   zmq_ctx_destroy(zmq_context_);
   Cleanup();
-  TRACE(TR_LOG,"BernCRTZMQData destructor completed");  
+  TLOG_INFO(id) << "BernCRTZMQData destructor completed" << TLOG_ENDL;  
 }
 
 
 
-void sbndaq::BernCRTZMQData::ConfigureStart(){
-  TRACE(TR_LOG,"BernCRTZMQData::ConfigureStart() called");  
+void sbndaq::BernCRTZMQData::ConfigureStart()
+{
+  TLOG_INFO(id) << "BernCRTZMQData::ConfigureStart() called" << TLOG_ENDL;  
 
   zmq_subscriber_ = zmq_socket(zmq_context_,ZMQ_SUB);
 
@@ -48,39 +52,42 @@ void sbndaq::BernCRTZMQData::ConfigureStart(){
 
   res = zmq_connect(zmq_subscriber_,zmq_data_pub_port_.c_str());
   if(res!=0)
-    TRACE(TR_ERROR,"BernCRTZMQDataZMQ::ConfigureStart() failed to connect.");
+    TLOG_ERROR(id) << "BernCRTZMQDataZMQ::ConfigureStart() failed to connect." << TLOG_ENDL;
 
   res = zmq_setsockopt(zmq_subscriber_,ZMQ_SUBSCRIBE,NULL,0);
   //res = zmq_setsockopt(zmq_subscriber_,ZMQ_RCVTIMEO,&zmq_data_receive_timeout_ms_,2);
 
   if(res!=0)
-    TRACE(TR_ERROR,"BernCRTZMQDataZMQ::ConfigureStart() socket options failed.");
+    TLOG_ERROR(id) << "BernCRTZMQDataZMQ::ConfigureStart() socket options failed." << TLOG_ENDL;
 
-  TRACE(TR_LOG,"BernCRTZMQData::ConfigureStart() completed");  
+  TLOG_INFO(id) << "BernCRTZMQData::ConfigureStart() completed" << TLOG_ENDL;  
 }
 
-void sbndaq::BernCRTZMQData::ConfigureStop(){
-  TRACE(TR_LOG,"BernCRTZMQData::ConfigureStop() called");
+void sbndaq::BernCRTZMQData::ConfigureStop()
+{
+  TLOG_INFO(id) << "BernCRTZMQData::ConfigureStop() called" << TLOG_ENDL;
 
   zmq_close(zmq_subscriber_);
 
-  TRACE(TR_LOG,"BernCRTZMQData::ConfigureStop() completed");  
+  TLOG_INFO(id) << "BernCRTZMQData::ConfigureStop() completed" << TLOG_ENDL;  
 }
 
-int sbndaq::BernCRTZMQData::GetDataSetup(){
+int sbndaq::BernCRTZMQData::GetDataSetup()
+{
   return 1;
 }
 
-int sbndaq::BernCRTZMQData::GetDataComplete(){
+int sbndaq::BernCRTZMQData::GetDataComplete()
+{
   return 1;
 }
 
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
-size_t sbndaq::BernCRTZMQData::GetZMQData(){
-
+size_t sbndaq::BernCRTZMQData::GetZMQData()
+{
   std::cout << "Calling GetZMQData" << std::endl;
   
-  TRACE(TR_GD_LOG,"BernCRTZMQData::GetZMQData called");
+  TLOG_INFO(id) << "BernCRTZMQData::GetZMQData called" << TLOG_ENDL;
   
   size_t data_size=0;
   size_t events=0;
@@ -90,47 +97,50 @@ size_t sbndaq::BernCRTZMQData::GetZMQData(){
   zmq_msg_t feb_data_msg;
   zmq_msg_init(&feb_data_msg);
 
-  
-
-  while(zmq_msg_recv(&feb_data_msg,zmq_subscriber_,ZMQ_DONTWAIT)<0){
-    //TRACE(TR_GD_DEBUG,"BernCRTZMQData::GetFEBData() called and no data/error.");
+  while(zmq_msg_recv(&feb_data_msg,zmq_subscriber_,ZMQ_DONTWAIT) < 0)
+  {
+    if ( errno != EAGAIN ) // No data awailable now
+    {
+      TLOG_ERROR(id) << "BernCRTZMQData::GetFEBData() called " << errno << " " << strerror(errno) << TLOG_ENDL;
+    }
     usleep(1000);
     //return 0;
     ++wait_count;
     
-    if( wait_count%500 == 0 ){
-      std::cout << "\twait count: " << wait_count << std::endl;
+    if( (wait_count%500) == 0 )
+    {
+      TLOG_INFO(id) << "\twait count: " << wait_count << TLOG_ENDL;
     }
   }
   
-  std::cout << "\toutside wait loop: " << wait_count << std::endl;
+  TLOG_INFO(id) << "\toutside wait loop: " << wait_count << TLOG_ENDL;
   
-  if(zmq_msg_size(&feb_data_msg)>0){
-    
-    TRACE(TR_GD_DEBUG,"BernCRTZMQData::GetZMQData() about to copy");
+  if(zmq_msg_size(&feb_data_msg)>0)
+  {
+    TLOG_INFO(id) << "BernCRTZMQData::GetZMQData() about to copy" << TLOG_ENDL;
     
     std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
 	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
 	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[events]));
     
-    TRACE(TR_GD_DEBUG,"BernCRTZMQData::GetZMQData() copied!");
+    TLOG_INFO(id) << "BernCRTZMQData::GetZMQData() copied!" << TLOG_ENDL;
     
     events += zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
     data_size += zmq_msg_size(&feb_data_msg);
 
-    TRACE(TR_GD_DEBUG,"BernCRTZMQData::GetZMQData() copied %lu events (%lu size)",events,data_size);
+    TLOG_INFO(id) << "BernCRTZMQData::GetZMQData() copied " << events << " events (" << data_size << " size)" << TLOG_ENDL;
 
     //check : is this too much data for the buffer?
-    if( events>ZMQBufferCapacity_ ){
-      TRACE(TR_ERROR,"BernCRTZMQData::GetZMQData : Too many events in ZMQ buffer! %lu",events);
+    if( events>ZMQBufferCapacity_ )
+    {
+      TLOG_ERROR(id) << "BernCRTZMQData::GetZMQData : Too many events in ZMQ buffer! " << events << TLOG_ENDL;
       throw cet::exception("In BernCRTZMQData::GetZMQData, Too many events in ZMQ buffer!");
     }
-    
   }
 
   zmq_msg_close(&feb_data_msg);
 
-  TRACE(TR_GD_LOG,"BernCRTZMQData::GetZMQData() size returned was %lu",data_size);
+  TLOG_INFO(id) << "BernCRTZMQData::GetZMQData() size returned was " << data_size << TLOG_ENDL;
 
   return data_size;
 

@@ -18,6 +18,11 @@ cet_make_exec(febconf
 		LIBRARIES zmq
 		       )
 
+cet_make_exec(febmon
+		SOURCE febmon.cc
+		LIBRARIES zmq
+		       )
+
 
 cet_make_exec(confsetbias
 		SOURCE confsetbias.cc
