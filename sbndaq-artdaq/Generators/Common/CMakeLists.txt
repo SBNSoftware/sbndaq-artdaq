@@ -1,4 +1,5 @@
 add_subdirectory(GPS)
+add_subdirectory(Bern)
 
 include_directories( ${CAENCOMM_INC} )
 include_directories( ${CAENVME_INC} )
