@@ -26,11 +26,9 @@ cet_make_exec(febmon
 
 cet_make_exec(confsetbias
 		SOURCE confsetbias.cc
-		LIBRARIES zmq
 		       )
 
 cet_make_exec(confsetgain
 		SOURCE confsetgain.cc
-		LIBRARIES zmq
 		       )
 

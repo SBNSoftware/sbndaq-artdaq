@@ -1,6 +1,5 @@
-/// sends gains to FEBs
+// Creates a configuration file for sending gains to FEBs
 
-#include <zmq.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>

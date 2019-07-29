@@ -1,5 +1,5 @@
-/// sets biases on FEB
-#include <zmq.h>
+// Creates a configuration file for sending biases to FEBs
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
