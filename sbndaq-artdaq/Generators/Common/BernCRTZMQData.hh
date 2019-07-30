@@ -31,6 +31,10 @@ namespace sbndaq {
     
     void febctl(feb_command command, unsigned char mac5);
 
+    const int PROBE_BITSTREAM_LENGTH = 224;
+    const int SLOW_CONTROL_BITSTREAM_LENGTH = 1144;
+    void feb_send_bitstreams(char * Probe_bitStream, char * SlowControl_bitStream, unsigned char mac5);
+
   };
 }
 

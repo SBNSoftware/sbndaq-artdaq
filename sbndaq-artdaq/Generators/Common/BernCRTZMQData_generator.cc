@@ -25,7 +25,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   zmq_data_pub_port_           = ps_.get<std::string>("zmq_data_pub_port");
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
 
-  febctl(DAQ_BEG, 82);
+  febctl(DAQ_BEG, 82); //note, the mac address is presently hardcoded for tests at DAB, this is must be changed later of course
 
   TLOG_INFO(id) << "BernCRTZMQData constructor : Calling zmq subscriber with port " << zmq_data_pub_port_.c_str() << TLOG_ENDL;
   
@@ -40,7 +40,7 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
   zmq_ctx_destroy(zmq_context_);
 
 
-  febctl(DAQ_END, 82);
+  febctl(DAQ_END, 82); //warning, fixed mac address!!!
 
   Cleanup();
   TLOG_INFO(id) << "BernCRTZMQData destructor completed" << TLOG_ENDL;  
@@ -89,18 +89,18 @@ int sbndaq::BernCRTZMQData::GetDataComplete()
 }
 
 void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned char mac5) {
-  /**
-   * Copied functionality of febctl tool from febdriver
-   * Sends a command to febdrv.
-   * Arguments:
-   * - command: BIAS_OF BIAS_ON DAQ_BEG DAQ_END GETINFO
-   * - mac5 is the last 8 bits of the mac address of the FEB
-   * 
-   * TODO:
-   *  - Somehow pass the socket string, e.g. by an argument, presently it's hardcoded
-   *  - Handle return string from the function (we need if with GETINFO)
-   *  - Do something during unexpected events (throw exceptions?)
-   */
+/**
+ * Copied functionality of febctl tool from febdriver
+ * Sends a command to febdrv.
+ * Arguments:
+ * - command: BIAS_OF BIAS_ON DAQ_BEG DAQ_END GETINFO
+ * - mac5 is the last 8 bits of the mac address of the FEB
+ * 
+ * TODO:
+ *  - Somehow pass the socket string, e.g. by an argument, presently it's hardcoded
+ *  - Handle return string from the function (we need if with GETINFO)
+ *  - Do something during unexpected events (throw exceptions?)
+ */
   
   char command_string[8];
   switch (command) {
@@ -144,6 +144,65 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned char mac5) {
   zmq_msg_close (&reply);
   zmq_close (requester);
   zmq_ctx_destroy (context);
+}
+
+void sbndaq::BernCRTZMQData::feb_send_bitstreams(char * Probe_bitStream, char * SlowControl_bitStream, unsigned char mac5) {
+/**
+ * Sends configuration bitstream to febdriver
+ * Based on febconf main()
+ * Arguments:
+ * - Probe_bitStream - monitoring configuration. It consists of 224 bits, typically all '0' for normal operation 
+ * - SlowControl_bitStream - actual configuration to be sent to the board, 1144 bits
+ * the bitstreams are expected to be actual strings of binary numbers. There is no real way to check their validity at this point
+ * 
+ * TODO:
+ *  - Somehow pass the socket string, e.g. by an argument, presently it's hardcoded
+ *  - Handle return string from the function (we need if with GETINFO)
+ *  - Do something during unexpected events (throw exceptions?)
+ *  - think of a more clever way of passing the bitstreams to this function. Probably they should have their own class/object
+ */
+
+  if(mac5==255)
+  {
+    TLOG_ERROR(id)   << "BernCRTZMQData::feb_send_bitstreams Bitstreams cannot be sent to mac5 = 255!" << TLOG_ENDL;
+    return;
+  }
+
+  char socket[] = "tcp://localhost:5555"; //warning: hardcoded value, to be updated!
+
+  void * context = zmq_ctx_new ();
+
+  //  Socket to talk to server
+  TLOG_DEBUG(id)   << "BernCRTZMQData::feb_send_bitstreams Connecting to febdrv..."<< TLOG_ENDL;
+  void *requester = zmq_socket (context, ZMQ_REQ);
+  zmq_connect (requester, socket);
+
+  char cmd[32];
+
+  sprintf(cmd,"SETCONF");
+  cmd[8]=mac5;
+
+  const int MAXPACKLEN = 1500;
+  uint8_t buffer[MAXPACKLEN];
+
+  TLOG_DEBUG(id)   << "BernCRTZMQData::feb_send_bitstreams Sending command "<<cmd<<"..."<< TLOG_ENDL;
+
+  memcpy(buffer,cmd,9);
+  memcpy(buffer+9,SlowControl_bitStream,SLOW_CONTROL_BITSTREAM_LENGTH/8);
+  memcpy(buffer+9+SLOW_CONTROL_BITSTREAM_LENGTH/8,Probe_bitStream,PROBE_BITSTREAM_LENGTH/8);
+  zmq_send ( requester, buffer, (SLOW_CONTROL_BITSTREAM_LENGTH+PROBE_BITSTREAM_LENGTH)/8+9, 0);
+
+  TLOG_DEBUG(id)   << "BernCRTZMQData::feb_send_bitstreams Waiting for reply..."<< TLOG_ENDL;
+
+  zmq_msg_t reply;
+  zmq_msg_init (&reply);
+  zmq_msg_recv (&reply, requester, 0);
+  TLOG_DEBUG(id)   << "BernCRTZMQData::feb_send_bitstreams Received reply: "<<(char*)zmq_msg_data (&reply)<< TLOG_ENDL;
+  zmq_msg_close (&reply);
+  zmq_close (requester);
+  zmq_ctx_destroy (context);
+
+
 }
 
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
