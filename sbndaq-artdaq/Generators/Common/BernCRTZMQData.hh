@@ -26,8 +26,10 @@ namespace sbndaq {
     std::string zmq_data_pub_port_;
     void*  zmq_context_;
     void*  zmq_subscriber_;
-    
 
+    enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
+    
+    void febctl(feb_command command, unsigned char mac5);
 
   };
 }

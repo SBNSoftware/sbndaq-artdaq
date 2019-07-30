@@ -20,10 +20,12 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   :
   BernCRTZMQ_GeneratorBase(ps)  
 {
-  TLOG_INFO(id) << "BernCRTZMQData constructor called" << TLOG_ENDL;  
-
+  TLOG_INFO(id) << "BernCRTZMQData constructor called" << TLOG_ENDL; 
+ 
   zmq_data_pub_port_           = ps_.get<std::string>("zmq_data_pub_port");
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
+
+  febctl(DAQ_BEG, 82);
 
   TLOG_INFO(id) << "BernCRTZMQData constructor : Calling zmq subscriber with port " << zmq_data_pub_port_.c_str() << TLOG_ENDL;
   
@@ -36,6 +38,10 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
   TLOG_INFO(id) << "BernCRTZMQData destructor called" << TLOG_ENDL;  
   zmq_ctx_destroy(zmq_context_);
+
+
+  febctl(DAQ_END, 82);
+
   Cleanup();
   TLOG_INFO(id) << "BernCRTZMQData destructor completed" << TLOG_ENDL;  
 }
@@ -80,6 +86,64 @@ int sbndaq::BernCRTZMQData::GetDataSetup()
 int sbndaq::BernCRTZMQData::GetDataComplete()
 {
   return 1;
+}
+
+void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned char mac5) {
+  /**
+   * Copied functionality of febctl tool from febdriver
+   * Sends a command to febdrv.
+   * Arguments:
+   * - command: BIAS_OF BIAS_ON DAQ_BEG DAQ_END GETINFO
+   * - mac5 is the last 8 bits of the mac address of the FEB
+   * 
+   * TODO:
+   *  - Somehow pass the socket string, e.g. by an argument, presently it's hardcoded
+   *  - Handle return string from the function (we need if with GETINFO)
+   *  - Do something during unexpected events (throw exceptions?)
+   */
+  
+  char command_string[8];
+  switch (command) {
+    case DAQ_BEG : strcpy ( command_string, "DAQ_BEG");   break;
+    case DAQ_END : strcpy ( command_string, "DAQ_END");   break;
+    case BIAS_ON : strcpy ( command_string, "BIAS_ON");   break;
+    case BIAS_OF : strcpy ( command_string, "BIAS_OF");   break;
+    case GETINFO : strcpy ( command_string, "GETINFO");   break;
+    default:
+      TLOG_ERROR(id)   << "BernCRTZMQData::febctl Command "<<command<<" unrecognized!" << TLOG_ENDL;
+      return;
+
+  }
+  
+  void * context = zmq_ctx_new ();
+
+  char socket[] = "tcp://localhost:5555"; //warning: hardcoded value, to be updated!
+
+  //  Socket to talk to server
+  TLOG_DEBUG(id)   << "BernCRTZMQData::febctl Connecting to febdrv..." << TLOG_ENDL;
+  void *requester = zmq_socket (context, ZMQ_REQ);
+  if(zmq_connect (requester, socket) < 0) {
+    TLOG_ERROR(id)   << "BernCRTZMQData::febctl Connection to "<<socket<<" failed!" << TLOG_ENDL;
+    return;
+    //throw exception? return special code?
+  }
+
+  //zmq_connect (requester, "ipc://command");
+  zmq_msg_t request;
+  zmq_msg_init_size (&request, 9);
+  memcpy(zmq_msg_data (&request), command_string,7);
+  ((uint8_t*)zmq_msg_data (&request))[7]=0;
+  ((uint8_t*)zmq_msg_data (&request))[8]=mac5;
+  TLOG_DEBUG(id) << "BernCRTZMQData::febctl Sending command \"" << command_string << "\" to mac5 = " << mac5 << TLOG_ENDL;
+  zmq_msg_send (&request, requester, 0);
+  zmq_msg_close (&request);
+  zmq_msg_t reply;
+  zmq_msg_init (&reply);
+  zmq_msg_recv (&reply, requester, 0);
+  TLOG_DEBUG(id) << "BernCRTZMQData::febctl Received reply: "<< (char*)zmq_msg_data (&reply) << TLOG_ENDL;
+  zmq_msg_close (&reply);
+  zmq_close (requester);
+  zmq_ctx_destroy (context);
 }
 
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
