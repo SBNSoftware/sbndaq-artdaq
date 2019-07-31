@@ -25,8 +25,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   zmq_data_pub_port_           = ps_.get<std::string>("zmq_data_pub_port");
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
 
-
-  TLOG_INFO(id) << "BernCRTZMQData constructor : CITIROC_Probe_bitStream = \"" << ps_.get<std::string>("CITIROC_Probe_bitStream") <<"\"" << TLOG_ENDL;
+  febctl(GETINFO, 82); //note, the mac address is presently hardcoded for tests at DAB, this is must be changed later of course
 
   feb_send_bitstreams(82); //warning, mac hardcoded. Also this function should not be called directly from here
   febctl(DAQ_BEG, 82); //note, the mac address is presently hardcoded for tests at DAB, this is must be changed later of course
