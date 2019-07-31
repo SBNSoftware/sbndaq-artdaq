@@ -25,6 +25,10 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   zmq_data_pub_port_           = ps_.get<std::string>("zmq_data_pub_port");
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
 
+
+  TLOG_INFO(id) << "BernCRTZMQData constructor : CITIROC_Probe_bitStream = \"" << ps_.get<std::string>("CITIROC_Probe_bitStream") <<"\"" << TLOG_ENDL;
+
+  feb_send_bitstreams(82); //warning, mac hardcoded. Also this function should not be called directly from here
   febctl(DAQ_BEG, 82); //note, the mac address is presently hardcoded for tests at DAB, this is must be changed later of course
 
   TLOG_INFO(id) << "BernCRTZMQData constructor : Calling zmq subscriber with port " << zmq_data_pub_port_.c_str() << TLOG_ENDL;
@@ -88,7 +92,7 @@ int sbndaq::BernCRTZMQData::GetDataComplete()
   return 1;
 }
 
-void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned char mac5) {
+void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
 /**
  * Copied functionality of febctl tool from febdriver
  * Sends a command to febdrv.
@@ -128,13 +132,12 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned char mac5) {
     //throw exception? return special code?
   }
 
-  //zmq_connect (requester, "ipc://command");
   zmq_msg_t request;
   zmq_msg_init_size (&request, 9);
   memcpy(zmq_msg_data (&request), command_string,7);
   ((uint8_t*)zmq_msg_data (&request))[7]=0;
   ((uint8_t*)zmq_msg_data (&request))[8]=mac5;
-  TLOG_DEBUG(id) << "BernCRTZMQData::febctl Sending command \"" << command_string << "\" to mac5 = " << mac5 << TLOG_ENDL;
+  TLOG_DEBUG(id) << "BernCRTZMQData::febctl Sending command \"" << command_string << "\" to mac5 = " << (char)mac5 << TLOG_ENDL;
   zmq_msg_send (&request, requester, 0);
   zmq_msg_close (&request);
   zmq_msg_t reply;
@@ -146,25 +149,70 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned char mac5) {
   zmq_ctx_destroy (context);
 }
 
-void sbndaq::BernCRTZMQData::feb_send_bitstreams(char * Probe_bitStream, char * SlowControl_bitStream, unsigned char mac5) {
+int ConvertAsciiToBitstream(std::string ASCII_bitstream, uint8_t *buffer) {
+/**
+ * Converts bitstream saved in ASCII format to an actuall bitstream
+ * Bitstream is returned via argument buffer
+ * Returned value is the length of the bitstream (number of bits)
+ * The format of the ASCII stream is the following:
+ * Read '0' and '1' characters, ignoring spaces until you encounter character different than '0', '1' or ' ', then skip to the next line.
+ */
+
+  const int MAXPACKLEN = 1500; //TODO: this should be a global variable, or something...
+  memset(buffer,0,MAXPACKLEN); //reset buffer
+
+  int length = 0;
+  std::istringstream iASCII_bitstream(ASCII_bitstream);
+  std::string line;    
+  while (std::getline(iASCII_bitstream, line)) { //loop over lines
+    for(char& c : line) { //loop over characters
+      if(c == ' ') continue; //ignore blank characters
+      if(c == '0' || c == '1') { //encode the bit into the bitstream
+        const int byte = (++length) / 8;
+        const int bit = length % 8;
+        if(length % 8) buffer[byte] = 0; //clear new byte
+        if(c == '1')  buffer[byte] |= 1 << bit;
+      }
+      else break; //if the character is not a space, '0' or '1', go to next line
+    }
+  }
+
+  return length;
+}
+
+void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
 /**
  * Sends configuration bitstream to febdriver
  * Based on febconf main()
  * Arguments:
+ * mac5 of the board, note one cannot use 255 address to broadcast to all boards
+ * Bitstreams should be read from (?)
  * - Probe_bitStream - monitoring configuration. It consists of 224 bits, typically all '0' for normal operation 
  * - SlowControl_bitStream - actual configuration to be sent to the board, 1144 bits
- * the bitstreams are expected to be actual strings of binary numbers. There is no real way to check their validity at this point
  * 
  * TODO:
  *  - Somehow pass the socket string, e.g. by an argument, presently it's hardcoded
- *  - Handle return string from the function (we need if with GETINFO)
+ *  - Handle return string from the function
  *  - Do something during unexpected events (throw exceptions?)
  *  - think of a more clever way of passing the bitstreams to this function. Probably they should have their own class/object
  */
 
-  if(mac5==255)
-  {
+  const int MAXPACKLEN = 1500; //TODO this should be a global variable or something
+  uint8_t Probe_bitStream[MAXPACKLEN], SlowControl_bitStream[MAXPACKLEN];
+  const int probe_length = ConvertAsciiToBitstream(ps_.get<std::string>("CITIROC_Probe_bitStream"), Probe_bitStream);
+  const int sc_length    = ConvertAsciiToBitstream(ps_.get<std::string>("CITIROC_SlowControl_bitStream0"), SlowControl_bitStream);
+
+  if(mac5==255) {
     TLOG_ERROR(id)   << "BernCRTZMQData::feb_send_bitstreams Bitstreams cannot be sent to mac5 = 255!" << TLOG_ENDL;
+    return;
+  }
+
+  if(probe_length != PROBE_BITSTREAM_LENGTH) {
+    TLOG_ERROR(id)   << "BernCRTZMQData::feb_send_bitstreams Probe bitstream length incorrect: "<<probe_length <<" (expected "<<PROBE_BITSTREAM_LENGTH<<")"<<TLOG_ENDL;
+    return;
+  }
+  if(sc_length != SLOW_CONTROL_BITSTREAM_LENGTH) {
+    TLOG_ERROR(id)   << "BernCRTZMQData::feb_send_bitstreams Slow Control bitstream length incorrect: "<< sc_length <<" (expected "<<SLOW_CONTROL_BITSTREAM_LENGTH<<")" << TLOG_ENDL;
     return;
   }
 
@@ -182,7 +230,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(char * Probe_bitStream, char * 
   sprintf(cmd,"SETCONF");
   cmd[8]=mac5;
 
-  const int MAXPACKLEN = 1500;
   uint8_t buffer[MAXPACKLEN];
 
   TLOG_DEBUG(id)   << "BernCRTZMQData::feb_send_bitstreams Sending command "<<cmd<<"..."<< TLOG_ENDL;
