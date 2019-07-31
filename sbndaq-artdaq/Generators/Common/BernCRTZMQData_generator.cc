@@ -25,11 +25,6 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   zmq_data_pub_port_           = ps_.get<std::string>("zmq_data_pub_port");
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
 
-  febctl(GETINFO, 82); //note, the mac address is presently hardcoded for tests at DAB, this is must be changed later of course
-
-  feb_send_bitstreams(82); //warning, mac hardcoded. Also this function should not be called directly from here
-  febctl(DAQ_BEG, 82); //note, the mac address is presently hardcoded for tests at DAB, this is must be changed later of course
-
   TLOG_INFO(id) << "BernCRTZMQData constructor : Calling zmq subscriber with port " << zmq_data_pub_port_.c_str() << TLOG_ENDL;
   
   zmq_context_    = zmq_ctx_new();
@@ -42,8 +37,6 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
   TLOG_INFO(id) << "BernCRTZMQData destructor called" << TLOG_ENDL;  
   zmq_ctx_destroy(zmq_context_);
 
-
-  febctl(DAQ_END, 82); //warning, fixed mac address!!!
 
   Cleanup();
   TLOG_INFO(id) << "BernCRTZMQData destructor completed" << TLOG_ENDL;  
