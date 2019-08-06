@@ -29,13 +29,12 @@ namespace sbndaq {
     void*  zmq_subscriber_;
 
     enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
-    
-    void febctl(feb_command command, uint8_t mac5);
+    void febctl(feb_command command, unsigned int iFEB);
 
     const int PROBE_BITSTREAM_LENGTH = 224;
     const int SLOW_CONTROL_BITSTREAM_LENGTH = 1144;
-    void feb_send_bitstreams(uint8_t mac5);
-//    int ConvertAsciiToBitstream(std:string, uint8_t *buffer);
+    void feb_send_bitstreams(unsigned int iFEB);
+    int ConvertASCIIToBitstream(std::string ASCII_bitstream, uint8_t *buffer);
   };
 }
 

@@ -30,7 +30,16 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   
   zmq_context_    = zmq_ctx_new();
 
-  febctl(GETINFO, 0x52);
+  FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
+  TRACE(TR_DEBUG, std::string("There are ") + std::to_string(FEBIDs_.size()) + " FEBID!");
+  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+    TRACE(TR_DEBUG, std::string("FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]));
+  }
+  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+    febctl(GETINFO, iFEB);
+    feb_send_bitstreams(iFEB);
+    febctl(DAQ_BEG, iFEB);
+  }
 
   TRACE(TR_LOG, "BernCRTZMQData constructor completed");  
 }
@@ -40,7 +49,9 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
   TRACE(TR_LOG, "BernCRTZMQData destructor called");  
   zmq_ctx_destroy(zmq_context_);
 
-
+  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+    febctl(DAQ_END, iFEB);
+  }
 
   Cleanup();
   TRACE(TR_LOG, "BernCRTZMQData destructor completed");  
@@ -88,7 +99,7 @@ int sbndaq::BernCRTZMQData::GetDataComplete()
   return 1;
 }
 
-void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
+void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
 /**
  * Copied functionality of febctl tool from febdriver
  * Sends a command to febdrv.
@@ -126,12 +137,22 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
     //throw exception? return special code?
   }
 
+  uint8_t mac5;
+  if(FEBIDs_.size() <= iFEB) {
+    TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl Could not find FEB ") + std::to_string(iFEB) + " in the FEBIDs!");
+    return;
+    //throw exception? return special code?
+  }
+  else {
+    mac5 = FEBIDs_[iFEB] & 0xff;
+  }
+
   zmq_msg_t request;
   zmq_msg_init_size (&request, 9);
   memcpy(zmq_msg_data (&request), command_string,7);
   ((uint8_t*)zmq_msg_data (&request))[7]=0;
   ((uint8_t*)zmq_msg_data (&request))[8]=mac5;
-  TRACE(TR_DEBUG, std::string("BernCRTZMQData::febctl Sending command \"") + command_string + "\" to mac5 = " + (char)mac5);
+  TRACE(TR_DEBUG, std::string("BernCRTZMQData::febctl Sending command \"") + command_string + "\" to mac5 = " + std::to_string(mac5));
   zmq_msg_send (&request, requester, 0);
   zmq_msg_close (&request);
   zmq_msg_t reply;
@@ -143,7 +164,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
   zmq_ctx_destroy (context);
 }
 
-int ConvertAsciiToBitstream(std::string ASCII_bitstream, uint8_t *buffer) {
+int sbndaq::BernCRTZMQData::ConvertASCIIToBitstream(std::string ASCII_bitstream, uint8_t *buffer) {
 /**
  * Converts bitstream saved in ASCII format to an actuall bitstream
  * Bitstream is returned via argument buffer
@@ -174,7 +195,7 @@ int ConvertAsciiToBitstream(std::string ASCII_bitstream, uint8_t *buffer) {
   return length;
 }
 
-void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
+void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
 /**
  * Sends configuration bitstream to febdriver
  * Based on febconf main()
@@ -192,8 +213,18 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
 
   const int MAXPACKLEN = 1500; //TODO this should be a global variable or something
   uint8_t Probe_bitStream[MAXPACKLEN], SlowControl_bitStream[MAXPACKLEN];
-  const int probe_length = ConvertAsciiToBitstream(ps_.get<std::string>("CITIROC_Probe_bitStream"), Probe_bitStream);
-  const int sc_length    = ConvertAsciiToBitstream(ps_.get<std::string>("CITIROC_SlowControl_bitStream0"), SlowControl_bitStream);
+  const int probe_length = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_Probe_bitStream"), Probe_bitStream);
+  const int sc_length    = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_SlowControl_bitStream0"), SlowControl_bitStream);
+  
+  uint8_t mac5;
+  if(FEBIDs_.size() <= iFEB) {
+    TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl Could not find FEB ") + std::to_string(iFEB) + " in the FEBIDs!");
+    return;
+    //throw exception? return special code?
+  }
+  else {
+    mac5 = FEBIDs_[iFEB] & 0xff;
+  }
 
   if(mac5==255) {
     TRACE(TR_ERROR, "BernCRTZMQData::feb_send_bitstreams Bitstreams cannot be sent to mac5 = 255!");
