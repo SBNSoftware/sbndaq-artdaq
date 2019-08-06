@@ -12,8 +12,6 @@
 
 #include "BernCRT_TRACE_defines.h"
 
-#include <string>
-
 #include <zmq.h>
 
 #define id "BernCRT"
@@ -24,7 +22,8 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 {
   TRACE(TR_LOG, "BernCRTZMQData constructor called"); 
  
-  zmq_data_pub_port_           = ps_.get<std::string>("zmq_data_pub_port");
+  zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
+  zmq_data_pub_port_           = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port")+1);
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
 
   TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Calling zmq subscriber with port ")+ zmq_data_pub_port_);
@@ -119,14 +118,10 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
   
   void * context = zmq_ctx_new ();
 
-  char socket[32];
-  sprintf(socket, "tcp://localhost:%d", ps_.get<int>("zmq_listening_port"));
-
-  //  Socket to talk to server
   TRACE(TR_DEBUG, "BernCRTZMQData::febctl Connecting to febdrv...");
   void *requester = zmq_socket (context, ZMQ_REQ);
-  if(zmq_connect (requester, socket) < 0) {
-    TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl Connection to ") + socket + " failed!");
+  if(zmq_connect (requester, zmq_listening_port_.c_str()) < 0) {
+    TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl Connection to ") + zmq_listening_port_ + " failed!");
     return;
     //throw exception? return special code?
   }
@@ -214,15 +209,11 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
     return;
   }
   
-  char socket[32];
-  sprintf(socket, "tcp://localhost:%d", ps_.get<int>("zmq_listening_port"));
-
   void * context = zmq_ctx_new ();
 
-  //  Socket to talk to server
   TRACE(TR_DEBUG, "BernCRTZMQData::feb_send_bitstreams Connecting to febdrv...");
   void *requester = zmq_socket (context, ZMQ_REQ);
-  zmq_connect (requester, socket);
+  zmq_connect (requester, zmq_listening_port_.c_str());
 
   char cmd[32];
 

@@ -23,6 +23,7 @@ namespace sbndaq {
     int    GetDataComplete();
 
     int    zmq_data_receive_timeout_ms_;
+    std::string zmq_listening_port_;
     std::string zmq_data_pub_port_;
     void*  zmq_context_;
     void*  zmq_subscriber_;
