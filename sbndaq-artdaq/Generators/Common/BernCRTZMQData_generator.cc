@@ -98,7 +98,6 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
  * - mac5 is the last 8 bits of the mac address of the FEB
  * 
  * TODO:
- *  - Somehow pass the socket string, e.g. by an argument, presently it's hardcoded
  *  - Handle return string from the function (we need if with GETINFO)
  *  - Do something during unexpected events (throw exceptions?)
  */
@@ -120,7 +119,8 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
   
   void * context = zmq_ctx_new ();
 
-  char socket[] = "tcp://:5555"; //warning: hardcoded value, to be updated!
+  char socket[32];
+  sprintf(socket, "tcp://localhost:%d", ps_.get<int>("zmq_listening_port"));
 
   //  Socket to talk to server
   TRACE(TR_DEBUG, "BernCRTZMQData::febctl Connecting to febdrv...");
@@ -190,7 +190,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
  * - SlowControl_bitStream - actual configuration to be sent to the board, 1144 bits
  * 
  * TODO:
- *  - Somehow pass the socket string, e.g. by an argument, presently it's hardcoded
  *  - Handle return string from the function
  *  - Do something during unexpected events (throw exceptions?)
  *  - think of a more clever way of passing the bitstreams to this function. Probably they should have their own class/object
@@ -214,8 +213,9 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::feb_send_bitstreams Slow Control bitstream length incorrect: ") + std::to_string(sc_length) + " (expected " + std::to_string(SLOW_CONTROL_BITSTREAM_LENGTH)+")");
     return;
   }
-
-  char socket[] = "tcp://localhost:5555"; //warning: hardcoded value, to be updated!
+  
+  char socket[32];
+  sprintf(socket, "tcp://localhost:%d", ps_.get<int>("zmq_listening_port"));
 
   void * context = zmq_ctx_new ();
 
