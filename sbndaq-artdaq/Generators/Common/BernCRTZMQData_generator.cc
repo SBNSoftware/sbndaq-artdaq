@@ -237,7 +237,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
 
 int sbndaq::BernCRTZMQData::ConvertASCIIToBitstream(std::string ASCII_bitstream, uint8_t *buffer) {
 /**
- * Converts bitstream saved in ASCII format to an actuall bitstream
+ * Converts bitstream saved in ASCII format to an actual bitstream
  * Bitstream is returned via argument buffer
  * Returned value is the length of the bitstream (number of bits)
  * The format of the ASCII stream is the following:
@@ -285,7 +285,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   const int MAXPACKLEN = 1500; //TODO this should be a global variable or something
   uint8_t Probe_bitStream[MAXPACKLEN], SlowControl_bitStream[MAXPACKLEN];
   const int probe_length = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_Probe_bitStream"), Probe_bitStream);
-  const int sc_length    = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_SlowControl_bitStream0"), SlowControl_bitStream);
+  const int sc_length    = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_SlowControl_bitStream"+std::to_string(iFEB)), SlowControl_bitStream);
 
   uint8_t mac5;
   if(FEBIDs_.size() <= iFEB) {
