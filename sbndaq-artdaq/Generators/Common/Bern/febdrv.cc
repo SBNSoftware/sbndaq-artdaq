@@ -926,7 +926,7 @@ int main (int argc, char **argv)
     }
   //rv=zmq_bind (responder, "ipc://command");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for command! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: listening at tcp://5555\n");
+  printdate(); printf ("febdrv: listening at tcp://localhost:5555\n");
   //printdate(); printf ("febdrv: listening at ipc://command\n");
   
   //  Socket to send data to clients
