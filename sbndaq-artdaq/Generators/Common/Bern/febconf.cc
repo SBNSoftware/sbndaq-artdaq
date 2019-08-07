@@ -111,6 +111,8 @@ int main (int argc, char **argv)
   //  Socket to talk to server
   printf ("Connecting to febdrv...\n");
   void *requester = zmq_socket (context, ZMQ_REQ);
+  const int linger = 0; //time in ms to keep pending messages after closing the socket
+  zmq_setsockopt(requester, ZMQ_LINGER, &linger, sizeof(linger));
   zmq_connect (requester, argv[1]);
 
   sprintf(cmd,"SETCONF");
@@ -131,8 +133,16 @@ int main (int argc, char **argv)
 
   zmq_msg_t reply;
   zmq_msg_init (&reply);
-  zmq_msg_recv (&reply, requester, 0);
-  printf ("Received reply: %s\n", (char*)zmq_msg_data (&reply));
+  int rv = zmq_msg_recv (&reply, requester, ZMQ_DONTWAIT);
+  const int timeout = 5*1000*1000; //µs
+  for(int i = 0; i < 10 && rv < 0; i++) {
+     printf("\twaiting for reply...\n");
+     usleep(timeout/10);
+     rv = zmq_msg_recv (&reply, requester, ZMQ_DONTWAIT);
+   }
+  if(rv>=0) printf ("Received reply: %s\n", (char*)zmq_msg_data (&reply));
+  else printf ("Error: received no reply after waiting for %d seconds\n", timeout / 1000000);
+
   zmq_msg_close (&reply);
   zmq_close (requester);
   zmq_ctx_destroy (context);

@@ -48,8 +48,8 @@ int main (int argc, char **argv)
   zmq_msg_send (&request, requester, 0);
   zmq_msg_close (&request);
   zmq_msg_t reply;
-  const int timeout = 5*1000*1000; //µs
   zmq_msg_init (&reply);
+  const int timeout = 5*1000*1000; //µs
   rv = zmq_msg_recv (&reply, requester, ZMQ_DONTWAIT);
   for(int i = 0; i < 10 && rv < 0; i++) {
     printf("\twaiting for answer...\n");
