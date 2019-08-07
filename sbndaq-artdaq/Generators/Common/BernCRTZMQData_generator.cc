@@ -361,7 +361,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   else {
     TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string);
   }
-  TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string);
   zmq_msg_close (&reply);
   zmq_close (requester);
   zmq_ctx_destroy (context);
