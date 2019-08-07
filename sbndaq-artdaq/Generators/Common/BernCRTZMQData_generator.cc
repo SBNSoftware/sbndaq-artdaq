@@ -30,12 +30,13 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   
   zmq_context_    = zmq_ctx_new();
 
-  FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
+//  FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
   TRACE(TR_DEBUG, std::string("There are ") + std::to_string(FEBIDs_.size()) + " FEBID!");
-  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     TRACE(TR_DEBUG, std::string("FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]));
   }
-  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+  //for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     febctl(GETINFO, iFEB);
     feb_send_bitstreams(iFEB);
     febctl(DAQ_BEG, iFEB);
@@ -108,7 +109,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
  * - mac5 is the last 8 bits of the mac address of the FEB
  * 
  * TODO:
- *  - Handle return string from the function (we need if with GETINFO)
+ *  - Do something with the firmware versions returned with GETINFO)
  *  - Do something during unexpected events (throw exceptions?)
  */
 
@@ -158,10 +159,66 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
   zmq_msg_t reply;
   zmq_msg_init (&reply);
   zmq_msg_recv (&reply, requester, 0);
-  TRACE(TR_DEBUG, std::string("BernCRTZMQData::febctl Received reply: ") + (char*)zmq_msg_data (&reply));
+  std::string reply_string = (char*)zmq_msg_data(&reply);
   zmq_msg_close (&reply);
   zmq_close (requester);
   zmq_ctx_destroy (context);
+
+  if(command != GETINFO) {
+    if(reply_string.compare("OK")) {
+      TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl_bitstreams Received unexpected reply from febdrv: ") + reply_string);
+    }
+    else {
+      TRACE(TR_DEBUG, std::string("BernCRTZMQData::febctl_bitstreams Received reply: ") + reply_string);
+    }
+  }
+  else { //check if the boards we see correspond to the FHICL file configuration
+    TRACE(TR_DEBUG, std::string("BernCRTZMQData::febctl_bitstreams Received reply: ") + reply_string);
+    std::istringstream ireply_string(reply_string);
+    std::string line;
+    if(!std::getline(ireply_string, line)) {
+      TRACE(TR_ERROR, "BernCRTZMQData::febctl_bitstreams Received empty reply febdrv!");
+    }
+    else { //parse febdrv reply
+      //parse number of reported FEBs
+      const unsigned int read_nFEBs = stoi(line);
+      if(read_nFEBs != nFEBs()) {
+        TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl_bitstreams Number of FEBs seen by febdrv (") + std::to_string(read_nFEBs) + ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!");
+      }
+      else {
+        //read firmwares and mac addresses MAC addresses
+        std::vector <std::string> firmwares;
+        std::vector <uint64_t> mac5s;
+        while (std::getline(ireply_string, line)) {
+          firmwares.push_back(line.substr(18, 100));
+          unsigned int mac[6];
+          if (sscanf(line.substr(0,17).c_str(), "%x:%x:%x:%x:%x:%x", &mac[5], &mac[4], &mac[3], &mac[2], &mac[1], &mac[0]) != 6) {
+            TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl_bitstreams Error during parsing MAC address returned by febdrv (" + line +  ")!"));
+          }
+          else {
+            TRACE(TR_DEBUG, std::string("BernCRTZMQData::febctl_bitstreams Raw mac address is: ") + std::to_string(mac[5]) +":"+ std::to_string(mac[4]) +":"+ std::to_string(mac[3]) +":"+ std::to_string(mac[2]) +":"+ std::to_string(mac[1]) +":"+ std::to_string(mac[0]));
+            uint64_t full_mac = 0;
+            for(int i = 0; i < 6; i++) {
+              full_mac += (uint64_t)mac[i] << i * 8;
+            }
+            mac5s.push_back(full_mac);
+          }
+        }
+        //check if all MAC addresses are present in the FHiCL configuration
+        for(unsigned int iFEB = 0; iFEB < mac5s.size(); iFEB++) {
+          bool config_found = false;
+          for(unsigned int jFEB = 0; jFEB < nFEBs(); jFEB++) {
+            if(mac5s[iFEB] == FEBIDs_[jFEB]) {
+              config_found = true;
+            }
+          }
+          if(!config_found) {
+            TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl_bitstreams Configuration for MAC address seen by febdrv (" + std::to_string(mac5s[iFEB]) +  ") missing in the FCL file!"));
+          }
+        }
+      }
+    }
+  }
 }
 
 int sbndaq::BernCRTZMQData::ConvertASCIIToBitstream(std::string ASCII_bitstream, uint8_t *buffer) {
@@ -196,26 +253,26 @@ int sbndaq::BernCRTZMQData::ConvertASCIIToBitstream(std::string ASCII_bitstream,
 }
 
 void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
-/**
- * Sends configuration bitstream to febdriver
- * Based on febconf main()
- * Arguments:
- * mac5 of the board, note one cannot use 255 address to broadcast to all boards
- * Bitstreams should be read from (?)
- * - Probe_bitStream - monitoring configuration. It consists of 224 bits, typically all '0' for normal operation 
- * - SlowControl_bitStream - actual configuration to be sent to the board, 1144 bits
- * 
- * TODO:
- *  - Handle return string from the function
- *  - Do something during unexpected events (throw exceptions?)
- *  - think of a more clever way of passing the bitstreams to this function. Probably they should have their own class/object
- */
+  /**
+   * Sends configuration bitstream to febdriver
+   * Based on febconf main()
+   * Arguments:
+   * mac5 of the board, note one cannot use 255 address to broadcast to all boards
+   * Bitstreams should be read from (?)
+   * - Probe_bitStream - monitoring configuration. It consists of 224 bits, typically all '0' for normal operation 
+   * - SlowControl_bitStream - actual configuration to be sent to the board, 1144 bits
+   * 
+   * TODO:
+   *  - Handle return string from the function
+   *  - Do something during unexpected events (throw exceptions?)
+   *  - think of a more clever way of passing the bitstreams to this function. Probably they should have their own class/object
+   */
 
   const int MAXPACKLEN = 1500; //TODO this should be a global variable or something
   uint8_t Probe_bitStream[MAXPACKLEN], SlowControl_bitStream[MAXPACKLEN];
   const int probe_length = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_Probe_bitStream"), Probe_bitStream);
   const int sc_length    = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_SlowControl_bitStream0"), SlowControl_bitStream);
-  
+
   uint8_t mac5;
   if(FEBIDs_.size() <= iFEB) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl Could not find FEB ") + std::to_string(iFEB) + " in the FEBIDs!");
@@ -239,7 +296,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::feb_send_bitstreams Slow Control bitstream length incorrect: ") + std::to_string(sc_length) + " (expected " + std::to_string(SLOW_CONTROL_BITSTREAM_LENGTH)+")");
     return;
   }
-  
+
   void * context = zmq_ctx_new ();
 
   TRACE(TR_DEBUG, "BernCRTZMQData::feb_send_bitstreams Connecting to febdrv...");
@@ -265,7 +322,14 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   zmq_msg_t reply;
   zmq_msg_init (&reply);
   zmq_msg_recv (&reply, requester, 0);
-  TRACE(TR_DEBUG, std::string("BernCRTZMQData::feb_send_bitstreams Received reply: ") + (char*)zmq_msg_data (&reply));
+  std::string reply_string = (char*)zmq_msg_data(&reply);
+  if(reply_string.compare("OK")) {
+    TRACE(TR_ERROR, std::string("BernCRTZMQData::febctl_send_bitstreams Received unexpected reply from febdrv: ") + reply_string);
+  }
+  else {
+    TRACE(TR_DEBUG, std::string("BernCRTZMQData::febctl_send_bitstreams Received reply: ") + reply_string);
+  }
+  TRACE(TR_DEBUG, std::string("BernCRTZMQData::feb_send_bitstreams Received reply: ") + reply_string);
   zmq_msg_close (&reply);
   zmq_close (requester);
   zmq_ctx_destroy (context);
