@@ -303,7 +303,9 @@ int sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf)
 void usage()
 {
   printf("Usage: to init febdrv on eth0 interface with poll duration extended by 300 ms, type \n");
-  printf("febdrv eth0 300\n");
+  printf("febdrv eth0 300 [listening_port]\n");
+  printf("if listening_port is not specified, default is 5555\n");
+  printf("The data publisher, stats and stats2 port numberss are larger by 1, 2 and 3, respectively\n");
 }
 
 int pingclients()
@@ -891,7 +893,18 @@ int main (int argc, char **argv)
   //printf("WARNING!! The poll duration is set to minimum %d ms.\n",polldelay);
   int rv;
   char cmd[32]; //command string
-  if(argc!=3) { usage(); return 0;}
+  if(argc<3 || argc > 4) { usage(); return 0;}
+
+  int listening_port;
+  if(argc == 3) listening_port = 5555;
+  else listening_port = atoi(argv[3]);
+
+  char listening_socket[32], publishing_socket[32], stats_socket[32], stats2_socket[32];
+  sprintf(listening_socket,  "tcp://*:%d", listening_port);
+  sprintf(publishing_socket, "tcp://*:%d", listening_port+1);
+  sprintf(stats_socket,      "tcp://*:%d", listening_port+2);
+  sprintf(stats2_socket,     "tcp://*:%d", listening_port+3);
+
   polldelay=atoi(argv[2]);
   printf("WARNING!! The poll duration is set to minimum %d ms.\n",polldelay);
   memset(evbuf,0, sizeof(evbuf));
@@ -917,58 +930,58 @@ int main (int argc, char **argv)
   
   //  Socket to respond to clients
   responder = zmq_socket (context, ZMQ_REP);
-  rv=zmq_bind (responder, "tcp://*:5555");
+  rv=zmq_bind (responder, listening_socket);
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind tcp socket for command! Exiting.\n"); 
+      printf("Can't bind socket %s for command! Exiting.\n", listening_socket); 
       return 0;
     }
   //rv=zmq_bind (responder, "ipc://command");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for command! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: listening at tcp://localhost:5555\n");
+  printdate(); printf ("febdrv: listening at %s\n", listening_socket);
   //printdate(); printf ("febdrv: listening at ipc://command\n");
   
   //  Socket to send data to clients
   publisher = zmq_socket (context, ZMQ_PUB);
-  rv = zmq_bind (publisher, "tcp://*:5556");
+  rv = zmq_bind (publisher, publishing_socket);
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind tcp socket for data! Exiting.\n"); 
+      printf("Can't bind socket %s for data! Exiting.\n", publishing_socket); 
       return 0;
     }
   //rv = zmq_bind (publisher, "ipc://data");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for data! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: data publisher at tcp://5556\n");
+  printdate(); printf ("febdrv: data publisher at %s\n", publishing_socket);
   //printdate(); printf ("febdrv: data publisher at ipc://data\n");
   
   //  Socket to send statistics to clients
   pubstats = zmq_socket (context, ZMQ_PUB);
-  rv = zmq_bind (pubstats, "tcp://*:5557");
+  rv = zmq_bind (pubstats, stats_socket);
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind tcp socket for stats! Exiting.\n"); 
+      printf("Can't bind socket %s for stats! Exiting.\n", stats_socket); 
       return 0;
     }
   //rv = zmq_bind (pubstats, "ipc://stats");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for stats! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: stats publisher at tcp://5557\n");
+  printdate(); printf ("febdrv: stats publisher at %s\n", stats_socket);
   //printdate(); printf ("febdrv: stats publisher at ipc://stats\n");
   
   //  Socket to send binary packed statistics to clients
   pubstats2 = zmq_socket (context, ZMQ_PUB);
-  rv = zmq_bind (pubstats2, "tcp://*:5558");
+  rv = zmq_bind (pubstats2, stats2_socket);
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind tcp socket for stats2! Exiting.\n"); 
+      printf("Can't bind socket %s for stats2! Exiting.\n", stats2_socket); 
       return 0;
     }
   //rv = zmq_bind (pubstats2, "ipc://stats2");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for stats2! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: stats2 publisher at tcp://5558\n");
+  printdate(); printf ("febdrv: stats2 publisher at %s\n", stats2_socket);
   //printdate(); printf ("febdrv: stats2 publisher at ipc://stats2\n");
   
   //initialising FEB daisy chain
