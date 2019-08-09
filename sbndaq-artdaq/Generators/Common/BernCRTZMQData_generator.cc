@@ -30,6 +30,10 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   
   zmq_context_    = zmq_ctx_new();
 
+  zmq_requester_ = zmq_socket (zmq_context_, ZMQ_REQ);
+  const int linger = 0;
+  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
+
   TRACE(TR_DEBUG, std::string("There are ") + std::to_string(FEBIDs_.size()) + " FEBID!");
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     TRACE(TR_DEBUG, std::string("FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]));
@@ -37,7 +41,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     febctl(GETINFO, iFEB);
     feb_send_bitstreams(iFEB);
-    febctl(DAQ_BEG, iFEB);
+    febctl(DAQ_BEG, iFEB); 
   }
 
   TRACE(TR_LOG, "BernCRTZMQData constructor completed");  
@@ -46,11 +50,12 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
   TRACE(TR_LOG, "BernCRTZMQData destructor called");  
-  zmq_ctx_destroy(zmq_context_);
-
   for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
     febctl(DAQ_END, iFEB);
   }
+  zmq_close (zmq_requester_);
+
+  zmq_ctx_destroy(zmq_context_);
 
   Cleanup();
   TRACE(TR_LOG, "BernCRTZMQData destructor completed");  
@@ -126,13 +131,8 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
 
   }
   
-  void * context = zmq_ctx_new ();
-
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Connecting to febdrv...");
-  void *requester = zmq_socket (context, ZMQ_REQ);
-  const int linger = 0;
-  zmq_setsockopt(requester, ZMQ_LINGER, &linger, sizeof(linger));
-  if(zmq_connect (requester, zmq_listening_port_.c_str()) < 0) {
+  if(zmq_connect (zmq_requester_, zmq_listening_port_.c_str()) < 0) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
     return;
     //throw exception? return special code?
@@ -154,29 +154,25 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
   ((uint8_t*)zmq_msg_data (&request))[7]=0;
   ((uint8_t*)zmq_msg_data (&request))[8]=mac5;
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Sending command \"" + command_string + "\" to mac5 = " + std::to_string(mac5));
-  zmq_msg_send (&request, requester, 0);
+  zmq_msg_send (&request, zmq_requester_, 0);
   zmq_msg_close (&request);
   zmq_msg_t reply;
   zmq_msg_init (&reply);
   const int timeout = 5; //s hardcoded value, move to config file?
   const int attempts = 10;
-  int rv = zmq_msg_recv (&reply, requester, ZMQ_DONTWAIT);
+  int rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
   for(int i = 0; i < attempts && rv < 0; i++) {
     usleep(timeout*1000000/attempts);
-    rv = zmq_msg_recv (&reply, requester, ZMQ_DONTWAIT);
+    rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
   }
   if(rv<0) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Received no reply after waiting for " + std::to_string(timeout) + " seconds");
     zmq_msg_close (&reply);
-    zmq_close (requester);
-    zmq_ctx_destroy (context);
     return;
   }
 
   std::string reply_string = (char*)zmq_msg_data(&reply);
   zmq_msg_close (&reply);
-  zmq_close (requester);
-  zmq_ctx_destroy (context);
 
   if(command != GETINFO) {
     if(reply_string.compare("OK")) {
@@ -311,13 +307,8 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
     return;
   }
 
-  void * context = zmq_ctx_new ();
-
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Connecting to febdrv...");
-  void *requester = zmq_socket (context, ZMQ_REQ);
-  const int linger = 0;
-  zmq_setsockopt(requester, ZMQ_LINGER, &linger, sizeof(linger));
-  zmq_connect (requester, zmq_listening_port_.c_str());
+  zmq_connect (zmq_requester_, zmq_listening_port_.c_str());
 
   char cmd[32];
 
@@ -331,7 +322,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   memcpy(buffer,cmd,9);
   memcpy(buffer+9,SlowControl_bitStream,SLOW_CONTROL_BITSTREAM_LENGTH/8);
   memcpy(buffer+9+SLOW_CONTROL_BITSTREAM_LENGTH/8,Probe_bitStream,PROBE_BITSTREAM_LENGTH/8);
-  zmq_send ( requester, buffer, (SLOW_CONTROL_BITSTREAM_LENGTH+PROBE_BITSTREAM_LENGTH)/8+9, 0);
+  zmq_send (zmq_requester_, buffer, (SLOW_CONTROL_BITSTREAM_LENGTH+PROBE_BITSTREAM_LENGTH)/8+9, 0);
 
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Waiting for reply...");
 
@@ -340,16 +331,14 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
 
   const int timeout = 5; //s hardcoded value, move to config file?
   const int attempts = 10;
-  int rv = zmq_msg_recv (&reply, requester, ZMQ_DONTWAIT);
+  int rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
   for(int i = 0; i < attempts && rv < 0; i++) {
     usleep(timeout*1000000/attempts);
-    rv = zmq_msg_recv (&reply, requester, ZMQ_DONTWAIT);
+    rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
   }
   if(rv<0) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Received no reply after waiting for " + std::to_string(timeout) + " seconds");
     zmq_msg_close (&reply);
-    zmq_close (requester);
-    zmq_ctx_destroy (context);
     return;
   }
 
@@ -362,10 +351,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
     TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string);
   }
   zmq_msg_close (&reply);
-  zmq_close (requester);
-  zmq_ctx_destroy (context);
-
-
 }
 
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
