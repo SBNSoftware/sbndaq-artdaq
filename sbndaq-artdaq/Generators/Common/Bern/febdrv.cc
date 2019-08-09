@@ -360,24 +360,20 @@ int getInfo()
 {
   pingclients();
   char ethernet[80];
-  sprintf(ethernet,"%d\n", nclients);
-  std::string text(ethernet);
-  if ( nclients > 0 )
+  std::string text = std::to_string(nclients) + "\n";
+  for ( int i=0; i<nclients; i++)
   {
-    for ( int i=0; i<nclients; i++)
-    {
-      sprintf(ethernet,
-	      "%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X ",
-	      ipkt[i].src_mac[0], ipkt[i].src_mac[1],
-	      ipkt[i].src_mac[2], ipkt[i].src_mac[3],
-	      ipkt[i].src_mac[4], ipkt[i].src_mac[5]);
-      text += ethernet;
-      text += (char *)&ipkt[i].Data[0];
-      text += '\n';
-    }
+    sprintf(ethernet,
+        "%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X ",
+        ipkt[i].src_mac[0], ipkt[i].src_mac[1],
+        ipkt[i].src_mac[2], ipkt[i].src_mac[3],
+        ipkt[i].src_mac[4], ipkt[i].src_mac[5]);
+    text += ethernet;
+    text += (char *)&ipkt[i].Data[0];
+    text += '\n';
   }
   infoLength = text.size();
-  memcpy(&buf[0],text.c_str(),infoLength);
+  memcpy(&buf[0],text.c_str(),infoLength + 1);
   return(0);
 }
 
@@ -1031,8 +1027,8 @@ int main (int argc, char **argv)
 	}
       else if (strcmp(cmd, "GETINFO")==0) 
 	{
-	  zmq_msg_init_size (&reply, infoLength);
-	  memcpy(zmq_msg_data (&reply),buf,infoLength);
+	  zmq_msg_init_size (&reply, infoLength+1);
+	  memcpy(zmq_msg_data (&reply),buf,infoLength+1);
 	}
       else
 	{ 
