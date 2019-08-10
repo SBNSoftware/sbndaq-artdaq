@@ -3,6 +3,8 @@
 
 #include "sbndaq-artdaq/Generators/Common/BernCRTZMQ_GeneratorBase.hh"
 
+#include "BernCRTFEBConfiguration.hh"
+
 #include "zmq.h"
 
 namespace sbndaq {    
@@ -32,10 +34,8 @@ namespace sbndaq {
     enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
     void febctl(feb_command command, unsigned int iFEB);
 
-    const int PROBE_BITSTREAM_LENGTH = 224;
-    const int SLOW_CONTROL_BITSTREAM_LENGTH = 1144;
     void feb_send_bitstreams(unsigned int iFEB);
-    int ConvertASCIIToBitstream(std::string ASCII_bitstream, uint8_t *buffer);
+    std::vector< BernCRTFEBConfiguration> feb_configuration;
   };
 }
 

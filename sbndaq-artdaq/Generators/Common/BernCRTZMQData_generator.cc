@@ -34,10 +34,12 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   const int linger = 0;
   zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
-  TRACE(TR_DEBUG, std::string("There are ") + std::to_string(FEBIDs_.size()) + " FEBID!");
+  TRACE(TR_DEBUG, std::string("There are ") + std::to_string(nFEBs()) + " FEBID!");
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     TRACE(TR_DEBUG, std::string("FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]));
+    feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
   }
+
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     febctl(GETINFO, iFEB);
     feb_send_bitstreams(iFEB);
@@ -231,37 +233,6 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
   }
 }
 
-int sbndaq::BernCRTZMQData::ConvertASCIIToBitstream(std::string ASCII_bitstream, uint8_t *buffer) {
-/**
- * Converts bitstream saved in ASCII format to an actual bitstream
- * Bitstream is returned via argument buffer
- * Returned value is the length of the bitstream (number of bits)
- * The format of the ASCII stream is the following:
- * Read '0' and '1' characters, ignoring spaces until you encounter character different than '0', '1' or ' ', then skip to the next line.
- */
-
-  const int MAXPACKLEN = 1500; //TODO: this should be a global variable, or something...
-  memset(buffer,0,MAXPACKLEN); //reset buffer
-
-  int length = 0;
-  std::istringstream iASCII_bitstream(ASCII_bitstream);
-  std::string line;    
-  while (std::getline(iASCII_bitstream, line)) { //loop over lines
-    for(char& c : line) { //loop over characters
-      if(c == ' ') continue; //ignore blank characters
-      if(c == '0' || c == '1') { //encode the bit into the bitstream
-        const int byte = (++length) / 8;
-        const int bit = length % 8;
-        if(length % 8) buffer[byte] = 0; //clear new byte
-        if(c == '1')  buffer[byte] |= 1 << bit;
-      }
-      else break; //if the character is not a space, '0' or '1', go to next line
-    }
-  }
-
-  return length;
-}
-
 void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   /**
    * Sends configuration bitstream to febdriver
@@ -275,13 +246,9 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
    * TODO:
    *  - Handle return string from the function
    *  - Do something during unexpected events (throw exceptions?)
-   *  - think of a more clever way of passing the bitstreams to this function. Probably they should have their own class/object
    */
 
   const int MAXPACKLEN = 1500; //TODO this should be a global variable or something
-  uint8_t Probe_bitStream[MAXPACKLEN], SlowControl_bitStream[MAXPACKLEN];
-  const int probe_length = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_Probe_bitStream"), Probe_bitStream);
-  const int sc_length    = ConvertASCIIToBitstream(ps_.get<std::string>("CITIROC_SlowControl_bitStream"+std::to_string(iFEB)), SlowControl_bitStream);
 
   uint8_t mac5;
   if(FEBIDs_.size() <= iFEB) {
@@ -298,15 +265,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
     return;
   }
 
-  if(probe_length != PROBE_BITSTREAM_LENGTH) {
-    TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Probe bitstream length incorrect: " + std::to_string(probe_length) + " (expected " + std::to_string(PROBE_BITSTREAM_LENGTH) + ")");
-    return;
-  }
-  if(sc_length != SLOW_CONTROL_BITSTREAM_LENGTH) {
-    TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Slow Control bitstream length incorrect: " + std::to_string(sc_length) + " (expected " + std::to_string(SLOW_CONTROL_BITSTREAM_LENGTH)+")");
-    return;
-  }
-
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Connecting to febdrv...");
   zmq_connect (zmq_requester_, zmq_listening_port_.c_str());
 
@@ -320,9 +278,9 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Sending command " + cmd + "...");
 
   memcpy(buffer,cmd,9);
-  memcpy(buffer+9,SlowControl_bitStream,SLOW_CONTROL_BITSTREAM_LENGTH/8);
-  memcpy(buffer+9+SLOW_CONTROL_BITSTREAM_LENGTH/8,Probe_bitStream,PROBE_BITSTREAM_LENGTH/8);
-  zmq_send (zmq_requester_, buffer, (SLOW_CONTROL_BITSTREAM_LENGTH+PROBE_BITSTREAM_LENGTH)/8+9, 0);
+  memcpy(buffer+9, feb_configuration[iFEB].GetSlowControlBitStream(), feb_configuration[iFEB].GetSlowControlBitStreamLength());
+  memcpy(buffer+9 + feb_configuration[iFEB].GetSlowControlBitStreamLength(), feb_configuration[iFEB].GetProbeBitStream(), feb_configuration[iFEB].GetProbeBitStreamLength());
+  zmq_send (zmq_requester_, buffer, feb_configuration[iFEB].GetSlowControlBitStreamLength()+feb_configuration[iFEB].GetProbeBitStreamLength()+9, 0);
 
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Waiting for reply...");
 
