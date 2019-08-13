@@ -32,7 +32,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 
   zmq_requester_ = zmq_socket (zmq_context_, ZMQ_REQ);
   const int linger = 0;
-  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
+/*  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
   febctl(GETINFO);
 
@@ -43,7 +43,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 
     feb_send_bitstreams(iFEB);
     febctl(DAQ_BEG, iFEB); 
-  }  
+  }*/
 
   TRACE(TR_LOG, "BernCRTZMQData constructor completed");  
 }
@@ -51,10 +51,10 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
   TRACE(TR_LOG, "BernCRTZMQData destructor called");  
-  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+/*  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
     febctl(DAQ_END, iFEB);
   } 
-  zmq_close (zmq_requester_);
+  zmq_close (zmq_requester_);*/
 
   zmq_ctx_destroy(zmq_context_);
 
