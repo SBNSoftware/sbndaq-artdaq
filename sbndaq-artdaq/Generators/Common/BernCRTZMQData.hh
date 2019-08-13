@@ -32,7 +32,7 @@ namespace sbndaq {
     void*  zmq_requester_;
 
     enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
-    void febctl(feb_command command, unsigned int iFEB);
+    void febctl(feb_command command, int iFEB = -1);
 
     void feb_send_bitstreams(unsigned int iFEB);
     std::vector< BernCRTFEBConfiguration> feb_configuration;

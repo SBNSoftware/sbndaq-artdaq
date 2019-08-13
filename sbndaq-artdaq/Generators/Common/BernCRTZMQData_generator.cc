@@ -34,16 +34,16 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   const int linger = 0;
   zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
-  febctl(GETINFO, 255);
+  febctl(GETINFO);
 
   TRACE(TR_LOG, std::string("BernCRTZMQData constructor : There are ") + std::to_string(nFEBs()) + " FEBID");
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TRACE(TR_LOG, std::string("BernCRTZMQData constructor : FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]));
+    TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Last 8 bits of FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff));
     feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
 
     feb_send_bitstreams(iFEB);
     febctl(DAQ_BEG, iFEB); 
-  } 
+  }  
 
   TRACE(TR_LOG, "BernCRTZMQData constructor completed");  
 }
@@ -104,13 +104,13 @@ int sbndaq::BernCRTZMQData::GetDataComplete()
   return 1;
 }
 
-void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
+void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
 /**
  * Copied functionality of febctl tool from febdriver
  * Sends a command to febdrv.
  * Arguments:
  * - command: BIAS_OF BIAS_ON DAQ_BEG DAQ_END GETINFO
- * - mac5 is the last 8 bits of the mac address of the FEB
+ * - iFEB: number of the FEB in the chain. If iFEB is -1, mac5 is set to 255 and command is sent to all boards.
  * 
  * TODO:
  *  - Do something with the firmware versions returned with GETINFO)
@@ -140,13 +140,14 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
   }
 
   uint8_t mac5;
-  if(FEBIDs_.size() <= iFEB) {
+  if((int)FEBIDs_.size() <= iFEB) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!");
     return;
     //throw exception? return special code?
   }
   else {
-    mac5 = FEBIDs_[iFEB] & 0xff;
+    if(iFEB == -1) mac5 = 255;
+    else           mac5 = FEBIDs_[iFEB] & 0xff;
   }
 
   zmq_msg_t request;
@@ -232,7 +233,6 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
   }
 }
 
-//void sbndaq::BernCRTZMQData::feb_send_bitstreams(sbndaq::BernCRTFEBConfiguration feb_configuration, unsigned int iFEB) {
 void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   /**
    * Sends configuration bitstream to febdriver
