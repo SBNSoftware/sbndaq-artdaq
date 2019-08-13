@@ -4,19 +4,19 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
   if(!ConvertASCIIToBitstream(
         ps_.get<std::string>("CITIROC_Probe_bitStream"),
         ProbeBitStream,
-        PROBE_BITSTREAM_LENGTH)) {   
+        PROBE_BITSTREAM_NBITS)) {   
     TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load PROBE bit stream");
   }
   if(!ConvertASCIIToBitstream(
         ps_.get<std::string>("CITIROC_SlowControl_bitStream"+std::to_string(iFEB)),
         SlowControlBitStream,
-        SLOW_CONTROL_BITSTREAM_LENGTH)) {   
+        SLOW_CONTROL_BITSTREAM_NBITS)) {   
     TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load Slow Control bit stream");
   }
 }
 
 
-int sbndaq::BernCRTFEBConfiguration::ConvertASCIIToBitstream(std::string ASCIIBitStream, uint8_t *buffer, int length) {
+int sbndaq::BernCRTFEBConfiguration::ConvertASCIIToBitstream(std::string ASCIIBitStream, uint8_t *buffer, int nBits) {
   /**
    * Converts bitstream saved in ASCII format to an actual bitstream
    * Bitstream is returned via argument buffer
@@ -25,7 +25,7 @@ int sbndaq::BernCRTFEBConfiguration::ConvertASCIIToBitstream(std::string ASCIIBi
    * Read '0' and '1' characters, ignoring spaces until you encounter character different than '0', '1' or ' ', then skip to the next line.
    */
 
-  memset(buffer,0,length); //reset buffer
+  memset(buffer,0,nBits/8); //reset buffer
   int read_bits = 0;
   std::istringstream iASCIIBitStream(ASCIIBitStream);
   std::string line;
@@ -37,9 +37,9 @@ int sbndaq::BernCRTFEBConfiguration::ConvertASCIIToBitstream(std::string ASCIIBi
         const int bit = read_bits % 8;
 
         ++read_bits;
-        if(read_bits > length) {
+        if(read_bits > nBits) {
           TRACE(TR_WARNING, std::string("BernCRTFEBConfiguration::") + __func__ + " too long bitstream!!!");
-          memset(buffer,0,length); //reset buffer
+          memset(buffer,0,nBits/8); //reset buffer
           return false;
         }
 
@@ -49,9 +49,9 @@ int sbndaq::BernCRTFEBConfiguration::ConvertASCIIToBitstream(std::string ASCIIBi
     }
   }
 
-  if(read_bits < length) {
+  if(read_bits < nBits) {
     TRACE(TR_WARNING, std::string("BernCRTFEBConfiguration::") + __func__ + " too short bitstream!!!");
-    memset(buffer,0,length); //reset buffer
+    memset(buffer,0, nBits/8); //reset buffer
     return false;
   }
 
@@ -59,7 +59,7 @@ int sbndaq::BernCRTFEBConfiguration::ConvertASCIIToBitstream(std::string ASCIIBi
 }
 
 
-uint8_t * sbndaq::BernCRTFEBConfiguration::GetProbeBitStream() { return ProbeBitStream; }
-int       sbndaq::BernCRTFEBConfiguration::GetProbeBitStreamLength() { return PROBE_BITSTREAM_LENGTH/8; }
-uint8_t * sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStream() { return SlowControlBitStream; }
-int       sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStreamLength() { return SLOW_CONTROL_BITSTREAM_LENGTH/8; }
+uint8_t * sbndaq::BernCRTFEBConfiguration::GetProbeBitStream()             { return ProbeBitStream; }
+int       sbndaq::BernCRTFEBConfiguration::GetProbeBitStreamNBytes()       { return PROBE_BITSTREAM_NBITS/8; }
+uint8_t * sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStream()       { return SlowControlBitStream; }
+int       sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStreamNBytes() { return SLOW_CONTROL_BITSTREAM_NBITS/8; }

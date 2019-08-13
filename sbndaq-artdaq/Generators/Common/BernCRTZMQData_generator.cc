@@ -34,17 +34,16 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   const int linger = 0;
   zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
-  TRACE(TR_DEBUG, std::string("There are ") + std::to_string(nFEBs()) + " FEBID!");
-  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TRACE(TR_DEBUG, std::string("FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]));
-    feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
-  }
+  febctl(GETINFO, 255);
 
+  TRACE(TR_LOG, std::string("BernCRTZMQData constructor : There are ") + std::to_string(nFEBs()) + " FEBID");
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    febctl(GETINFO, iFEB);
+    TRACE(TR_LOG, std::string("BernCRTZMQData constructor : FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]));
+    feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
+
     feb_send_bitstreams(iFEB);
     febctl(DAQ_BEG, iFEB); 
-  }
+  } 
 
   TRACE(TR_LOG, "BernCRTZMQData constructor completed");  
 }
@@ -54,7 +53,7 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
   TRACE(TR_LOG, "BernCRTZMQData destructor called");  
   for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
     febctl(DAQ_END, iFEB);
-  }
+  } 
   zmq_close (zmq_requester_);
 
   zmq_ctx_destroy(zmq_context_);
@@ -233,6 +232,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, unsigned int iFEB) {
   }
 }
 
+//void sbndaq::BernCRTZMQData::feb_send_bitstreams(sbndaq::BernCRTFEBConfiguration feb_configuration, unsigned int iFEB) {
 void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   /**
    * Sends configuration bitstream to febdriver
@@ -278,9 +278,9 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Sending command " + cmd + "...");
 
   memcpy(buffer,cmd,9);
-  memcpy(buffer+9, feb_configuration[iFEB].GetSlowControlBitStream(), feb_configuration[iFEB].GetSlowControlBitStreamLength());
-  memcpy(buffer+9 + feb_configuration[iFEB].GetSlowControlBitStreamLength(), feb_configuration[iFEB].GetProbeBitStream(), feb_configuration[iFEB].GetProbeBitStreamLength());
-  zmq_send (zmq_requester_, buffer, feb_configuration[iFEB].GetSlowControlBitStreamLength()+feb_configuration[iFEB].GetProbeBitStreamLength()+9, 0);
+  memcpy(buffer+9, feb_configuration[iFEB].GetSlowControlBitStream(), feb_configuration[iFEB].GetSlowControlBitStreamNBytes());
+  memcpy(buffer+9 + feb_configuration[iFEB].GetSlowControlBitStreamNBytes(), feb_configuration[iFEB].GetProbeBitStream(), feb_configuration[iFEB].GetProbeBitStreamNBytes());
+  zmq_send (zmq_requester_, buffer, feb_configuration[iFEB].GetSlowControlBitStreamNBytes()+feb_configuration[iFEB].GetProbeBitStreamNBytes()+9, 0);
 
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Waiting for reply...");
 
