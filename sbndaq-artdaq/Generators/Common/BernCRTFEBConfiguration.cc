@@ -2,13 +2,13 @@
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
   if(!ConvertASCIIToBitstream(
-        ps_.get<std::string>("CITIROC_Probe_bitStream"),
+        ps_.get<std::string>("ProbeBitStream"),
         ProbeBitStream,
         PROBE_BITSTREAM_NBITS)) {   
     TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load PROBE bit stream");
   }
   if(!ConvertASCIIToBitstream(
-        ps_.get<std::string>("CITIROC_SlowControl_bitStream"+std::to_string(iFEB)),
+        ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB)),
         SlowControlBitStream,
         SLOW_CONTROL_BITSTREAM_NBITS)) {   
     TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load Slow Control bit stream");
