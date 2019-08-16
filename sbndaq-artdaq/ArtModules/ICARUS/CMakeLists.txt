@@ -36,25 +36,33 @@ simple_plugin(IcarusInput "source"
   MF_MessageLogger
   ${CETLIB_EXCEPT}
 )
+
 simple_plugin(PhysCrateDump "module"
+         			${ARTDAQ-CORE_UTILITIES}
               sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS)
+
 simple_plugin(PhysCrateWriteICARUSDataFile "module"
+         			${ARTDAQ-CORE_UTILITIES}
               sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS)
+
 simple_plugin(PhysCrateViewer "module"
               sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS
 	      art_root_io_tfile_support ${ROOT_CORE}
 	      art_Framework_Services_Registry
 	      art_root_io_TFileService_service
+	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )
-simple_plugin(PhysCrateSimpleAna "module"
-              sbndaq-artdaq-core_Overlays
+
+			simple_plugin(PhysCrateSimpleAna "module"
+	sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS
 	      art_root_io_tfile_support ${ROOT_CORE}
 	      art_Framework_Services_Registry
 	      art_root_io_TFileService_service
+	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )
 
 # Subdirectories.
