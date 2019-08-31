@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
+
 #define DEBUG_umut 0
 #define EVSPERFEB 1024   // max events per feb per poll to buffer
 #define NBUFS 2   // number of buffers for double-buffering
@@ -38,9 +40,9 @@ void *pubstats2 = NULL;
 
 FEBDTP_PKT_t spkt,rpkt; //send and receive packets
 FEBDTP_PKT_t ipkt[FEB_MAX_CHAIN]; // store info packets
-EVENT_t evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
+sbndaq::BernCRTZMQEvent evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
 int evnum[NBUFS]; //number of good events in the buffer fields
-int evbufstat[NBUFS]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out   
+int evbufstat[NBUFS]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
 int evtsperpoll[256];
 int msperpoll=0;
 int lostperpoll_cpu[256];
@@ -517,10 +519,10 @@ int getSCR(uint8_t mac5, uint8_t *buf1)
 }
 
 
-EVENT_t * getnextevent() //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out  
+sbndaq::BernCRTZMQEvent * getnextevent() //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
 {
-  EVENT_t * retval=0;
-  //EVENT_t evbuf[2][256*EVSPERFEB]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
+  sbndaq::BernCRTZMQEvent * retval=0;
+  //sbndaq::BernCRTZMQEvent evbuf[2][256*EVSPERFEB]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
   //int evnum[2]; //number of good events in the buffer fields
   //int evbufstat[2]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= ready, 3=being sent out   
   int sbi=0;
@@ -742,7 +744,7 @@ int polldata() // poll data from daysy-chain and send it to the publisher socket
   //
   ftime(&mstime0);
   //
-  EVENT_t *evt=0;
+  sbndaq::BernCRTZMQEvent *evt=0;
   int rv=0;
   int jj;
   int numbytes; //number of received bytes
