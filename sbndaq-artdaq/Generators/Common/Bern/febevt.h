@@ -1,17 +1,4 @@
-// 0MQ data backend structure
-typedef struct {
-  uint16_t mac5;
-  uint16_t flags;
-  uint16_t lostcpu;
-  uint16_t lostfpga;
-  uint32_t ts0;
-  uint32_t ts1;
-  uint16_t adc[32];
-  uint32_t coinc;
-} EVENT_t; 
-
-//#define EVLEN 80
-#define EVLEN 84
+#define EVLEN sizeof(sbndaq::BernCRTZMQEvent)
 #define MAGICWORD8 0xa5 //marker for the buffer start in the file 
 #define MAGICWORD16 0xaa55 //marker for the buffer start in the file 
 #define MAGICWORD32 0xaa55aa55 //marker for the buffer start in the file 

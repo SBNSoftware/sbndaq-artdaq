@@ -3,6 +3,8 @@
 
 #include "sbndaq-artdaq/Generators/Common/BernCRTZMQ_GeneratorBase.hh"
 
+#include "BernCRTFEBConfiguration.hh"
+
 #include "zmq.h"
 
 namespace sbndaq {    
@@ -23,12 +25,17 @@ namespace sbndaq {
     int    GetDataComplete();
 
     int    zmq_data_receive_timeout_ms_;
+    std::string zmq_listening_port_;
     std::string zmq_data_pub_port_;
     void*  zmq_context_;
     void*  zmq_subscriber_;
-    
+    void*  zmq_requester_;
 
+    enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
+    void febctl(feb_command command, int iFEB = -1);
 
+    void feb_send_bitstreams(unsigned int iFEB);
+    std::vector< BernCRTFEBConfiguration> feb_configuration;
   };
 }
 

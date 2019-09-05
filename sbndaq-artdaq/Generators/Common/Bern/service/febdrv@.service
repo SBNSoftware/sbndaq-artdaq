@@ -1,0 +1,12 @@
+[Unit]
+Description=febdrv on %I
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/febdrv.%I.conf
+ExecStart=/path_to_febdrv/febdrv $ETHERNET_PORT 300 $ZMQ_PORT
+SyslogIdentifier=febdrv %I
+
+[Install]
+RequiredBy=febdrv-main.service
+
