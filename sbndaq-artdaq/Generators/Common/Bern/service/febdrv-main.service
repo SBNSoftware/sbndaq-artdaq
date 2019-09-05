@@ -1,7 +1,7 @@
 [Unit]
 Description=Main febdrv demon calling individual febdrv instances
 
-#For each ethernet port add "requires" line:
+#For each ethernet port add "BindsTo" line:
 #BindsTo=febdrv@ETHERNET_PORT
 #e.g.
 #BindsTo=febdrv@enp5s0
