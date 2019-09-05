@@ -211,7 +211,6 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
             TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Error during parsing MAC address returned by febdrv (" + line +  ")!");
           }
           else {
-            TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Raw mac address is: " + std::to_string(mac[5]) +":"+ std::to_string(mac[4]) +":"+ std::to_string(mac[3]) +":"+ std::to_string(mac[2]) +":"+ std::to_string(mac[1]) +":"+ std::to_string(mac[0]));
             uint64_t full_mac = 0;
             for(int i = 0; i < 6; i++) {
               full_mac += (uint64_t)mac[i] << i * 8;
@@ -219,17 +218,39 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
             mac5s.push_back(full_mac);
           }
         }
-        //check if all MAC addresses are present in the FHiCL configuration
+        //check if all MAC addresses are unique, present in the FHiCL configuration, and all MACs expected by FHiCL are found
+        std::vector<bool> fcl_mac_found; for(unsigned int i=0;i<nFEBs();i++) fcl_mac_found.push_back(false);
+        bool any_mac_missing = false;
         for(unsigned int iFEB = 0; iFEB < mac5s.size(); iFEB++) {
-          bool config_found = false;
+          bool mac_found = false;
           for(unsigned int jFEB = 0; jFEB < nFEBs(); jFEB++) {
             if(mac5s[iFEB] == FEBIDs_[jFEB]) {
-              config_found = true;
+              if(fcl_mac_found[jFEB]) {
+                TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " MAC address ending with " +std::to_string(mac5&0xff) + " (dec) found twice by febdrv. Check hardware MAC configuration!");
+              }
+              else {
+                fcl_mac_found[jFEB] = true;
+                mac_found = true;
+              }
             }
           }
-          if(!config_found) {
-            TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Configuration for MAC address seen by febdrv (" + std::to_string(mac5s[iFEB]) +  ") missing in the FCL file!");
+          if(!mac_found) {
+            any_mac_missing = true;
+            TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " MAC address seen by febdrv " + std::to_string(mac5s[iFEB] &0xff) +  " (dec) missing in the FCL file!");
           }
+        }
+        bool some_fcl_mac_missing = 0;
+        for(unsigned int jFEB = 0; jFEB < nFEBs(); jFEB++) {
+          if(!fcl_mac_found[jFEB]) {
+            some_fcl_mac_missing = true;
+            break;
+          }
+        }
+        if(some_fcl_mac_missing) {
+            TRACE(TR_WARNING, std::string("BernCRTZMQData::") + __func__ + " Some of the MAC addresses defined in the FCL file do not match any FEBs seen by febdrv.");
+        }
+        else if(!any_mac_missing) {
+            TRACE(TR_LOG, std::string("BernCRTZMQData::") + __func__ + " All "+std::to_string(nFEBs())+" FEBs found in the FCL.");
         }
       }
     }
