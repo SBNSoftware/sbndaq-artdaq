@@ -25,14 +25,13 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
   zmq_data_pub_port_           = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port")+1);
   zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
-
-  TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Calling zmq subscriber with port ")+ zmq_data_pub_port_);
   
   zmq_context_    = zmq_ctx_new();
 
-  zmq_requester_ = zmq_socket (zmq_context_, ZMQ_REQ);
+  TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Calling zmq requester with port ")+ zmq_listening_port_);
+  zmq_requester_ = zmq_socket(zmq_context_, ZMQ_REQ);
   const int linger = 0;
-/*  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
+  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
   febctl(GETINFO);
 
@@ -41,9 +40,12 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
     TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Last 8 bits of FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff));
     feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
 
+//    std::ofstream file("/tmp/aaduszki_tmp_" + std::to_string(iFEB));
+//    file << feb_configuration[iFEB].GetString();
+
     feb_send_bitstreams(iFEB);
     febctl(DAQ_BEG, iFEB); 
-  }*/
+  }
 
   TRACE(TR_LOG, "BernCRTZMQData constructor completed");  
 }
@@ -51,10 +53,10 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
   TRACE(TR_LOG, "BernCRTZMQData destructor called");  
-/*  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
+  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
     febctl(DAQ_END, iFEB);
   } 
-  zmq_close (zmq_requester_);*/
+  zmq_close (zmq_requester_);
 
   zmq_ctx_destroy(zmq_context_);
 
@@ -72,6 +74,7 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
 
   int res=0;
 
+  TRACE(TR_LOG, std::string("BernCRTZMQData::ConfigureStart() : Calling zmq subscriber with port ")+ zmq_data_pub_port_);
   res = zmq_connect(zmq_subscriber_,zmq_data_pub_port_.c_str());
   if(res!=0)
     TRACE(TR_ERROR, "BernCRTZMQDataZMQ::ConfigureStart() failed to connect.");
@@ -133,14 +136,14 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
   }
   
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Connecting to febdrv...");
-  if(zmq_connect (zmq_requester_, zmq_listening_port_.c_str()) < 0) {
+  if(zmq_connect (zmq_requester_, zmq_listening_port_.c_str())) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
     return;
     //throw exception? return special code?
   }
 
   uint8_t mac5;
-  if((int)FEBIDs_.size() <= iFEB) {
+  if((int)nFEBs() <= iFEB) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!");
     return;
     //throw exception? return special code?
@@ -248,8 +251,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
    *  - Do something during unexpected events (throw exceptions?)
    */
 
-  const int MAXPACKLEN = 1500; //TODO this should be a global variable or something
-
   uint8_t mac5;
   if(FEBIDs_.size() <= iFEB) {
     TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!");
@@ -266,21 +267,34 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   }
 
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Connecting to febdrv...");
-  zmq_connect (zmq_requester_, zmq_listening_port_.c_str());
+  if(zmq_connect(zmq_requester_, zmq_listening_port_.c_str())) {
+    TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
+    return;
+  }
 
   char cmd[32];
 
   sprintf(cmd,"SETCONF");
   cmd[8]=mac5;
 
-  uint8_t buffer[MAXPACKLEN];
-
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Sending command " + cmd + "...");
 
+  const int MAXPACKLEN = 1500;
+  uint8_t buffer[MAXPACKLEN];
+
   memcpy(buffer,cmd,9);
-  memcpy(buffer+9, feb_configuration[iFEB].GetSlowControlBitStream(), feb_configuration[iFEB].GetSlowControlBitStreamNBytes());
-  memcpy(buffer+9 + feb_configuration[iFEB].GetSlowControlBitStreamNBytes(), feb_configuration[iFEB].GetProbeBitStream(), feb_configuration[iFEB].GetProbeBitStreamNBytes());
-  zmq_send (zmq_requester_, buffer, feb_configuration[iFEB].GetSlowControlBitStreamNBytes()+feb_configuration[iFEB].GetProbeBitStreamNBytes()+9, 0);
+  memcpy(
+      buffer+9,
+      feb_configuration[iFEB].GetSlowControlBitStream(),
+      feb_configuration[iFEB].GetSlowControlBitStreamNBytes());
+  memcpy(
+      buffer+9 + feb_configuration[iFEB].GetSlowControlBitStreamNBytes(),
+      feb_configuration[iFEB].GetProbeBitStream(),
+      feb_configuration[iFEB].GetProbeBitStreamNBytes());
+  zmq_send(
+      zmq_requester_,
+      buffer,
+      feb_configuration[iFEB].GetSlowControlBitStreamNBytes()+feb_configuration[iFEB].GetProbeBitStreamNBytes()+9, 0);
 
   TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Waiting for reply...");
 

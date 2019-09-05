@@ -27,29 +27,29 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
-  TRACE(TR_LOG,"BernFeb constructor called");  
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase constructor called");  
   Initialize();
-  TRACE(TR_LOG,"BernFeb constructor completed");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase constructor completed");
 }
 
 
 /*---------------------------------------------------------------------*/
 
-bool be_verbose_section = false;
+bool be_verbose_section = true;
 
 
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
 
-if(be_verbose_section){
-std::cout << std::endl;
-std::cout << "---------------------------" << std::endl;
-std::cout << "SECTION 1 - INITIALIZE" << std::endl;
-std::cout << "---------------------------" << std::endl;  
-std::cout << std::endl;
-}
+  if(be_verbose_section){
+    std::cout << std::endl;
+    std::cout << "---------------------------" << std::endl;
+    std::cout << "SECTION 1 - INITIALIZE" << std::endl;
+    std::cout << "---------------------------" << std::endl;  
+    std::cout << std::endl;
+  }
 
-  TRACE(TR_LOG,"BernFeb::Initialize() called");
-  
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::Initialize() called");
+
   //RunNumber_ = ps_.get<uint32_t>("RunNumber",999);
   RunNumber_ = 0;
   SubrunTimeWindowSize_ = ps_.get<uint64_t>("SubRunTimeWindowSize",60e9); //one minute
@@ -86,26 +86,26 @@ std::cout << std::endl;
     }
     else{
       throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
-	<< "MaxTimeDiffs must be same size as ZMQIDs in config!";
+        << "MaxTimeDiffs must be same size as ZMQIDs in config!";
     }
   }
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs", 100000);
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check", 10000);
-  
+
   if(nChannels_!=32)
     throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
       << "nChannels != 32. This is not supported.";
 
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
-			      throttle_usecs_ % throttle_usecs_check_ != 0) ) {
+        throttle_usecs_ % throttle_usecs_check_ != 0) ) {
     throw cet::exception("Error in BernCRTZMQ: disallowed combination of throttle_usecs and throttle_usecs_check (see BernCRTZMQ.hh for rules)");
   }
-  
-  TRACE(TR_LOG,"BernFeb::Initialize() completed");
 
-						
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::Initialize() completed");
+
+
 
   for( size_t i_id=0; i_id<FEBIDs_.size(); ++i_id){
     auto const& id = FEBIDs_[i_id];
@@ -115,7 +115,7 @@ std::cout << std::endl;
 
   TRACE(TR_DEBUG,"\tMade %lu ZMQBuffers",FEBIDs_.size());
 
-  TRACE(TR_LOG,"BernFeb::Initialize() ... starting GetData worker thread.");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::Initialize() ... starting GetData worker thread.");
   share::ThreadFunctor functor = std::bind(&BernCRTZMQ_GeneratorBase::GetData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
   auto getData_worker = share::WorkerThread::createWorkerThread(worker_functor);
@@ -136,7 +136,7 @@ std::cout << "SECTION 2 - START" << "\n";
 std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
-  TRACE(TR_LOG,"BernFeb::start() called");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::start() called");
 
   std::cout << std::endl << "--- START ---" << std::endl;
   
@@ -156,7 +156,7 @@ std::cout << std::endl;
   ConfigureStart();
   GetData_thread_->start();
 
-  TRACE(TR_LOG,"BernFeb::start() completed");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::start() completed");
 }
 
 /*-----------------------------------------------------------------------*/
@@ -171,10 +171,10 @@ std::cout << "SECTION 3 - STOP" << "\n";
 std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
-  TRACE(TR_LOG,"BernFeb::stop() called");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::stop() called");
   GetData_thread_->stop();
   ConfigureStop();
-  TRACE(TR_LOG,"BernFeb::stop() completed");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::stop() completed");
 }
 
 /*-----------------------------------------------------------------------*/
@@ -190,10 +190,10 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
 
-  TRACE(TR_LOG,"BernFeb::stopNoMutex() called");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::stopNoMutex() called");
   GetData_thread_->stop();
   ConfigureStop();
-  TRACE(TR_LOG,"BernFeb::stopNoMutex() completed");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::stopNoMutex() completed");
 }
 
 /*-----------------------------------------------------------------------*/
@@ -208,8 +208,8 @@ std::cout << "SECTION 5 - CLEANUP" << "\n";
 std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
-  TRACE(TR_LOG,"BernFeb::Cleanup() called");
-  TRACE(TR_LOG,"BernFeb::Cleanup() completed");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::Cleanup() called");
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::Cleanup() completed");
 }
 
 /*-----------------------------------------------------------------------*/
@@ -224,9 +224,9 @@ std::cout << "SECTION 6 - BernCRTZMQ_GeneratorBase Destructor" << "\n";
 std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
-  TRACE(TR_LOG,"BernFeb destructor called");  
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase destructor called");  
   Cleanup();
-  TRACE(TR_LOG,"BernFeb destructor completed");  
+  TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase destructor completed");  
 }
 
 /*-----------------------------------------------------------------------*/
@@ -361,7 +361,7 @@ std::cout << std::endl;
 
 	//Time the poll has finished
 
-	//timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
+        //timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
 	
 	timeval time_poll_finished; gettimeofday(&time_poll_finished,NULL);
 
@@ -566,7 +566,7 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
 
-  TRACE(TR_GD_LOG,"BernFeb::GetData() called");
+  TRACE(TR_GD_LOG,"BernCRTZMQ_GeneratorBase::GetData() called");
 
   if( GetDataSetup()!=1 ) return false;;
 
