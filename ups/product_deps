@@ -27,7 +27,7 @@ pqxx		      v6_2_5a      s67
 pqxx                  v6_2_5c      s82
 epics                 v3_16_2
 jsoncpp		      v1_7_7c
-wibtools	      v0_00_04     -
+wibtools	      v0_00_11     -
 windriver	      v12_06_00	   -
 icarus_artdaq_base    v0_08_03     -
 cetbuildtools         v7_13_02       -       only_for_build

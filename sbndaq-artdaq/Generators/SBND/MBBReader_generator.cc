@@ -9,8 +9,8 @@
 #include "cetlib_except/exception.h"
 
 #include "WIBException/ExceptionBase.hh"
-#include "WIB/WIBException.hh"
-#include "WIB/BNL_UDP_Exception.hh"
+#include "WIBException.hh"
+#include "BNL_UDP_Exception.hh"
 
 #include <sstream>
 #include <vector>
@@ -27,7 +27,7 @@ MBBReader::MBBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerato
 {
   const std::string identification = "MBBReader";
 
-  setupmMBB(ps);
+  int success = setupMBB(ps);
   if (!success)
   {
     cet::exception excpt(identification);
@@ -35,9 +35,9 @@ MBBReader::MBBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerato
   }
 }
 
-void MBBReader::setupMBB(fhicl::ParameterSet const& ps) 
+int MBBReader::setupMBB(fhicl::ParameterSet const& ps) 
 {
-
+  int success = 1;
   const std::string identification = "MBBReader::setupMBB";
   auto mbb_address              = ps.get<std::string>("MBB.address");
   auto mbb_table                = ps.get<std::string>("MBB.mbb_table");
@@ -56,6 +56,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   
   if (expected_mbb_fw_version != mbb_fw_version)
   {
+    success = 0;
     cet::exception excpt(identification);
     excpt << "MBB Firmware version is "
         << std::hex << std::setw(8) << std::setfill('0')
@@ -68,6 +69,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   }
 
   TLOG_INFO(identification) << "Configured MBB" << TLOG_ENDL;
+  return success;
 }
 
 // "shutdown" transition

@@ -5,7 +5,7 @@
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
 
-#include "WIB/MBB.hh"
+#include "MBB.hh"
 
 namespace sbndaq 
 {
@@ -28,7 +28,7 @@ namespace sbndaq
      bool getNext_(artdaq::FragmentPtrs& output) override;
      void stopNoMutex() override {}
 
-     void setupMBB(fhicl::ParameterSet const& ps);
+     int setupMBB(fhicl::ParameterSet const& ps);
      std::unique_ptr<MBB> mbb;
   };
 }

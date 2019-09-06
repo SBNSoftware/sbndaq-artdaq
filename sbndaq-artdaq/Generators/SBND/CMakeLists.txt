@@ -6,8 +6,9 @@ include_directories($ENV{TRACE_INC})
 include_directories($ENV{WIBTOOLS_INC})
 include_directories(./TriggerBoard)
 
-cet_find_library( WIBTOOLS    NAMES WIB    PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
-cet_find_library( WIBEXCEPTION    NAMES ToolException    PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+cet_find_library( WIBTOOLS_WIB    NAMES WIB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+cet_find_library( WIBTOOLS_MBB    NAMES MBB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+cet_find_library( WIBEXCEPTION    NAMES ToolException PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
 
 simple_plugin(TriggerBoardReader "generator"
   sbndaq-artdaq-core_Overlays
@@ -46,7 +47,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_WIBReader
 			${TRACE}
 			${CETLIB}
 			${CETLIB_EXCEPT}
-			${WIBTOOLS}
+			${WIBTOOLS_WIB}
 			${WIBEXCEPTION}
 )
 
@@ -65,7 +66,8 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_MBBReader
 			${TRACE}
 			${CETLIB}
 			${CETLIB_EXCEPT}
-			${WIBTOOLS}
+			${WIBTOOLS_WIB}
+			${WIBTOOLS_MBB}
 			${WIBEXCEPTION}
 )
 
