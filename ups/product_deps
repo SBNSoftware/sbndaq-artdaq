@@ -18,7 +18,7 @@ fcldir      -
 
 #
 product		      version	   optional
-artdaq                v3_05_00
+artdaq                v3_06_00
 sbndaq_artdaq_core    v0_02_05
 caencomm	      v1_2a
 caenvme		      v2_50
