@@ -21,16 +21,20 @@ void sbndaq::NevisTPCNUXMIT::ConfigureStart() {
   
   // Run configuration recipe
   fCrate->runNUStream( ps_ );
+  TLOG(TLVL_INFO) << "Created Crate object" << TLOG_ENDL;
+
   // To do: nevistpc::Crate should have a general runConfiguration function
   // The specific Crate configuration function to run should be specified in a fcl file
   // Therefore, only one common generator would be need for all configurations that run the same GetFEMCrateData() function
 
   // Set up worker MonitorCrate thread.
   share::ThreadFunctor MonitorCrate_functor = std::bind( &NevisTPCNUXMIT::MonitorCrate, this );
-  auto MonitorCrate_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( MonitorCrate_functor, "MonitorCrateWorkerThread" ) );
+  auto MonitorCrate_worker_functor = 
+    share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( MonitorCrate_functor, "MonitorCrateWorkerThread" ) );
   auto MonitorCrate_worker = share::WorkerThread::createWorkerThread( MonitorCrate_worker_functor );
   MonitorCrate_thread_.swap( MonitorCrate_worker );
   MonitorCrate_thread_->start();
+  TLOG(TLVL_INFO) << "Started MonitorCrate thread" << TLOG_ENDL;
 
   // Get timestamp for binary file name
   time_t t = time(0);

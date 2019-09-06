@@ -12,6 +12,7 @@ simple_plugin( CAENV1730Dump "module"
   #art_root_io_tfile_support ${ROOT_CORE}
   #art_root_io_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
+	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common 
 )
 
@@ -22,6 +23,7 @@ simple_plugin( CAENV1730WaveformAna "module"
   #art_root_io_tfile_support ${ROOT_CORE}
   #art_root_io_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
+	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common 
 )
 
@@ -32,6 +34,7 @@ simple_plugin( BernCRTZMQAna "module"
   #art_Framework_Services_Optional
   #art_Framework_Services_Optional_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
+	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common 
 )
 
