@@ -9,8 +9,8 @@
 #include "cetlib_except/exception.h"
 
 #include "WIBException/ExceptionBase.hh"
-#include "WIB/WIBException.hh"
-#include "WIB/BNL_UDP_Exception.hh"
+#include "WIBException.hh"
+#include "BNL_UDP_Exception.hh"
 
 #include <sstream>
 #include <vector>

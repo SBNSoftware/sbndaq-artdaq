@@ -5,7 +5,7 @@
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
 
-#include "WIB/WIB.hh"
+#include "WIB.hh"
 
 namespace sbndaq 
 {
