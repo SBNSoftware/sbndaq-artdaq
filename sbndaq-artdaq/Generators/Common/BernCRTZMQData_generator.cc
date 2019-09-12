@@ -35,16 +35,11 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 
   febctl(GETINFO);
 
-  TRACE(TR_LOG, std::string("BernCRTZMQData constructor : There are ") + std::to_string(nFEBs()) + " FEBID");
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Last 8 bits of FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff));
     feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
-
 //    std::ofstream file("/tmp/aaduszki_tmp_" + std::to_string(iFEB));
 //    file << feb_configuration[iFEB].GetString();
-
-    feb_send_bitstreams(iFEB);
-    febctl(DAQ_BEG, iFEB); 
   }
 
   TRACE(TR_LOG, "BernCRTZMQData constructor completed");  
@@ -53,9 +48,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
 sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
   TRACE(TR_LOG, "BernCRTZMQData destructor called");  
-  for(unsigned int iFEB = 0; iFEB < FEBIDs_.size(); iFEB++) {
-    febctl(DAQ_END, iFEB);
-  } 
+
   zmq_close (zmq_requester_);
 
   zmq_ctx_destroy(zmq_context_);
@@ -69,6 +62,14 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
 void sbndaq::BernCRTZMQData::ConfigureStart()
 {
   TRACE(TR_LOG, "BernCRTZMQData::ConfigureStart() called");  
+  
+  //make sure the HV and DAQ are off before we start to send the configuration to the board
+  febctl(BIAS_OF);
+  febctl(DAQ_END);
+
+  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) feb_send_bitstreams(iFEB);
+  febctl(BIAS_ON);
+  febctl(DAQ_BEG); //start data taking mode for all boards 
 
   zmq_subscriber_ = zmq_socket(zmq_context_,ZMQ_SUB);
 
@@ -91,6 +92,9 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
 void sbndaq::BernCRTZMQData::ConfigureStop()
 {
   TRACE(TR_LOG, "BernCRTZMQData::ConfigureStop() called");
+  
+  febctl(DAQ_END);
+  febctl(BIAS_OF);
 
   zmq_close(zmq_subscriber_);
 
@@ -298,7 +302,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   sprintf(cmd,"SETCONF");
   cmd[8]=mac5;
 
-  TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Sending command " + cmd + "...");
+  TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Sending command " + cmd + " to mac address " + std::to_string(mac5) + "...");
 
   const int MAXPACKLEN = 1500;
   uint8_t buffer[MAXPACKLEN];
@@ -373,11 +377,11 @@ size_t sbndaq::BernCRTZMQData::GetZMQData()
     
     if( (wait_count%500) == 0 )
     {
-      TRACE(TR_LOG, std::string("\twait count: ") + std::to_string(wait_count));
+      TRACE(TR_LOG, std::string("BernCRTZMQData::GetZMQData() wait count: ") + std::to_string(wait_count));
     }
   }
   
-  TRACE(TR_LOG, std::string("\toutside wait loop: ") + std::to_string(wait_count));
+  TRACE(TR_LOG, std::string("BernCRTZMQData::GetZMQData() outside wait loop: ") + std::to_string(wait_count));
   
   if(zmq_msg_size(&feb_data_msg)>0)
   {
