@@ -68,7 +68,7 @@ uint8_t brcmac[6]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 ///////////////Forward declarations
 int startDAQ(uint8_t mac5);
-int getInnfo();
+int getInfo();
 
 ///////////////End Forward declarations
 
@@ -307,7 +307,7 @@ void usage()
   printf("Usage: to init febdrv on eth0 interface with poll duration extended by 300 ms, type \n");
   printf("febdrv eth0 300 [listening_port]\n");
   printf("if listening_port is not specified, default is 5555\n");
-  printf("The data publisher, stats and stats2 port numberss are larger by 1, 2 and 3, respectively\n");
+  printf("The data publisher, stats and stats2 port numbers are larger by 1, 2 and 3, respectively\n");
 }
 
 int pingclients()
@@ -335,7 +335,6 @@ int pingclients()
 	    printf("%s\n",rpkt.Data); // new client reply received
 	    sprintf(verstr[nclients],"%s",rpkt.Data); 
 	    changed=1;
-	    // startDAQ(macs[nclients][5]); GLOB_daqon=0;
 	  }
 	nclients++;
       }
