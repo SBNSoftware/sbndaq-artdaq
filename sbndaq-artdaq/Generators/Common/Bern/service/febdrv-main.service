@@ -1,10 +1,10 @@
 [Unit]
 Description=Main febdrv demon calling individual febdrv instances
 
-#For each ethernet port add "requires" line:
-#Requires=febdrv@ETHERNET_PORT
+#For each ethernet port add "BindsTo" line:
+#BindsTo=febdrv@ETHERNET_PORT
 #e.g.
-#Requires=febdrv@enp5s0
+#BindsTo=febdrv@enp5s0
 
 [Service]
 Type=simple
@@ -18,7 +18,7 @@ WantedBy=multi-user.target
 ##Usage and configuration
 ##1. Update path to febdrv in febdrv@.service
 ##2. For each ethernet port with FEBs connected create febdrv.PORTNAME.conf file (based on the attached examples) and copy it to /etc
-##3. For each ethernet port with FEBs connected add line Requires=febdrv@PORTNAME in the [Unit] section in febdrv-main.service
+##3. For each ethernet port with FEBs connected add line BindsTo=febdrv@PORTNAME in the [Unit] section in febdrv-main.service
 ##4. Copy febdrv-main.service and febdrv@.service to /etc/systemd/system
 ##5. Enable services responsible for individual instances:
 #
