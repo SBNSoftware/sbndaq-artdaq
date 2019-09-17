@@ -302,6 +302,23 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   sbndaq::CAENDecoder::checkError(retcod,"ReadLVDSOutputConfig",fBoardID);
 
   CheckReadback("LVDSOutputConfig", fBoardID, data, readBack);
+
+  // If TRIGGER mode, send them out TRG-OUT NIM
+  if ( fModeLVDS == 1 )
+  {
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_TRG_OUT_CONTROL, &data);
+    sbndaq::CAENDecoder::checkError(retcod,"ReadTRGOutputConfig",fBoardID);
+
+    data |= ENABLE_TRG_OUT;
+
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_TRG_OUT_CONTROL, data);
+    sbndaq::CAENDecoder::checkError(retcod,"WriteTRGOutputConfig",fBoardID);
+
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_TRG_OUT_CONTROL, &readBack);
+    sbndaq::CAENDecoder::checkError(retcod,"ReadTRGOutputConfig",fBoardID);
+    
+    CheckReadback("TRGOutputConfig", fBoardID, data, readBack);
+  }
 }
 
 void sbndaq::CAENV1730Readout::ConfigureRecordFormat()

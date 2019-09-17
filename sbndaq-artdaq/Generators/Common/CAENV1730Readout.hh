@@ -81,12 +81,14 @@ namespace sbndaq
     } ACQ_STATUS_MASK_t;
 
     typedef enum {
-      FP_IO_CONTROL   = 0x811C,
-      FP_LVDS_CONTROL = 0x81A0
+      FP_TRG_OUT_CONTROL = 0x8110,
+      FP_IO_CONTROL      = 0x811C,
+      FP_LVDS_CONTROL    = 0x81A0
     } ADDRESS_t;
 
     typedef enum {
-      ENABLE_NEW_LVDS = 0x10
+      ENABLE_NEW_LVDS = 0x10,
+      ENABLE_TRG_OUT  = 0xFF
     } IO_MASK_t;
 
     enum {
