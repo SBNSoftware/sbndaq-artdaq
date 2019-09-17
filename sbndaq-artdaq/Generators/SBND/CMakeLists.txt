@@ -6,8 +6,9 @@ include_directories($ENV{TRACE_INC})
 include_directories($ENV{WIBTOOLS_INC})
 include_directories(./TriggerBoard)
 
-cet_find_library( WIBTOOLS    NAMES WIB    PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
-cet_find_library( WIBEXCEPTION    NAMES ToolException    PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+cet_find_library( WIBTOOLS_WIB    NAMES WIB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+cet_find_library( WIBTOOLS_MBB    NAMES MBB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+cet_find_library( WIBEXCEPTION    NAMES ToolException PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
 
 simple_plugin(TriggerBoardReader "generator"
   sbndaq-artdaq-core_Overlays
@@ -46,7 +47,27 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_WIBReader
 			${TRACE}
 			${CETLIB}
 			${CETLIB_EXCEPT}
-			${WIBTOOLS}
+			${WIBTOOLS_WIB}
+			${WIBEXCEPTION}
+)
+
+cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_MBBReader
+		  SOURCE MBBReader_generator.cc
+		  LIBRARIES
+			artdaq_DAQdata
+			artdaq_Generators
+  			artdaq-core_Utilities
+  			sbndaq-artdaq_Common_Utilities
+			${Boost_SYSTEM_LIBRARY}
+			${ART_UTILITIES}
+			${FHICLCPP}
+			${MF_MESSAGELOGGER}
+			${MF_UTILITIES}
+			${TRACE}
+			${CETLIB}
+			${CETLIB_EXCEPT}
+			${WIBTOOLS_WIB}
+			${WIBTOOLS_MBB}
 			${WIBEXCEPTION}
 )
 
@@ -56,6 +77,29 @@ simple_plugin(WIBReader "generator"
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq-core_Overlays_SBND
   sbndaq-artdaq_Generators_SBND_WIBReader
+  sbndaq-artdaq_Common_Utilities
+  artdaq-core_Data
+  artdaq_Generators
+  artdaq_Application
+  artdaq_DAQdata
+  artdaq-core_Utilities
+  artdaq-utilities_Plugins
+  ${ART_UTILITIES}
+  ${CANVAS}
+  ${TRACE}
+  ${FHICLCPP}
+  ${MF_MESSAGELOGGER}
+  ${CETLIB}
+  ${CETLIB_EXCEPT}
+  ${WIBTOOLS}
+  ${WIBEXCEPTION}
+  )
+
+simple_plugin(MBBReader "generator"
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq-core_Overlays_Common
+  sbndaq-artdaq-core_Overlays_SBND
+  sbndaq-artdaq_Generators_SBND_MBBReader
   sbndaq-artdaq_Common_Utilities
   artdaq-core_Data
   artdaq_Generators

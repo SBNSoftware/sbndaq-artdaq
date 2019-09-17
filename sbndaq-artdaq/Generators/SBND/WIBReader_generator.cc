@@ -9,8 +9,8 @@
 #include "cetlib_except/exception.h"
 
 #include "WIBException/ExceptionBase.hh"
-#include "WIB/WIBException.hh"
-#include "WIB/BNL_UDP_Exception.hh"
+#include "WIBException.hh"
+#include "BNL_UDP_Exception.hh"
 
 #include <sstream>
 #include <vector>
@@ -26,7 +26,7 @@ namespace sbndaq
 WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps) 
 {
   const std::string identification = "WIBReader";
-
+  TLOG_INFO(identification) << "WIBReader constructor" << TLOG_ENDL;
   auto configuration_tries = ps.get<unsigned>("WIB.configuration_tries");
   bool success = false;
   for (unsigned iTry=1; iTry <= configuration_tries; iTry++) 
@@ -70,6 +70,8 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
 {
 
   const std::string identification = "WIBReader::setupWIB";
+  TLOG_INFO(identification) << "Starting setupWIB " << TLOG_ENDL;
+
   auto wib_address                = ps.get<std::string>("WIB.address");
   auto wib_table                  = ps.get<std::string>("WIB.wib_table");
   auto femb_table                 = ps.get<std::string>("WIB.femb_table");
@@ -94,6 +96,7 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
 
   auto force_full_reset           = ps.get<bool>("WIB.force_full_reset");
   auto dnd_wait_time              = ps.get<unsigned>("WIB.dnd_wait_time");
+  TLOG_INFO(identification) << "Starting setupWIB 1" << TLOG_ENDL;
 
   if (use_WIB_fake_data.size() != 4)
   {
@@ -118,18 +121,25 @@ void WIBReader::setupWIB(fhicl::ParameterSet const& ps)
 
   TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
   wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
+  TLOG_INFO(identification) << "Connected to WIB at " <<  wib_address << TLOG_ENDL;
 
 
   // Set whether to continue on errors
+  TLOG_INFO(identification) << "WIB sitch at 1" << TLOG_ENDL;
   wib->SetContinueOnFEMBRegReadError(continueOnFEMBRegReadError);
+  TLOG_INFO(identification) << "WIB sitch at 2" << TLOG_ENDL;
   wib->SetContinueOnFEMBSPIError(continueOnFEMBSPIError);
+  TLOG_INFO(identification) << "WIB sitch at 3" << TLOG_ENDL;
   wib->SetContinueOnFEMBSyncError(continueOnFEMBSyncError);
+  TLOG_INFO(identification) << "WIB sitch at 4" << TLOG_ENDL;
   wib->SetContinueIfListOfFEMBClockPhasesDontSync(continueIfListOfFEMBClockPhasesDontSync);
+  TLOG_INFO(identification) << "WIB sitch at 5" << TLOG_ENDL;
   
-  // For SBND, number of FEMBs is fixed
-  TLOG_DEBUG(identification) << "N DAQ Links:  "  << FEMB_COUNT << TLOG_ENDL;
-  TLOG_DEBUG(identification) << "N FEMB Ports: "  << FEMB_COUNT << TLOG_ENDL;
+ // For SBND, number of FEMBs is fixed
+  TLOG_INFO(identification) << "N DAQ Links:  "  << FEMB_COUNT << TLOG_ENDL;
+  TLOG_INFO(identification) << "N FEMB Ports: "  << FEMB_COUNT << TLOG_ENDL;
   WIB::WIB_DAQ_t daqMode = wib->GetDAQMode();
+  TLOG_INFO(identification) << "WIB sitch at 6" << TLOG_ENDL;
   
   // Need to check firmware version here
 

@@ -1,0 +1,32 @@
+[Unit]
+Description=Main febdrv demon calling individual febdrv instances
+
+#For each ethernet port add "BindsTo" line:
+#BindsTo=febdrv@ETHERNET_PORT
+#e.g.
+#BindsTo=febdrv@enp5s0
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/sleep infinity
+ExecStop=/usr/bin/killall febdrv
+SyslogIdentifier=febdrv-main
+
+[Install]
+WantedBy=multi-user.target 
+
+##Usage and configuration
+##1. Update path to febdrv in febdrv@.service
+##2. For each ethernet port with FEBs connected create febdrv.PORTNAME.conf file (based on the attached examples) and copy it to /etc
+##3. For each ethernet port with FEBs connected add line BindsTo=febdrv@PORTNAME in the [Unit] section in febdrv-main.service
+##4. Copy febdrv-main.service and febdrv@.service to /etc/systemd/system
+##5. Enable services responsible for individual instances:
+#
+##systemctl enable febdrv@enp2s0.service
+##systemctl enable febdrv@enp3s0.service
+#systemctl enable febdrv@enp4s0.service
+#systemctl enable febdrv@enp5s0.service
+#
+##6. Start (or enable) the main service:
+#systemctl start febdrv-main
+

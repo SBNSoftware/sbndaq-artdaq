@@ -14,21 +14,20 @@
 #include <net/if.h>
 #include <netinet/ether.h>
 #include <sys/timeb.h>
-#include <string>
+
 #include "febdrv.h"
 #include "febevt.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
+//#include <curl/curl.h>
 
 #define DEBUG_umut 0
 #define EVSPERFEB 1024   // max events per feb per poll to buffer
 #define NBUFS 2   // number of buffers for double-buffering
 
+//CURL *curl;
+//  CURLcode res;
+
+
 void *context = NULL;
-int infoLength = 0;
 
 //  Socket to respond to clients
 void *responder = NULL;
@@ -39,10 +38,9 @@ void *pubstats = NULL;
 void *pubstats2 = NULL;
 
 FEBDTP_PKT_t spkt,rpkt; //send and receive packets
-FEBDTP_PKT_t ipkt[FEB_MAX_CHAIN]; // store info packets
-sbndaq::BernCRTZMQEvent evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
+EVENT_t evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
 int evnum[NBUFS]; //number of good events in the buffer fields
-int evbufstat[NBUFS]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
+int evbufstat[NBUFS]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out   
 int evtsperpoll[256];
 int msperpoll=0;
 int lostperpoll_cpu[256];
@@ -68,7 +66,6 @@ uint8_t brcmac[6]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 ///////////////Forward declarations
 int startDAQ(uint8_t mac5);
-int getInfo();
 
 ///////////////End Forward declarations
 
@@ -299,15 +296,12 @@ int sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf)
   flushlink();
   packlen=sendtofeb(packlen);
   if(packlen<=0) return 0; 
-  return packlen;
 }
 
 void usage()
 {
   printf("Usage: to init febdrv on eth0 interface with poll duration extended by 300 ms, type \n");
-  printf("febdrv eth0 300 [listening_port]\n");
-  printf("if listening_port is not specified, default is 5555\n");
-  printf("The data publisher, stats and stats2 port numbers are larger by 1, 2 and 3, respectively\n");
+  printf("febdrv eth0 300\n");
 }
 
 int pingclients()
@@ -324,7 +318,6 @@ int pingclients()
   while(recvfromfeb(10000)) 
     if(rpkt.CMD==FEB_OK) 
       {
-	memcpy(&ipkt[nclients],&rpkt,sizeof(rpkt));
 	memcpy(macs[nclients],rpkt.src_mac,6);
 	febs[macs[nclients][5]]=1;
 	if(FEB_present[macs[nclients][5]]==0)
@@ -335,6 +328,7 @@ int pingclients()
 	    printf("%s\n",rpkt.Data); // new client reply received
 	    sprintf(verstr[nclients],"%s",rpkt.Data); 
 	    changed=1;
+	    // startDAQ(macs[nclients][5]); GLOB_daqon=0;
 	  }
 	nclients++;
       }
@@ -355,27 +349,6 @@ int pingclients()
       printf("In total %d FEBs connected.\n",nclients);
     }
   return nclients;
-}
-
-int getInfo()
-{
-  pingclients();
-  char ethernet[80];
-  std::string text = std::to_string(nclients) + "\n";
-  for ( int i=0; i<nclients; i++)
-  {
-    sprintf(ethernet,
-        "%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X ",
-        ipkt[i].src_mac[0], ipkt[i].src_mac[1],
-        ipkt[i].src_mac[2], ipkt[i].src_mac[3],
-        ipkt[i].src_mac[4], ipkt[i].src_mac[5]);
-    text += ethernet;
-    text += (char *)&ipkt[i].Data[0];
-    text += '\n';
-  }
-  infoLength = text.size();
-  memcpy(&buf[0],text.c_str(),infoLength + 1);
-  return(0);
 }
 
 int sendconfig(uint8_t mac5)
@@ -409,7 +382,7 @@ int sendconfig(uint8_t mac5)
   return 1;
 }
 
-int stopDAQ()
+int stopDAQ(uint8_t mac5)
 {
   GLOB_daqon=0;
   return 1;
@@ -518,10 +491,10 @@ int getSCR(uint8_t mac5, uint8_t *buf1)
 }
 
 
-sbndaq::BernCRTZMQEvent * getnextevent() //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
+EVENT_t * getnextevent() //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out  
 {
-  sbndaq::BernCRTZMQEvent * retval=0;
-  //sbndaq::BernCRTZMQEvent evbuf[2][256*EVSPERFEB]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
+  EVENT_t * retval=0;
+  //EVENT_t evbuf[2][256*EVSPERFEB]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
   //int evnum[2]; //number of good events in the buffer fields
   //int evbufstat[2]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= ready, 3=being sent out   
   int sbi=0;
@@ -560,8 +533,8 @@ uint32_t total_acquired=0;
 void free_subbufer (void *data, void *hint) //call back from ZMQ sent function, hint points to subbufer index
 {
   //return;
-  uint64_t sbi;
-  sbi =  (uint64_t)hint; //reset buffer status to empty
+  int sbi;
+  sbi =  (int)hint; //reset buffer status to empty
   evbufstat[sbi]=0;
   evnum[sbi]=0; 
   // printf("Subbuf %d transmission complete.\n",sbi); 
@@ -572,7 +545,7 @@ int senddata()
   //printf("enter sendata()\n");
   int sbi=0;
   void* bptr=0;
-  int64_t sbitosend=-1; // check for filled buffers
+  int sbitosend=-1; // check for filled buffers
   //printf("bufstat "); for(sbi=0;sbi<NBUFS;sbi++) { printf("%d ",evbufstat[sbi]); if(evbufstat[sbi]==1) printf("found 1 ");}  printf("\n");
   for(sbi=0;sbi<NBUFS;sbi++) 
     {
@@ -604,7 +577,6 @@ int senddata()
   //printf("done..\n");
   zmq_msg_close (&msg);
   //printf("exit sendata()\n");
-  return 0;
 }
 
 int sendstats2() //send statistics in binary packet format
@@ -725,162 +697,156 @@ void print_binary(int number, int num_digits)
 	}
     }
 }
-
 //###############################################
 int polldata() // poll data from daysy-chain and send it to the publisher socket
 {  
-  //printf("enter polldata()\n");
-  bool NOts0,NOts1;
-  bool REFEVTts0,REFEVTts1;
-  uint32_t tt0,tt1;
-  uint32_t ts0,ts1;
-  uint32_t ts0_ref,ts1_ref;
-  uint8_t ls2b0,ls2b1; //least sig 2 bits
-  uint16_t adc;
-  uint64_t tmp;
-  // umut
-  uint32_t coinc;
-  //
-  ftime(&mstime0);
-  //
-  sbndaq::BernCRTZMQEvent *evt=0;
-  int rv=0;
-  int jj;
-  int numbytes; //number of received bytes
-  int datalen;  //data buffer
-  msperpoll=0;
-  overwritten=0;
-  lostinfpga=0;
-  //evtsperpoll=0;
-  memset(lostperpoll_cpu,0,sizeof(lostperpoll_cpu));
-  memset(lostperpoll_fpga,0,sizeof(lostperpoll_fpga));
-  memset(evtsperpoll,0,sizeof(evtsperpoll));
-  //
-  if(GLOB_daqon==0) {sleep(1); return 0;} //if no DAQ running - just delay for not too fast ping
-  for(int f=0; f<nclients;f++) //loop on all connected febs : macs[f][6]
-  {
-    ts0ok[macs[f][5]]=1;
-    ts1ok[macs[f][5]]=1;
-    sendcommand(macs[f],FEB_RD_CDR,0,buf);
-    numbytes=1;
-    rpkt.CMD=0; //just to start somehow
-    while(numbytes>0 && rpkt.CMD!=FEB_EOF_CDR) //loop on messages from one FEB
-    {
-      numbytes=recvfromfeb(5000);
-      if(numbytes==0) continue;       
-      if(rpkt.CMD!=FEB_DATA_CDR) continue; //should not happen, but just in case..
-      datalen=numbytes-18;
-      //printf("feb->host: received data packet %d bytes CMD=%04x from  %02x:%02x:%02x:%02x:%02x:%02x.\n", numbytes,rpkt.CMD,rpkt.src_mac[0],rpkt.src_mac[1],rpkt.src_mac[2],rpkt.src_mac[3],rpkt.src_mac[4],rpkt.src_mac[5]);
+	//printf("enter polldata()\n");
+	bool NOts0,NOts1;
+	bool REFEVTts0,REFEVTts1;
+	uint32_t tt0,tt1;
+	uint32_t ts0,ts1;
+	uint32_t ts0_ref,ts1_ref;
+	uint8_t ls2b0,ls2b1; //least sig 2 bits
+	uint16_t adc;
+	uint64_t tmp;
+	// umut
+	uint32_t coinc;
+	//
+	ftime(&mstime0);
+	//
+	EVENT_t *evt=0;
+	int rv=0;
+	int jj;
+	int numbytes; //number of received bytes
+	int datalen;  //data buffer
+	msperpoll=0;
+	overwritten=0;
+	lostinfpga=0;
+	//evtsperpoll=0;
+	memset(lostperpoll_cpu,0,sizeof(lostperpoll_cpu));
+	memset(lostperpoll_fpga,0,sizeof(lostperpoll_fpga));
+	memset(evtsperpoll,0,sizeof(evtsperpoll));
+	//
+	if(GLOB_daqon==0) {sleep(1); return 0;} //if no DAQ running - just delay for not too fast ping
+	for(int f=0; f<nclients;f++) //loop on all connected febs : macs[f][6]
+	{
+		ts0ok[macs[f][5]]=1;
+		ts1ok[macs[f][5]]=1;
+		sendcommand(macs[f],FEB_RD_CDR,0,buf);
+		numbytes=1;
+		rpkt.CMD=0; //just to start somehow
+		while(numbytes>0 && rpkt.CMD!=FEB_EOF_CDR) //loop on messages from one FEB
+		{
+			numbytes=recvfromfeb(5000);
+			if(numbytes==0) continue;       
+			if(rpkt.CMD!=FEB_DATA_CDR) continue; //should not happen, but just in case..
+			datalen=numbytes-18;
+			//printf("feb->host: received data packet %d bytes CMD=%04x from  %02x:%02x:%02x:%02x:%02x:%02x.\n", numbytes,rpkt.CMD,rpkt.src_mac[0],rpkt.src_mac[1],rpkt.src_mac[2],rpkt.src_mac[3],rpkt.src_mac[4],rpkt.src_mac[5]);
 			
-      jj=0;
-      while(jj<datalen)
-      {
-	//printf(" Remaining events: %d\n",(t->gpkt).REG);
-	//printf("Flags: 0x%08x ",*(UInt_t*)(&(t->gpkt).Data[jj]));
-	overwritten=*(uint16_t*)(&(rpkt).Data[jj]); 
-	jj=jj+2;
-	lostinfpga=*(uint16_t*)(&(rpkt).Data[jj]); 
-	jj=jj+2;
-	total_lost+=lostinfpga;
-	lostperpoll_fpga[rpkt.src_mac[5]]+=lostinfpga;
-	ts0=*(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4; 
-	ts1=*(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4; 
-	//	printf("T0=%u ns, T1=%u ns \n",ts0,ts1);
-	ls2b0=ts0 & 0x00000003;
-	ls2b1=ts1 & 0x00000003;
-	tt0=(ts0 & 0x3fffffff) >>2; // and bit, right shift operators
-	tt1=(ts1 & 0x3fffffff) >>2;
-	tt0=(GrayToBin(tt0) << 2) | ls2b0; // lleft shift operator
-	tt1=(GrayToBin(tt1) << 2) | ls2b1;
-	tt0=tt0+5;//IK: correction based on phase drift w.r.t GPS
-	tt1=tt1+5; //IK: correction based on phase drift w.r.t GPS
-	NOts0=((ts0 & 0x40000000)>0); // check overflow bit
-	NOts1=((ts1 & 0x40000000)>0);
-	//        if((ts0 & 0x80000000)>0) {ts0=0x0; ts0_ref=tt0; ts0_ref_MEM[rpkt.src_mac[5]]=tt0;} 
-	//        else { ts0=tt0; ts0_ref=ts0_ref_MEM[rpkt.src_mac[5]]; }
-	//        if((ts1 & 0x80000000)>0) {ts1=0x0; ts1_ref=tt1; ts1_ref_MEM[rpkt.src_mac[5]]=tt1;} 
-	//        else { ts1=tt1; ts1_ref=ts1_ref_MEM[rpkt.src_mac[5]]; }
+			jj=0;
+			while(jj<datalen)
+			{
+				//printf(" Remaining events: %d\n",(t->gpkt).REG);
+				//printf("Flags: 0x%08x ",*(UInt_t*)(&(t->gpkt).Data[jj]));
+				overwritten=*(uint16_t*)(&(rpkt).Data[jj]); 
+				jj=jj+2;
+				lostinfpga=*(uint16_t*)(&(rpkt).Data[jj]); 
+				jj=jj+2;
+				total_lost+=lostinfpga;
+				lostperpoll_fpga[rpkt.src_mac[5]]+=lostinfpga;
+				ts0=*(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4; 
+				ts1=*(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4; 
+				//	printf("T0=%u ns, T1=%u ns \n",ts0,ts1);
+				ls2b0=ts0 & 0x00000003;
+				ls2b1=ts1 & 0x00000003;
+				tt0=(ts0 & 0x3fffffff) >>2; // and bit, right shift operators
+				tt1=(ts1 & 0x3fffffff) >>2;
+				tt0=(GrayToBin(tt0) << 2) | ls2b0; // lleft shift operator
+				tt1=(GrayToBin(tt1) << 2) | ls2b1;
+				tt0=tt0+5;//IK: correction based on phase drift w.r.t GPS
+				tt1=tt1+5; //IK: correction based on phase drift w.r.t GPS
+				NOts0=((ts0 & 0x40000000)>0); // check overflow bit
+				NOts1=((ts1 & 0x40000000)>0);
+				//        if((ts0 & 0x80000000)>0) {ts0=0x0; ts0_ref=tt0; ts0_ref_MEM[rpkt.src_mac[5]]=tt0;} 
+				//        else { ts0=tt0; ts0_ref=ts0_ref_MEM[rpkt.src_mac[5]]; }
+				//        if((ts1 & 0x80000000)>0) {ts1=0x0; ts1_ref=tt1; ts1_ref_MEM[rpkt.src_mac[5]]=tt1;} 
+				//        else { ts1=tt1; ts1_ref=ts1_ref_MEM[rpkt.src_mac[5]]; }
 				
-	if((ts0 & 0x80000000)>0) 
-	{
-	  REFEVTts0=1; 
-	  ts0=tt0; 
-	  ts0_ref=tt0; 
-	  ts0_ref_MEM[rpkt.src_mac[5]]=tt0;
-	}
-	else 
-	{
-	  REFEVTts0=0; 
-	  ts0=tt0; 
-	  ts0_ref=ts0_ref_MEM[rpkt.src_mac[5]]; 
-	}
-	if((ts1 & 0x80000000)>0) 
-	{
-	  REFEVTts1=1; 
-	  ts1=tt1; 
-	  ts1_ref=tt1; 
-	  ts1_ref_MEM[rpkt.src_mac[5]]=tt1;
-	}
-	else
-	{
-	  REFEVTts1=0; 
-	  ts1=tt1; 
-	  ts1_ref=ts1_ref_MEM[rpkt.src_mac[5]]; 
-	}
+				if((ts0 & 0x80000000)>0) 
+				{
+					REFEVTts0=1; 
+					ts0=tt0; 
+					ts0_ref=tt0; 
+					ts0_ref_MEM[rpkt.src_mac[5]]=tt0;
+				} else {
+					REFEVTts0=0; 
+					ts0=tt0; 
+					ts0_ref=ts0_ref_MEM[rpkt.src_mac[5]]; 
+				}
+				if((ts1 & 0x80000000)>0) 
+				{
+					REFEVTts1=1; 
+					ts1=tt1; 
+					ts1_ref=tt1; 
+					ts1_ref_MEM[rpkt.src_mac[5]]=tt1;
+				} else {
+					REFEVTts1=0; 
+					ts1=tt1; 
+					ts1_ref=ts1_ref_MEM[rpkt.src_mac[5]]; 
+				}
 				
-	//	 printf("T0=%u ns, T1=%u ns T0_ref=%u ns  T1_ref=%u ns \n",ts0,ts1,ts0_ref,ts1_ref);
-	//         tmp=ts0*1e9/(ts0_ref-1); ts0=tmp;
-	//         tmp=ts1*1e9/(ts0_ref-1); ts1=tmp;
-	//         tmp=ts1_ref*1e9/(ts0_ref-1); ts1_ref=tmp;
-	//	 printf("Corrected T0=%u ns, T1=%u ns T0_ref=%u ns  T1_ref=%u ns \n",ts0,ts1,ts0_ref,ts1_ref);
-	evt=getnextevent();
-	if(evt==0) 
-	{
-	  driver_state=DRV_BUFOVERRUN; 
-	  printdate();  
-	  printf("Buffer overrun for FEB S/N %d !! Aborting.\n",macs[f][5]); 
-	  continue;
-	} 
-	evt->ts0=ts0;
-	evt->ts1=ts1;
-	evt->lostcpu=overwritten;
-	evt->lostfpga=lostinfpga;  
-	evt->flags=0;
-	evt->mac5=rpkt.src_mac[5];
-	// the "|" operator is the bitwise OR operator.
-	if(NOts0==0) evt->flags|=0x0001; else ts0ok[macs[f][5]]=0;    //opposite logic! 1 if TS is present, 0 if not!    
-	if(NOts1==0) evt->flags|=0x0002; else ts1ok[macs[f][5]]=0;
-	if(REFEVTts0==1) evt->flags|=0x0004; //bit indicating TS0 reference event
-	if(REFEVTts1==1) evt->flags|=0x0008; //bit indicating TS1 reference event
-	//
-	if(DEBUG_umut) printf("Mac5: %d Flag: %d TS0: %u ns TS1: %u ns\n",evt->mac5, evt->flags, evt->ts0, evt->ts1);
-	for(int kk=0; kk<32; kk++) 
-	{ 
-	  evt->adc[kk]=*(uint16_t*)(&(rpkt).Data[jj]); 
-	  if(DEBUG_umut) printf("%d ",evt->adc[kk]);
-	  jj++; 
-	  jj++;
-	}
-	//
-	coinc = *(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4;
-	if(DEBUG_umut) print_binary(coinc,16);
-	if(DEBUG_umut) printf("\n");
-	//umut
-	evt->coinc = coinc;
-	//
-	total_acquired++;
-	evtsperpoll[rpkt.src_mac[5]]++;
-      }   //loop on event buffer in one L2 packet     
-    }	// loop on messages from 1 FEB
-    total_lost+=overwritten;
-    lostperpoll_cpu[rpkt.src_mac[5]]+=overwritten;
-  } //loop on FEBS
-
-  //if(evtsperpoll>0) printf(" %d events per poll.\n",evtsperpoll); 
-  ftime(&mstime1);
-  msperpoll=(mstime1.time-mstime0.time)*1000+(mstime1.millitm-mstime0.millitm);
-  //printf("exit polldata()\n");
-  return rv;
+				//	 printf("T0=%u ns, T1=%u ns T0_ref=%u ns  T1_ref=%u ns \n",ts0,ts1,ts0_ref,ts1_ref);
+				//         tmp=ts0*1e9/(ts0_ref-1); ts0=tmp;
+				//         tmp=ts1*1e9/(ts0_ref-1); ts1=tmp;
+				//         tmp=ts1_ref*1e9/(ts0_ref-1); ts1_ref=tmp;
+				//	 printf("Corrected T0=%u ns, T1=%u ns T0_ref=%u ns  T1_ref=%u ns \n",ts0,ts1,ts0_ref,ts1_ref);
+				evt=getnextevent();
+				if(evt==0) 
+				{
+					driver_state=DRV_BUFOVERRUN; 
+					printdate();  
+					printf("Buffer overrun for FEB S/N %d !! Aborting.\n",macs[f][5]); 
+					continue;
+				} 
+				evt->ts0=ts0;
+				evt->ts1=ts1;
+				evt->lostcpu=overwritten;
+				evt->lostfpga=lostinfpga;  
+				evt->flags=0;
+				evt->mac5=rpkt.src_mac[5];
+				// the "|" operator is the bitwise OR operator.
+				if(NOts0==0) evt->flags|=0x0001; else ts0ok[macs[f][5]]=0;    //opposite logic! 1 if TS is present, 0 if not!    
+				if(NOts1==0) evt->flags|=0x0002; else ts1ok[macs[f][5]]=0;
+				if(REFEVTts0==1) evt->flags|=0x0004; //bit indicating TS0 reference event
+				if(REFEVTts1==1) evt->flags|=0x0008; //bit indicating TS1 reference event
+				//
+				if(DEBUG_umut) printf("Mac5: %d Flag: %d TS0: %u ns TS1: %u ns\n",evt->mac5, evt->flags, evt->ts0, evt->ts1);
+				for(int kk=0; kk<32; kk++) 
+				{ 
+					evt->adc[kk]=*(uint16_t*)(&(rpkt).Data[jj]); 
+					if(DEBUG_umut) printf("%d ",evt->adc[kk]);
+					jj++; 
+					jj++;
+				}
+				//
+				coinc = *(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4;
+				if(DEBUG_umut) print_binary(coinc,16);
+				if(DEBUG_umut) printf("\n");
+				//umut
+				evt->coinc = coinc;
+				//
+				total_acquired++;
+				evtsperpoll[rpkt.src_mac[5]]++;
+			}   //loop on event buffer in one L2 packet     
+		}	// loop on messages from 1 FEB
+		total_lost+=overwritten;
+		lostperpoll_cpu[rpkt.src_mac[5]]+=overwritten;
+	} //loop on FEBS
+	//if(evtsperpoll>0) printf(" %d events per poll.\n",evtsperpoll); 
+	ftime(&mstime1);
+	msperpoll=(mstime1.time-mstime0.time)*1000+(mstime1.millitm-mstime0.millitm);
+	//printf("exit polldata()\n");
+	return rv;
 }
 
 int polldelay=1;
@@ -890,18 +856,7 @@ int main (int argc, char **argv)
   //printf("WARNING!! The poll duration is set to minimum %d ms.\n",polldelay);
   int rv;
   char cmd[32]; //command string
-  if(argc<3 || argc > 4) { usage(); return 0;}
-
-  int listening_port;
-  if(argc == 3) listening_port = 5555;
-  else listening_port = atoi(argv[3]);
-
-  char listening_socket[32], publishing_socket[32], stats_socket[32], stats2_socket[32];
-  sprintf(listening_socket,  "tcp://*:%d", listening_port);
-  sprintf(publishing_socket, "tcp://*:%d", listening_port+1);
-  sprintf(stats_socket,      "tcp://*:%d", listening_port+2);
-  sprintf(stats2_socket,     "tcp://*:%d", listening_port+3);
-
+  if(argc!=3) { usage(); return 0;}
   polldelay=atoi(argv[2]);
   printf("WARNING!! The poll duration is set to minimum %d ms.\n",polldelay);
   memset(evbuf,0, sizeof(evbuf));
@@ -913,8 +868,8 @@ int main (int argc, char **argv)
   memset(FEB_evrate,0,256);
   memset(FEB_biason,0,256);
   memset(FEB_present,0,256);
-  memset(FEB_lastheard,0,256*sizeof(time_t)); //number of seconds since the board is heard
-  memset(FEB_VCXO,0,256*sizeof(uint16_t));
+  memset(FEB_lastheard,0,256); //number of seconds since the board is heard
+  memset(FEB_VCXO,0,256);
   // network interface to febs
   rv=initif(argv[1]);
   if(rv==0) 
@@ -927,58 +882,58 @@ int main (int argc, char **argv)
   
   //  Socket to respond to clients
   responder = zmq_socket (context, ZMQ_REP);
-  rv=zmq_bind (responder, listening_socket);
+  rv=zmq_bind (responder, "tcp://*:5555");
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind socket %s for command! Exiting.\n", listening_socket); 
+      printf("Can't bind tcp socket for command! Exiting.\n"); 
       return 0;
     }
   //rv=zmq_bind (responder, "ipc://command");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for command! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: listening at %s\n", listening_socket);
+  printdate(); printf ("febdrv: listening at tcp://5555\n");
   //printdate(); printf ("febdrv: listening at ipc://command\n");
   
   //  Socket to send data to clients
   publisher = zmq_socket (context, ZMQ_PUB);
-  rv = zmq_bind (publisher, publishing_socket);
+  rv = zmq_bind (publisher, "tcp://*:5556");
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind socket %s for data! Exiting.\n", publishing_socket); 
+      printf("Can't bind tcp socket for data! Exiting.\n"); 
       return 0;
     }
   //rv = zmq_bind (publisher, "ipc://data");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for data! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: data publisher at %s\n", publishing_socket);
+  printdate(); printf ("febdrv: data publisher at tcp://5556\n");
   //printdate(); printf ("febdrv: data publisher at ipc://data\n");
   
   //  Socket to send statistics to clients
   pubstats = zmq_socket (context, ZMQ_PUB);
-  rv = zmq_bind (pubstats, stats_socket);
+  rv = zmq_bind (pubstats, "tcp://*:5557");
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind socket %s for stats! Exiting.\n", stats_socket); 
+      printf("Can't bind tcp socket for stats! Exiting.\n"); 
       return 0;
     }
   //rv = zmq_bind (pubstats, "ipc://stats");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for stats! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: stats publisher at %s\n", stats_socket);
+  printdate(); printf ("febdrv: stats publisher at tcp://5557\n");
   //printdate(); printf ("febdrv: stats publisher at ipc://stats\n");
   
   //  Socket to send binary packed statistics to clients
   pubstats2 = zmq_socket (context, ZMQ_PUB);
-  rv = zmq_bind (pubstats2, stats2_socket);
+  rv = zmq_bind (pubstats2, "tcp://*:5558");
   if(rv<0) 
     {
       printdate(); 
-      printf("Can't bind socket %s for stats2! Exiting.\n", stats2_socket); 
+      printf("Can't bind tcp socket for stats2! Exiting.\n"); 
       return 0;
     }
   //rv = zmq_bind (pubstats2, "ipc://stats2");
   //if(rv<0) {printdate(); printf("Can't bind ipc socket for stats2! Exiting.\n"); return 0;}
-  printdate(); printf ("febdrv: stats2 publisher at %s\n", stats2_socket);
+  printdate(); printf ("febdrv: stats2 publisher at tcp://5558\n");
   //printdate(); printf ("febdrv: stats2 publisher at ipc://stats2\n");
   
   //initialising FEB daisy chain
@@ -1007,17 +962,16 @@ int main (int argc, char **argv)
 	  continue;
 	} 
       sprintf(cmd,"%s",(char*)zmq_msg_data(&request));
-      printdate(); printf ("Received Command %s %02x  ",cmd, *(uint8_t*)(zmq_msg_data(&request)+8)); 
+      printdate(); printf ("Received Command %s %02x  ",cmd, *(uint8_t*)(zmq_msg_data(&request)+8) );
       rv=0;
       if(nclients>0)
 	{
 	  if(strcmp(cmd, "BIAS_ON")==0) rv=biasON(*(uint8_t*)(zmq_msg_data(&request)+8)); //get 8-th byte of message - mac of target board
 	  else if (strcmp(cmd, "BIAS_OF")==0) rv=biasOFF(*(uint8_t*)(zmq_msg_data(&request)+8));
 	  else if (strcmp(cmd, "DAQ_BEG")==0) rv=startDAQ(*(uint8_t*)(zmq_msg_data(&request)+8));
-	  else if (strcmp(cmd, "DAQ_END")==0) rv=stopDAQ();
+	  else if (strcmp(cmd, "DAQ_END")==0) rv=stopDAQ(*(uint8_t*)(zmq_msg_data(&request)+8));
 	  else if (strcmp(cmd, "SETCONF")==0) rv=configu(*(uint8_t*)(zmq_msg_data(&request)+8), (uint8_t*)(zmq_msg_data(&request)+9), zmq_msg_size (&request)-9); 
 	  else if (strcmp(cmd, "GET_SCR")==0) rv=getSCR(*(uint8_t*)(zmq_msg_data(&request)+8),buf); 
-	  else if (strcmp(cmd, "GETINFO")==0) rv=getInfo();
 	}
       //  Send reply back to client
       zmq_msg_t reply;
@@ -1026,17 +980,11 @@ int main (int argc, char **argv)
 	  zmq_msg_init_size (&reply, 1144/8);
 	  memcpy(zmq_msg_data (&reply),buf,1144/8);
 	}
-      else if (strcmp(cmd, "GETINFO")==0) 
-	{
-	  zmq_msg_init_size (&reply, infoLength+1);
-	  memcpy(zmq_msg_data (&reply),buf,infoLength+1);
-	}
       else
 	{ 
 	  zmq_msg_init_size (&reply, 5);
-	  /* The following is really weird, right? */
-	  if(rv>0) sprintf((char *)zmq_msg_data (&reply), "OK");
-	  else sprintf((char *)zmq_msg_data (&reply), "ERR");
+	  if(rv>0) sprintf(zmq_msg_data (&reply), "OK");
+	  else sprintf(zmq_msg_data (&reply), "ERR");
 	}
       printf("Sending reply %s\n",(char*)zmq_msg_data (&reply));
       zmq_msg_send (&reply, responder, 0);

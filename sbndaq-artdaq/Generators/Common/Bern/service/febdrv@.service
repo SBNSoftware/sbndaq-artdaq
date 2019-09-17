@@ -1,0 +1,14 @@
+[Unit]
+Description=febdrv on %I
+BindsTo=sys-subsystem-net-devices-%I.device
+After=sys-subsystem-net-devices-%I.device
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/febdrv.%I.conf
+ExecStart=/path_to_febdrv/febdrv %I 300 $ZMQ_PORT
+SyslogIdentifier=febdrv %I
+
+[Install]
+RequiredBy=febdrv-main.service
+
