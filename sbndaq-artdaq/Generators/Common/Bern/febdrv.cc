@@ -144,6 +144,22 @@ int initif(char *iface)
       perror("sender: socket");
       return 0;
     }
+  /* Bind RAW to device */
+  if (setsockopt(sockfd_w, SOL_SOCKET, SO_BINDTODEVICE, ifName, IF_NAMESIZE-1) == -1){
+    perror("SO_BINDTODEVICE RAW");
+    return 0;
+  }
+  struct ifreq ifreq_s;
+  strncpy( ifreq_s.ifr_name, iface, IF_NAMESIZE );
+  ioctl(sockfd_w, SIOCGIFINDEX, &ifreq_s );
+  struct sockaddr_ll sockaddr_ll_s;
+  memset(&sockaddr_ll_s, 0, sizeof(struct sockaddr_ll) );
+  sockaddr_ll_s.sll_family = AF_PACKET;
+  sockaddr_ll_s.sll_ifindex = ifreq_s.ifr_ifindex;
+  if (bind(sockfd_w, (struct sockaddr *)&sockaddr_ll_s, sizeof(struct sockaddr_ll)) == -1){
+    perror("bind sockfd_w");
+    return 0;
+  }
   /* Open PF_PACKET socket, listening for EtherType ETHER_TYPE */
   if ((sockfd_r = socket(PF_PACKET, SOCK_RAW, spkt.iptype)) == -1) 
     {
@@ -162,7 +178,10 @@ int initif(char *iface)
       perror("SO_BINDTODEVICE");
       return 0;
     }
-  
+  if (bind(sockfd_r, (struct sockaddr *)&sockaddr_ll_s, sizeof(struct sockaddr_ll)) == -1){
+    perror("bind sockfd_r");
+    return 0;
+  }
   /* Get the index of the interface to send on */
   memset(&if_idx, 0, sizeof(struct ifreq));
   strncpy(if_idx.ifr_name, ifName, IFNAMSIZ-1);
@@ -258,10 +277,7 @@ int flushlink()
 
 int sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf)
 {
-  int numbytes=1;
-  int retval=0;
   int packlen=64;
-  int tout=50000;
   memcpy(&spkt.dst_mac,mac,6);        
   memcpy(&spkt.CMD,&cmd,2);
   memcpy(&spkt.REG,&reg,2);
@@ -298,7 +314,10 @@ int sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf)
     }
   flushlink();
   packlen=sendtofeb(packlen);
-  if(packlen<=0) return 0; 
+  if(packlen<=0) {
+    printf("sendcommand - sendtofeb returned ERROR, exitting\n");
+    exit(1);
+  }
   return packlen;
 }
 
@@ -321,7 +340,7 @@ int pingclients()
   dstmac[5]=0xff; 
   sendcommand(dstmac,FEB_SET_RECV,FEB_VCXO[nclients],hostmac);
   
-  while(recvfromfeb(10000)) 
+  while(recvfromfeb(10000)) { 
     if(rpkt.CMD==FEB_OK) 
       {
 	memcpy(&ipkt[nclients],&rpkt,sizeof(rpkt));
@@ -338,6 +357,7 @@ int pingclients()
 	  }
 	nclients++;
       }
+  }
   for(int f=0;f<256;f++)
     {
       if(FEB_present[f]==1 && febs[f]==0) 
