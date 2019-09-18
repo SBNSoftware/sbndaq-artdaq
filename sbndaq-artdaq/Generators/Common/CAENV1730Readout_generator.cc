@@ -182,43 +182,49 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   // wes, 16Jan2018: disabling default parameters
   ///
   fFragmentID = ps.get<uint32_t>("fragment_id");
-  TLOG(TCONFIG)<< __func__ << ": fFragmentID=" << fFragmentID;
+  TLOG(TINFO)<< __func__ << ": fFragmentID=" << fFragmentID;
 
   fVerbosity = ps.get<int>("Verbosity"); //-1
-  TLOG(TCONFIG) << __func__<< ": Verbosity=" << fVerbosity;
+  TLOG(TINFO) << __func__<< ": Verbosity=" << fVerbosity;
 
   fBoardChainNumber = ps.get<int>("BoardChainNumber"); //0
-  TLOG(TCONFIG)<<__func__ << ": BoardChainNumber=" << fBoardChainNumber;
+  TLOG(TINFO)<<__func__ << ": BoardChainNumber=" << fBoardChainNumber;
 
   fInterruptLevel = ps.get<uint8_t>("InterruptLevel"); //1
-  TLOG(TCONFIG) << __func__ << ": InterruptLevel=" << fInterruptLevel;
+  TLOG(TINFO) << __func__ << ": InterruptLevel=" << fInterruptLevel;
 
   fInterruptStatusID = ps.get<uint32_t>("InterruptStatusID"); //0
-  TLOG(TCONFIG) << __func__ << ": InterruptStatusID=" << fInterruptStatusID;
+  TLOG(TINFO) << __func__ << ": InterruptStatusID=" << fInterruptStatusID;
 
   fInterruptEventNumber = ps.get<uint16_t>("InterruptEventNumber"); //1
-  TLOG(TCONFIG) << __func__<< ": InterruptEventNumber=" << fInterruptEventNumber;
+  TLOG(TINFO) << __func__<< ": InterruptEventNumber=" << fInterruptEventNumber;
 
   fSWTrigger = ps.get<bool>("SWTrigger"); //false
-  TLOG(TCONFIG)<<__func__ << ": SWTrigger=" << fSWTrigger ;
+  TLOG(TINFO)<<__func__ << ": SWTrigger=" << fSWTrigger ;
 
   fModeLVDS = ps.get<uint32_t>("ModeLVDS"); // LVDS output mode
-  TLOG(TCONFIG)<<__func__ << ": ModeLVDS=" << fModeLVDS;
+  TLOG(TINFO)<<__func__ << ": ModeLVDS=" << fModeLVDS;
+
+  fSelfTriggerMode = ps.get<uint32_t>("SelfTriggerMode"); 
+  TLOG(TERROR)<<__func__ << ": SelfTriggerMode=" << fSelfTriggerMode;
+
+  fSelfTriggerMask = ps.get<uint32_t>("SelfTriggerMask"); 
+  TLOG(TERROR)<<__func__ << ": SelfTriggerMask=" << std::hex << fSelfTriggerMask << std::dec;
 
   fGetNextSleep = ps.get<uint32_t>("GetNextSleep"); //1000000
-  TLOG(TCONFIG) << __func__<< ": GetNextSleep=" << fGetNextSleep;
+  TLOG(TINFO) << __func__<< ": GetNextSleep=" << fGetNextSleep;
 
   fCircularBufferSize = ps.get<uint32_t>("CircularBufferSize"); //1000000
-  TLOG(TCONFIG) << __func__<< ": CircularBufferSize=" << fCircularBufferSize;
+  TLOG(TINFO) << __func__<< ": CircularBufferSize=" << fCircularBufferSize;
 
   fCombineReadoutWindows = ps.get<bool>("CombineReadoutWindows");
-  TLOG(TCONFIG) <<__func__ << ": CombineReadoutWindows=" << fCombineReadoutWindows;
+  TLOG(TINFO) <<__func__ << ": CombineReadoutWindows=" << fCombineReadoutWindows;
 
   fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig",false);
-  TLOG(TCONFIG) <<__func__ <<": CalibrateOnConfig=" << fCalibrateOnConfig;
+  TLOG(TINFO) <<__func__ <<": CalibrateOnConfig=" << fCalibrateOnConfig;
 
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("fGetNextFragmentBunchSize",20);
-  TLOG(TCONFIG) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
+  TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
 }
 
@@ -271,6 +277,17 @@ void sbndaq::CAENV1730Readout::RunADCCalibration()
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
   auto retcode = CAEN_DGTZ_Calibrate(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
+}
+
+void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
+{
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+  uint32_t data,readBack;
+
+  retcod = CAEN_DGTZ_SetChannelSelfTrigger(fHandle,
+					   (CAEN_DGTZ_TriggerMode_t)fSelfTriggerMode,
+					   fSelfTriggerMask);
+  sbndaq::CAENDecoder::checkError(retcod,"SetSelfTriggerMask",fBoardID);
 }
 
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
@@ -462,16 +479,8 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   retcode = CAEN_DGTZ_GetExtTriggerInputMode(fHandle,(CAEN_DGTZ_TriggerMode_t *)&readback);
   CheckReadback("SetExtTriggerInputMode", fBoardID,fCAEN.extTrgMode,readback);
 
-  /*
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetSelfTriggerMode" << fCAEN.selfTrgMode 
-			       << " on channel mask " << fCAEN.channelSelfTrgMask << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SetChannelSelfTrigger(fHandle,(CAEN_DGTZ_TriggerMode_t)(fCAEN.selfTrgMode));
-  sbndaq::CAENDecoder::checkError(retcode,"SetChannelSelfTrigger",fBoardID);
-  */
-  //retcode = CAEN_DGTZ_GetExtTriggerInputMode(fHandle,(CAEN_DGTZ_TriggerMode_t *)&readback);
-  //CheckReadback("SetExtTriggerInputMode", fBoardID,fCAEN.extTrgMode,readback);
-
-  for(uint32_t ch=0; ch<fNChannels; ++ch){
+  for(uint32_t ch=0; ch<fNChannels; ++ch)
+  {
 
     TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channel " << ch
 				 << " trigger threshold to " << fCAEN.triggerThresholds[ch] << TLOG_ENDL;
@@ -481,30 +490,19 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
     CheckReadback("SetChannelTriggerThreshold",fBoardID,fCAEN.triggerThresholds[ch],readback);
 
     //pulse width only set in pairs
-    if(ch%2==0){
+    if(ch%2==0)
+    {
       TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
 				   << " trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
       retcode = CAEN_DGTZ_WriteRegister(fHandle,0x1070+(ch<<8),fCAEN.triggerPulseWidth);
       sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
       retcode = CAEN_DGTZ_ReadRegister(fHandle,0x1070+(ch<<8),&readback);
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
-      /*
-      TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
-				   << " self trigger logic to " << fCAEN.channelSelfTrgLogic[ch/2]
-				   << " self trigger pulse type to " << fCAEN.channelSelfTrgPulseType[ch/2] << TLOG_ENDL;
-      retcode = CAEN_DGTZ_WriteRegister(fHandle,0x1084+(ch<<8),
-					((fCAEN.channelSelfTrgLogic[ch/2] & 0x3) + (fCAEN.channelSelfTrgPulseType[ch/2] & 0x1)<<2) );
-
-      sbndaq::CAENDecoder::checkError(retcode,"SetSelfTriggerLogic",fBoardID);
-      retcode = CAEN_DGTZ_ReadRegister(fHandle,0x1084+(ch<<8),&readback);
-      CheckReadback("SetSelfTriggerLogic",fBoardID,
-		    (fCAEN.channelSelfTrgLogic[ch/2] & 0x3) + (fCAEN.channelSelfTrgPulseType[ch/2] & 0x1)<<2)
-		    ,readback);
-      */
     }
   }
 
   ConfigureLVDS();
+  ConfigureSelfTriggerMode();
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;
   retcode = CAEN_DGTZ_SetExtTriggerInputMode(fHandle,(CAEN_DGTZ_TriggerMode_t)(fCAEN.extTrgMode));

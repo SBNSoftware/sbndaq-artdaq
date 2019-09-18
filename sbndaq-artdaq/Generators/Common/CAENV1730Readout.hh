@@ -115,6 +115,8 @@ namespace sbndaq
     uint32_t fGetNextSleep;
     uint32_t fGetNextFragmentBunchSize;
     bool     fSWTrigger;
+    uint32_t fSelfTriggerMode;
+    uint32_t fSelfTriggerMask;
     uint32_t fModeLVDS;
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
@@ -142,6 +144,7 @@ namespace sbndaq
     void ConfigureReadout();
     void ConfigureAcquisition();
     void ConfigureLVDS();
+    void ConfigureSelfTriggerMode();
     void RunADCCalibration();
 
     bool WaitForTrigger();
