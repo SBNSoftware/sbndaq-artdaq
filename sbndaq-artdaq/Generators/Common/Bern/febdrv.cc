@@ -1048,6 +1048,10 @@ int main (int argc, char **argv)
 	}
       else if (strcmp(cmd, "GETINFO")==0) 
 	{
+          if(nclients == 0) { //send GETINFO reply even if no FEBs are connected
+            infoLength = 2;
+            memcpy(&buf[0],"0\n",infoLength + 1);
+          }
 	  zmq_msg_init_size (&reply, infoLength+1);
 	  memcpy(zmq_msg_data (&reply),buf,infoLength+1);
 	}
