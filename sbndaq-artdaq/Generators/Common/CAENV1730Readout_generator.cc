@@ -206,10 +206,11 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   TLOG(TINFO)<<__func__ << ": ModeLVDS=" << fModeLVDS;
 
   fSelfTriggerMode = ps.get<uint32_t>("SelfTriggerMode"); 
-  TLOG(TERROR)<<__func__ << ": SelfTriggerMode=" << fSelfTriggerMode;
+  TLOG(TINFO)<<__func__ << ": SelfTriggerMode=" << fSelfTriggerMode;
 
   fSelfTriggerMask = ps.get<uint32_t>("SelfTriggerMask"); 
-  TLOG(TERROR)<<__func__ << ": SelfTriggerMask=" << std::hex << fSelfTriggerMask << std::dec;
+  TLOG(TINFO)<<__func__ << ": SelfTriggerMask=" << std::hex 
+	     << fSelfTriggerMask << std::dec;
 
   fGetNextSleep = ps.get<uint32_t>("GetNextSleep"); //1000000
   TLOG(TINFO) << __func__<< ": GetNextSleep=" << fGetNextSleep;
@@ -293,7 +294,7 @@ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
 {
   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
-  uint32_t data,readBack;
+  uint32_t data,readBack,ioMode;
 
   // Always set output to "New LVDS features"
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_IO_CONTROL, &data);
@@ -308,9 +309,10 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   sbndaq::CAENDecoder::checkError(retcod,"ReadFPOutputConfig",fBoardID);
 
   CheckReadback("FPOutputConfig", fBoardID, data, readBack);
+  ioMode = readBack;
 
   // Construct mode mask
-  data = fModeLVDS | ( fModeLVDS << 4 ) | ( fModeLVDS << 8 ) | (fModeLVDS << 12 );
+  data = fModeLVDS | (fModeLVDS << 4) | (fModeLVDS << 8) | (fModeLVDS << 12);
 
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_CONTROL, data);
   sbndaq::CAENDecoder::checkError(retcod,"WriteLVDSOutputConfig",fBoardID);
@@ -321,7 +323,7 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   CheckReadback("LVDSOutputConfig", fBoardID, data, readBack);
 
   // If TRIGGER mode, send them out TRG-OUT NIM
-  if ( fModeLVDS == 1 )
+  if ( fModeLVDS == LVDS_TRIGGER )
   {
     retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_TRG_OUT_CONTROL, &data);
     sbndaq::CAENDecoder::checkError(retcod,"ReadTRGOutputConfig",fBoardID);
@@ -335,7 +337,25 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     sbndaq::CAENDecoder::checkError(retcod,"ReadTRGOutputConfig",fBoardID);
     
     CheckReadback("TRGOutputConfig", fBoardID, data, readBack);
+
+    // Put LVDS into OUTPUT mode and send to TRG-OUT
+    ioMode |= (LVDS_IO | ENABLE_TRG_OUT_LEMO) ;
   }
+  else
+  {
+    // Put LVDS into INPUT mode
+    ioMode &= ~LVDS_IO;
+  }
+
+  TLOG(TINFO) << __func__ << "FPOutputConfig: 0x" << 
+    std::hex << ioMode << std::dec;
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, ioMode);
+  sbndaq::CAENDecoder::checkError(retcod,"WriteFPOutputConfig",fBoardID);
+
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_IO_CONTROL, &readBack);
+  sbndaq::CAENDecoder::checkError(retcod,"ReadFPOutputConfig",fBoardID);
+
+  CheckReadback("FPOutputConfig", fBoardID, ioMode, readBack);
 }
 
 void sbndaq::CAENV1730Readout::ConfigureRecordFormat()

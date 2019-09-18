@@ -87,8 +87,14 @@ namespace sbndaq
     } ADDRESS_t;
 
     typedef enum {
-      ENABLE_NEW_LVDS = 0x10,
-      ENABLE_TRG_OUT  = 0xFF
+      ENABLE_NEW_LVDS     = 0x10,
+      ENABLE_TRG_OUT      = 0xFF,
+      ENABLE_TRG_OUT_LEMO = 0x2,
+      LVDS_IO             = 0x3C,
+      LVDS_BUSY           = 0,
+      LVDS_TRIGGER        = 1,
+      LVDS_nBUSY_nVETO    = 2,
+      LVDS_LEGACY         = 3
     } IO_MASK_t;
 
     enum {
