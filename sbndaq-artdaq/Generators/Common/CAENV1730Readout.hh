@@ -81,20 +81,26 @@ namespace sbndaq
     } ACQ_STATUS_MASK_t;
 
     typedef enum {
+      DYNAMIC_RANGE      = 0x8028,
+      ACQ_CONTROL        = 0x8100,
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,
-      FP_LVDS_CONTROL    = 0x81A0
+      FP_LVDS_CONTROL    = 0x81A0,
+      READOUT_CONTROL    = 0xEF00
     } ADDRESS_t;
 
-    typedef enum {
-      ENABLE_NEW_LVDS     = 0x10,
-      ENABLE_TRG_OUT      = 0xFF,
-      ENABLE_TRG_OUT_LEMO = 0x2,
-      LVDS_IO             = 0x3C,
-      LVDS_BUSY           = 0,
-      LVDS_TRIGGER        = 1,
-      LVDS_nBUSY_nVETO    = 2,
-      LVDS_LEGACY         = 3
+    typedef enum 
+    {
+      ENABLE_LVDS_TRIGGER  = 0x2000000,
+      ENABLE_NEW_LVDS      = 0x100,
+      ENABLE_TRG_OUT       = 0xFF,
+      TRIGGER_LOGIC        = 0x1F00,
+      DISABLE_TRG_OUT_LEMO = 0x2,
+      LVDS_IO              = 0x3C,
+      LVDS_BUSY            = 0,
+      LVDS_TRIGGER         = 1,
+      LVDS_nBUSY_nVETO     = 2,
+      LVDS_LEGACY          = 3
     } IO_MASK_t;
 
     enum {
