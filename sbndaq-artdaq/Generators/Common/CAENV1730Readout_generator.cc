@@ -332,7 +332,8 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_TRG_OUT_CONTROL, &data);
     sbndaq::CAENDecoder::checkError(retcod,"ReadTRGOutputConfig",fBoardID);
 
-    data |= ( ENABLE_LVDS_TRIGGER | ENABLE_TRG_OUT );
+    //    data |= ( ENABLE_LVDS_TRIGGER | ENABLE_TRG_OUT );
+    data |= ( ENABLE_TRG_OUT );
     data &= ~ TRIGGER_LOGIC ; // Choose OR Logic
 
     retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_TRG_OUT_CONTROL, data);
