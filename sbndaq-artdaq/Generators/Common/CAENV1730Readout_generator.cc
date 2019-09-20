@@ -67,13 +67,15 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   Configure();
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << "=0x" << data;
+  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
+    "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL,&data);
   TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_LVDS_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << data << std::dec;
+  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
+    data << std::dec;
 
   
   //<--  configureInterrupts();
@@ -234,10 +236,10 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fCombineReadoutWindows = ps.get<bool>("CombineReadoutWindows");
   TLOG(TINFO) <<__func__ << ": CombineReadoutWindows=" << fCombineReadoutWindows;
 
-  fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig",false);
+  fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig");
   TLOG(TINFO) <<__func__ <<": CalibrateOnConfig=" << fCalibrateOnConfig;
 
-  fGetNextFragmentBunchSize  = ps.get<uint32_t>("fGetNextFragmentBunchSize",20);
+  fGetNextFragmentBunchSize  = ps.get<uint32_t>("fGetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
 }
@@ -355,6 +357,9 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     // Put LVDS into INPUT mode
     ioMode &= ~(LVDS_IO | DISABLE_TRG_OUT_LEMO);
   }
+
+  // Always send out EXT trigger
+  ioMode |= ENABLE_EXT_TRIGGER;
 
   TLOG(TINFO) << __func__ << " FPOutputConfig: 0x" << 
     std::hex << ioMode << std::dec;

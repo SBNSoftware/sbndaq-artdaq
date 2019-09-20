@@ -91,7 +91,8 @@ namespace sbndaq
 
     typedef enum 
     {
-      ENABLE_LVDS_TRIGGER  = 0x2000000,
+      ENABLE_LVDS_TRIGGER  = 0x20000000,
+      ENABLE_EXT_TRIGGER   = 0x40000000,
       ENABLE_NEW_LVDS      = 0x100,
       ENABLE_TRG_OUT       = 0xFF,
       TRIGGER_LOGIC        = 0x1F00,
