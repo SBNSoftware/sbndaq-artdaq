@@ -366,7 +366,8 @@ size_t sbndaq::BernCRTZMQData::GetZMQData()
   {
     if ( errno != EAGAIN ) // No data awailable now
     {
-      TRACE(TR_ERROR, std::string("BernCRTZMQData::GetFEBData() called ") +  std::to_string(errno) + " "  + strerror(errno));
+      TRACE(TR_ERROR, std::string("BernCRTZMQData::GetFEBData() called ") +  std::to_string(errno) + " "  + zmq_strerror(errno));
+    return 0;
     }
     usleep(1000);
     //return 0;
