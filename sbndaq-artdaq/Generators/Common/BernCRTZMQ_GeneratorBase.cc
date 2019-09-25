@@ -70,12 +70,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
     throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
       << "Sequence Time Window size is less than 1 ms (1e6 ns). This is not supported.";
 
-  //AA: what these variables are for? They are not used anywhere else
-  FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity",5e3);
-  FEBBufferSizeBytes_ = FEBBufferCapacity_*sizeof(BernCRTZMQEvent);
-
+  FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity",5000);
   ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity",1024*30);
-  ZMQBufferSizeBytes_ = ZMQBufferCapacity_*sizeof(BernCRTZMQEvent);
 
   MaxTimeDiffs_   = ps_.get< std::vector<uint32_t> >("MaxTimeDiffs",std::vector<uint32_t>(FEBIDs_.size(),1e7));
 

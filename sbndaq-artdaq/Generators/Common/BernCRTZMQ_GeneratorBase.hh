@@ -84,7 +84,6 @@ namespace sbndaq {
 
     std::unique_ptr<BernCRTZMQEvent[]> ZMQBufferUPtr;
     uint32_t ZMQBufferCapacity_;
-    uint32_t ZMQBufferSizeBytes_;
 
   private:
 
@@ -127,7 +126,6 @@ namespace sbndaq {
 
     std::unordered_map< uint64_t, FEBBuffer_t  > FEBBuffers_;
     uint32_t FEBBufferCapacity_;
-    uint32_t FEBBufferSizeBytes_;
 
     uint32_t SeqIDMinimumSec_;
 
