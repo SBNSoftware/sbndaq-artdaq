@@ -113,6 +113,8 @@ namespace sbndaq
     packetBuffer_list_t packetBuffers_;
     bool rawOutput_;
     std::string rawPath_;
+
+    unsigned int n_sends_;
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */
