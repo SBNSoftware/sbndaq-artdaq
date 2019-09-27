@@ -50,13 +50,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
 
   TRACE(TR_LOG,"BernCRTZMQ_GeneratorBase::Initialize() called");
 
-  //RunNumber_ = ps_.get<uint32_t>("RunNumber",999);
   RunNumber_ = 0;
-  SubrunTimeWindowSize_ = ps_.get<uint64_t>("SubRunTimeWindowSize",60e9); //one minute
-  SequenceTimeWindowSize_ = ps_.get<uint32_t>("SequenceTimeWindowSize",5e6); //5 ms
-  nADCBits_  = ps_.get<uint8_t>("nADCBits",12);
-  nChannels_ = ps_.get<uint32_t>("nChannels",32);
-  ReaderID_ = ps_.get<uint8_t>("ReaderID",0x1);
   FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
 
   //new variable added by me (see the header file)
@@ -64,11 +58,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
   GPSCounter_= 0;
   event_in_clock = 0;
   GPS_time = 0;
-
-
-  if(SequenceTimeWindowSize_<1e6)
-    throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
-      << "Sequence Time Window size is less than 1 ms (1e6 ns). This is not supported.";
 
   FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity",5000);
   ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity",1024*30);
@@ -88,11 +77,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs", 100000);
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check", 10000);
-
-  if(nChannels_!=32)
-    throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
-      << "nChannels != 32. This is not supported.";
-
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
         throttle_usecs_ % throttle_usecs_check_ != 0) ) {
@@ -734,8 +718,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
           time_correction,time_offset,
           RunNumber_,
           seq_id,
-          feb_id, ReaderID_,
-          nChannels_,nADCBits_);
+          feb_id);
      */
 
     if(time_poll_start_store_nanosec[i_e+1]!=time_poll_start_store_nanosec[i_e]){
@@ -917,17 +900,13 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 	std::cout << "RunNumber_ " << RunNumber_ << std::endl;
 	std::cout << "seq_id " << seq_id << std::endl;
 	std::cout << "feb_id " << feb_id << std::endl;
-	std::cout << "ReaderID_ " << ReaderID_ << std::endl;
-	std::cout << "nChannels_ " << time_offset << std::endl;
-	std::cout << "nADCBits_ " << time_offset << std::endl;
 
     BernCRTZMQFragmentMetadata metadata(frag_begin_time_s,frag_begin_time_ns,
 				     frag_end_time_s,frag_end_time_ns,
 				     time_correction,time_offset,
 				     RunNumber_,
 				     seq_id,
-				     feb_id, ReaderID_,
-				     nChannels_,nADCBits_);
+				     feb_id);
 
     double time_corr_factor = 1.0e9 / (1000000000 - time_correction);
     

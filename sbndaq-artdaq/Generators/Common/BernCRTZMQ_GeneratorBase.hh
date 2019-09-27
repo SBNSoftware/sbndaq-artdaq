@@ -34,12 +34,7 @@ namespace sbndaq {
     void stopNoMutex() override;
 
     uint32_t RunNumber_;
-    uint64_t SubrunTimeWindowSize_;
     uint32_t SequenceTimeWindowSize_; //in nanoseconds
-
-    uint32_t ReaderID_;
-    uint32_t nChannels_;
-    uint32_t nADCBits_;
 
     std::vector<uint64_t> FEBIDs_;
     size_t nFEBs() { return FEBIDs_.size(); }
