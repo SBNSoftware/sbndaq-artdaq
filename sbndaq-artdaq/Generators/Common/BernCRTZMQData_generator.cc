@@ -24,7 +24,6 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
  
   zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
   zmq_data_pub_port_           = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port")+1);
-  zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
   
   zmq_context_    = zmq_ctx_new();
 
@@ -64,8 +63,8 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
   TRACE(TR_LOG, "BernCRTZMQData::ConfigureStart() called");  
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
-  febctl(BIAS_OF);
   febctl(DAQ_END);
+  febctl(BIAS_OF);
 
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) feb_send_bitstreams(iFEB);
   febctl(BIAS_ON);
@@ -81,7 +80,6 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
     TRACE(TR_ERROR, "BernCRTZMQDataZMQ::ConfigureStart() failed to connect.");
 
   res = zmq_setsockopt(zmq_subscriber_,ZMQ_SUBSCRIBE,NULL,0);
-  //res = zmq_setsockopt(zmq_subscriber_,ZMQ_RCVTIMEO,&zmq_data_receive_timeout_ms_,2);
 
   if(res!=0)
     TRACE(TR_ERROR, "BernCRTZMQDataZMQ::ConfigureStart() socket options failed.");
@@ -180,6 +178,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
   std::string reply_string = (char*)zmq_msg_data(&reply);
   zmq_msg_close (&reply);
 
+  //Process reply message
   if(command != GETINFO) {
     if(reply_string.compare("OK")) {
       TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Received unexpected reply from febdrv: " + reply_string);
@@ -188,7 +187,9 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
       TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string);
     }
   }
-  else { //check if the boards we see correspond to the FHICL file configuration
+  else {
+    //GETINFO returns the number of FEBs connected, their macs and firmware versions.
+    //Check if the boards we see correspond to the FHICL file configuration
     TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string);
     std::istringstream ireply_string(reply_string);
     std::string line;
