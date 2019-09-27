@@ -72,7 +72,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
 
   if (rv > 0)
     {
-      std::cout << "revents: " << ufds[0].revents << std::endl;//", " << ufds[1].revents << std::endl;
+      std::cout << "revents: " << ufds[0].revents << std::endl;
       if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI)
 	{
 	  uint8_t peekBuffer[2];
