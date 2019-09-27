@@ -119,7 +119,7 @@ namespace sbndaq {
 
     std::chrono::system_clock insertTimer_;
 
-    std::unordered_map< uint64_t, FEBBuffer_t  > FEBBuffers_;
+    std::unordered_map< uint64_t, FEBBuffer_t  > FEBBuffers_; //TODO possibly we can optimize it by limiting MAC address to uint8_t
     uint32_t FEBBufferCapacity_;
 
     uint32_t SeqIDMinimumSec_;

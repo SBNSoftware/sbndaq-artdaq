@@ -121,7 +121,7 @@ std::cout << std::endl;
   std::cout << std::endl << "--- START ---" << std::endl;
   
   //get the time of the day when the run starts
-  timeval start_time; gettimeofday(&start_time,NULL);
+  timeval start_time; gettimeofday(&start_time,NULL); //TODO: use different way to measure time. chrono perhaps
   start_time_metadata_s = start_time.tv_sec;
   start_time_metadata_ns = start_time.tv_usec*1000;
   std::cout<<"start_time [s]: " << start_time.tv_sec << "\n";
@@ -547,11 +547,16 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
 
   TRACE(TR_GD_LOG,"BernCRTZMQ_GeneratorBase::GetData() called");
 
-  if( GetDataSetup()!=1 ) return false;;
+  if( GetDataSetup()!=1 ) return false;
 
   const size_t data_size = GetZMQData(); //this fills the data from the ZMQ buffer
   if(data_size % sizeof(BernCRTZMQEvent)) {
-    TRACE(TR_ERROR,"\tBernCRTZMQ::GetData() received data of %lu bytes cannot be divided into %lu chunks of BernCRTZMQEvent. Possible mismatch of febdrv version.", data_size, sizeof(BernCRTZMQEvent));
+    TRACE(TR_ERROR,"\tBernCRTZMQ::GetData() received data of %lu bytes cannot be divided into %lu chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.", data_size, sizeof(BernCRTZMQEvent));
+  }
+  if(data_size == 0) {
+    TRACE(TR_ERROR,"BernCRTZMQ::GetData() failed. Stopping.");
+    throw cet::exception("BernCRTZMQ::GetData() failed. Stopping");
+    //TODO: note that we quit without turning off HV, but we can't turn off HV if zmq context is stopped, which is the reason of the failure here
   }
 
   size_t total_events = data_size/sizeof(BernCRTZMQEvent);
@@ -565,7 +570,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
 
     size_t i_e=0;
     size_t this_n_events=0;
-    uint64_t prev_mac = (FEBIDs_[0] & 0xffffffffffffff00) + ZMQBufferUPtr[0].MAC5(); //why is it uint64_t if MAC5 is uint16_t?
+    uint64_t prev_mac = (FEBIDs_[0] & 0xffffffffffffff00) + ZMQBufferUPtr[0].MAC5();
     size_t new_buffer_size = 0;
 
     TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() start sorting with mac=0x%lx",prev_mac);
@@ -586,7 +591,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
       }
 
 
-      if((prev_mac&0xff)!=this_event.MAC5()){ //what is the logic behind this?
+      if((prev_mac&0xff)!=this_event.MAC5()){ //TODO: understand the logic behind this
 
         TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() found new MAC (0x%x)! prev_mac=0x%lx, iterator=%lu this_events=%lu",
             this_event.MAC5(), (prev_mac&0xff), i_e,this_n_events);
@@ -596,7 +601,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
         TRACE(TR_GD_DEBUG,"\tBernCRTZMQ::GetData() ... id=0x%lx, n_events=%lu, buffer_size=%lu",
             FEBBuffers_[prev_mac].id, this_n_events, FEBBuffers_[prev_mac].buffer.size());
 
-        //auto id_str = GetFEBIDString(prev_mac);	
+        //auto id_str = GetFEBIDString(prev_mac);
         //metricMan->sendMetric("EventsAdded_"+id_str,this_n_events,"events",5,true,"BernCRTZMQGenerator");
         UpdateBufferOccupancyMetrics(prev_mac,new_buffer_size);
 

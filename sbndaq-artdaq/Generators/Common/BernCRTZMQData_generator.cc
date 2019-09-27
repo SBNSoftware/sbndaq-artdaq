@@ -33,9 +33,9 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
   febctl(GETINFO);
-
+  
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Last 8 bits of FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff));
+    TRACE(TR_DEBUG, std::string("BernCRTZMQData constructor : Reading bitstream configuration for FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff));
     feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
 //    std::ofstream file("/tmp/aaduszki_tmp_" + std::to_string(iFEB));
 //    file << feb_configuration[iFEB].GetString();
@@ -351,8 +351,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
 size_t sbndaq::BernCRTZMQData::GetZMQData()
 {
-  std::cout << "Calling GetZMQData" << std::endl;
-  
   TRACE(TR_LOG, "BernCRTZMQData::GetZMQData called");
   
   size_t data_size=0;
@@ -368,7 +366,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData()
     if ( errno != EAGAIN ) // No data awailable now
     {
       TRACE(TR_ERROR, std::string("BernCRTZMQData::GetFEBData() called ") +  std::to_string(errno) + " "  + zmq_strerror(errno));
-    return 0;
+      return 0;
     }
     usleep(1000);
     //return 0;
