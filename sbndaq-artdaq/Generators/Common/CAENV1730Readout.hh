@@ -83,25 +83,56 @@ namespace sbndaq
     typedef enum {
       DYNAMIC_RANGE      = 0x8028,
       ACQ_CONTROL        = 0x8100,
+      GLOBAL_TRIGGER     = 0x810C,
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,
       FP_LVDS_CONTROL    = 0x81A0,
-      READOUT_CONTROL    = 0xEF00
+      READOUT_CONTROL    = 0xEF00,
+      // Aiwu add registers for the LVDS logic
+      FP_LVDS_Logic_G1   = 0x1084,
+      FP_LVDS_Logic_G2   = 0x1284,
+      FP_LVDS_Logic_G3   = 0x1484,
+      FP_LVDS_Logic_G4   = 0x1684,
+      FP_LVDS_Logic_G5   = 0x1884,
+      FP_LVDS_Logic_G6   = 0x1A84,
+      FP_LVDS_Logic_G7   = 0x1C84,
+      FP_LVDS_Logic_G8   = 0x1E84,
+      // Aiwu add end
+      // Aiwu add registers for the LVDS output width
+      FP_LVDS_OutWidth_Ch1   = 0x1070,
+      FP_LVDS_OutWidth_Ch2   = 0x1170,
+      FP_LVDS_OutWidth_Ch3   = 0x1270,
+      FP_LVDS_OutWidth_Ch4   = 0x1370,
+      FP_LVDS_OutWidth_Ch5   = 0x1470,
+      FP_LVDS_OutWidth_Ch6   = 0x1570,
+      FP_LVDS_OutWidth_Ch7   = 0x1670,
+      FP_LVDS_OutWidth_Ch8   = 0x1770,
+      FP_LVDS_OutWidth_Ch9   = 0x1870,
+      FP_LVDS_OutWidth_Ch10   = 0x1970,
+      FP_LVDS_OutWidth_Ch11   = 0x1A70,
+      FP_LVDS_OutWidth_Ch12   = 0x1B70,
+      FP_LVDS_OutWidth_Ch13   = 0x1C70,
+      FP_LVDS_OutWidth_Ch14   = 0x1D70,
+      FP_LVDS_OutWidth_Ch15   = 0x1E70,
+      FP_LVDS_OutWidth_Ch16   = 0x1F70
+
     } ADDRESS_t;
 
     typedef enum 
     {
-      ENABLE_LVDS_TRIGGER  = 0x20000000,
-      ENABLE_EXT_TRIGGER   = 0x40000000,
-      ENABLE_NEW_LVDS      = 0x100,
-      ENABLE_TRG_OUT       = 0xFF,
-      TRIGGER_LOGIC        = 0x1F00,
-      DISABLE_TRG_OUT_LEMO = 0x2,
-      LVDS_IO              = 0x3C,
-      LVDS_BUSY            = 0,
-      LVDS_TRIGGER         = 1,
-      LVDS_nBUSY_nVETO     = 2,
-      LVDS_LEGACY          = 3
+      ENABLE_LVDS_TRIGGER   = 0x20000000,
+      ENABLE_EXT_TRIGGER    = 0x40000000,
+      ENABLE_NEW_LVDS       = 0x100,
+      ENABLE_TRG_OUT        = 0xFF,
+      TRIGGER_LOGIC         = 0x1F00,
+      DISABLE_TRG_OUT_LEMO  = 0x2,
+      LVDS_IO               = 0x3C,
+      LVDS_BUSY             = 0,
+      LVDS_TRIGGER          = 1,
+      LVDS_nBUSY_nVETO      = 2,
+      LVDS_LEGACY           = 3,
+      MAJORITY_TIME_WINDOW_S = 20,
+      MAJORITY_LEVEL_S      = 24
     } IO_MASK_t;
 
     enum {
@@ -134,6 +165,37 @@ namespace sbndaq
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
     uint32_t fFragmentID;
+    uint32_t fMajorityLevel;
+    uint32_t fMajorityTimeWindow;
+
+    // Aiwu add fhicl parameters - LVDS logic
+    uint32_t fLVDSLogicValueG1;
+    uint32_t fLVDSLogicValueG2;
+    uint32_t fLVDSLogicValueG3;
+    uint32_t fLVDSLogicValueG4;
+    uint32_t fLVDSLogicValueG5;
+    uint32_t fLVDSLogicValueG6;
+    uint32_t fLVDSLogicValueG7;
+    uint32_t fLVDSLogicValueG8;
+    // Aiwu add end
+    // Aiwu add fhicl parameters - LVDS output pulse width
+    uint32_t fLVDSOutWidthC1;
+    uint32_t fLVDSOutWidthC2;
+    uint32_t fLVDSOutWidthC3;
+    uint32_t fLVDSOutWidthC4;
+    uint32_t fLVDSOutWidthC5;
+    uint32_t fLVDSOutWidthC6;
+    uint32_t fLVDSOutWidthC7;
+    uint32_t fLVDSOutWidthC8;
+    uint32_t fLVDSOutWidthC9;
+    uint32_t fLVDSOutWidthC10;
+    uint32_t fLVDSOutWidthC11;
+    uint32_t fLVDSOutWidthC12;
+    uint32_t fLVDSOutWidthC13;
+    uint32_t fLVDSOutWidthC14;
+    uint32_t fLVDSOutWidthC15;
+    uint32_t fLVDSOutWidthC16;
+    // Aiwu add end
 
     //internals
     size_t   fNChannels;
@@ -158,6 +220,7 @@ namespace sbndaq
     void ConfigureAcquisition();
     void ConfigureLVDS();
     void ConfigureSelfTriggerMode();
+    void ConfigureMajorityLogic();
     void RunADCCalibration();
 
     bool WaitForTrigger();
