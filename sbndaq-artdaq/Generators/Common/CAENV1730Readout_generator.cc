@@ -290,7 +290,7 @@ void sbndaq::CAENV1730Readout::Configure()
 
 void sbndaq::CAENV1730Readout::RunADCCalibration()
 {
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
+  TLOG_ARB(TINFO,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
   auto retcode = CAEN_DGTZ_Calibrate(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
 }
@@ -357,9 +357,6 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     // Put LVDS into INPUT mode
     ioMode &= ~(LVDS_IO | DISABLE_TRG_OUT_LEMO);
   }
-
-  // Always send out EXT trigger
-  ioMode |= ENABLE_EXT_TRIGGER;
 
   TLOG(TINFO) << __func__ << " FPOutputConfig: 0x" << 
     std::hex << ioMode << std::dec;
