@@ -302,7 +302,11 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fLVDSOutWidthC16 = ps.get<uint32_t>("LVDSOutWidthC16"); // LVDS output width Ch16
   TLOG(TINFO)<<__func__ << ": LVDSOutWidthC16=" << fLVDSOutWidthC16;
   //Aiwu add end
-
+  //Aiwu add - self trigger polarity
+  fSelfTrigBit = ps.get<uint32_t>("SelfTrigBit"); // LVDS output width Ch16
+  TLOG(TINFO)<<__func__ << ": SelfTrigBit=" << fSelfTrigBit;
+  
+  //Aiwu addd end
 }
 
 void sbndaq::CAENV1730Readout::Configure()
@@ -529,6 +533,12 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_OutWidth_Ch16, &readBack);
   TLOG(TINFO) << "LVDS  Logic output width for Ch16: 0x" << std::hex << readBack << std::dec;
   //Aiwu add ends
+
+  //Aiwu add - test self trigger polarity
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, CONFIG_READ_ADDR, fSelfTrigBit);
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, CONFIG_READ_ADDR, &readBack);
+  TLOG(TINFO) << "Address 0x8000, values inside: 0x" << std::hex << readBack << std::dec;
+  //Aiwu end
 }
 
 void sbndaq::CAENV1730Readout::ConfigureRecordFormat()

@@ -196,6 +196,9 @@ namespace sbndaq
     uint32_t fLVDSOutWidthC15;
     uint32_t fLVDSOutWidthC16;
     // Aiwu add end
+    //Aiwu add - self trigger polarity
+    uint32_t fSelfTrigBit;
+    //Aiwu add end
 
     //internals
     size_t   fNChannels;
