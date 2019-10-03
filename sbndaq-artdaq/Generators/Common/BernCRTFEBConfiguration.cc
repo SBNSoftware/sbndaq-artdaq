@@ -17,6 +17,8 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
         SLOW_CONTROL_BITSTREAM_NBITS)) {   
     TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load Slow Control bit stream");
   }
+
+  hv_on_permission = ps_.get< std::vector<bool> >("TurnOnHV")[iFEB];
 }
 
 int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream, uint8_t *bitstream, unsigned int nBits) {
@@ -229,3 +231,5 @@ uint8_t * sbndaq::BernCRTFEBConfiguration::GetProbeBitStream()             { ret
 int       sbndaq::BernCRTFEBConfiguration::GetProbeBitStreamNBytes()       { return PROBE_BITSTREAM_NBITS/8; }
 uint8_t * sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStream()       { return SlowControlBitStream; }
 int       sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStreamNBytes() { return SLOW_CONTROL_BITSTREAM_NBITS/8; }
+
+bool      sbndaq::BernCRTFEBConfiguration::GetHVOnPermission()             { return hv_on_permission; }
