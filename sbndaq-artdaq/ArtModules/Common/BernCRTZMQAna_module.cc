@@ -47,7 +47,19 @@ private:
   
   //sample histogram
   TH1F* fSampleHist;
-  TH1F* fSampleHist_TS0;
+  TH1F* TS0;
+
+  TTree * events;
+
+   uint8_t mac5;
+   uint16_t flags;
+   uint16_t lostcpu;
+   uint16_t lostfpga;
+   uint32_t ts0;
+   uint32_t ts1;
+   //const uint16_t * adc;
+   uint16_t adc[32];
+   uint32_t coinc;
   
 };
 
@@ -60,12 +72,22 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   //I do this here in the constructor to setup the histogram just once
   //but you can call the TFileService and make new objects from anywhere
   art::ServiceHandle<art::TFileService> tfs; //pointer to a file named tfs
-  art::ServiceHandle<art::TFileService> tfs_time;
 
   //make the histogram
   //the arguments are the same as what would get passed into ROOT
   fSampleHist = tfs->make<TH1F>("hSampleHist","Sample Hist Title; x axis (units); y axis (units)",100,-50,50);
-  fSampleHist_TS0 = tfs_time->make<TH1F>("hSampleHist_TS0","TS0 distribution; time [ns]; counts",1000,1e8,2e9);
+  TS0 = tfs->make<TH1F>("hSampleHist_TS0","TS0 distribution; time [ns]; counts",1000,1e9-500,1e9+500);
+
+  events = tfs->make<TTree>("events", "FEB events");
+
+  events->Branch("mac5",        &mac5,  "mac5/b");
+  events->Branch("flags",       &flags, "flags/s");
+  events->Branch("lostcpu",     &lostcpu,       "lostcpu/s");
+  events->Branch("lostfpga",    &lostcpu,       "lostfpga/s");
+  events->Branch("ts0",         &ts0,           "ts0/i");
+  events->Branch("ts1",         &ts1,           "ts1/i");
+  events->Branch("adc",         &adc,           "adc[32]/s");
+  events->Branch("coinc",       &coinc,         "coinc/i");
 
 }
 
@@ -138,10 +160,24 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
        
       }
 
-	fSampleHist_TS0 -> Fill(evt->Time_TS0());
+      TS0 -> Fill(evt->Time_TS0());
+
+      mac5 = evt->MAC5();
+      flags = evt->flags;
+      lostcpu = evt->lostcpu;
+      lostfpga = evt->lostfpga;
+      ts0 = evt->Time_TS0();
+      ts1 = evt->Time_TS1();
+      coinc = evt->coinc;
+
+      //adc = evt->ADC();
+      for(int ch=0; ch<32; ch++) adc[ch] = evt->ADC(ch);
+
+      events->Fill();
 
     }//end loop over events in a fragment
   
+
   }//end loop over fragments
 
   //just close the output stream

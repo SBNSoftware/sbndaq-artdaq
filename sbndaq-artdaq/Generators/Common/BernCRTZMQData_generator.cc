@@ -24,7 +24,6 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
  
   zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
   zmq_data_pub_port_           = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port")+1);
-  zmq_data_receive_timeout_ms_ = ps_.get<int>("zmq_data_receive_timeout_ms",500);
   
   zmq_context_    = zmq_ctx_new();
 
@@ -34,9 +33,9 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
   febctl(GETINFO);
-
+  
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TRACE(TR_LOG, std::string("BernCRTZMQData constructor : Last 8 bits of FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff));
+    TRACE(TR_DEBUG, std::string("BernCRTZMQData constructor : Reading bitstream configuration for FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff));
     feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
 //    std::ofstream file("/tmp/aaduszki_tmp_" + std::to_string(iFEB));
 //    file << feb_configuration[iFEB].GetString();
@@ -64,8 +63,8 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
   TRACE(TR_LOG, "BernCRTZMQData::ConfigureStart() called");  
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
-  febctl(BIAS_OF);
   febctl(DAQ_END);
+  febctl(BIAS_OF);
 
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) feb_send_bitstreams(iFEB);
   febctl(BIAS_ON);
@@ -81,7 +80,6 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
     TRACE(TR_ERROR, "BernCRTZMQDataZMQ::ConfigureStart() failed to connect.");
 
   res = zmq_setsockopt(zmq_subscriber_,ZMQ_SUBSCRIBE,NULL,0);
-  //res = zmq_setsockopt(zmq_subscriber_,ZMQ_RCVTIMEO,&zmq_data_receive_timeout_ms_,2);
 
   if(res!=0)
     TRACE(TR_ERROR, "BernCRTZMQDataZMQ::ConfigureStart() socket options failed.");
@@ -180,6 +178,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
   std::string reply_string = (char*)zmq_msg_data(&reply);
   zmq_msg_close (&reply);
 
+  //Process reply message
   if(command != GETINFO) {
     if(reply_string.compare("OK")) {
       TRACE(TR_ERROR, std::string("BernCRTZMQData::") + __func__ + " Received unexpected reply from febdrv: " + reply_string);
@@ -188,7 +187,9 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
       TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string);
     }
   }
-  else { //check if the boards we see correspond to the FHICL file configuration
+  else {
+    //GETINFO returns the number of FEBs connected, their macs and firmware versions.
+    //Check if the boards we see correspond to the FHICL file configuration
     TRACE(TR_DEBUG, std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string);
     std::istringstream ireply_string(reply_string);
     std::string line;
@@ -350,8 +351,6 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
 size_t sbndaq::BernCRTZMQData::GetZMQData()
 {
-  std::cout << "Calling GetZMQData" << std::endl;
-  
   TRACE(TR_LOG, "BernCRTZMQData::GetZMQData called");
   
   size_t data_size=0;
@@ -366,7 +365,8 @@ size_t sbndaq::BernCRTZMQData::GetZMQData()
   {
     if ( errno != EAGAIN ) // No data awailable now
     {
-      TRACE(TR_ERROR, std::string("BernCRTZMQData::GetFEBData() called ") +  std::to_string(errno) + " "  + strerror(errno));
+      TRACE(TR_ERROR, std::string("BernCRTZMQData::GetFEBData() called ") +  std::to_string(errno) + " "  + zmq_strerror(errno));
+      return 0;
     }
     usleep(1000);
     //return 0;
