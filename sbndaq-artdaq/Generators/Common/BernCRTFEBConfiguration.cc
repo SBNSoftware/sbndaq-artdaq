@@ -10,13 +10,23 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
         ProbeBitStream,
         PROBE_BITSTREAM_NBITS)) {   
     TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load PROBE bit stream");
+    throw cet::exception(std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load PROBE bit stream");
   }
   if(!ASCIIToBitStream(
         ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB)),
         SlowControlBitStream,
         SLOW_CONTROL_BITSTREAM_NBITS)) {   
     TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load Slow Control bit stream");
+    throw cet::exception(std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load Slow Control bit stream");
   }
+  std::vector<bool> hv_on_permissions = ps_.get< std::vector<bool> >("TurnOnHV");
+  std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("FEBIDs"); //read MAC5 list for validation purposes only
+  if(hv_on_permissions.size() != mac5s.size()) { //validate size of the array in the FHiCL file
+    TRACE(TR_ERROR, std::string("BernCRTFEBConfiguration::") + __func__ + " TurnOnHV array size differs from FEBIDs array size");
+    throw cet::exception(std::string("BernCRTFEBConfiguration::") + __func__ + " TurnOnHV array size differs from FEBIDs array size");
+  }
+
+  hv_on_permission = hv_on_permissions[iFEB];
 }
 
 int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream, uint8_t *bitstream, unsigned int nBits) {
@@ -229,3 +239,5 @@ uint8_t * sbndaq::BernCRTFEBConfiguration::GetProbeBitStream()             { ret
 int       sbndaq::BernCRTFEBConfiguration::GetProbeBitStreamNBytes()       { return PROBE_BITSTREAM_NBITS/8; }
 uint8_t * sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStream()       { return SlowControlBitStream; }
 int       sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStreamNBytes() { return SLOW_CONTROL_BITSTREAM_NBITS/8; }
+
+bool      sbndaq::BernCRTFEBConfiguration::GetHVOnPermission()             { return hv_on_permission; }

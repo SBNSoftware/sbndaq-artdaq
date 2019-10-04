@@ -66,8 +66,10 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
   febctl(DAQ_END);
   febctl(BIAS_OF);
 
-  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) feb_send_bitstreams(iFEB);
-  febctl(BIAS_ON);
+  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
+    feb_send_bitstreams(iFEB); //send PROBE and SC configuration to FEB
+    if(feb_configuration[iFEB].GetHVOnPermission()) febctl(BIAS_ON, iFEB); //turn on SiPM HV (if FHiCL file allows it)
+  }
   febctl(DAQ_BEG); //start data taking mode for all boards 
 
   zmq_subscriber_ = zmq_socket(zmq_context_,ZMQ_SUB);
