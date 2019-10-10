@@ -2,7 +2,7 @@
 #define sbndaq_artdaq_Generators_Common_BernCRTFEBConfiguration_hh
 
 #include "fhiclcpp/ParameterSet.h"
-#include "BernCRT_TRACE_defines.h"
+#include "trace.h"
 
 namespace sbndaq {
 
