@@ -572,55 +572,54 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() got "<<total_events<<" total events";
 
-  if(total_events>0){
 
-    size_t i_e=0;
-    size_t this_n_events=0;
-    uint64_t prev_mac = (FEBIDs_[0] & 0xffffffffffffff00) + ZMQBufferUPtr[0].MAC5();
-    size_t new_buffer_size = 0;
+  size_t i_e=0;
+  size_t this_n_events=0;
+  uint64_t prev_mac = (FEBIDs_[0] & 0xffffffffffffff00) + ZMQBufferUPtr[0].MAC5();
+  size_t new_buffer_size = 0;
 
-    TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() start sorting with mac="<<prev_mac;
+  TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() start sorting with mac="<<prev_mac;
 
-    while(i_e<total_events){
+  while(i_e<total_events){
 
-      auto const& this_event = ZMQBufferUPtr[i_e];
+    auto const& this_event = ZMQBufferUPtr[i_e];
 
-      if(be_verbose){
-        std::cout << "\n\t\ttotal_events " << total_events << std::endl;
-        std::cout << "\n\t\tthis_event " << this_event << std::endl;
-        std::cout << "\t\tIsOverflow_TS0() " << this_event.IsOverflow_TS0() << std::endl;
-        std::cout << "\t\tIsOverflow_TS1() " << this_event.IsOverflow_TS1() << std::endl;
-        std::cout << "\t\tIsReference_TS0() " << this_event.IsReference_TS0() << std::endl;
-        std::cout << "\t\tIsReference_TS1() " << this_event.IsReference_TS1() << std::endl;
-        std::cout << "\t\tTS0() " << this_event.Time_TS0() << std::endl;
-        std::cout << "\t\tTS1() " << this_event.Time_TS1() << std::endl;
-      }
-
-
-      if((prev_mac&0xff)!=this_event.MAC5()){ //TODO: understand the logic behind this
-
-        TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() found new MAC ("<<this_event.MAC5()
-          <<")! prev_mac="<<(prev_mac&0xff)
-          <<", iterator="<<i_e
-          <<" this_events="<<this_n_events;
-
-        new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events,total_events);
-
-        TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() ... id="<<FEBBuffers_[prev_mac].id
-          <<", n_events="<<this_n_events
-          <<", buffer_size="<<FEBBuffers_[prev_mac].buffer.size();
-
-        //auto id_str = GetFEBIDString(prev_mac);
-        //metricMan->sendMetric("EventsAdded_"+id_str,this_n_events,"events",5,true,"BernCRTZMQGenerator");
-        UpdateBufferOccupancyMetrics(prev_mac,new_buffer_size);
-
-        this_n_events=0;
-      }
-
-      prev_mac = (prev_mac & 0xffffffffffffff00) + this_event.MAC5();
-      ++i_e; ++this_n_events;
+    if(be_verbose){
+      std::cout << "\n\t\ttotal_events " << total_events << std::endl;
+      std::cout << "\n\t\tthis_event " << this_event << std::endl;
+      std::cout << "\t\tIsOverflow_TS0() " << this_event.IsOverflow_TS0() << std::endl;
+      std::cout << "\t\tIsOverflow_TS1() " << this_event.IsOverflow_TS1() << std::endl;
+      std::cout << "\t\tIsReference_TS0() " << this_event.IsReference_TS0() << std::endl;
+      std::cout << "\t\tIsReference_TS1() " << this_event.IsReference_TS1() << std::endl;
+      std::cout << "\t\tTS0() " << this_event.Time_TS0() << std::endl;
+      std::cout << "\t\tTS1() " << this_event.Time_TS1() << std::endl;
     }
+
+
+    if((prev_mac&0xff)!=this_event.MAC5()){ //TODO: understand the logic behind this
+
+      TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() found new MAC ("<<this_event.MAC5()
+                      <<")! prev_mac="<<(prev_mac&0xff)
+                      <<", iterator="<<i_e
+                      <<" this_events="<<this_n_events;
+
+      new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events,total_events);
+
+      TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() ... id="<<FEBBuffers_[prev_mac].id
+                      <<", n_events="<<this_n_events
+                      <<", buffer_size="<<FEBBuffers_[prev_mac].buffer.size();
+
+      //auto id_str = GetFEBIDString(prev_mac);
+      //metricMan->sendMetric("EventsAdded_"+id_str,this_n_events,"events",5,true,"BernCRTZMQGenerator");
+      UpdateBufferOccupancyMetrics(prev_mac,new_buffer_size);
+
+      this_n_events=0;
+    }
+
+    prev_mac = (prev_mac & 0xffffffffffffff00) + this_event.MAC5();
+    ++i_e; ++this_n_events;
   }
+
 
   //metricMan->sendMetric("TotalEventsAdded",total_events-1,"events",5,true,"BernCRTZMQGenerator");
 
