@@ -10,21 +10,21 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
         ps_.get<std::string>("ProbeBitStream"),
         ProbeBitStream,
         PROBE_BITSTREAM_NBITS)) {   
-    TLOG(TLVL_ERROR)<<std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load PROBE bit stream";
-    throw cet::exception(std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load PROBE bit stream");
+    TLOG(TLVL_ERROR)<<__func__ << " Failed to load PROBE bit stream";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load PROBE bit stream");
   }
   if(!ASCIIToBitStream(
         ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB)),
         SlowControlBitStream,
         SLOW_CONTROL_BITSTREAM_NBITS)) {   
-    TLOG(TLVL_ERROR)<<std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load Slow Control bit stream";
-    throw cet::exception(std::string("BernCRTFEBConfiguration::") + __func__ + " Failed to load Slow Control bit stream");
+    TLOG(TLVL_ERROR)<< __func__  << " Failed to load Slow Control bit stream";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load Slow Control bit stream");
   }
   std::vector<bool> hv_on_permissions = ps_.get< std::vector<bool> >("TurnOnHV");
   std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("FEBIDs"); //read MAC5 list for validation purposes only
   if(hv_on_permissions.size() != mac5s.size()) { //validate size of the array in the FHiCL file
-    TLOG(TLVL_ERROR)<<std::string("BernCRTFEBConfiguration::") + __func__ + " TurnOnHV array size differs from FEBIDs array size";
-    throw cet::exception(std::string("BernCRTFEBConfiguration::") + __func__ + " TurnOnHV array size differs from FEBIDs array size");
+    TLOG(TLVL_ERROR)<< __func__ << " TurnOnHV array size differs from FEBIDs array size";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " TurnOnHV array size differs from FEBIDs array size");
   }
 
   hv_on_permission = hv_on_permissions[iFEB];
@@ -48,7 +48,7 @@ int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream
       if(c == ' ') continue; //ignore blank characters
       if(c == '0' || c == '1') { //encode the bit into the bitstream
         if(read_bits >= nBits) {
-          TLOG(TLVL_WARNING)<<std::string("BernCRTFEBConfiguration::") + __func__ + " too long bitstream!!!";
+          TLOG(TLVL_WARNING)<< __func__ << " too long bitstream!!!";
           memset(bitstream,0,nBits/8); //reset
           return false;
         }
@@ -61,7 +61,7 @@ int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream
   }
 
   if(read_bits < nBits) {
-    TLOG(TLVL_WARNING)<<std::string("BernCRTFEBConfiguration::") + __func__ + " too short bitstream!!!";
+    TLOG(TLVL_WARNING)<< __func__  << " too short bitstream!!!";
     memset(bitstream,0, nBits/8); //reset
     return false;
   }
@@ -75,7 +75,7 @@ int sbndaq::BernCRTFEBConfiguration::GetBit(unsigned int bit_number, uint8_t * b
    * nBits is the total length of the bitstream
    */
   if(bit_number >= nBits) {
-    TLOG(TLVL_ERROR)<<std::string("BernCRTFEBConfiguration::") + __func__ + " requested bit " + std::to_string(bit_number) + "exceeds bitstream length!";
+    TLOG(TLVL_ERROR)<< __func__ << " requested bit " << std::to_string(bit_number) << "exceeds bitstream length!";
     return -1;
   }
   const int byte = (nBits - bit_number - 1) / 8; //reverse byte order
@@ -96,7 +96,7 @@ void sbndaq::BernCRTFEBConfiguration::SetBit(unsigned int bit_number, bool value
    * nBits is the total length of the bitstream
    */
   if(bit_number >= nBits) {
-    TLOG(TLVL_ERROR)<<std::string("BernCRTFEBConfiguration::") + __func__ + " requested bit " + std::to_string(bit_number) + "exceeds bitstream length!";
+    TLOG(TLVL_ERROR)<< __func__ << " requested bit " << std::to_string(bit_number) << "exceeds bitstream length!";
     return;
   }
   const int byte = (nBits - bit_number - 1) / 8; //reverse byte order
@@ -119,7 +119,7 @@ std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int firstBit, 
    * If last bit is not specified, only one bit is printed
    */
   if(lastBit >= SLOW_CONTROL_BITSTREAM_NBITS) {
-    TLOG(TLVL_ERROR)<<std::string("BernCRTFEBConfiguration::") + __func__ + " Last bit "  + std::to_string(lastBit) + "exceeds Slow Control bitstream length!";
+    TLOG(TLVL_ERROR)<< __func__ << " Last bit " << std::to_string(lastBit) << "exceeds Slow Control bitstream length!";
     return "-";
   }
   std::string s = "";

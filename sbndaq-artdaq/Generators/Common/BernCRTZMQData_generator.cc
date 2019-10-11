@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-// #include "BernCRT_TRACE_defines.h"
-
 #include <zmq.h>
 
 #define id "BernCRT"
@@ -28,7 +26,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   
   zmq_context_    = zmq_ctx_new();
 
-  TLOG(TLVL_DEBUG) <<  std::string("BernCRTZMQData constructor : Calling zmq requester with port ") + zmq_listening_port_;
+  TLOG(TLVL_DEBUG) << __func__ << " : Calling zmq requester with port " << zmq_listening_port_;
   zmq_requester_ = zmq_socket(zmq_context_, ZMQ_REQ);
   const int linger = 0;
   zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
@@ -36,32 +34,32 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   febctl(GETINFO);
   
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TLOG(TLVL_DEBUG) << std::string("BernCRTZMQData constructor : Reading bitstream configuration for FEBID ") + std::to_string(iFEB)+ ": " + std::to_string(FEBIDs_[iFEB]&0xff);
+    TLOG(TLVL_DEBUG) << __func__ << " Reading bitstream configuration for FEBID " << std::to_string(iFEB) << ": " << std::to_string(FEBIDs_[iFEB]&0xff);
     feb_configuration.push_back(sbndaq::BernCRTFEBConfiguration(ps_, iFEB)); //create configuration object
 //    std::ofstream file("/tmp/aaduszki_tmp_" + std::to_string(iFEB));
 //    file << feb_configuration[iFEB].GetString();
   }
 
-  TLOG(TLVL_INFO) <<  "BernCRTZMQData constructor completed";  
+  TLOG(TLVL_INFO) << __func__ << " constructor completed";  
 }
 
 sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
-  TLOG(TLVL_INFO) <<  "BernCRTZMQData destructor called";  
+  TLOG(TLVL_INFO) << __func__ <<  "() called";  
 
   zmq_close (zmq_requester_);
 
   zmq_ctx_destroy(zmq_context_);
 
   Cleanup();
-  TLOG(TLVL_INFO) << "BernCRTZMQData destructor completed";  
+  TLOG(TLVL_INFO) << __func__ << "() completed";  
 }
 
 
 
 void sbndaq::BernCRTZMQData::ConfigureStart()
 {
-  TLOG(TLVL_INFO) << "BernCRTZMQData::ConfigureStart() called";  
+  TLOG(TLVL_INFO) << __func__ << "() called";  
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
   febctl(DAQ_END);
@@ -77,28 +75,28 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
 
   int res=0;
 
-  TLOG(TLVL_INFO) << std::string("BernCRTZMQData::ConfigureStart() : Calling zmq subscriber with port ")+ zmq_data_pub_port_;
+  TLOG(TLVL_INFO) << __func__ << " Calling zmq subscriber with port " << zmq_data_pub_port_;
   res = zmq_connect(zmq_subscriber_,zmq_data_pub_port_.c_str());
   if(res!=0)
-    TLOG(TLVL_ERROR) << "BernCRTZMQDataZMQ::ConfigureStart() failed to connect.";
+    TLOG(TLVL_ERROR) << __func__  << " failed to connect.";
 
   res = zmq_setsockopt(zmq_subscriber_,ZMQ_SUBSCRIBE,NULL,0);
 
   if(res!=0)
-    TLOG(TLVL_ERROR) << "BernCRTZMQDataZMQ::ConfigureStart() socket options failed.";
-    TLOG(TLVL_INFO) << "BernCRTZMQData::ConfigureStart() completed";
+    TLOG(TLVL_ERROR) << __func__ << " socket options failed.";
+  TLOG(TLVL_INFO) << __func__ << " completed";
 }
 
 void sbndaq::BernCRTZMQData::ConfigureStop()
 {
-  TLOG(TLVL_INFO) << "BernCRTZMQData::ConfigureStop() called";
+  TLOG(TLVL_INFO) << __func__ << "() called";
 
   febctl(DAQ_END);
   febctl(BIAS_OF);
 
   zmq_close(zmq_subscriber_);
 
-  TLOG(TLVL_INFO) << "BernCRTZMQData::ConfigureStop() completed";
+  TLOG(TLVL_INFO) << __func__ << "() completed";
 }
 
 int sbndaq::BernCRTZMQData::GetDataSetup()
@@ -133,21 +131,20 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
     case BIAS_OF : strcpy ( command_string, "BIAS_OF");   break;
     case GETINFO : strcpy ( command_string, "GETINFO");   break;
     default:
-      TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Unrecognized command! [software error, this should never happen]";
-      throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Unrecognized command! [software error, this should never happen]");
-
+      TLOG(TLVL_ERROR) <<   __func__ << " Unrecognized command! [software error, this should never happen]";
+      throw cet::exception( std::string(TRACE_NAME) +  __func__ + " Unrecognized command! [software error, this should never happen]");
   }
 
-  TLOG(TLVL_DEBUG) << std::string("BernCRTZMQData::") + __func__ + " Connecting to febdrv...";
+  TLOG(TLVL_DEBUG) <<  __func__ << " Connecting to febdrv...";
   if(zmq_connect (zmq_requester_, zmq_listening_port_.c_str())) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Connection to " + zmq_listening_port_ + " failed!";
-    throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
+    TLOG(TLVL_ERROR) << __func__ << " Connection to " << zmq_listening_port_ << " failed!";
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
   }
 
   uint8_t mac5;
   if((int)nFEBs() <= iFEB) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!";
-    throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!");
+    TLOG(TLVL_ERROR) << __func__ << " Could not find FEB " << std::to_string(iFEB) << " in the FEBIDs!";
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!");
   }
   else {
     if(iFEB == -1) mac5 = 255;
@@ -159,7 +156,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
   memcpy(zmq_msg_data (&request), command_string,7);
   ((uint8_t*)zmq_msg_data (&request))[7]=0;
   ((uint8_t*)zmq_msg_data (&request))[8]=mac5;
-  TLOG(TLVL_DEBUG) << std::string("BernCRTZMQData::") + __func__ + " Sending command \"" + command_string + "\" to mac5 = " + std::to_string(mac5);
+  TLOG(TLVL_DEBUG) <<  __func__ << " Sending command \"" << command_string << "\" to mac5 = " << std::to_string(mac5);
   zmq_msg_send (&request, zmq_requester_, 0);
   zmq_msg_close (&request);
   zmq_msg_t reply;
@@ -172,9 +169,9 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
     rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
   }
   if(rv<0) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds";
+    TLOG(TLVL_ERROR) <<  __func__ << " Received no reply from febdrv after waiting for " << std::to_string(timeout) << " seconds";
     zmq_msg_close (&reply);
-    throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
   }
 
   std::string reply_string = (char*)zmq_msg_data(&reply);
@@ -183,27 +180,27 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
   //Process reply message
   if(command != GETINFO) {
     if(reply_string.compare("OK")) {
-      TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Received unexpected reply from febdrv: " + reply_string;
+      TLOG(TLVL_ERROR) <<  __func__ << " Received unexpected reply from febdrv: " << reply_string;
     }
     else {
-      TLOG(TLVL_DEBUG) << std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string;
+      TLOG(TLVL_DEBUG) <<  __func__ << " Received reply: " << reply_string;
     }
   }
   else {
     //GETINFO returns the number of FEBs connected, their macs and firmware versions.
     //Check if the boards we see correspond to the FHICL file configuration
-    TLOG(TLVL_DEBUG) << std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string;
+    TLOG(TLVL_DEBUG) <<  __func__ << " Received reply: " << reply_string;
     std::istringstream ireply_string(reply_string);
     std::string line;
     if(!std::getline(ireply_string, line)) {
-      TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Received empty reply febdrv!";
+      TLOG(TLVL_ERROR) <<  __func__ << " Received empty reply febdrv!";
     }
     else { //parse febdrv reply
       //parse number of reported FEBs
       const unsigned int read_nFEBs = stoi(line);
       if(read_nFEBs != nFEBs()) {
-        TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Number of FEBs seen by febdrv (" + std::to_string(read_nFEBs) + ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!";
-        throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Number of FEBs seen by febdrv (" + std::to_string(read_nFEBs) + ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!");
+        TLOG(TLVL_ERROR) <<  __func__ << " Number of FEBs seen by febdrv (" << std::to_string(read_nFEBs) << ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!";
+        throw cet::exception( std::string(TRACE_NAME) + __func__ + " Number of FEBs seen by febdrv (" + std::to_string(read_nFEBs) + ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!");
       }
       else {
         //read firmwares and mac addresses MAC addresses
@@ -213,7 +210,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
           firmwares.push_back(line.substr(18, 100));
           unsigned int mac[6];
           if (sscanf(line.substr(0,17).c_str(), "%x:%x:%x:%x:%x:%x", &mac[5], &mac[4], &mac[3], &mac[2], &mac[1], &mac[0]) != 6) {
-            TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Error during parsing MAC address returned by febdrv (" + line +  ")!";
+            TLOG(TLVL_ERROR) <<  __func__ << " Error during parsing MAC address returned by febdrv (" << line <<  ")!";
           }
           else {
             uint64_t full_mac = 0;
@@ -231,8 +228,8 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
           for(unsigned int jFEB = 0; jFEB < nFEBs(); jFEB++) {
             if(mac5s[iFEB] == FEBIDs_[jFEB]) {
               if(fcl_mac_found[jFEB]) {
-                TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " MAC address ending with " +std::to_string(mac5&0xff) + " (dec) found twice by febdrv. Check hardware MAC configuration!";
-                throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " MAC address ending with " +std::to_string(mac5&0xff) + " (dec) found twice by febdrv. Check hardware MAC configuration!");
+                TLOG(TLVL_ERROR) <<  __func__ << " MAC address ending with " << std::to_string(mac5&0xff) << " (dec) found twice by febdrv. Check hardware MAC configuration!";
+                throw cet::exception( std::string(TRACE_NAME) + __func__ + " MAC address ending with " +std::to_string(mac5&0xff) + " (dec) found twice by febdrv. Check hardware MAC configuration!");
                 
               }
               else {
@@ -243,8 +240,8 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
           }
           if(!mac_found) {
             any_mac_missing = true;
-            TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " MAC address seen by febdrv " + std::to_string(mac5s[iFEB] &0xff) +  " (dec) missing in the FCL file!";
-            throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " MAC address seen by febdrv " + std::to_string(mac5s[iFEB] &0xff) +  " (dec) missing in the FCL file!");
+            TLOG(TLVL_ERROR) <<  __func__ << " MAC address seen by febdrv " << std::to_string(mac5s[iFEB] &0xff) <<  " (dec) missing in the FCL file!";
+            throw cet::exception( std::string(TRACE_NAME) + __func__ + " MAC address seen by febdrv " + std::to_string(mac5s[iFEB] &0xff) +  " (dec) missing in the FCL file!");
           }
         }
         bool some_fcl_mac_missing = 0;
@@ -255,11 +252,11 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
           }
         }
         if(some_fcl_mac_missing) {
-            TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Some of the MAC addresses defined in the FCL file do not match any FEBs seen by febdrv.";
-            throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Some of the MAC addresses defined in the FCL file do not match any FEBs seen by febdrv.");
+            TLOG(TLVL_ERROR) <<  __func__ << " Some of the MAC addresses defined in the FCL file do not match any FEBs seen by febdrv.";
+            throw cet::exception( std::string(TRACE_NAME) + __func__ + " Some of the MAC addresses defined in the FCL file do not match any FEBs seen by febdrv.");
         }
         else if(!any_mac_missing) {
-            TLOG(TLVL_INFO)<<std::string("BernCRTZMQData::") + __func__ + " All "+std::to_string(nFEBs())+" FEBs found in the FCL.";
+            TLOG(TLVL_INFO)<< __func__ << " All " << std::to_string(nFEBs()) << " FEBs found in the FCL.";
         }
       }
     }
@@ -279,22 +276,22 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
 
   uint8_t mac5;
   if(FEBIDs_.size() <= iFEB) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!";
-    throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!");
+    TLOG(TLVL_ERROR) <<  __func__ << " Could not find FEB " << std::to_string(iFEB) << " in the FEBIDs!";
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(iFEB) + " in the FEBIDs!");
   }
   else {
     mac5 = FEBIDs_[iFEB] & 0xff;
   }
 
   if(mac5==255) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Bitstreams cannot be sent to mac5 = 255!";
+    TLOG(TLVL_ERROR) <<  __func__ << " Bitstreams cannot be sent to mac5 = 255!";
     return;
   }
 
-  TLOG(TLVL_DEBUG)<<std::string("BernCRTZMQData::") + __func__ + " Connecting to febdrv...";
+  TLOG(TLVL_DEBUG)<< __func__ << " Connecting to febdrv...";
   if(zmq_connect(zmq_requester_, zmq_listening_port_.c_str())) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Connection to " + zmq_listening_port_ + " failed!";
-    throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
+    TLOG(TLVL_ERROR) <<  __func__ << " Connection to " << zmq_listening_port_ << " failed!";
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
   }
 
   char cmd[32];
@@ -302,7 +299,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   sprintf(cmd,"SETCONF");
   cmd[8]=mac5;
 
-  TLOG(TLVL_DEBUG)<<std::string("BernCRTZMQData::") + __func__ + " Sending command " + cmd + " to mac address " + std::to_string(mac5) + "...";
+  TLOG(TLVL_DEBUG)<< __func__ << " Sending command " << cmd << " to mac address " << std::to_string(mac5) << "...";
 
   const int MAXPACKLEN = 1500;
   uint8_t buffer[MAXPACKLEN];
@@ -321,7 +318,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
       buffer,
       feb_configuration[iFEB].GetSlowControlBitStreamNBytes()+feb_configuration[iFEB].GetProbeBitStreamNBytes()+9, 0);
 
-  TLOG(TLVL_DEBUG)<<std::string("BernCRTZMQData::") + __func__ + " Waiting for reply...";
+  TLOG(TLVL_DEBUG)<< __func__ << " Waiting for reply...";
 
   zmq_msg_t reply;
   zmq_msg_init (&reply);
@@ -334,18 +331,18 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
     rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
   }
   if(rv<0) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds";
+    TLOG(TLVL_ERROR) <<  __func__ << " Received no reply from febdrv after waiting for " << std::to_string(timeout) << " seconds";
     zmq_msg_close (&reply);
-    throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
+    throw cet::exception(std::string(TRACE_NAME) + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
   }
 
   std::string reply_string = (char*)zmq_msg_data(&reply);
   if(reply_string.compare("OK")) {
-    TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::") + __func__ + " Received unexpected reply from febdrv: " + reply_string;
-    throw cet::exception(std::string("BernCRTZMQData::") + __func__ + " Received unexpected reply from febdrv: " + reply_string);
+    TLOG(TLVL_ERROR) <<  __func__ << " Received unexpected reply from febdrv: " << reply_string;
+    throw cet::exception(std::string(TRACE_NAME) + __func__ + " Received unexpected reply from febdrv: " + reply_string);
   }
   else {
-    TLOG(TLVL_DEBUG)<<std::string("BernCRTZMQData::") + __func__ + " Received reply: " + reply_string;
+    TLOG(TLVL_DEBUG)<< __func__ << " Received reply: " << reply_string;
   }
   zmq_msg_close (&reply);
 }
@@ -353,7 +350,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
 size_t sbndaq::BernCRTZMQData::GetZMQData()
 {
-  TLOG(TLVL_INFO)<<"BernCRTZMQData::GetZMQData called";
+  TLOG(TLVL_INFO)<< __func__ << "() called";
   
   size_t data_size=0;
   size_t events=0;
@@ -367,8 +364,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData()
   {
     if ( errno != EAGAIN ) // No data awailable now
     {
-      // TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::GetFEBData() called ") +  std::to_string(errno) + " "  + zmq_strerror(errno));
-      TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::GetFEBData() called ") +  std::to_string(errno) + " "  + zmq_strerror(errno);
+      TLOG(TLVL_ERROR) << __func__ << " Instead of EAGAIN got the following errno: " <<  std::to_string(errno) << " " << zmq_strerror(errno);
       return 0;
     }
     usleep(1000);
@@ -377,38 +373,38 @@ size_t sbndaq::BernCRTZMQData::GetZMQData()
     
     if( (wait_count%500) == 0 )
     {
-      TLOG(TLVL_DEBUG) <<  std::string("BernCRTZMQData::GetZMQData() wait count: ") + std::to_string(wait_count);
+      TLOG(TLVL_DEBUG) << __func__ << " wait count: " << std::to_string(wait_count);
     }
   }
   
-  TLOG(TLVL_INFO) << std::string("BernCRTZMQData::GetZMQData() outside wait loop: ") + std::to_string(wait_count);
+  TLOG(TLVL_DEBUG) << __func__ << " outside wait loop: " << std::to_string(wait_count);
   
   if(zmq_msg_size(&feb_data_msg)>0)
   {
-    TLOG(TLVL_INFO) << "BernCRTZMQData::GetZMQData() about to copy";
+    TLOG(TLVL_INFO) << __func__ << " about to copy";
     
     std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
 	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
 	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[events]));
     
-    TLOG(TLVL_INFO) <<  "BernCRTZMQData::GetZMQData() copied!";
+    TLOG(TLVL_INFO) << __func__ << " copied!";
     
     events += zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
     data_size += zmq_msg_size(&feb_data_msg);
 
-    TLOG(TLVL_INFO) << std::string("BernCRTZMQData::GetZMQData() copied ") + std::to_string(events) + " events (" + std::to_string(data_size) + " size)";
+    TLOG(TLVL_INFO) << __func__ << " copied " << std::to_string(events) << " events (" << std::to_string(data_size) << " size)";
 
     //check : is this too much data for the buffer?
     if( events>ZMQBufferCapacity_ )
     {
-      TLOG(TLVL_ERROR) << std::string("BernCRTZMQData::GetZMQData : Too many events in ZMQ buffer! ") + std::to_string(events);
-      throw cet::exception("In BernCRTZMQData::GetZMQData, Too many events in ZMQ buffer!");
+      TLOG(TLVL_ERROR) << __func__ << " Too many events in ZMQ buffer! " << std::to_string(events);
+      throw cet::exception(std::string(TRACE_NAME) + " " + __func__ + " Too many events in ZMQ buffer!");
     }
   }
 
   zmq_msg_close(&feb_data_msg);
 
-  TLOG(TLVL_INFO) << std::string("BernCRTZMQData::GetZMQData() size returned was ") + std::to_string(data_size);
+  TLOG(TLVL_INFO) << __func__ << " size returned was " + std::to_string(data_size);
 
   return data_size;
 
