@@ -37,7 +37,7 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
 bool be_verbose_section = true;
 
 
-void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
+void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   if(be_verbose_section){
     std::cout << std::endl;
@@ -101,7 +101,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize(){
   GetData_thread_.swap(getData_worker);
 
   SeqIDMinimumSec_ = 0;
-}
+} //Initialize
 
 /*-----------------------------------------------------------------------*/
 
@@ -136,7 +136,7 @@ std::cout << std::endl;
   GetData_thread_->start();
 
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::start() completed";
-}
+} //start
 
 /*-----------------------------------------------------------------------*/
 
@@ -154,7 +154,7 @@ std::cout << std::endl;
   GetData_thread_->stop();
   ConfigureStop();
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::stop() completed";
-}
+} //stop
 
 /*-----------------------------------------------------------------------*/
 
@@ -173,7 +173,7 @@ std::cout << std::endl;
   GetData_thread_->stop();
   ConfigureStop();
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::stopNoMutex() completed";
-}
+} //stopNoMutex
 
 /*-----------------------------------------------------------------------*/
 
@@ -189,7 +189,7 @@ std::cout << std::endl;
 }
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::Cleanup() called";
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::Cleanup() completed";
-}
+} //Cleanup
 
 /*-----------------------------------------------------------------------*/
 
@@ -206,7 +206,7 @@ std::cout << std::endl;
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase destructor called";  
   Cleanup();
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase destructor completed"; 
-}
+} //destructor
 
 /*-----------------------------------------------------------------------*/
 
@@ -224,7 +224,7 @@ std::cout << std::endl;
   ss_id << "0x" << std::hex << std::setw(12) << std::setfill('0') << (id & 0xffffffffffff);
   //std::cout << "ss_id.str: " << ss_id.str() << std::endl;
   return ss_id.str();
-}
+} //GetFEBIDString
 
 /*-----------------------------------------------------------------------*/
 
@@ -244,7 +244,7 @@ std::cout << std::endl;
   //metricMan->sendMetric("BufferOccupancyPercent_"+id_str,
   //			 ((float)(buffer_size) / (float)(FEBBufferCapacity_))*100.,
   //			 "%",5,true,"BernCRTZMQGenerator");    
-}
+} //UpdateBufferOccupancyMetrics
 
 /*-----------------------------------------------------------------------*/
 
@@ -507,7 +507,7 @@ if(good_events!=nevents)
   std::cout << "Inserted into buffer on FEB " << (b.id & 0xff) << " " << good_events << " events." << std::endl;
 
   return b.buffer.size();*/
-  }
+} //InsertIntoFEBBuffer
 
 /*-----------------------------------------------------------------------*/
 
@@ -533,12 +533,11 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & b, siz
   b.buffer.erase_begin(nevents); //std::cout << b.buffer.erase_begin(nevents) << std::endl;
   std::cout << "Buffer Size after erasing the events: " << std::setw(4) << b.buffer.size() << " events" << std::endl << std::endl;
   return b.buffer.size();
-}
+} //EraseFromFEBBuffer
 
 /*-----------------------------------------------------------------------*/
 
-bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
-{
+bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   bool be_verbose = false;
 
@@ -552,13 +551,15 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
 
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::GetData() called";
 
-  if( GetDataSetup()!=1 ) return false;
+  if( GetDataSetup()!=1 ) return false; //TODO do we need GetDataSetup and this check at all?
 
-  const size_t data_size = GetZMQData(); //this fills the data from the ZMQ buffer
+  const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
+
   if(data_size % sizeof(BernCRTZMQEvent)) {
-    TLOG(TLVL_ERROR)<<"\tBernCRTZMQ::GetData() received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
+    TLOG(TLVL_ERROR)<<__func__<<": received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
+    throw cet::exception(std::string(TRACE_NAME) + __func__ + ": received data of "<<std::string(data_size)<<" bytes cannot be divided into "<<std::string(sizeof(BernCRTZMQEvent))<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
   }
-  if(data_size == 0) {
+  else if(data_size == 0) {
     TLOG(TLVL_ERROR)<<"BernCRTZMQ::GetData() failed. Stopping.";
     throw cet::exception("BernCRTZMQ::GetData() failed. Stopping");
     //TODO: note that we quit without turning off HV, but we can't turn off HV if zmq context is stopped, which is the reason of the failure here
@@ -619,14 +620,13 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData()
       prev_mac = (prev_mac & 0xffffffffffffff00) + this_event.MAC5();
       ++i_e; ++this_n_events;
     }
-
   }
 
   //metricMan->sendMetric("TotalEventsAdded",total_events-1,"events",5,true,"BernCRTZMQGenerator");
 
   if(total_events>0) return true;
   return false;
-}
+} //GetData
 
 /*-----------------------------------------------------------------------*/
 
@@ -991,7 +991,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   return false;
   */
 
-}
+} //FillFragment
 
 /*-----------------------------------------------------------------------*/
 
@@ -1079,7 +1079,7 @@ std::cout << std::endl;
 
   return true;
 
-}
+} //getNext_
 
 /*-----------------------------------------------------------------------*/
 
