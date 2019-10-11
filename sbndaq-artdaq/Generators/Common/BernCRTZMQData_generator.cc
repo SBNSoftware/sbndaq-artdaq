@@ -347,8 +347,6 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
   TLOG(TLVL_INFO)<< __func__ << "() called";
   
   size_t data_size=0;
-  size_t events=0;
-  
   size_t wait_count=0;
   
   zmq_msg_t feb_data_msg;
@@ -376,16 +374,16 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
     
     std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
 	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
-	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[events])); //TODO: events equals 0 at this point, why not write 0 simply??
+	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[0]));
     
-    TLOG(TLVL_INFO) << __func__ << " copied!";
+    TLOG(TLVL_DEBUG) << __func__ << " copied!";
     
-    events += zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
-    data_size += zmq_msg_size(&feb_data_msg);
+    size_t events = zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
+    data_size = zmq_msg_size(&feb_data_msg);
 
-    TLOG(TLVL_INFO) << __func__ << " copied " << std::to_string(events) << " events of size of " << std::to_string(data_size);
+    TLOG(TLVL_DEBUG) << __func__ << " copied " << std::to_string(events) << " events of size of " << std::to_string(data_size);
 
-    //check : is this too much data for the buffer?
+    //check : is this too much data for the buffer? //TODO: shouldn't we check it before copying?
     if( events > ZMQBufferCapacity_ ) {
       TLOG(TLVL_ERROR) << __func__ << " Too many events in ZMQ buffer! " << std::to_string(events);
       throw cet::exception(std::string(TRACE_NAME) + " " + __func__ + " Too many events in ZMQ buffer!");
