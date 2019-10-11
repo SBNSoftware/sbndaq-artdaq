@@ -231,6 +231,7 @@ std::cout << std::endl;
 
 void sbndaq::BernCRTZMQ_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const& /*id*/,
 								    size_t const& ) const { //buffer_size) const {
+/* No point to spam the screen with a function that does nothing (uncomment this if you add content)
 if(be_verbose_section){
 std::cout << std::endl;
 std::cout << "---------------------------" << std::endl;
@@ -238,6 +239,7 @@ std::cout << "SECTION 8 - UpdateBufferOccupancyMetrics" << "\n";
 std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
+*/
 
   //std::string id_str = GetFEBIDString(id);
   //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTZMQGenerator");    
@@ -261,16 +263,11 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     std::cout << std::endl;
   }
 
-  std::cout << "\n---InsertIntoFEBBuffer---\n";
+  TLOG(TLVL_DEBUG)<<__func__<<": FEB ID "<<(b.id & 0xff)<<". Current buffer size "<<b.buffer.size()<<" / "<<b.buffer.capacity()<<". Want to add "<<nevents<<" events.";
 
-  std::cout << "Calling insert into buffer on FEB " << (b.id & 0xff) << " (adding " << nevents << " events" << " to " << b.buffer.size() << " events into buffer" <<")" << std::endl;
-
-  TLOG(TLVL_DEBUG)<<"FEB ID "<<b.id<<". Current buffer size "<<b.buffer.size()<<" / "<<b.buffer.capacity()<<". Want to add "<<nevents<<" events.";
-
-  std::cout << "Buffer Capacity: " << std::setw(5) << b.buffer.capacity() << std::endl;
   //wait for available capacity...
-  {int i=0; while( (b.buffer.capacity()-b.buffer.size()) < nevents){ std::cout<<((i++)?".":"no available capacity!"); usleep(10); }}
-  std::cout << "\nCheck the buffer: " << std::endl;	
+  for(int i=0; (b.buffer.capacity()-b.buffer.size()) < nevents; i++) { std::cout<<(i?".":"no available capacity to save the events in FEBBuffers (I will be printing dots while waiting)!"); usleep(10); }
+  std::cout << "\nCheck the buffer after waiting for capacity: " << std::endl;	
   std::cout << "Buffer Capacity: " << std::setw(5) << b.buffer.capacity() << std::endl;
   std::cout << "Buffer Size: " << std::setw(6) << b.buffer.size() <<  std::endl;
 
@@ -280,13 +277,13 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
 
   // ------TRACE----------//
-  TLOG(TLVL_DEBUG)<<"FEB ID "<<b.id
-    <<". Current buffer size "<<b.buffer.size()
-    <<" with times ["<<b.buffer.front().Time_TS0()
-    <<","<<b.buffer.back().Time_TS0()<<"].";
+  TLOG(TLVL_DEBUG)<<"FEB ID "<<(b.id & 0xff)
+                  <<". Current buffer size "<<b.buffer.size()
+                  <<" with T0 in range ["<<b.buffer.front().Time_TS0()
+                  <<", "<<b.buffer.back().Time_TS0()<<"].";
   TLOG(TLVL_DEBUG)<<"Want to add "<<nevents
-    <<" events with times ["<<ZMQBufferUPtr[begin_index].Time_TS0()
-    <<","<<ZMQBufferUPtr[begin_index+nevents-1].Time_TS0()<<"].";
+                  <<" events with T0 in range ["<<ZMQBufferUPtr[begin_index].Time_TS0()
+                  <<", "<<ZMQBufferUPtr[begin_index+nevents-1].Time_TS0()<<"].";
 
   TLOG(TLVL_DEBUG)<<"Before sort, here's contents of buffer:";
   TLOG(TLVL_DEBUG)<<"============================================";
@@ -310,7 +307,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   //time_last_poll_start.tv_sec;//, time_last_poll_finished.tv_sec = 0;
   //std::cout << "time last poll start : " << time_last_poll_start.tv_sec << std::endl << "\n";
 
-  timeval time_poll_start; gettimeofday(&time_poll_start,NULL);
+  timeval time_poll_start; gettimeofday(&time_poll_start,NULL); //TODO: work on this!
 
 
   //for the moment, to delete after
@@ -324,24 +321,14 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   std::cout<<"time_poll_start [s] " << time_poll_start.tv_sec << std::endl;
   std::cout<<"time_poll_start [ns] " << time_poll_start.tv_usec*1000 << std::endl;
 
-  size_t good_events = 1;
-  while(good_events<nevents){
-    ++good_events;
-  }
-
-  //std::cout<< "nevets " << nevents << std::endl;
-  //std::cout<< "total_events " << total_events << std::endl;
-
   TLOG(TLVL_DEBUG)<<"Last event looks like \n "<<ZMQBufferUPtr[nevents/*total_events-1*/].c_str();
-  //TLOG(TLVL_DEBUG)<<"Time is %ld, %hu",time_poll_finished.time,time_poll_finished.millitm);
 
   //BernCRTZMQEvent* last_event_ptr = &(ZMQBufferUPtr[begin_index]);
   //BernCRTZMQEvent* this_event_ptr = last_event_ptr;
 
-  b.buffer.insert(b.buffer.end(), &(ZMQBufferUPtr[begin_index]), &(ZMQBufferUPtr[good_events+begin_index]));
+  b.buffer.insert(b.buffer.end(), &(ZMQBufferUPtr[begin_index]), &(ZMQBufferUPtr[nevents+begin_index]));
 
-
-  std::cout << "\nInserted into buffer on FEB " << (b.id & 0xff) << " " << good_events << " events." << std::endl;
+  std::cout << "\nInserted into buffer on FEB " << (b.id & 0xff) << ": " << nevents << " events." << std::endl;
 
 
   //Time the poll has finished
@@ -371,7 +358,6 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
     /*std::cout << "start_" << i_e << " " << time_poll_start_store_sec[i_e] << " fin_" << i_e << " " << 	time_poll_finish_store_sec[i_e] << " [s] " << "\n";
       std::cout << "start_" << i_e << " " << time_poll_start_store_nanosec[i_e] << " fin_" << i_e << " " << time_poll_finish_store_nanosec[i_e] << " [ns] " << "\n";*/
-
   }
 
 
@@ -379,7 +365,6 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     std::cout << "start_" << i_e << " " << time_poll_start_store_sec[i_e] << " fin_" << i_e << " " << 	time_poll_finish_store_sec[i_e] << " [s] " << "\n";
     std::cout << "start_" << i_e << " " << time_poll_start_store_nanosec[i_e] << " fin_" << i_e << " " << time_poll_finish_store_nanosec[i_e] << " [ns] " << "\n";
   }
-
 
 
   std::cout << "\n";
@@ -397,24 +382,6 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   return b.buffer.size();
 
   /*
-     std::cout << "Calling insert into buffer on FEB " << (b.id & 0xff) << " (adding " << nevents << " events" << " to " << b.buffer.size() << " events into buffer" <<")" << std::endl;
-
-
-     TLOG(TLVL_DEBUG)<<"FEB ID 0x%lx. Current buffer size %lu / %lu. Want to add %lu events.",
-     b.id,b.buffer.size(),b.buffer.capacity(),nevents);
-
-     timeval timenow; gettimeofday(&timenow,NULL); 
-
-  //don't fill while we wait for available capacity...
-  std::cout << "buffer capacity: " << b.buffer.capacity() << std::endl;
-  std::cout << "buffer size: " << b.buffer.size() << std::endl;
-
-
-  while( (b.buffer.capacity()-b.buffer.size()) < nevents){ usleep(10); }
-
-  //obtain the lock
-  std::unique_lock<std::mutex> lock(*(b.mutexptr));
-
   //ok, now, we need to do a few things:
   //(1) loop through our new events, and see if things are in order (time1)
   //(2) if they aren't, check if it's a reference or overflow condition
@@ -442,67 +409,68 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
   size_t good_events=1;
   while(good_events<nevents){
-  std::cout << "we are in the while cycle because good_events < nevents " << std::endl;
-  std::cout << "good_events " << good_events << " <= " << nevents << " nevents"<< std::endl;
-  this_event_ptr = &(ZMQBufferUPtr[good_events+begin_index]);
+    //AA: here someone (Federico?) apparently tries to filter out junk time values (a.k.a. "spikes") from CAEN FEBs. I really hope CAEN finally fixes this issue and we won't need to uncomment these lines
+    std::cout << "we are in the while cycle because good_events < nevents " << std::endl;
+    std::cout << "good_events " << good_events << " <= " << nevents << " nevents"<< std::endl;
+    this_event_ptr = &(ZMQBufferUPtr[good_events+begin_index]);
 
-  //if times not in order ...
-  if(this_event_ptr->Time_TS0() <= last_event_ptr->Time_TS0())
-  {	std::cout << "\tif times not in order if cycle" << std::endl;
-  std::cout << "this_event_ptr "<< this_event_ptr->Time_TS0() << " <= " << "last_event_ptr " <<last_event_ptr->Time_TS0() << std::endl;
-  // ... and the current is not an overflow or prev is not reference
-  // then we need to break out of this.
-  if( !(last_event_ptr->IsReference_TS0() || this_event_ptr->IsOverflow_TS0()))
-  {std::cout<<"1st.we are going to break the cycle\n";break;}
-  }
+    //if times not in order ...
+    if(this_event_ptr->Time_TS0() <= last_event_ptr->Time_TS0())
+    {	std::cout << "\tif times not in order if cycle" << std::endl;
+      std::cout << "this_event_ptr "<< this_event_ptr->Time_TS0() << " <= " << "last_event_ptr " <<last_event_ptr->Time_TS0() << std::endl;
+      // ... and the current is not an overflow or prev is not reference
+      // then we need to break out of this.
+      if( !(last_event_ptr->IsReference_TS0() || this_event_ptr->IsOverflow_TS0()))
+         {std::cout<<"1st.we are going to break the cycle\n";break;}
+     }
 
-  //if time difference is too large
-  else
-  if( (this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0())>b.max_time_diff )
-  {std::cout<<"2nd.we are going to break the cycle\n";
-  std::cout<<"b.max_time_diff " << b.max_time_diff << std::endl;
-  std::cout<<"this_event_ptr-last_event_ptr " << this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0() << std::endl;
+    //if time difference is too large
+    else
+    if( (this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0())>b.max_time_diff )
+      {std::cout<<"2nd.we are going to break the cycle\n";
+    std::cout<<"b.max_time_diff " << b.max_time_diff << std::endl;
+    std::cout<<"this_event_ptr-last_event_ptr " << this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0() << std::endl;
 
-  break;}
+    break;}
 
 
   last_event_ptr = this_event_ptr;
   ++good_events;
 
-}
+  }
 
-//note, the order here is important. the buffer with events needs to be last, as that's
-//what is used later for the filling process to determing number of events. 
-//determining number of events is an unlocked procedure
+  //note, the order here is important. the buffer with events needs to be last, as that's
+  //what is used later for the filling process to determing number of events. 
+  //determining number of events is an unlocked procedure
 
-timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
+  timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
 
-TLOG(TLVL_DEBUG)<<"Last event looks like \n %s",ZMQBufferUPtr[total_events-1].c_str());
-TLOG(TLVL_DEBUG)<<"Time is %ld, %hu",time_poll_finished.time,time_poll_finished.millitm);
+  TLOG(TLVL_DEBUG)<<"Last event looks like \n %s",ZMQBufferUPtr[total_events-1].c_str());
+  TLOG(TLVL_DEBUG)<<"Time is %ld, %hu",time_poll_finished.time,time_poll_finished.millitm);
 
-timenow.tv_sec = time_poll_finished.time;
-timenow.tv_usec = time_poll_finished.millitm*1000;
+  timenow.tv_sec = time_poll_finished.time;
+  timenow.tv_usec = time_poll_finished.millitm*1000;
 
-if(b.last_timenow.tv_sec==0){
-  timeb time_poll_started = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)));
-  b.last_timenow.tv_sec = time_poll_started.time;
-  b.last_timenow.tv_usec = time_poll_started.millitm*1000;
-}
+  if(b.last_timenow.tv_sec==0){
+    timeb time_poll_started = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)));
+    b.last_timenow.tv_sec = time_poll_started.time;
+    b.last_timenow.tv_usec = time_poll_started.millitm*1000;
+  }
 
-b.timebuffer.insert(b.timebuffer.end(),good_events,std::make_pair(b.last_timenow,timenow));
-b.droppedbuffer.insert(b.droppedbuffer.end(),good_events-1,0);
-b.droppedbuffer.insert(b.droppedbuffer.end(),1,nevents-good_events);
-b.buffer.insert(b.buffer.end(),&(ZMQBufferUPtr[begin_index]),&(ZMQBufferUPtr[good_events+begin_index])); //!!
+  b.timebuffer.insert(b.timebuffer.end(),good_events,std::make_pair(b.last_timenow,timenow));
+  b.droppedbuffer.insert(b.droppedbuffer.end(),good_events-1,0);
+  b.droppedbuffer.insert(b.droppedbuffer.end(),1,nevents-good_events);
+  b.buffer.insert(b.buffer.end(),&(ZMQBufferUPtr[begin_index]),&(ZMQBufferUPtr[good_events+begin_index])); //!!
 
-b.last_timenow = timenow;
+  b.last_timenow = timenow;
 
-TLOG(TLVL_DEBUG)<<"After insert, here's contents of buffer:");
-TLOG(TLVL_DEBUG)<<"============================================");
-for(size_t i_e=0; i_e<b.buffer.size(); ++i_e)
-TLOG(TLVL_DEBUG)<<"\t\t %lu : %u",i_e,b.buffer.at(i_e).Time_TS0());
-if(good_events!=nevents)
-  TLOG(TLVL_DEBUG)<<"\tWE DROPPED %lu EVENTS.",nevents-good_events);
+  TLOG(TLVL_DEBUG)<<"After insert, here's contents of buffer:");
   TLOG(TLVL_DEBUG)<<"============================================");
+  for(size_t i_e=0; i_e<b.buffer.size(); ++i_e)
+    TLOG(TLVL_DEBUG)<<"\t\t %lu : %u",i_e,b.buffer.at(i_e).Time_TS0());
+  if(good_events!=nevents)
+    TLOG(TLVL_DEBUG)<<"\tWE DROPPED %lu EVENTS.",nevents-good_events);
+    TLOG(TLVL_DEBUG)<<"============================================");
 
   std::cout << "Inserted into buffer on FEB " << (b.id & 0xff) << " " << good_events << " events." << std::endl;
 
@@ -555,9 +523,10 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
 
+  //simple check of data size validity
   if(data_size % sizeof(BernCRTZMQEvent)) {
     TLOG(TLVL_ERROR)<<__func__<<": received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
-    throw cet::exception(std::string(TRACE_NAME) + __func__ + ": received data of "<<std::string(data_size)<<" bytes cannot be divided into "<<std::string(sizeof(BernCRTZMQEvent))<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
+    throw cet::exception(std::string(TRACE_NAME) + __func__ + ": received data of " + std::to_string(data_size) + " bytes cannot be divided into " + std::to_string(sizeof(BernCRTZMQEvent)) + " chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
   }
   else if(data_size == 0) {
     TLOG(TLVL_ERROR)<<"BernCRTZMQ::GetData() failed. Stopping.";
@@ -566,21 +535,15 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   }
 
   size_t total_events = data_size/sizeof(BernCRTZMQEvent);
+  TLOG(TLVL_DEBUG)<<__func__<<": "<<total_events<<" total events";
 
-  std::cout << "TOTAL EVENTS GET DATA " << total_events << "\n";
-
-
-  TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() got "<<total_events<<" total events";
-
-
-  size_t i_e=0;
-  size_t this_n_events=0;
+  size_t this_n_events=0; //number of events in given FEB
   uint64_t prev_mac = (FEBIDs_[0] & 0xffffffffffffff00) + ZMQBufferUPtr[0].MAC5();
-  size_t new_buffer_size = 0;
 
   TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() start sorting with mac="<<prev_mac;
 
-  while(i_e<total_events){
+  for(size_t i_e = 0; i_e < total_events; i_e++) {
+    //loop over events in ZMQBufferUPtr
 
     auto const& this_event = ZMQBufferUPtr[i_e];
 
@@ -595,7 +558,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
       std::cout << "\t\tTS1() " << this_event.Time_TS1() << std::endl;
     }
 
-
     if((prev_mac&0xff)!=this_event.MAC5()){ //TODO: understand the logic behind this
 
       TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() found new MAC ("<<this_event.MAC5()
@@ -603,7 +565,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
                       <<", iterator="<<i_e
                       <<" this_events="<<this_n_events;
 
-      new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events,total_events);
+      //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
+      size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events, total_events);
 
       TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() ... id="<<FEBBuffers_[prev_mac].id
                       <<", n_events="<<this_n_events
@@ -611,13 +574,13 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
       //auto id_str = GetFEBIDString(prev_mac);
       //metricMan->sendMetric("EventsAdded_"+id_str,this_n_events,"events",5,true,"BernCRTZMQGenerator");
-      UpdateBufferOccupancyMetrics(prev_mac,new_buffer_size);
+      UpdateBufferOccupancyMetrics(prev_mac, new_buffer_size); //TODO: this function does nothing as of now!
 
       this_n_events=0;
     }
 
     prev_mac = (prev_mac & 0xffffffffffffff00) + this_event.MAC5();
-    ++i_e; ++this_n_events;
+    ++this_n_events;
   }
 
 
