@@ -21,8 +21,8 @@ namespace sbndaq {
     void ConfigureStop();  //called in stop()
 
     size_t GetZMQData();
-    int    GetDataSetup();
-    int    GetDataComplete();
+    int    GetDataSetup();    //TODO this function does nothing
+    int    GetDataComplete(); //TODO this function is never called
 
     std::string zmq_listening_port_;
     std::string zmq_data_pub_port_;
