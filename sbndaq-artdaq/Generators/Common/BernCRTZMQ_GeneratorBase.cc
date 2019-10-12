@@ -85,7 +85,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::Initialize() completed";
 
 
-
   for( size_t i_id=0; i_id<FEBIDs_.size(); ++i_id){
     auto const& id = FEBIDs_[i_id];
     FEBBuffers_[id] = FEBBuffer_t(FEBBufferCapacity_,MaxTimeDiffs_[i_id],id);
@@ -308,7 +307,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   //std::cout << "time last poll start : " << time_last_poll_start.tv_sec << std::endl << "\n";
 
   timeval time_poll_start; gettimeofday(&time_poll_start,NULL); //TODO: work on this!
-
+  //AA: presently time_poll_start and finish measure time before and after filling FEBBuffer from ZMQBuffer... this doesn't make much sense
 
   //for the moment, to delete after
 
@@ -326,13 +325,13 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   //BernCRTZMQEvent* last_event_ptr = &(ZMQBufferUPtr[begin_index]);
   //BernCRTZMQEvent* this_event_ptr = last_event_ptr;
 
+  //Insert events into FEBBuffer, the most important line of the function
   b.buffer.insert(b.buffer.end(), &(ZMQBufferUPtr[begin_index]), &(ZMQBufferUPtr[nevents+begin_index]));
 
   std::cout << "\nInserted into buffer on FEB " << (b.id & 0xff) << ": " << nevents << " events." << std::endl;
 
 
   //Time the poll has finished
-
   //timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
 
   timeval time_poll_finished; gettimeofday(&time_poll_finished,NULL);
@@ -426,22 +425,24 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
     //if time difference is too large
     else
-    if( (this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0())>b.max_time_diff )
-      {std::cout<<"2nd.we are going to break the cycle\n";
-    std::cout<<"b.max_time_diff " << b.max_time_diff << std::endl;
-    std::cout<<"this_event_ptr-last_event_ptr " << this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0() << std::endl;
+    if( (this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0())>b.max_time_diff ) {
+      std::cout<<"2nd.we are going to break the cycle\n";
+      std::cout<<"b.max_time_diff " << b.max_time_diff << std::endl;
+      std::cout<<"this_event_ptr-last_event_ptr " << this_event_ptr->Time_TS0()-last_event_ptr->Time_TS0() << std::endl;
 
-    break;}
+      break;
+    }
 
-
-  last_event_ptr = this_event_ptr;
-  ++good_events;
+    last_event_ptr = this_event_ptr;
+    ++good_events;
 
   }
 
   //note, the order here is important. the buffer with events needs to be last, as that's
   //what is used later for the filling process to determing number of events. 
   //determining number of events is an unlocked procedure
+
+  //AA: This is an attempt to fill timebuffers
 
   timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
 
@@ -529,8 +530,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     throw cet::exception(std::string(TRACE_NAME) + __func__ + ": received data of " + std::to_string(data_size) + " bytes cannot be divided into " + std::to_string(sizeof(BernCRTZMQEvent)) + " chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
   }
   else if(data_size == 0) {
-    TLOG(TLVL_ERROR)<<"BernCRTZMQ::GetData() failed. Stopping.";
-    throw cet::exception("BernCRTZMQ::GetData() failed. Stopping");
+    TLOG(TLVL_ERROR)<<"BernCRTZMQ::GetData() Obtained data size of 0. Stopping.";
+    throw cet::exception("BernCRTZMQ::GetData() Obtained data size of 0. Stopping");
     //TODO: note that we quit without turning off HV, but we can't turn off HV if zmq context is stopped, which is the reason of the failure here
   }
 
