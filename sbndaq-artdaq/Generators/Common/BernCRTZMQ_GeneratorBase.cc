@@ -442,7 +442,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   //what is used later for the filling process to determing number of events. 
   //determining number of events is an unlocked procedure
 
-  //AA: This is an attempt to fill timebuffers
+  //AA: This is an attempt to fill timebuffers (variables not filled otherwise in the uncommented code above)
 
   timeb time_poll_finished = *((timeb*)((char*)(ZMQBufferUPtr[total_events-1].adc)+sizeof(int)+sizeof(struct timeb)));
 
@@ -594,10 +594,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
 
 bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
-						    artdaq::FragmentPtrs & frags)
-{
-
-
+						    artdaq::FragmentPtrs & frags) {
   if(be_verbose_section){
     std::cout << std::endl;
     std::cout << "---------------------------" << std::endl;
@@ -608,8 +605,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
   TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment(id="<<feb_id<<",frags) called";
 
-  std::cout << "\n---FillFragment---\n";
-
   std::cout << "\nSTARTING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size() << std::endl;
 
   auto & feb = (FEBBuffers_[feb_id]);
@@ -618,8 +613,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() completed, buffer (mostly) empty.");
     return false;
     }*/
-
-  std::string id_str = GetFEBIDString(feb_id);
 
   size_t buffer_end = feb.buffer.size(); 
 
@@ -752,6 +745,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   TLOG(TLVL_DEBUG)<<"BernCRTZMQ::FillFragment() : Buffer size after erase = "<<feb.buffer.size();
 
   //update 
+  std::string id_str = GetFEBIDString(feb_id);
   metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
@@ -775,25 +769,25 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
   /*
 
-     if(this_event.IsReference_TS0()){
-     TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() Found reference pulse at i_e=%lu, time=%u",
-     i_e,this_event.Time_TS0());
-     if(metricMan != nullptr) metricMan->sendMetric("GPS_Ref_Time", (long int)this_event.Time_TS0() - 1e9, "ns", 5, artdaq::MetricMode::LastPoint);
-     i_gps=i_e;
-     }
-     else if(this_event.Time_TS0()<last_time && this_event.IsOverflow_TS0()){
-     n_wraparounds++;
-     TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() Found wraparound pulse at i_e=%lu, time=%u (last_time=%u), n=%lu",
-     i_e,this_event.Time_TS0(),last_time,n_wraparounds);
-     }
-     feb.correctedtimebuffer[i_e] = (this_event.Time_TS0()+(uint64_t)n_wraparounds*0x40000000);
-     last_time = this_event.Time_TS0();
+    if(this_event.IsReference_TS0()) {
+      TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() Found reference pulse at i_e=%lu, time=%u",
+      i_e,this_event.Time_TS0());
+      if(metricMan != nullptr) metricMan->sendMetric("GPS_Ref_Time", (long int)this_event.Time_TS0() - 1e9, "ns", 5, artdaq::MetricMode::LastPoint);
+      i_gps=i_e;
+    }
+    else if(this_event.Time_TS0()<last_time && this_event.IsOverflow_TS0()) {
+      n_wraparounds++;
+      TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() Found wraparound pulse at i_e=%lu, time=%u (last_time=%u), n=%lu",
+      i_e,this_event.Time_TS0(),last_time,n_wraparounds);
+    }
+    feb.correctedtimebuffer[i_e] = (this_event.Time_TS0()+(uint64_t)n_wraparounds*0x40000000);
+    last_time = this_event.Time_TS0();
 
-     std::cout << "last_time " << last_time << std::endl;
+    std::cout << "last_time " << last_time << std::endl;
 
 
-     if(i_gps!=buffer_end) break;
-     }
+    if(i_gps!=buffer_end) break;
+  }
 
   if(i_gps==buffer_end){
     TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() completed, buffer not empty, but waiting for GPS pulse.");
@@ -996,12 +990,8 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
 
-
-  std::cout << "\n---Calling getNext_---" << std::endl;
-
   TLOG(TLVL_INFO)<<"BernCRTZMQ::getNext_(frags) called";
-
-  std::cout << std::endl << "STARTING SIZE OF frags.size IN GETNEXT_ IS " << frags.size() << std::endl << std::endl;
+  std::cout << "STARTING SIZE OF frags.size IN GETNEXT_ IS " << frags.size() << std::endl << std::endl;
   
   //throttling...
   if (throttle_usecs_ > 0) {
@@ -1022,12 +1012,11 @@ std::cout << std::endl;
   
   for(auto const& id : FEBIDs_){
     while(true){
-      if(!FillFragment(id,frags)) break;
+      if(!FillFragment(id, frags)) break;
     }
   }
 
   TLOG(TLVL_INFO)<<"BernCRTZMQ::getNext_(frags) completed";
-
   std::cout << "ENDING SIZE OF frags.size IN GETNEXT_ IS " << frags.size() << std::endl;
   //std::cout << "---PRINT OUT FRAGMENT IN GETNEXT_---" << std::endl  << std::endl;
 
@@ -1036,11 +1025,9 @@ std::cout << std::endl;
     std::cout << *(bb.eventdata(0)) << std::endl;
   }*/
 
-
   if(frags.size()!=0) TLOG(TLVL_DEBUG)<<"BernCRTZMQ::geNext_() : last fragment is: "<<(BernCRTZMQFragment(*frags.back())).c_str();
 
   return true;
-
 } //getNext_
 
 /*-----------------------------------------------------------------------*/
