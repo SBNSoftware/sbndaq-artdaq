@@ -58,10 +58,10 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   event_in_clock = 0;
   GPS_time = 0;
 
-  FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity",5000);
-  ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity",1024*30);
+  FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
+  ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity");
 
-  MaxTimeDiffs_   = ps_.get< std::vector<uint32_t> >("MaxTimeDiffs",std::vector<uint32_t>(FEBIDs_.size(),1e7));
+  MaxTimeDiffs_   = ps_.get< std::vector<uint32_t> >("MaxTimeDiffs",std::vector<uint32_t>(FEBIDs_.size()));
 
   if(MaxTimeDiffs_.size()!=FEBIDs_.size()){
     if(MaxTimeDiffs_.size()==1){
@@ -74,8 +74,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
     }
   }
 
-  throttle_usecs_ = ps_.get<size_t>("throttle_usecs", 100000);
-  throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check", 10000);
+  throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
+  throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
         throttle_usecs_ % throttle_usecs_check_ != 0) ) {
