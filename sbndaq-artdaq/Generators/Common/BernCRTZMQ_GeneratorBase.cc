@@ -587,8 +587,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   //metricMan->sendMetric("TotalEventsAdded",total_events-1,"events",5,true,"BernCRTZMQGenerator");
 
-  if(total_events>0) return true;
-  return false;
+  return true;
 } //GetData
 
 /*-----------------------------------------------------------------------*/
