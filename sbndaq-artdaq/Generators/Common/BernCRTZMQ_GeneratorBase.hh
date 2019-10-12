@@ -97,7 +97,7 @@ namespace sbndaq {
 
       FEBBuffer(uint32_t capacity, uint32_t td, uint64_t i)
 	: buffer(EventBuffer_t(capacity)),
-	  timebuffer(EventTimeBuffer_t(capacity)),
+	  timebuffer(EventTimeBuffer_t(capacity)), //TODO: note, this buffer, and the following ones are used only in the code that's commented atm
 	  droppedbuffer(EventsDroppedBuffer_t(capacity)),
 	  correctedtimebuffer(EventsCorrectedTimeBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
