@@ -34,12 +34,7 @@ namespace sbndaq {
     void stopNoMutex() override;
 
     uint32_t RunNumber_;
-    uint64_t SubrunTimeWindowSize_;
     uint32_t SequenceTimeWindowSize_; //in nanoseconds
-
-    uint32_t ReaderID_;
-    uint32_t nChannels_;
-    uint32_t nADCBits_;
 
     std::vector<uint64_t> FEBIDs_;
     size_t nFEBs() { return FEBIDs_.size(); }
@@ -84,7 +79,6 @@ namespace sbndaq {
 
     std::unique_ptr<BernCRTZMQEvent[]> ZMQBufferUPtr;
     uint32_t ZMQBufferCapacity_;
-    uint32_t ZMQBufferSizeBytes_;
 
   private:
 
@@ -125,9 +119,8 @@ namespace sbndaq {
 
     std::chrono::system_clock insertTimer_;
 
-    std::unordered_map< uint64_t, FEBBuffer_t  > FEBBuffers_;
+    std::unordered_map< uint64_t, FEBBuffer_t  > FEBBuffers_; //TODO possibly we can optimize it by limiting MAC address to uint8_t
     uint32_t FEBBufferCapacity_;
-    uint32_t FEBBufferSizeBytes_;
 
     uint32_t SeqIDMinimumSec_;
 

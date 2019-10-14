@@ -1,13 +1,19 @@
 [Unit]
 Description=febdrv on %I
-BindsTo=sys-subsystem-net-devices-%I.device
-After=sys-subsystem-net-devices-%I.device
+
+#The following lines are needed if febdrv is located on /home/nfs
+Requires=home-nfs.mount
+After=home-nfs.mount
 
 [Service]
 Type=simple
 EnvironmentFile=/etc/febdrv.%I.conf
-ExecStart=/path_to_febdrv/febdrv %I 300 $ZMQ_PORT
 SyslogIdentifier=febdrv %I
+ExecStop=/usr/bin/systemctl stop febdrv-main
+
+#update path to the executable
+ExecStart=/path_to_febdrv/febdrv %I 300 $ZMQ_PORT
+
 
 [Install]
 RequiredBy=febdrv-main.service

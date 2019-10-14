@@ -1,6 +1,9 @@
 [Unit]
 Description=Main febdrv demon calling individual febdrv instances
 
+After=network-online.target
+Requires=network.target
+
 #For each ethernet port add "BindsTo" line:
 #BindsTo=febdrv@ETHERNET_PORT
 #e.g.

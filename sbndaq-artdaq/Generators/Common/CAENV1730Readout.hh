@@ -1,3 +1,7 @@
+//
+//  sbndaq-artdaq/Generators/Common/CAENV1730Readout.hh
+//
+
 #ifndef sbndaq_artdaq_Generators_CAENV1730Readout_hh
 #define sbndaq_artdaq_Generators_CAENV1730Readout_hh
 
@@ -37,12 +41,12 @@ namespace sbndaq
 
   private:
     bool readSingleWindowFragments(artdaq::FragmentPtrs &);
-	  bool readSingleWindowDataBlock();
+    bool readSingleWindowDataBlock();
 	
-		bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
+    bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
 		
-		void loadConfiguration(fhicl::ParameterSet const& ps);
-		void configureInterrupts();
+    void loadConfiguration(fhicl::ParameterSet const& ps);
+    void configureInterrupts();
 
     typedef enum 
     { 
@@ -59,7 +63,8 @@ namespace sbndaq
     //char*                 fBuffer;
     uint32_t              fBufferSize;
     //uint32_t              fCircularBufferSize;
-    CAEN_DGTZ_AcqMode_t   fAcqMode;		// initialized in the constructor
+    CAEN_DGTZ_AcqMode_t   fAcqMode;	// initialized in the constructor
+
 
     typedef enum {
       TEST_PATTERN_S=3
@@ -75,21 +80,43 @@ namespace sbndaq
       RUN_ENABLED  = 0x0004
     } ACQ_STATUS_MASK_t;
 
-    enum {
-      TERROR      = 0,
-	TWARNING  = 1,
-	TINFO     = 2,
-	TDEBUG    = 3,
-	
-	TCONFIG   = 4,
-	TSTART    = 5,
-	TSTOP     = 6,
-	TSTATUS   = 7,
-	TGETNEXT  = 8,
-	TGETDATA  = 9,
-        TMAKEFRAG = 10,
+    typedef enum {
+      DYNAMIC_RANGE      = 0x8028,
+      ACQ_CONTROL        = 0x8100,
+      FP_TRG_OUT_CONTROL = 0x8110,
+      FP_IO_CONTROL      = 0x811C,
+      FP_LVDS_CONTROL    = 0x81A0,
+      READOUT_CONTROL    = 0xEF00
+    } ADDRESS_t;
 
-        TTEMP = 30
+    typedef enum 
+    {
+      ENABLE_LVDS_TRIGGER  = 0x20000000,
+      ENABLE_EXT_TRIGGER   = 0x40000000,
+      ENABLE_NEW_LVDS      = 0x100,
+      ENABLE_TRG_OUT       = 0xFF,
+      TRIGGER_LOGIC        = 0x1F00,
+      DISABLE_TRG_OUT_LEMO = 0x2,
+      LVDS_IO              = 0x3C,
+      LVDS_BUSY            = 0,
+      LVDS_TRIGGER         = 1,
+      LVDS_nBUSY_nVETO     = 2,
+      LVDS_LEGACY          = 3
+    } IO_MASK_t;
+
+    enum {
+      TERROR    = 0,
+      TWARNING  = 1,
+      TINFO     = 2,
+      TDEBUG    = 3,
+      TCONFIG   = 4,
+      TSTART    = 5,
+      TSTOP     = 6,
+      TSTATUS   = 7,
+      TGETNEXT  = 8,
+      TGETDATA  = 9,
+      TMAKEFRAG = 10,
+      TTEMP     = 30
     };
 
     //fhicl parameters
@@ -99,11 +126,14 @@ namespace sbndaq
     uint16_t fInterruptEventNumber;
     uint32_t fInterruptStatusID;
     uint32_t fGetNextSleep;
-		uint32_t fGetNextFragmentBunchSize;
+    uint32_t fGetNextFragmentBunchSize;
     bool     fSWTrigger;
+    uint32_t fSelfTriggerMode;
+    uint32_t fSelfTriggerMask;
+    uint32_t fModeLVDS;
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
-		uint32_t fFragmentID;
+    uint32_t fFragmentID;
 
     //internals
     size_t   fNChannels;
@@ -112,11 +142,10 @@ namespace sbndaq
     bool     fail_GetNext;
     uint32_t fEvCounter; // set to zero at the beginning
     uint32_t last_rcvd_rwcounter;
-		uint32_t last_sent_rwcounter;
+    uint32_t last_sent_rwcounter;
     uint32_t total_data_size;
     //uint32_t event_size;	
     uint32_t n_readout_windows;
-
     uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
     
     //functions
@@ -127,6 +156,8 @@ namespace sbndaq
     void ConfigureTrigger();
     void ConfigureReadout();
     void ConfigureAcquisition();
+    void ConfigureLVDS();
+    void ConfigureSelfTriggerMode();
     void RunADCCalibration();
 
     bool WaitForTrigger();
@@ -138,7 +169,8 @@ namespace sbndaq
 
     void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
 
-		CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address, uint32_t data, uint32_t bitmask); 
+    CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address,
+					     uint32_t data, uint32_t bitmask); 
     
   };
 

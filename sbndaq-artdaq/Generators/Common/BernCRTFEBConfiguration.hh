@@ -2,7 +2,7 @@
 #define sbndaq_artdaq_Generators_Common_BernCRTFEBConfiguration_hh
 
 #include "fhiclcpp/ParameterSet.h"
-#include "BernCRT_TRACE_defines.h"
+#include "trace.h"
 
 namespace sbndaq {
 
@@ -23,12 +23,14 @@ namespace sbndaq {
       uint8_t * GetSlowControlBitStream();
       int       GetSlowControlBitStreamNBytes();
       std::string GetString(std::string separator=" # ");
+      bool      GetHVOnPermission();
 
     private:
       static const int PROBE_BITSTREAM_NBITS = 224;
       static const int SLOW_CONTROL_BITSTREAM_NBITS = 1144;
       uint8_t ProbeBitStream[PROBE_BITSTREAM_NBITS/8];
       uint8_t SlowControlBitStream[SLOW_CONTROL_BITSTREAM_NBITS/8];
+      bool hv_on_permission;
 
       static int GetBit(unsigned int bit_number, uint8_t * bitstream, unsigned int nBits);
       int GetBit(unsigned int bit_number);
