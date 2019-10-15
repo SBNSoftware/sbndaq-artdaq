@@ -66,42 +66,41 @@ ENDIF()
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v2_03_00 )
-find_ups_product( artdaq_utilities v1_03_00)
-find_ups_product( artdaq_core v3_00_00 )
-find_ups_product( artdaq_utilities v1_03_00)
+find_ups_product( artdaq v3_06_02 )
+find_ups_product( artdaq_utilities v1_05_02)
+find_ups_product( artdaq_core v3_05_07 )
 
-find_ups_product( art v2_07_03 )
-find_ups_product( fhiclcpp v4_05_01 )
-find_ups_product( messagefacility v2_00_02 )
-find_ups_product( cetlib v3_00_01 )
-find_ups_product( cetlib_except v1_01_02 )
-find_ups_root( v6_08_06 )
-find_ups_boost( v1_63_0b filesystem
+find_ups_product( art v3_02_04 )
+find_ups_product( fhiclcpp v4_09_03 )
+find_ups_product( messagefacility v2_04_03)
+find_ups_product( cetlib v3_07_02 )
+find_ups_product( cetlib_except  v1_03_03)
+find_ups_root( v6_16_00 )
+find_ups_boost( v1_69_0 filesystem
                         program_options
                         system
                         unit_test_framework
  )
 find_ups_product( pqxx v6_2_5a )
 find_ups_product( cetbuildtools v5_08_01 )
-find_ups_product( sqlite v3_16_02_00a)
+find_ups_product( sqlite v3_26_00_00)
  
 find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
-find_ups_product( sbndaq_artdaq_core v0_01_04 )
+find_ups_product( sbndaq_artdaq_core v0_03_00 )
 
 #include CAEN directories...
 include_directories($ENV{CAENCOMMDIR}/include)
 
 #experiment specific products needed
 IF(ICARUS_BUILD)
-  find_ups_product( icarus_artdaq_base v0_03_00 )
+  find_ups_product( icarus_artdaq_base v0_09_00 )
 ENDIF()
 
 IF(SBND_BUILD)
-  find_ups_product( libxml2 v2_9_4b )
+  find_ups_product( libxml2 v2_9_9 )
 ENDIF()
 
 
