@@ -54,7 +54,7 @@ cet_cmake_env()
 cet_set_compiler_flags(DIAGS VIGILANT
  WERROR
  NO_UNDEFINED
- EXTRA_FLAGS -pedantic -Wall -fPIC -DLINUX -D_LINUX -Wno-unused-variable -Wno-overloaded-virtual
+ EXTRA_FLAGS -Wall -fPIC -DLINUX -D_LINUX -Wno-unused-variable -Wno-overloaded-virtual
  )
 
 SET ( SANITIZE_ADDRESS $ENV{SANITIZE_ADDRESS} )
@@ -95,6 +95,10 @@ find_ups_product( redis v5_0_5 )
 
 #include CAEN directories...
 include_directories($ENV{CAENCOMMDIR}/include)
+
+#define redis lib
+cet_find_library( REDIS         NAMES hiredis         PATHS ENV REDIS_LIB        NO_DEFAULT_PATH )
+
 
 #experiment specific products needed
 IF(ICARUS_BUILD)

@@ -4,6 +4,8 @@
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrate_GeneratorBase.hh"
 #include <chrono>
 #include "icarus-artdaq-base/VetoUDP.h"
+#include "hiredis/hiredis.h"
+
 
 class PhysCrate;
 
@@ -14,6 +16,7 @@ namespace icarus {
   public:
     
     explicit PhysCrateData(fhicl::ParameterSet const & ps);
+    ~PhysCrateData();
 
     enum TestPulseType{
       kDisable = 0,
@@ -65,6 +68,11 @@ namespace icarus {
     unsigned int _vetoTestPeriod;
     share::WorkerThreadUPtr _vetoTestThread;
     share::WorkerThreadUPtr GetData_thread_;
+
+    //for redis connection...
+    redisContext *_redisCtxt;
+    std::string _redisHost;
+    int _redisPort;
 
  };
 }

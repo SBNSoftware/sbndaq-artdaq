@@ -41,6 +41,7 @@ simple_plugin(PhysCrateData "generator"
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-core_Data
+  ${REDIS}
   ${Boost_SYSTEM_LIBRARY}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
