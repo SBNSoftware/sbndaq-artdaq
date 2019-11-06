@@ -91,6 +91,8 @@ find_ups_product( caendigitizer v2_7_2 )
 
 find_ups_product( sbndaq_artdaq_core v0_03_00 )
 
+find_ups_product( redis v5_0_5 )
+
 #include CAEN directories...
 include_directories($ENV{CAENCOMMDIR}/include)
 
