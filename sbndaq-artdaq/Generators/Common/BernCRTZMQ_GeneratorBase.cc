@@ -718,13 +718,14 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
       }else{std::cout << "This is not a GPS count" << std::endl; ++GPSCounter_; }*/
 
 
-
+    //AA: temporary placeholder:
+    auto present_time = std::chrono::system_clock::now();
 
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(sizeof(BernCRTZMQEvent),  
           metadata.sequence_number(),feb_id,
           sbndaq::detail::FragmentType::BERNCRTZMQ, metadata, 
-          0//metadata.time_end_nanosec() //timestamp! to be filled!!!!
+          present_time.time_since_epoch().count()//metadata.time_end_nanosec() //timestamp! to be filled!!!!
           ) );
 
     //copy the BernCRTZMQEvent into the fragment we just created
