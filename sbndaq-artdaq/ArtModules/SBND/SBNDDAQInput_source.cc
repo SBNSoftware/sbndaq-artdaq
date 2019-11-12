@@ -8,7 +8,7 @@
 using std::string;
 
 /**
- * \brief The icarus_artdaq namespace
+ * \brief The sbndaq_artdaq namespace
  */
 namespace sbnddaq
 {
