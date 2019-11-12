@@ -9,14 +9,14 @@
 
 namespace sbnddaq
 {
-	/**
-	 * \brief Instance name for the icarus_artdaq version of BuildInfo module
-	 */
-	static std::string instanceName = "SBNDDAQArtdaqBuildInfo";
-	/**
-	 * \brief SBNDDAQArtdaqBuildInfo is a BuildInfo type containing information about artdaq_core, artdaq, icarus_artdaq_core and icarus_artdaq builds.
-	 */
-	typedef artdaq::BuildInfo<&instanceName, artdaqcore::GetPackageBuildInfo, artdaq::GetPackageBuildInfo, sbndaqcore::GetPackageBuildInfo, icarus::GetPackageBuildInfo> SBNDDAQArtdaqBuildInfo;
+  /**
+   * \brief Instance name for the icarus_artdaq version of BuildInfo module
+   */
+  static std::string instanceName = "SBNDDAQArtdaqBuildInfo";
+  /**
+   * \brief SBNDDAQArtdaqBuildInfo is a BuildInfo type containing information about artdaq_core, artdaq, sbndaq_artdaq_core and icarus_artdaq builds.
+   */
+  typedef artdaq::BuildInfo<&instanceName, artdaqcore::GetPackageBuildInfo, artdaq::GetPackageBuildInfo, sbndaqcore::GetPackageBuildInfo, sbndaq::GetPackageBuildInfo> SBNDDAQArtdaqBuildInfo;
 
-	DEFINE_ART_MODULE(SBNDDAQArtdaqBuildInfo)
+  DEFINE_ART_MODULE(SBNDDAQArtdaqBuildInfo)
 }
