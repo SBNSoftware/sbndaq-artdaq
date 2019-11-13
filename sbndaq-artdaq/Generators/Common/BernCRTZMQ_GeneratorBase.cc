@@ -91,7 +91,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   }
   ZMQBufferUPtr.reset(new BernCRTZMQEvent[ZMQBufferCapacity_]);
 
-  TLOG(TLVL_DEBUG)<<"\tMade %lu ZMQBuffers",FEBIDs_.size();
+  TLOG(TLVL_DEBUG) << "\tMade %lu ZMQBuffers",FEBIDs_.size();
 
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::Initialize() ... starting GetData worker thread.";
   share::ThreadFunctor functor = std::bind(&BernCRTZMQ_GeneratorBase::GetData,this);
@@ -262,7 +262,9 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     std::cout << std::endl;
   }
 
-  TLOG(TLVL_DEBUG)<<__func__<<": FEB ID "<<(b.id & 0xff)<<". Current buffer size "<<b.buffer.size()<<" / "<<b.buffer.capacity()<<". Want to add "<<nevents<<" events.";
+  TLOG(TLVL_DEBUG) << __func__ << ": FEB ID " << (b.id & 0xff)
+                   << ". Current buffer size " << b.buffer.size() << " / " << b.buffer.capacity()
+                   << ". Want to add " << nevents << " events.";
 
   //wait for available capacity...
   for(int i=0; (b.buffer.capacity()-b.buffer.size()) < nevents; i++) { std::cout<<(i?".":"no available capacity to save the events in FEBBuffers (I will be printing dots while waiting)!"); usleep(10); }
@@ -276,13 +278,13 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
 
   // ------TRACE----------//
-  TLOG(TLVL_DEBUG)<<"FEB ID "<<(b.id & 0xff)
-                  <<". Current buffer size "<<b.buffer.size()
-                  <<" with T0 in range ["<<b.buffer.front().Time_TS0()
-                  <<", "<<b.buffer.back().Time_TS0()<<"].";
-  TLOG(TLVL_DEBUG)<<"Want to add "<<nevents
-                  <<" events with T0 in range ["<<ZMQBufferUPtr[begin_index].Time_TS0()
-                  <<", "<<ZMQBufferUPtr[begin_index+nevents-1].Time_TS0()<<"].";
+  TLOG(TLVL_DEBUG) << "FEB ID " << (b.id & 0xff)
+                   << ". Current buffer size " << b.buffer.size()
+                   << " with T0 in range [" << b.buffer.front().Time_TS0()
+                   << ", " << b.buffer.back().Time_TS0() << "].";
+  TLOG(TLVL_DEBUG) << "Want to add " << nevents
+                   << " events with T0 in range [" << ZMQBufferUPtr[begin_index].Time_TS0()
+                   << ", " << ZMQBufferUPtr[begin_index+nevents-1].Time_TS0() << "].";
 
   TLOG(TLVL_DEBUG)<<"Before sort, here's contents of buffer:";
   TLOG(TLVL_DEBUG)<<"============================================";
@@ -518,7 +520,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     std::cout << std::endl;
   }
 
-  TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::GetData() called";
+  TLOG(TLVL_DEBUG) << "BernCRTZMQ_GeneratorBase::GetData() called";
 
   if( GetDataSetup()!=1 ) return false; //TODO do we need GetDataSetup and this check at all?
 
@@ -603,7 +605,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     std::cout << std::endl;
   }
 
-  TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment(id="<<feb_id<<",frags) called";
+  TLOG(TLVL_DEBUG) << "BernCRTZMQ::FillFragment(id=" << feb_id << ",frags) called";
 
   std::cout << "\nSTARTING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size() << std::endl;
 
@@ -619,7 +621,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   std::cout << "\nCurrent size of the Buffer: " << buffer_end << " events" << std::endl;
   if(metricMan != nullptr) metricMan->sendMetric("feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Average);
 
-  TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() : Fragment Searching. Total events in buffer="<<buffer_end;
+  TLOG(TLVL_DEBUG) << "BernCRTZMQ::FillFragment() : Fragment Searching. Total events in buffer=" << buffer_end;
 
   int time_correction; 
 
@@ -664,7 +666,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
     //if reference pulse, let's make a metric!
     if(this_event.IsReference_TS0()){
-      TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() Found reference pulse at i_e="<<i_e<<", time="<<this_event.Time_TS0();
+      TLOG(TLVL_DEBUG) << "BernCRTZMQ::FillFragment() Found reference pulse at i_e=" << i_e
+                       << ", time=" << this_event.Time_TS0();
       if(metricMan != nullptr) metricMan->sendMetric("GPS_Ref_Time", (long int)this_event.Time_TS0() - 1e9, "ns", 5, artdaq::MetricMode::LastPoint);
       //i_gps=i_e;
     }
@@ -991,8 +994,8 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
 
-  TLOG(TLVL_INFO)<<"BernCRTZMQ::getNext_(frags) called";
-  std::cout << "STARTING SIZE OF frags.size IN GETNEXT_ IS " << frags.size() << std::endl << std::endl;
+  TLOG(TLVL_DEBUG) << "BernCRTZMQ::getNext_(frags) called";
+  TLOG(TLVL_DEBUG) << "STARTING SIZE OF frags.size IN GETNEXT_ IS " << frags.size();
   
   //throttling...
   if (throttle_usecs_ > 0) {
@@ -1017,7 +1020,7 @@ std::cout << std::endl;
     }
   }
 
-  TLOG(TLVL_INFO)<<"BernCRTZMQ::getNext_(frags) completed";
+  TLOG(TLVL_DEBUG) << "BernCRTZMQ::getNext_(frags) completed";
   std::cout << "ENDING SIZE OF frags.size IN GETNEXT_ IS " << frags.size() << std::endl;
   //std::cout << "---PRINT OUT FRAGMENT IN GETNEXT_---" << std::endl  << std::endl;
 
@@ -1026,7 +1029,7 @@ std::cout << std::endl;
     std::cout << *(bb.eventdata(0)) << std::endl;
   }*/
 
-  if(frags.size()!=0) TLOG(TLVL_DEBUG)<<"BernCRTZMQ::geNext_() : last fragment is: "<<(BernCRTZMQFragment(*frags.back())).c_str();
+  if(frags.size()!=0) TLOG(TLVL_DEBUG) << "BernCRTZMQ::geNext_() : last fragment is: " << (BernCRTZMQFragment(*frags.back())).c_str();
 
   return true;
 } //getNext_
