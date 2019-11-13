@@ -344,7 +344,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
    * Reads data from febdrv via zeromq and copies it into ZMQBufferUPtr
    */
   
-  TLOG(TLVL_INFO)<< __func__ << "() called";
+  TLOG(TLVL_DEBUG) << __func__ << "() called";
   
   size_t data_size=0;
   size_t wait_count=0;
@@ -392,7 +392,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
 
   zmq_msg_close(&feb_data_msg);
 
-  TLOG(TLVL_INFO) << __func__ << " size returned was " + std::to_string(data_size);
+  TLOG(TLVL_DEBUG) << __func__ << " size returned was " + std::to_string(data_size);
 
   return data_size;
 } //GetZMQData
