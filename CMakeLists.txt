@@ -98,7 +98,7 @@ link_directories($ENV{CAENCOMM_LIB})
 
 #experiment specific products needed
 IF(ICARUS_BUILD)
-  find_ups_product( icarus_artdaq_base v0_09_00 )
+  #find_ups_product( icarus_artdaq_base v0_09_00 )
 ENDIF()
 
 IF(SBND_BUILD)

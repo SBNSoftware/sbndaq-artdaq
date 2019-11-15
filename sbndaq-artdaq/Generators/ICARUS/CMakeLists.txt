@@ -31,9 +31,9 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 		)
 
 simple_plugin(PhysCrateData "generator"
-  icarus-artdaq-base_A2795Board
-  icarus-artdaq-base_VetoUDP
-  icarus-artdaq-base_PhysCrate
+  icarus-base_A2795Board
+  icarus-base_VetoUDP
+  icarus-base_PhysCrate
   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_ICARUS
