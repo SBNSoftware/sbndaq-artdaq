@@ -92,7 +92,9 @@ find_ups_product( caendigitizer v2_7_2 )
 find_ups_product( sbndaq_artdaq_core v0_03_00 )
 
 #include CAEN directories...
-include_directories($ENV{CAENCOMMDIR}/include)
+include_directories($ENV{CAENCOMM_INC})
+link_directories($ENV{CAENCOMM_LIB})
+
 
 #experiment specific products needed
 IF(ICARUS_BUILD)

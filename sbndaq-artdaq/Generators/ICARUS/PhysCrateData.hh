@@ -3,7 +3,7 @@
 
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrate_GeneratorBase.hh"
 #include <chrono>
-#include "icarus-artdaq-base/VetoUDP.h"
+#include "icarus-base/VetoUDP.h"
 
 class PhysCrate;
 

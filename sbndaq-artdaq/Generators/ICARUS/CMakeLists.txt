@@ -1,3 +1,5 @@
+add_subdirectory(icarus-base)
+
 include_directories( ${CAENCOMM_INC} )
 #include_directories( ${CAENVME_INC} )
 #include_directories( ${CAENDIGITIZER_INC} )

@@ -13,8 +13,8 @@
 
 #include "sbndaq-artdaq-core/Trace/trace_defines.h"
 
-#include "icarus-artdaq-base/PhysCrate.h"
-#include "icarus-artdaq-base/A2795.h"
+#include "icarus-base/PhysCrate.h"
+#include "icarus-base/A2795.h"
 #include "CAENComm.h"
 
 icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
