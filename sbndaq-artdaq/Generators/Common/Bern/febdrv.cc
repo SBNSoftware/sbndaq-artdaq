@@ -90,19 +90,19 @@ void printmac( uint8_t *mac)
 uint32_t GrayToBin(uint32_t n)
 {
   uint32_t res=0;
-  int a[32],b[32],i=0,c=0;
-  for(i=0; i<32; i++)
+  int a[32],b[32];
+  for(int i=0; i<32; i++) //read bits of n into a[]
     { 
       if((n & 0x80000000)>0) a[i]=1; else a[i]=0; 
       n=n<<1; 
     }
   b[0]=a[0];
-  for(i=1; i<32; i++)
+  for(int i=1; i<32; i++)
     { 
       if(a[i]>0) if(b[i-1]==0) b[i]=1; else b[i]=0;
       else b[i]=b[i-1]; 
     }
-  for(i=0; i<32; i++)
+  for(int i=0; i<32; i++)
     {
       res=(res<<1);
       res=(res | b[i]); 
@@ -400,7 +400,9 @@ int getInfo()
 
 int sendconfig(uint8_t mac5)
 {
-  //t->SendCMD(t->dstmac,FEB_SET_RECV,fNumberEntry75->GetNumber(),t->srcmac);
+  /**
+   * Send configuration bitstreams to FEB
+   */
   int nreplies=0;
   int PrevConfigured=FEB_configured[mac5];
   dstmac[5]=mac5;
@@ -517,7 +519,6 @@ int biasOFF(uint8_t mac5)
 int configu(uint8_t mac5, uint8_t *buf1, int len)
 {
   int rv=1;
-  //printf("called configu(%02x,buf,%d)\n",mac5,len);
   if(len != (1144+224)/8) 
     { 
       rv=0; 
@@ -589,6 +590,9 @@ void free_subbufer (void *data, void *hint) //call back from ZMQ sent function, 
 
 int senddata()
 {
+  /**
+   * Send data via zeromq
+   */
   //printf("enter sendata()\n");
   int sbi=0;
   void* bptr=0;
@@ -755,7 +759,6 @@ int polldata() // poll data from daysy-chain and send it to the publisher socket
   uint32_t tt0,tt1;
   uint32_t ts0,ts1;
   uint32_t ts0_ref,ts1_ref;
-  uint8_t ls2b0,ls2b1; //least sig 2 bits
   uint16_t adc;
   uint64_t tmp;
   // umut
@@ -805,9 +808,11 @@ int polldata() // poll data from daysy-chain and send it to the publisher socket
 	lostperpoll_fpga[rpkt.src_mac[5]]+=lostinfpga;
 	ts0=*(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4; 
 	ts1=*(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4; 
-	//	printf("T0=%u ns, T1=%u ns \n",ts0,ts1);
-	ls2b0=ts0 & 0x00000003;
-	ls2b1=ts1 & 0x00000003;
+        //AA: The CAEN manual says all 30 bits of the timestamp are 
+        //    encoded in Gray Code. This is apparently not true.
+        //IK: Two LSBs of the time stamp are indeed coded normal binary, not Gray
+	uint8_t ls2b0=ts0 & 0x00000003;
+	uint8_t ls2b1=ts1 & 0x00000003;
 	tt0=(ts0 & 0x3fffffff) >>2; // and bit, right shift operators
 	tt1=(ts1 & 0x3fffffff) >>2;
 	tt0=(GrayToBin(tt0) << 2) | ls2b0; // lleft shift operator
@@ -903,12 +908,8 @@ int polldata() // poll data from daysy-chain and send it to the publisher socket
   return rv;
 }
 
-int polldelay=1;
 int main (int argc, char **argv)
 {
-  
-  //printf("WARNING!! The poll duration is set to minimum %d ms.\n",polldelay);
-  int rv;
   char cmd[32]; //command string
   if(argc<3 || argc > 4) { usage(); return 0;}
 
@@ -922,7 +923,7 @@ int main (int argc, char **argv)
   sprintf(stats_socket,      "tcp://*:%d", listening_port+2);
   sprintf(stats2_socket,     "tcp://*:%d", listening_port+3);
 
-  polldelay=atoi(argv[2]);
+  int polldelay=atoi(argv[2]);
   printf("WARNING!! The poll duration is set to minimum %d ms.\n",polldelay);
   memset(evbuf,0, sizeof(evbuf));
   memset(evnum,0, sizeof(evnum));
@@ -936,7 +937,7 @@ int main (int argc, char **argv)
   memset(FEB_lastheard,0,256*sizeof(time_t)); //number of seconds since the board is heard
   memset(FEB_VCXO,0,256*sizeof(uint16_t));
   // network interface to febs
-  rv=initif(argv[1]);
+  int rv=initif(argv[1]);
   if(rv==0) 
     {
       printdate(); 
@@ -954,10 +955,7 @@ int main (int argc, char **argv)
       printf("Can't bind socket %s for command! Exiting.\n", listening_socket); 
       return 0;
     }
-  //rv=zmq_bind (responder, "ipc://command");
-  //if(rv<0) {printdate(); printf("Can't bind ipc socket for command! Exiting.\n"); return 0;}
   printdate(); printf ("febdrv: listening at %s\n", listening_socket);
-  //printdate(); printf ("febdrv: listening at ipc://command\n");
   
   //  Socket to send data to clients
   publisher = zmq_socket (context, ZMQ_PUB);
@@ -968,10 +966,7 @@ int main (int argc, char **argv)
       printf("Can't bind socket %s for data! Exiting.\n", publishing_socket); 
       return 0;
     }
-  //rv = zmq_bind (publisher, "ipc://data");
-  //if(rv<0) {printdate(); printf("Can't bind ipc socket for data! Exiting.\n"); return 0;}
   printdate(); printf ("febdrv: data publisher at %s\n", publishing_socket);
-  //printdate(); printf ("febdrv: data publisher at ipc://data\n");
   
   //  Socket to send statistics to clients
   pubstats = zmq_socket (context, ZMQ_PUB);
@@ -982,10 +977,7 @@ int main (int argc, char **argv)
       printf("Can't bind socket %s for stats! Exiting.\n", stats_socket); 
       return 0;
     }
-  //rv = zmq_bind (pubstats, "ipc://stats");
-  //if(rv<0) {printdate(); printf("Can't bind ipc socket for stats! Exiting.\n"); return 0;}
   printdate(); printf ("febdrv: stats publisher at %s\n", stats_socket);
-  //printdate(); printf ("febdrv: stats publisher at ipc://stats\n");
   
   //  Socket to send binary packed statistics to clients
   pubstats2 = zmq_socket (context, ZMQ_PUB);
@@ -996,10 +988,7 @@ int main (int argc, char **argv)
       printf("Can't bind socket %s for stats2! Exiting.\n", stats2_socket); 
       return 0;
     }
-  //rv = zmq_bind (pubstats2, "ipc://stats2");
-  //if(rv<0) {printdate(); printf("Can't bind ipc socket for stats2! Exiting.\n"); return 0;}
   printdate(); printf ("febdrv: stats2 publisher at %s\n", stats2_socket);
-  //printdate(); printf ("febdrv: stats2 publisher at ipc://stats2\n");
   
   //initialising FEB daisy chain
   //scanclients();
