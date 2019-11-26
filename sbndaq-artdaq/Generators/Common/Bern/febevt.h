@@ -2,7 +2,6 @@
 #define MAGICWORD8 0xa5 //marker for the buffer start in the file 
 #define MAGICWORD16 0xaa55 //marker for the buffer start in the file 
 #define MAGICWORD32 0xaa55aa55 //marker for the buffer start in the file 
-//#define MAGICWORD32 0x01020255 //marker for the buffer start in the file 
 
 typedef struct {
   int status;		
@@ -10,7 +9,6 @@ typedef struct {
   time_t datime;
   int nfebs;
   int msperpoll;
-  //		char string[64];
 } DRIVER_STATUS_t;
 
 typedef struct {
@@ -27,5 +25,4 @@ typedef struct {
   float evtrate;
   uint8_t ts0ok;
   uint8_t ts1ok;
-  //	char string[128];
 } FEB_STATUS_t;
