@@ -430,7 +430,7 @@ int startDAQ(uint8_t mac5)
   int nreplies=0;
   dstmac[5]=mac5; 
   
-  memset(evbuf,0, sizeof(evbuf));
+  memset(evbuf,0, sizeof(evbuf)); //clean zmq buffer
   memset(evnum,0, sizeof(evnum));
   memset(evbufstat,0, sizeof(evbufstat));
   
@@ -554,26 +554,19 @@ sbndaq::BernCRTZMQEvent * getnextevent() { //flag, showing current status of sub
 }
 
 
-uint32_t ts0_ref_MEM[256];
-uint32_t ts1_ref_MEM[256];
-
-uint32_t total_acquired=0;
 
 void free_subbufer (void *data, void *hint) //call back from ZMQ sent function, hint points to subbufer index
 {
-  //return;
   uint64_t sbi;
   sbi =  (uint64_t)hint; //reset buffer status to empty
   evbufstat[sbi]=0;
   evnum[sbi]=0; 
-  // printf("Subbuf %d transmission complete.\n",sbi); 
 }
 
 int senddata() {
   /**
    * Send data via zeromq
    */
-  void* bptr=0;
   int64_t sbitosend=-1; // check for filled buffers
   for(int sbi=0; sbi<NBUFS; sbi++) {
     if(evbufstat[sbi]==1) sbitosend=sbi;  //the if there is being filled buffer
@@ -589,14 +582,14 @@ int senddata() {
   evbuf[sbitosend][evnum[sbitosend]].ts1=MAGICWORD32;
   evbuf[sbitosend][evnum[sbitosend]].coinc=MAGICWORD32;
   
-  bptr=&(evbuf[sbitosend][evnum[sbitosend]].adc[0]); //pointer to start of ADC field
+  void * bptr=&(evbuf[sbitosend][evnum[sbitosend]].adc[0]); //pointer to start of ADC field
   memcpy(bptr,&(evnum[sbitosend]),sizeof(int)); bptr=bptr+sizeof(int);
   memcpy(bptr,&mstime0,sizeof(struct timeb)); bptr=bptr+sizeof(struct timeb); //start of poll time
   memcpy(bptr,&mstime1,sizeof(struct timeb)); bptr=bptr+sizeof(struct timeb);  //end of poll time
   
   evnum[sbitosend]++;
   zmq_msg_t msg;
-  zmq_msg_init_data (&msg, evbuf[sbitosend], evnum[sbitosend]*EVLEN , free_subbufer, (void*)sbitosend);
+  zmq_msg_init_data (&msg, evbuf[sbitosend], evnum[sbitosend]*EVLEN, free_subbufer, (void*)sbitosend);
   //Scheduling subbuf for sending...
   zmq_msg_send (&msg, publisher, ZMQ_DONTWAIT);
   zmq_msg_close (&msg);
@@ -706,11 +699,12 @@ int sendstats()
   return 1; 
 } //sendstats
 //###############################################
+
 void polldata() { 
   /**
    * poll data from daisy-chain and send it to the publisher socket
    */
-  ftime(&mstime0);
+  ftime(&mstime0); //http://man7.org/linux/man-pages/man3/ftime.3.html : "This function is obsolete.  Don't use it."
   msperpoll=0;
   uint32_t overwritten=0;
   uint32_t lostinfpga=0;
@@ -752,41 +746,12 @@ void polldata() {
 	tt1=tt1+5; //IK: correction based on phase drift w.r.t GPS
 	bool NOts0=((ts0 & 0x40000000)>0); // check overflow bit
 	bool NOts1=((ts1 & 0x40000000)>0);
-	//        if((ts0 & 0x80000000)>0) {ts0=0x0; ts0_ref=tt0; ts0_ref_MEM[rpkt.src_mac[5]]=tt0;} 
-	//        else { ts0=tt0; ts0_ref=ts0_ref_MEM[rpkt.src_mac[5]]; }
-	//        if((ts1 & 0x80000000)>0) {ts1=0x0; ts1_ref=tt1; ts1_ref_MEM[rpkt.src_mac[5]]=tt1;} 
-	//        else { ts1=tt1; ts1_ref=ts1_ref_MEM[rpkt.src_mac[5]]; }
+
+        bool REFEVTts0 = ts0 & 0x80000000;
+        bool REFEVTts1 = ts1 & 0x80000000;
+	ts0=tt0; 
+	ts1=tt1; 
 				
-        bool REFEVTts0,REFEVTts1;
-        uint32_t ts0_ref,ts1_ref; //these variables are not used! What's the purpose?
-	if((ts0 & 0x80000000)>0) {
-	  REFEVTts0=1; 
-	  ts0=tt0; 
-	  ts0_ref=tt0; 
-	  ts0_ref_MEM[rpkt.src_mac[5]]=tt0;
-	}
-	else {
-	  REFEVTts0=0; 
-	  ts0=tt0; 
-	  ts0_ref=ts0_ref_MEM[rpkt.src_mac[5]]; 
-	}
-	if((ts1 & 0x80000000)>0) {
-	  REFEVTts1=1; 
-	  ts1=tt1; 
-	  ts1_ref=tt1; 
-	  ts1_ref_MEM[rpkt.src_mac[5]]=tt1;
-	}
-	else {
-	  REFEVTts1=0; 
-	  ts1=tt1; 
-	  ts1_ref=ts1_ref_MEM[rpkt.src_mac[5]]; 
-	}
-				
-	//	 printf("T0=%u ns, T1=%u ns T0_ref=%u ns  T1_ref=%u ns \n",ts0,ts1,ts0_ref,ts1_ref);
-	//         uint64_t tmp=ts0*1e9/(ts0_ref-1); ts0=tmp;
-	//         tmp=ts1*1e9/(ts0_ref-1); ts1=tmp;
-	//         tmp=ts1_ref*1e9/(ts0_ref-1); ts1_ref=tmp;
-	//	 printf("Corrected T0=%u ns, T1=%u ns T0_ref=%u ns  T1_ref=%u ns \n",ts0,ts1,ts0_ref,ts1_ref);
         sbndaq::BernCRTZMQEvent *evt = getnextevent();
 	if(evt==0) {
 	  driver_state=DRV_BUFOVERRUN; 
@@ -800,6 +765,7 @@ void polldata() {
 	evt->lostfpga=lostinfpga;  
 	evt->flags=0;
 	evt->mac5=rpkt.src_mac[5];
+
 	if(NOts0==0) evt->flags|=0x0001; else ts0ok[macs[f][5]]=0;    //opposite logic! 1 if TS is present, 0 if not!    
 	if(NOts1==0) evt->flags|=0x0002; else ts1ok[macs[f][5]]=0;
 	if(REFEVTts0==1) evt->flags|=0x0004; //bit indicating TS0 reference event
@@ -813,7 +779,6 @@ void polldata() {
 	
         evt->coinc = coinc;
 	
-	total_acquired++;
 	evtsperpoll[rpkt.src_mac[5]]++;
       }   //loop on event buffer in one L2 packet     
     }	// loop on messages from 1 FEB
@@ -907,7 +872,6 @@ int main (int argc, char **argv) {
     driver_state=DRV_OK;
     //Check next request from client
     zmq_msg_init (&request);
-    //if(zmq_msg_recv (&request, responder, ZMQ_DONTWAIT)==-1) {zmq_msg_close (&request);  polldata(); senddata(); sendstats(); sendstats2();sendstats3(); continue;} 
     if(zmq_msg_recv (&request, responder, ZMQ_DONTWAIT)==-1) 
     {
       zmq_msg_close (&request);  
