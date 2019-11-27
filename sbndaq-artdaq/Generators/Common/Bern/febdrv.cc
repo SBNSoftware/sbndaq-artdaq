@@ -38,7 +38,7 @@ void *pubstats2 = NULL;
 FEBDTP_PKT_t spkt,rpkt; //send and receive packets
 FEBDTP_PKT_t ipkt[FEB_MAX_CHAIN]; // store info packets
 sbndaq::BernCRTZMQEvent evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event. 256: max number of FEBs; +1 to accomodate extra event with timing information
-int evnum[NBUFS]; //number of good events in the buffer fields
+int evnum[NBUFS]; //number of good events in the buffer fields //AA: TODO change this to int32_t to make sure it will always be sent properly via zmq
 int evbufstat[NBUFS]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
 int evtsperpoll[256];
 int msperpoll=0;
@@ -576,6 +576,13 @@ int senddata() {
   
   evbufstat[sbitosend]=3; //  reset to 0 by the callback only when transmission is done!
   //fill buffer trailer in the last event
+  //AA: please note that the code below does not fill all consecutive bytes
+  //    of the event structure, e.g. there are fields lostcpu and lostfpga
+  //    between mac5 and ts0 which are not set. Apparently the person who
+  //    added these fields didn't care to update this function. This means
+  //    the last event format is no longer described febrv manual (v Sep 2016).
+  //    Therefore, unless we decide to update this code, the "point of reference"
+  //    to retrieve the number of events and poll times is the adc[0] field.
   evbuf[sbitosend][evnum[sbitosend]].flags=0xFFFF;
   evbuf[sbitosend][evnum[sbitosend]].mac5=0xFFFF;
   evbuf[sbitosend][evnum[sbitosend]].ts0=MAGICWORD32;
@@ -583,9 +590,9 @@ int senddata() {
   evbuf[sbitosend][evnum[sbitosend]].coinc=MAGICWORD32;
   
   void * bptr=&(evbuf[sbitosend][evnum[sbitosend]].adc[0]); //pointer to start of ADC field
-  memcpy(bptr,&(evnum[sbitosend]),sizeof(int)); bptr=bptr+sizeof(int);
-  memcpy(bptr,&mstime0,sizeof(struct timeb)); bptr=bptr+sizeof(struct timeb); //start of poll time
-  memcpy(bptr,&mstime1,sizeof(struct timeb)); bptr=bptr+sizeof(struct timeb);  //end of poll time
+  memcpy(bptr,&(evnum[sbitosend]),sizeof(int));  bptr=bptr+sizeof(int);
+  memcpy(bptr,&mstime0,sizeof(struct timeb));    bptr=bptr+sizeof(struct timeb); //start of poll time
+  memcpy(bptr,&mstime1,sizeof(struct timeb));    bptr=bptr+sizeof(struct timeb);  //end of poll time
   
   evnum[sbitosend]++;
   zmq_msg_t msg;

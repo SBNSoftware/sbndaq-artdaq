@@ -148,6 +148,12 @@ namespace sbndaq {
     timeval time_last_poll_start;
     timeval time_last_poll_finished;
 
+    //AA: values read from the special last zeromq event, containing poll times
+    uint64_t this_poll_start;
+    uint64_t this_poll_end;
+    uint64_t last_poll_start;
+    uint64_t last_poll_end;
+
     uint32_t feb_event_count; //AA: number of events in a single poll (?)
     uint32_t start_time_metadata_s;
     uint32_t start_time_metadata_ns;

@@ -370,7 +370,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
   TLOG(TLVL_DEBUG) << __func__ << ": outside wait loop after " << wait_count << " iterations";
   
   if(zmq_msg_size(&feb_data_msg)>0) {
-    TLOG(TLVL_DEBUG) << __func__ << ": about to copy";
+    TLOG(TLVL_DEBUG) << __func__ << ": about to copy " <<zmq_msg_size(&feb_data_msg)<< " bytes";
     
     std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
 	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
