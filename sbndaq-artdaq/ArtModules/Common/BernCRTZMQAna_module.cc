@@ -61,13 +61,11 @@ private:
    uint32_t coinc;
 
 //metadata
-//Saving times as double causes loss of precision from 1 ns to some 200 ns, but for poll timestamps that should be still sufficient
-   double    run_start_time;
-   double    time_poll_start;
-   double    time_poll_finish;
-   double    time_last_poll_start;
-   double    time_last_poll_finish;
-   double    fragment_fill_time;
+   uint64_t  run_start_time;
+   uint64_t  this_poll_start;
+   uint64_t  this_poll_end;
+   uint64_t  last_poll_start;
+   uint64_t  last_poll_end;
    uint32_t  feb_event_count;
    uint32_t  gps_counter;
    uint32_t  events_in_data_packet;
@@ -112,12 +110,11 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   events->Branch("coinc",       &coinc,         "coinc/i");
 
 //metadata
-  events->Branch("run_start_time",            &run_start_time,              "run_start_time/d");
-  events->Branch("time_poll_start",           &time_poll_start,             "time_poll_start/d");
-  events->Branch("time_poll_finish",          &time_poll_finish,            "time_poll_finish/d");
-  events->Branch("time_last_poll_start",      &time_last_poll_start,        "time_last_poll_start/d");
-  events->Branch("time_last_poll_finish",     &time_last_poll_finish,       "time_last_poll_finish/d");
-  events->Branch("fragment_fill_time",        &fragment_fill_time,          "fragment_fill_time/d");
+  events->Branch("run_start_time",            &run_start_time,              "run_start_time/l");
+  events->Branch("this_poll_start",           &this_poll_start,             "this_poll_start/l");
+  events->Branch("this_poll_end",             &this_poll_end,               "this_poll_end/l");
+  events->Branch("last_poll_start",           &last_poll_start,             "last_poll_start/l");
+  events->Branch("last_poll_end",             &last_poll_end,               "last_poll_end/l");
   events->Branch("feb_event_count",           &feb_event_count,             "feb_event_count/i");
   events->Branch("gps_counter",               &gps_counter,                 "gps_counter/i");
   events->Branch("events_in_data_packet",     &events_in_data_packet,       "events_in_data_packet/i");
@@ -155,10 +152,6 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
   if (!rawFragHandle.isValid()) return;
 
 
-  //define an ofstream to read the data out in a file
-  //
-  //std::ofstream outputFile("Timestamps.txt",std::ios::app);
-  
   std::cout << "######################################################################" << std::endl;
   std::cout << std::endl;  
   std::cout << "Run " << evt.run() << ", subrun " << evt.subRun()
@@ -187,10 +180,6 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       //we can print this
       std::cout << *bevt << std::endl;
 
-      //write all timestamps in an outuputfile
-      //outputFile << bevt->Time_TS0() << std::endl;
-
-
       //let's fill our sample hist with the Time_TS0()-1e9 if 
       //it's a GPS reference pulse
       if(bevt->IsReference_TS0()){
@@ -199,7 +188,7 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 
       TS0 -> Fill(bevt->Time_TS0());
 
-//event data
+      //event data
       mac5     = bevt->MAC5();
       flags    = bevt->flags;
       lostcpu  = bevt->lostcpu;
@@ -210,13 +199,12 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 
       for(int ch=0; ch<32; ch++) adc[ch] = bevt->ADC(ch);
 
-//metadata
-      run_start_time            = md->run_start_time_seconds()        + 1e-9 * md->run_start_time_nanosec();
-      time_poll_start           = md->time_poll_start_seconds()       + 1e-9 * md->time_poll_start_nanosec();
-      time_poll_finish          = md->time_poll_finish_seconds()      + 1e-9 * md->time_poll_finish_nanosec();
-      time_last_poll_start      = md->time_last_poll_start_seconds()  + 1e-9 * md->time_last_poll_start_nanosec();
-      time_last_poll_finish     = md->time_last_poll_finish_seconds() + 1e-9 * md->time_last_poll_finish_nanosec();
-      fragment_fill_time        = md->fragment_fill_time_seconds()    + 1e-9 * md->fragment_fill_time_nanosec();
+      //metadata
+      run_start_time            = md->run_start_time();
+      this_poll_start           = md->this_poll_start();
+      this_poll_end             = md->this_poll_end();
+      last_poll_start           = md->last_poll_start();
+      last_poll_end             = md->last_poll_end();
       feb_event_count           = md->feb_event_count();
       gps_counter               = md->gps_count();
       events_in_data_packet     = md->event_packet();
@@ -233,13 +221,7 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       events->Fill();
 
     }//end loop over events in a fragment
-  
-
   }//end loop over fragments
-
-  //just close the output stream
-  //outputFile.close();
-
 }
 
 DEFINE_ART_MODULE(sbndaq::BernCRTZMQAna)
