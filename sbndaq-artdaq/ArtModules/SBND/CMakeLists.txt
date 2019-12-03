@@ -6,7 +6,7 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
  	       sbndaq-artdaq-core_Overlays_SBND
 )
 
-simple_plugin(SBNDDAQArtdaqBuildInfo "module"
+simple_plugin(SBNDArtdaqBuildInfo "module"
   artdaq_DAQdata
   artdaq_BuildInfo
   artdaq-core_BuildInfo
@@ -18,7 +18,7 @@ simple_plugin(SBNDDAQArtdaqBuildInfo "module"
   ${CETLIB_EXCEPT}
 )
 
-simple_plugin(SBNDDAQInput "source"
+simple_plugin(SBNDInput "source"
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq-core_Overlays_SBND
