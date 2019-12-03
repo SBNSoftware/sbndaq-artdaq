@@ -17,8 +17,7 @@
 
 sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   :
-  BernCRTZMQ_GeneratorBase(ps)  
-{
+  BernCRTZMQ_GeneratorBase(ps) {
   TLOG(TLVL_INFO) << "BernCRTZMQData constructor called"; 
  
   zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
@@ -41,7 +40,7 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   }
 
   TLOG(TLVL_INFO) << __func__ << " constructor completed";  
-}
+} //constructor
 
 sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
@@ -53,12 +52,9 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
 
   Cleanup();
   TLOG(TLVL_INFO) << __func__ << "() completed";  
-}
+} //destructor
 
-
-
-void sbndaq::BernCRTZMQData::ConfigureStart()
-{
+void sbndaq::BernCRTZMQData::ConfigureStart() {
   TLOG(TLVL_INFO) << __func__ << "() called";  
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
@@ -85,10 +81,9 @@ void sbndaq::BernCRTZMQData::ConfigureStart()
   if(res!=0)
     TLOG(TLVL_ERROR) << __func__ << " socket options failed.";
   TLOG(TLVL_INFO) << __func__ << " completed";
-}
+} //ConfigureStart
 
-void sbndaq::BernCRTZMQData::ConfigureStop()
-{
+void sbndaq::BernCRTZMQData::ConfigureStop() {
   TLOG(TLVL_INFO) << __func__ << "() called";
 
   febctl(DAQ_END);
@@ -97,15 +92,13 @@ void sbndaq::BernCRTZMQData::ConfigureStop()
   zmq_close(zmq_subscriber_);
 
   TLOG(TLVL_INFO) << __func__ << "() completed";
-}
+} //ConfigureStop
 
-int sbndaq::BernCRTZMQData::GetDataSetup()
-{
+int sbndaq::BernCRTZMQData::GetDataSetup() {
   return 1;
 }
 
-int sbndaq::BernCRTZMQData::GetDataComplete()
-{
+int sbndaq::BernCRTZMQData::GetDataComplete() {
   return 1;
 }
 
@@ -120,8 +113,6 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
  * If the command is GETINFO this function will verify if the
  * list of MAC5s reported by febdrv matches the list in FHiCL
  */
-
-//  char trace_message[256];
 
   char command_string[8];
   switch (command) {
@@ -261,7 +252,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, int iFEB) {
       }
     }
   }
-}
+} //febctl
 
 void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
   /**
@@ -345,58 +336,55 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(unsigned int iFEB) {
     TLOG(TLVL_DEBUG)<< __func__ << " Received reply: " << reply_string;
   }
   zmq_msg_close (&reply);
-}
+} //feb_send_bitstreams
 
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
-size_t sbndaq::BernCRTZMQData::GetZMQData()
-{
-  TLOG(TLVL_INFO)<< __func__ << "() called";
+size_t sbndaq::BernCRTZMQData::GetZMQData() {
+  /**
+   * Reads data from febdrv via zeromq and copies it into ZMQBufferUPtr
+   */
+  
+  TLOG(TLVL_DEBUG) << __func__ << "() called";
   
   size_t data_size=0;
-  size_t events=0;
-  
   size_t wait_count=0;
   
   zmq_msg_t feb_data_msg;
   zmq_msg_init(&feb_data_msg);
 
-  while(zmq_msg_recv(&feb_data_msg,zmq_subscriber_,ZMQ_DONTWAIT) < 0)
-  {
-    if ( errno != EAGAIN ) // No data awailable now
-    {
-      TLOG(TLVL_ERROR) << __func__ << " Instead of EAGAIN got the following errno: " <<  std::to_string(errno) << " " << zmq_strerror(errno);
+  //attempt to read data from febdrv
+  while(zmq_msg_recv(&feb_data_msg, zmq_subscriber_, ZMQ_DONTWAIT) < 0) {
+    if ( errno != EAGAIN ) { // No data awailable now
+      TLOG(TLVL_ERROR) << __func__ << ": Instead of EAGAIN got the following errno: " <<  std::to_string(errno) << " " << zmq_strerror(errno);
       return 0;
     }
     usleep(1000);
-    //return 0;
+
     ++wait_count;
     
-    if( (wait_count%500) == 0 )
-    {
-      TLOG(TLVL_DEBUG) << __func__ << " wait count: " << std::to_string(wait_count);
+    if( (wait_count%500) == 0 ) {
+      TLOG(TLVL_DEBUG) << __func__ << ": wait count: " << wait_count;
     }
   }
   
-  TLOG(TLVL_DEBUG) << __func__ << " outside wait loop: " << std::to_string(wait_count);
+  TLOG(TLVL_DEBUG) << __func__ << ": outside wait loop after " << wait_count << " iterations";
   
-  if(zmq_msg_size(&feb_data_msg)>0)
-  {
-    TLOG(TLVL_INFO) << __func__ << " about to copy";
+  if(zmq_msg_size(&feb_data_msg)>0) {
+    TLOG(TLVL_DEBUG) << __func__ << ": about to copy";
     
     std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
 	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
-	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[events]));
+	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[0]));
     
-    TLOG(TLVL_INFO) << __func__ << " copied!";
+    TLOG(TLVL_DEBUG) << __func__ << " copied!";
     
-    events += zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
-    data_size += zmq_msg_size(&feb_data_msg);
+    size_t events = zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
+    data_size = zmq_msg_size(&feb_data_msg);
 
-    TLOG(TLVL_INFO) << __func__ << " copied " << std::to_string(events) << " events (" << std::to_string(data_size) << " size)";
+    TLOG(TLVL_DEBUG) << __func__ << " copied " << std::to_string(events) << " events of size of " << std::to_string(data_size);
 
-    //check : is this too much data for the buffer?
-    if( events>ZMQBufferCapacity_ )
-    {
+    //check : is this too much data for the buffer? //TODO: shouldn't we check it before copying?
+    if( events > ZMQBufferCapacity_ ) {
       TLOG(TLVL_ERROR) << __func__ << " Too many events in ZMQ buffer! " << std::to_string(events);
       throw cet::exception(std::string(TRACE_NAME) + " " + __func__ + " Too many events in ZMQ buffer!");
     }
@@ -404,10 +392,9 @@ size_t sbndaq::BernCRTZMQData::GetZMQData()
 
   zmq_msg_close(&feb_data_msg);
 
-  TLOG(TLVL_INFO) << __func__ << " size returned was " + std::to_string(data_size);
+  TLOG(TLVL_DEBUG) << __func__ << " size returned was " + std::to_string(data_size);
 
   return data_size;
-
-}
+} //GetZMQData
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::BernCRTZMQData) 

@@ -97,7 +97,7 @@ namespace sbndaq {
 
       FEBBuffer(uint32_t capacity, uint32_t td, uint64_t i)
 	: buffer(EventBuffer_t(capacity)),
-	  timebuffer(EventTimeBuffer_t(capacity)),
+	  timebuffer(EventTimeBuffer_t(capacity)), //TODO: note, this buffer, and the following ones are used only in the code that's commented atm
 	  droppedbuffer(EventsDroppedBuffer_t(capacity)),
 	  correctedtimebuffer(EventsCorrectedTimeBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
@@ -136,7 +136,10 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
-	//my new variable
+	//my new variable (AA: Federico?)
+    //TODO: there is only a single set of variables for all FEBs read by a single board reader
+    //as a result e.g. PPS events in any board will cause the GPS counter to advance. This need
+    //to be rewritten
     size_t FragmentCounter_; //it counts the fragments in the buffer
     size_t GPSCounter_; // it counts how many GPS have occurred
     size_t event_in_clock; // it counts how many events are within a clock of the FEB
@@ -145,7 +148,7 @@ namespace sbndaq {
     timeval time_last_poll_start;
     timeval time_last_poll_finished;
 
-    uint32_t feb_event_count;
+    uint32_t feb_event_count; //AA: number of events in a single poll (?)
     uint32_t start_time_metadata_s;
     uint32_t start_time_metadata_ns;
     uint32_t time_poll_start_metadata_s;

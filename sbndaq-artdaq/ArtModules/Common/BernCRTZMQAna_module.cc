@@ -79,6 +79,8 @@ private:
    uint32_t n_events;
    uint32_t n_datagrams;
 
+   uint64_t fragment_timestamp;
+
   
 };
 
@@ -127,6 +129,7 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   events->Branch("n_events",                  &n_events,                    "n_events/i");
   events->Branch("n_datagrams",               &n_datagrams,                 "n_datagrams/i");
 
+  events->Branch("fragment_timestamp",        &fragment_timestamp,          "fragment_timestamp/l");
 }
 
 sbndaq::BernCRTZMQAna::~BernCRTZMQAna()
@@ -168,12 +171,12 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 
     //this applies the 'overlay' to the fragment, to tell it to treat it like a BernCRTZMQ fragment
     BernCRTZMQFragment bern_fragment(frag);
-    
+
     const BernCRTZMQFragmentMetadata* md = bern_fragment.metadata();
     std::cout << *md << std::endl;
 
     //gets the number of CRT events (hits) inside this fragment
-    size_t n_events = md->n_events();
+    n_events = md->n_events();
 
     //loop over the events in the fragment ...
     for(size_t i_e=0; i_e<n_events; ++i_e) {
@@ -224,6 +227,8 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       dropped_events            = md->dropped_events();
       n_events                  = md->n_events();
       n_datagrams               = md->n_datagrams();
+
+      fragment_timestamp        = frag.timestamp();
 
       events->Fill();
 
