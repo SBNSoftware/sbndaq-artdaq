@@ -273,25 +273,25 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
   TLOG(TLVL_DEBUG) << "FEB ID " << (b.id & 0xff)
     << ". Current buffer size " << b.buffer.size()
-    << " with T0 in range [" << b.buffer.front().Time_TS0()
-    << ", " << b.buffer.back().Time_TS0() << "].";
+    << " with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.front().Time_TS0())
+    << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.back().Time_TS0()) << "].";
   TLOG(TLVL_DEBUG) << "Want to add " << nevents
-    << " events with T0 in range [" << ZMQBufferUPtr[begin_index].Time_TS0()
-    << ", " << ZMQBufferUPtr[begin_index+nevents-1].Time_TS0() << "].";
+    << " events with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index].Time_TS0())
+    << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index+nevents-1].Time_TS0()) << "].";
 
   TLOG(TLVL_DEBUG)<<"Before sort, here's contents of buffer:";
   TLOG(TLVL_DEBUG)<<"============================================";
   for(size_t i_e=0; i_e<b.buffer.size(); ++i_e)
     TLOG(TLVL_DEBUG)<<"\t\t "<<i_e
       <<" : MAC5="<<b.buffer.at(i_e).MAC5()
-      <<" TS0="<<b.buffer.at(i_e).Time_TS0()
+      <<" TS0="<<sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.at(i_e).Time_TS0())
       <<" IsReference_TS0="<<b.buffer.at(i_e).IsReference_TS0();
   TLOG(TLVL_DEBUG)<<"Want to add the following:";
   TLOG(TLVL_DEBUG)<<"--------------------------------------------";
   for(size_t i_e=begin_index; i_e<begin_index+nevents; ++i_e)
     TLOG(TLVL_DEBUG)<<"\t\t "<<i_e
       <<" : MAC5="<<ZMQBufferUPtr[i_e].MAC5()
-      <<" TS0="<<ZMQBufferUPtr[i_e].Time_TS0()
+      <<" TS0="<<sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[i_e].Time_TS0())
       <<" IsReference_TS0="<<ZMQBufferUPtr[i_e].IsReference_TS0();
   TLOG(TLVL_DEBUG)<<"============================================";
   // ---------------------//
@@ -321,14 +321,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
   std::cout << "\nInserted into buffer on FEB " << (b.id & 0xff) << ": " << nevents << " events." << std::endl;
 
-  //let's print out the content of the buffer and count the event in the feb
   feb_event_count = b.buffer.size();
-
-  for(size_t i_e=0; i_e<b.buffer.size(); ++i_e){
-    std::cout << "This poll start:" << i_e << " " << this_poll_start << " end_"  <<this_poll_end << " [ns] ";
-    std::cout << "Last poll start:" << i_e << " " << last_poll_start << " end_"  <<last_poll_end << " [ns] ";
-    std::cout<<std::endl;
-  }
 
   std::cout << "feb_event_count: " << feb_event_count << std::endl;
   std::cout << std::endl;
@@ -653,7 +646,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
     std::cout << "Event: " << i_e << std::endl;
     std::cout << metadata << std::endl;
-    std::cout << "\tTimestamp: "<<timestamp << std::endl;
+    std::cout << "\tTimestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp)<< std::endl;
 
     //TODO: understand, what is this doing. Do we add a single Bern hit or many?
     //create our new fragment on the end of the frags vector
