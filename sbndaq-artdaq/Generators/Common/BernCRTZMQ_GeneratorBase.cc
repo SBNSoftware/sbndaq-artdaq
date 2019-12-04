@@ -47,7 +47,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::Initialize() called";
 
   RunNumber_ = 0;
-  FEBIDs_ = ps_.get< std::vector<uint64_t> >("FEBIDs");
+  FEBIDs_ = ps_.get< std::vector<uint8_t> >("FEBIDs");
 
   //new variable added by me (see the header file)
   //TODO possibly all this need to be removed
@@ -216,8 +216,7 @@ std::cout << "---------------------------" << std::endl;
 std::cout << std::endl;
 }
   std::stringstream ss_id;
-  ss_id << "0x" << std::hex << std::setw(12) << std::setfill('0') << (id & 0xffffffffffff);
-  //std::cout << "ss_id.str: " << ss_id.str() << std::endl;
+  ss_id << "0x" << std::hex <<id;
   return ss_id.str();
 } //GetFEBIDString
 
@@ -257,7 +256,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     std::cout << std::endl;
   }
 
-  TLOG(TLVL_DEBUG) << __func__ << ": FEB ID " << (b.id & 0xff)
+  TLOG(TLVL_DEBUG) << __func__ << ": FEB ID " << b.id
     << ". Current buffer size " << b.buffer.size() << " / " << b.buffer.capacity()
     << ". Want to add " << nevents << " events.";
 
@@ -271,7 +270,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   //obtain the lock
   std::unique_lock<std::mutex> lock(*(b.mutexptr));
 
-  TLOG(TLVL_DEBUG) << "FEB ID " << (b.id & 0xff)
+  TLOG(TLVL_DEBUG) << "FEB ID " << b.id
     << ". Current buffer size " << b.buffer.size()
     << " with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.front().Time_TS0())
     << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.back().Time_TS0()) << "].";
@@ -319,7 +318,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   }
   FragmentCounter_ += nevents;
 
-  std::cout << "\nInserted into buffer on FEB " << (b.id & 0xff) << ": " << nevents << " events." << std::endl;
+  std::cout << "\nInserted into buffer on FEB " << b.id << ": " << nevents << " events." << std::endl;
 
   feb_event_count = b.buffer.size();
 
@@ -482,7 +481,10 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   TLOG(TLVL_DEBUG)<<__func__<<": "<<(total_events-1)<<"+1 events ";
 
   size_t this_n_events=0; //number of events in given FEB
-  uint64_t prev_mac = (FEBIDs_[0] & 0xffffffffffffff00) + ZMQBufferUPtr[0].MAC5();
+
+  //NOTE: value in ZMQBuffer is 16 bit. We just assume it will always be less than 0xff
+  //      In particular the special last event in ZMQ buffer has "mac5" field set to 0x0xffff
+  uint16_t prev_mac = ZMQBufferUPtr[0].MAC5();
 
   //Get the special last event and read the time information from it
   TLOG(TLVL_DEBUG)<<"Reading information from the last zeromq event";
@@ -519,7 +521,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     throw cet::exception("BernCRTZMQ::GetData() Data corruption! Number of events reported in the last zmq event differs from what you expect from the packet size ");
   }
 
-  TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() start sorting with mac="<<(prev_mac & 0xff);
+  TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() start sorting with mac="<<prev_mac;
 
   for(size_t i_e = 0; i_e < total_events; i_e++) { //loop over events in ZMQBufferUPtr
 
@@ -536,7 +538,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
       std::cout << "\t\tTS1() " << this_event.Time_TS1() << std::endl;
     }
 
-    if((prev_mac&0xff)!=this_event.MAC5()){
+    if(prev_mac != this_event.MAC5()){
       /*
        * febdrv zeromq packet looks as follows:
        * - events for first MAC5
@@ -552,8 +554,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
        * the code may not work properly -> write something more robust.
        */
 
-      TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() found new MAC ("<<(this_event.MAC5() & 0xff)
-                      <<")! prev_mac="<<(prev_mac&0xff)
+      TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() found new MAC ("<<this_event.MAC5()
+                      <<")! prev_mac="<<prev_mac
                       <<", iterator="<<i_e
                       <<" this_events="<<this_n_events;
 
@@ -571,7 +573,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
       this_n_events=0;
     }
 
-    prev_mac = (prev_mac & 0xffffffffffffff00) + this_event.MAC5();
+    prev_mac = this_event.MAC5();
     ++this_n_events;
   }
 
