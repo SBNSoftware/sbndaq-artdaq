@@ -37,7 +37,7 @@ namespace sbndaq {
     uint32_t RunNumber_;
     uint32_t SequenceTimeWindowSize_; //in nanoseconds
 
-    std::vector<uint64_t> FEBIDs_;
+    std::vector<uint8_t> FEBIDs_;
     size_t nFEBs() { return FEBIDs_.size(); }
     std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration;
 
@@ -120,7 +120,7 @@ namespace sbndaq {
 
     std::chrono::system_clock insertTimer_;
 
-    std::unordered_map< uint64_t, FEBBuffer_t  > FEBBuffers_; //first number is the mac address. TODO possibly we can optimize it by limiting MAC address to uint8_t
+    std::unordered_map< uint8_t, FEBBuffer_t  > FEBBuffers_; //first number is the mac address.
     uint32_t FEBBufferCapacity_;
 
     uint32_t SeqIDMinimumSec_;
