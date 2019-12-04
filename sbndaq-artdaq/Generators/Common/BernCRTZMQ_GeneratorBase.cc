@@ -19,6 +19,9 @@
 
 #define TRACE_NAME "BernCRTZMQ_GeneratorBase"
 
+bool be_verbose_section = true;
+
+
 sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet const & ps)
   :
   CommandableFragmentGenerator(ps),
@@ -29,10 +32,7 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
   TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase constructor completed";
 }
 
-
 /*---------------------------------------------------------------------*/
-
-bool be_verbose_section = true;
 
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
@@ -554,6 +554,9 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
        *
        * Whenever we see a new MAC5 and we know the previous one is complete and we can insert it into the buffer.
        * The timing information event isn't inserted into buffer directly, but is accessed directly by InsertIntoFEBBuffer
+       *
+       * TODO: note that the above assumes the zmq packet contains a single poll only! If we start polling more often
+       * the code may not work properly -> write something more robust.
        */
 
       TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() found new MAC ("<<(this_event.MAC5() & 0xff)
@@ -628,6 +631,11 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
     //assign timestamp to the event
     int ts0  = this_event.ts0;
+
+    //add PPS cable offset modulo 1s
+    ts0 = (ts0 + feb_configuration[this_event.mac5].GetPPSOffset()) % (1000*1000*1000);
+    if(ts0 < 0) ts0 += 1000*1000*1000;
+
     uint64_t mean_poll_time = metadata.last_poll_start()/2 + metadata.this_poll_end()/2;
     int mean_poll_time_ns = mean_poll_time % (1000*1000*1000); 
     
@@ -683,7 +691,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   return false;
 
   /*
-
     if(this_event.IsReference_TS0()) {
       TLOG(TLVL_INFO)<<"BernCRTZMQ::FillFragment() Found reference pulse at i_e=%lu, time=%u",
       i_e,this_event.Time_TS0());
