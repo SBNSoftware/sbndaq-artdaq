@@ -295,8 +295,8 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   TLOG(TLVL_DEBUG)<<"============================================";
   // ---------------------//
 
-  TLOG(TLVL_DEBUG)<<"this_poll_start [ns] " << this_poll_start;
-  TLOG(TLVL_DEBUG)<<"this_poll_end [ns]   " << this_poll_end;
+  TLOG(TLVL_DEBUG)<<"this_poll_start [ns] " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_start);
+  TLOG(TLVL_DEBUG)<<"this_poll_end [ns]   " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_end);
 
   //Insert events into FEBBuffer, the most important line of the function
   b.buffer.insert(b.buffer.end(), &(ZMQBufferUPtr[begin_index]), &(ZMQBufferUPtr[nevents+begin_index]));
@@ -620,7 +620,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
   //loop over all the CRTHit events in our buffer (for this FEB)
   for(size_t i_e=0; i_e<buffer_end; ++i_e) {
-    //get this event!
     auto const& this_event = feb.buffer[i_e];
     auto const& metadata = feb.metadata_buffer[i_e];
 
@@ -648,7 +647,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
     std::cout << "Event: " << i_e << std::endl;
     std::cout << metadata << std::endl;
-    std::cout << "\tTimestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp)<< std::endl;
+    std::cout << "\tTimestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp)<< std::endl;
 
     //TODO: understand, what is this doing. Do we add a single Bern hit or many?
     //create our new fragment on the end of the frags vector
