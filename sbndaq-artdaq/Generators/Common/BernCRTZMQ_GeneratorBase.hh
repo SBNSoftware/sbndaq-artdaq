@@ -5,6 +5,8 @@
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
+#include "BernCRTFEBConfiguration.hh"
+
 #include <unistd.h>
 #include <vector>
 #include <deque>
@@ -37,6 +39,7 @@ namespace sbndaq {
 
     std::vector<uint64_t> FEBIDs_;
     size_t nFEBs() { return FEBIDs_.size(); }
+    std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration;
 
     std::vector<uint32_t> MaxTimeDiffs_;
 
