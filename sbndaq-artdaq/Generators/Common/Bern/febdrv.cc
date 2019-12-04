@@ -29,7 +29,6 @@
 void *context = NULL;
 int infoLength = 0;
 
-
 void *responder = NULL; //  Socket to respond to clients
 void *publisher = NULL; //  Socket to send data to clients
 void *pubstats  = NULL; //  Socket to send statistics to clients;
@@ -62,15 +61,7 @@ int driver_state=DRV_OK;
 uint8_t dstmac[6]={0x00,0x60,0x37,0x12,0x34,0x00}; //base mac for FEBs, last byte 0->255
 uint8_t brcmac[6]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
-///////////////Forward declarations
-int startDAQ(uint8_t mac5);
-int getInfo();
-
-///////////////End Forward declarations
-
-
-void printdate()
-{
+void printdate() {
   char str[64];
   time_t result=time(NULL);
   sprintf(str,"%s", asctime(gmtime(&result))); 
@@ -78,8 +69,7 @@ void printdate()
   printf("%s ", str); 
 }
 
-void printmac( uint8_t *mac)
-{
+void printmac( uint8_t *mac) {
   printf("%02x:%02x:%02x:%02x:%02x:%02x",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
 
@@ -231,8 +221,6 @@ int sendtofeb(int len)  //sending spkt
     driver_state=DRV_SENDERROR; 
     return 0;
   }
-  //	printf("host->feb: sent packet %d bytes from  %02x:%02x:%02x:%02x:%02x:%02x ", len,spkt.src_mac[0],spkt.src_mac[1],spkt.src_mac[2],spkt.src_mac[3],spkt.src_mac[4],spkt.src_mac[5]);
-  //	printf("to %02x:%02x:%02x:%02x:%02x:%02x.\n", spkt.dst_mac[0],spkt.dst_mac[1],spkt.dst_mac[2],spkt.dst_mac[3],spkt.dst_mac[4],spkt.dst_mac[5]);
   return 1; 
 } //sendtofeb
 
@@ -250,7 +238,6 @@ int recvfromfeb(int timeout_us) //result is in rpkt
     driver_state=DRV_RECVERROR; 
     return 0;
   } //timeout
-  //printf("feb->host: received packet %d bytes from  %02x:%02x:%02x:%02x:%02x:%02x.\n", numbytes,rpkt.src_mac[0],rpkt.src_mac[1],rpkt.src_mac[2],rpkt.src_mac[3],rpkt.src_mac[4],rpkt.src_mac[5]);
   FEB_lastheard[rpkt.src_mac[5]]=time(NULL);
   return numbytes;
 }
@@ -263,8 +250,7 @@ int flushlink()
   return 1;
 }
 
-void sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf)
-{
+void sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf) {
   int packlen=64;
   memcpy(&spkt.dst_mac,mac,6);        
   memcpy(&spkt.CMD,&cmd,2);
@@ -309,22 +295,19 @@ void sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf)
   return;
 } //sendcommand
 
-void usage()
-{
+void usage() {
   printf("Usage: to init febdrv on eth0 interface with poll duration extended by 300 ms, type \n");
   printf("febdrv eth0 300 [listening_port]\n");
   printf("if listening_port is not specified, default is 5555\n");
   printf("The data publisher, stats and stats2 port numbers are larger by 1, 2 and 3, respectively\n");
 }
 
-int pingclients()
-{
+int pingclients() {
   if(GLOB_daqon!=0) return 0; //ping only allowed when DAQ is off
   nclients=0;
   int changed=0;
   uint8_t febs[256];
   memset(febs,0,256);
-  //printf("Pinging connected FEBs with FEB_SET_RECV..\n");
   dstmac[5]=0xff; 
   sendcommand(dstmac,FEB_SET_RECV,FEB_VCXO[nclients],hostmac);
   
@@ -527,26 +510,20 @@ int getSCR(uint8_t mac5, uint8_t *buf1)
 }
 
 
-sbndaq::BernCRTZMQEvent * getnextevent() { //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
-  sbndaq::BernCRTZMQEvent * retval=0;
-  //sbndaq::BernCRTZMQEvent evbuf[2][256*EVSPERFEB]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
-  //int evnum[2]; //number of good events in the buffer fields
-  //int evbufstat[2]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= ready, 3=being sent out   
+sbndaq::BernCRTZMQEvent * getnextevent() {
   // check for available buffers
   for(int sbi=0;sbi<NBUFS;sbi++) { 
     if(evbufstat[sbi]==1) { //check for buffer being filled
-      retval=&(evbuf[sbi][evnum[sbi]]); 
-      evnum[sbi]++; 
+      evnum[sbi]++;
       if(evnum[sbi]==EVSPERFEB*256)  evbufstat[sbi]=2; //buffer full, set to ready
-      return retval;
+      return &(evbuf[sbi][evnum[sbi]]); //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
     } //found buffer being filled, return pointer
   }
   for(int sbi=0;sbi<NBUFS;sbi++) {
     if(evbufstat[sbi]==0) { //check for empty buffer
-      retval=&(evbuf[sbi][0]); 
       evnum[sbi]=1; 
       evbufstat[sbi]=1; //buffer being filled
-      return retval;
+      return &(evbuf[sbi][0]);
     } //started new buffer, return pointer
   }
   //if we get here, than no buffers are available!
@@ -583,6 +560,7 @@ int senddata() {
   //    the last event format is no longer described febrv manual (v Sep 2016).
   //    Therefore, unless we decide to update this code, the "point of reference"
   //    to retrieve the number of events and poll times is the adc[0] field.
+  //    TODO: fix this
   evbuf[sbitosend][evnum[sbitosend]].flags=0xFFFF;
   evbuf[sbitosend][evnum[sbitosend]].mac5=0xFFFF;
   evbuf[sbitosend][evnum[sbitosend]].ts0=MAGICWORD32;
@@ -626,13 +604,9 @@ int sendstats2() //send statistics in binary packet format
       memset(&fs,0,sizeof(fs));
       fs.connected=1;
       if(recvfromfeb(10000)==0) fs.connected=0;  
-      //   sprintf(str+strlen(str), "Timeout for FEB %02x:%02x:%02x:%02x:%02x:%02x !\n",macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
       if(rpkt.CMD!=FEB_OK)   fs.error=1;  
-      //  sprintf(str+strlen(str), "no FEB_OK for FEB %02x:%02x:%02x:%02x:%02x:%02x !\n",macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
       
       fs.evtrate=*((float*)(rpkt.Data));
-      //   sprintf(str+strlen(str), "FEB %02x:%02x:%02x:%02x:%02x:%02x ",macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
-      //   sprintf(str+strlen(str), "%s Conf: %d Bias: %d ",verstr[f],FEB_configured[macs[f][5]],FEB_biason[macs[f][5]]);
       fs.configured=FEB_configured[macs[f][5]];
       fs.biason=FEB_biason[macs[f][5]];
       sprintf(fs.fwcpu,"%s",verstr[f]);
@@ -646,16 +620,10 @@ int sendstats2() //send statistics in binary packet format
 	  fs.lostfpga=lostperpoll_fpga[macs[f][5]];
 	  fs.ts0ok=ts0ok[macs[f][5]];
 	  fs.ts1ok=ts1ok[macs[f][5]];
-	  //    sprintf(str+strlen(str), "Per poll: %d ",evtsperpoll[macs[f][5]]);
-	  //   sprintf(str+strlen(str), "Lost CPU: %d ",lostperpoll_cpu[macs[f][5]]);
-	  //    sprintf(str+strlen(str), "FPGA: %d ",lostperpoll_fpga[macs[f][5]]);
 	}
-      //   sprintf(str+strlen(str), "rate %5.1f Hz\n",Rate);
       memcpy(ptr,&fs,sizeof(fs)); ptr+=sizeof(fs);
     }
-  //if(GLOB_daqon) sprintf(str+strlen(str), "Poll %d ms.\n",msperpoll);
   zmq_msg_send (&msg, pubstats2, ZMQ_DONTWAIT);
-  //printf("done..\n");
   zmq_msg_close (&msg);
   return 1; 
 } //sendstats2
@@ -670,7 +638,6 @@ int sendstats()
   time_t result=time(NULL);
   if(GLOB_daqon) sprintf(str+strlen(str), "\nDAQ ON; System time: %s", asctime(gmtime(&result))); 
   else sprintf(str+strlen(str), "\nDAQ OFF; System time: %s", asctime(gmtime(&result))); 
-  //for(int mac5=0;mac5<255;mac5++) printf("%02x %d ",mac5,FEB_configured[mac5]);    
   
   // Get event rates
   for(int f=0; f<nclients;f++) //loop on all connected febs : macs[f][6]
@@ -692,7 +659,6 @@ int sendstats()
 	  sprintf(str+strlen(str), "GPS_OK: %d Beam_OK:%d ",ts0ok[macs[f][5]],ts1ok[macs[f][5]]);
 	}
       sprintf(str+strlen(str), "rate %5.1f Hz\n",Rate);
-      //  printf("%s",str);
     }
   if(GLOB_daqon) sprintf(str+strlen(str), "Poll %d ms.\n",msperpoll);
   
@@ -700,9 +666,7 @@ int sendstats()
   zmq_msg_init_size (&msg, strlen(str)+1);
   memcpy(zmq_msg_data (&msg), str, strlen(str)+1);
   zmq_msg_send (&msg, pubstats, ZMQ_DONTWAIT);
-  //printf("done..\n");
   zmq_msg_close (&msg);
-  //printf("exit sendtats()\n");
   return 1; 
 } //sendstats
 //###############################################
@@ -711,10 +675,8 @@ void polldata() {
   /**
    * poll data from daisy-chain and send it to the publisher socket
    */
-  ftime(&mstime0); //http://man7.org/linux/man-pages/man3/ftime.3.html : "This function is obsolete.  Don't use it."
+  ftime(&mstime0); //http://man7.org/linux/man-pages/man3/ftime.3.html : "This function is obsolete.  Don't use it." TODO: fix
   msperpoll=0;
-  uint32_t overwritten=0;
-  uint32_t lostinfpga=0;
   memset(lostperpoll_cpu,0,sizeof(lostperpoll_cpu));
   memset(lostperpoll_fpga,0,sizeof(lostperpoll_fpga));
   memset(evtsperpoll,0,sizeof(evtsperpoll));
@@ -722,6 +684,7 @@ void polldata() {
   if(GLOB_daqon==0) {sleep(1); return;} //if no DAQ running - just delay for not too fast ping
   
   for(int f=0; f<nclients;f++) { //loop on all connected febs : macs[f][6]
+    uint32_t overwritten=0;
     ts0ok[macs[f][5]]=1;
     ts1ok[macs[f][5]]=1;
     sendcommand(macs[f],FEB_RD_CDR,0,buf);
@@ -736,7 +699,7 @@ void polldata() {
       int jj=0;
       while(jj<datalen) {
 	overwritten = *(uint16_t*)(&(rpkt).Data[jj]); jj += 2;
-	lostinfpga  = *(uint16_t*)(&(rpkt).Data[jj]); jj += 2;
+	uint32_t lostinfpga  = *(uint16_t*)(&(rpkt).Data[jj]); jj += 2;
 	lostperpoll_fpga[rpkt.src_mac[5]] += lostinfpga;
 	uint32_t ts0 = *(uint32_t*)(&(rpkt).Data[jj]); jj += 4; 
 	uint32_t ts1 = *(uint32_t*)(&(rpkt).Data[jj]); jj += 4; 
@@ -762,8 +725,7 @@ void polldata() {
         sbndaq::BernCRTZMQEvent *evt = getnextevent();
 	if(evt==0) {
 	  driver_state=DRV_BUFOVERRUN; 
-	  printdate();  
-	  printf("Buffer overrun for FEB S/N %d !! Aborting.\n",macs[f][5]); 
+	  printdate(); printf("Buffer overrun for FEB S/N %d !! Aborting.\n",macs[f][5]); 
 	  continue;
 	} 
 	evt->ts0=ts0;
