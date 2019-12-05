@@ -507,20 +507,29 @@ int getSCR(uint8_t mac5, uint8_t *buf1)
 
 
 sbndaq::BernCRTZMQEvent * getnextevent() {
+  /**
+   * Returns pointer to next empty location in event buffer.
+   * If buffers are full, returns 0
+   */
+
   // check for available buffers
+  // first see if there are buffers being filled presently 
   for(int sbi=0;sbi<NBUFS;sbi++) { 
     if(evbufstat[sbi]==1) { //check for buffer being filled
+      sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][evnum[sbi]]);
       evnum[sbi]++;
       if(evnum[sbi]==EVSPERFEB*256)  evbufstat[sbi]=2; //buffer full, set to ready
-      return &(evbuf[sbi][evnum[sbi]]); //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event
-    } //found buffer being filled, return pointer
+      return retval; //found buffer being filled, return pointer
+    }
   }
+  //if failed, try to start filling next empty buffer
   for(int sbi=0;sbi<NBUFS;sbi++) {
     if(evbufstat[sbi]==0) { //check for empty buffer
+      sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][0]);
       evnum[sbi]=1; 
       evbufstat[sbi]=1; //buffer being filled
-      return &(evbuf[sbi][0]);
-    } //started new buffer, return pointer
+      return retval; //started new buffer, return pointer
+    }
   }
   //if we get here, than no buffers are available!
   return 0;
