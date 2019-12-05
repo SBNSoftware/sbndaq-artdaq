@@ -24,7 +24,7 @@
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 
 #define EVSPERFEB 1024   // max events per feb per poll to buffer
-#define NBUFS     30     // number of buffers. This should be at least the number of FEBs in a chain
+#define NBUFS     30     // number of buffers. AA: I don't understand why we need more than 1 
 
 void *context = NULL;
 int infoLength = 0;
@@ -514,7 +514,7 @@ sbndaq::BernCRTZMQEvent * getnextevent() {
 
   // check for available buffers
   // first see if there are buffers being filled presently 
-  for(int sbi=0;sbi<NBUFS;sbi++) { 
+  for(int sbi=0;sbi<NBUFS;sbi++) {
     if(evbufstat[sbi]==1) { //check for buffer being filled
       sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][evnum[sbi]]);
       evnum[sbi]++;
@@ -526,7 +526,7 @@ sbndaq::BernCRTZMQEvent * getnextevent() {
   for(int sbi=0;sbi<NBUFS;sbi++) {
     if(evbufstat[sbi]==0) { //check for empty buffer
       sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][0]);
-      evnum[sbi]=1; 
+      evnum[sbi]=1;
       evbufstat[sbi]=1; //buffer being filled
       return retval; //started new buffer, return pointer
     }
@@ -685,9 +685,9 @@ void polldata() {
   memset(lostperpoll_cpu,0,sizeof(lostperpoll_cpu));
   memset(lostperpoll_fpga,0,sizeof(lostperpoll_fpga));
   memset(evtsperpoll,0,sizeof(evtsperpoll));
-  
+
   if(GLOB_daqon==0) {sleep(1); return;} //if no DAQ running - just delay for not too fast ping
-  
+
   for(int f=0; f<nclients;f++) { //loop on all connected febs : macs[f][6]
     uint32_t overwritten=0;
     ts0ok[macs[f][5]]=1;
@@ -703,61 +703,63 @@ void polldata() {
 
       int jj=0;
       while(jj<datalen) {
-	overwritten = *(uint16_t*)(&(rpkt).Data[jj]); jj += 2;
-	uint32_t lostinfpga  = *(uint16_t*)(&(rpkt).Data[jj]); jj += 2;
-	lostperpoll_fpga[rpkt.src_mac[5]] += lostinfpga;
-	uint32_t ts0 = *(uint32_t*)(&(rpkt).Data[jj]); jj += 4; 
-	uint32_t ts1 = *(uint32_t*)(&(rpkt).Data[jj]); jj += 4; 
+        overwritten = *(uint16_t*)(&(rpkt).Data[jj]); jj += 2;
+        uint32_t lostinfpga  = *(uint16_t*)(&(rpkt).Data[jj]); jj += 2;
+        lostperpoll_fpga[rpkt.src_mac[5]] += lostinfpga;
+        uint32_t ts0 = *(uint32_t*)(&(rpkt).Data[jj]); jj += 4; 
+        uint32_t ts1 = *(uint32_t*)(&(rpkt).Data[jj]); jj += 4; 
         //AA: The CAEN manual says all 30 bits of the timestamp are 
         //    encoded in Gray Code. This is apparently not true.
         //IK: Two LSBs of the time stamp are indeed coded normal binary, not Gray
-	uint8_t ls2b0=ts0 & 0x00000003;
-	uint8_t ls2b1=ts1 & 0x00000003;
-	uint32_t tt0=(ts0 & 0x3fffffff) >> 2;
-	uint32_t tt1=(ts1 & 0x3fffffff) >> 2;
-	tt0=(GrayToBin(tt0) << 2) | ls2b0;
-	tt1=(GrayToBin(tt1) << 2) | ls2b1;
-	tt0=tt0+5; //IK: correction based on phase drift w.r.t GPS
-	tt1=tt1+5; //IK: correction based on phase drift w.r.t GPS
-	bool NOts0=((ts0 & 0x40000000)>0); // check overflow bit
-	bool NOts1=((ts1 & 0x40000000)>0);
+        uint8_t ls2b0=ts0 & 0x00000003;
+        uint8_t ls2b1=ts1 & 0x00000003;
+        uint32_t tt0=(ts0 & 0x3fffffff) >> 2;
+        uint32_t tt1=(ts1 & 0x3fffffff) >> 2;
+        tt0=(GrayToBin(tt0) << 2) | ls2b0;
+        tt1=(GrayToBin(tt1) << 2) | ls2b1;
+        tt0=tt0+5; //IK: correction based on phase drift w.r.t GPS
+        tt1=tt1+5; //IK: correction based on phase drift w.r.t GPS
+        bool NOts0=((ts0 & 0x40000000)>0); // check overflow bit
+        bool NOts1=((ts1 & 0x40000000)>0);
 
         bool REFEVTts0 = ts0 & 0x80000000;
         bool REFEVTts1 = ts1 & 0x80000000;
-	ts0=tt0; 
-	ts1=tt1; 
-				
-        sbndaq::BernCRTZMQEvent *evt = getnextevent();
-	if(evt==0) {
-	  driver_state=DRV_BUFOVERRUN; 
-	  printdate(); printf("Buffer overrun for FEB S/N %d !! Aborting.\n",macs[f][5]); 
-	  continue;
-	} 
-	evt->ts0=ts0;
-	evt->ts1=ts1;
-	evt->lostcpu=overwritten;
-	evt->lostfpga=lostinfpga;  
-	evt->flags=0;
-	evt->mac5=rpkt.src_mac[5];
+        ts0=tt0; 
+        ts1=tt1; 
 
-	if(NOts0==0) evt->flags|=0x0001; else ts0ok[macs[f][5]]=0;    //opposite logic! 1 if TS is present, 0 if not!    
-	if(NOts1==0) evt->flags|=0x0002; else ts1ok[macs[f][5]]=0;
-	if(REFEVTts0==1) evt->flags|=0x0004; //bit indicating TS0 reference event
-	if(REFEVTts1==1) evt->flags|=0x0008; //bit indicating TS1 reference event
-	
-	for(int kk=0; kk<32; kk++) { 
-	  evt->adc[kk] = *(uint16_t*)(&(rpkt).Data[jj]); 
+        sbndaq::BernCRTZMQEvent *evt = getnextevent();
+        if(evt==0) {
+          driver_state=DRV_BUFOVERRUN;
+          break;
+        } 
+        evt->ts0=ts0;
+        evt->ts1=ts1;
+        evt->lostcpu=overwritten;
+        evt->lostfpga=lostinfpga;  
+        evt->flags=0;
+        evt->mac5=rpkt.src_mac[5];
+
+        if(NOts0==0) evt->flags|=0x0001; else ts0ok[macs[f][5]]=0;    //opposite logic! 1 if TS is present, 0 if not!    
+        if(NOts1==0) evt->flags|=0x0002; else ts1ok[macs[f][5]]=0;
+        if(REFEVTts0==1) evt->flags|=0x0004; //bit indicating TS0 reference event
+        if(REFEVTts1==1) evt->flags|=0x0008; //bit indicating TS1 reference event
+
+        for(int kk=0; kk<32; kk++) { 
+          evt->adc[kk] = *(uint16_t*)(&(rpkt).Data[jj]); 
           jj += 2;
-	}
+        }
         uint32_t coinc = *(uint32_t*)(&(rpkt).Data[jj]); jj=jj+4;
-	
+
         evt->coinc = coinc;
-	
-	evtsperpoll[rpkt.src_mac[5]]++;
-      }   //loop on event buffer in one L2 packet     
+
+        evtsperpoll[rpkt.src_mac[5]]++;
+      }   //loop on event buffer in one L2 packet
     }	// loop on messages from 1 FEB
     lostperpoll_cpu[rpkt.src_mac[5]]+=overwritten;
   } //loop on FEBS
+  if(driver_state == DRV_BUFOVERRUN) {
+    printdate(); printf("Some events skipped due to buffer overrun!\n"); 
+  }
 
   ftime(&mstime1);
   msperpoll=(mstime1.time-mstime0.time)*1000+(mstime1.millitm-mstime0.millitm);
