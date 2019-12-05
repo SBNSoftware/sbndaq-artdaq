@@ -24,7 +24,7 @@
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 
 #define EVSPERFEB 1024   // max events per feb per poll to buffer
-#define NBUFS 2   // number of buffers for double-buffering
+#define NBUFS     30     // number of buffers. This should be at least the number of FEBs in a chain
 
 void *context = NULL;
 int infoLength = 0;
@@ -348,8 +348,7 @@ int pingclients() {
   return nclients;
 }
 
-int getInfo()
-{
+int getInfo() {
   pingclients();
   char ethernet[80];
   std::string text = std::to_string(nclients) + "\n";
@@ -369,8 +368,7 @@ int getInfo()
   return(0);
 }
 
-int sendconfig(uint8_t mac5)
-{
+int sendconfig(uint8_t mac5) {
   /**
    * Send configuration bitstreams to FEB
    */
@@ -402,14 +400,12 @@ int sendconfig(uint8_t mac5)
   return 1;
 }
 
-int stopDAQ()
-{
+int stopDAQ() {
   GLOB_daqon=0;
   return 1;
 }
 
-int startDAQ(uint8_t mac5)
-{
+int startDAQ(uint8_t mac5) {
   int nreplies=0;
   dstmac[5]=mac5; 
   
