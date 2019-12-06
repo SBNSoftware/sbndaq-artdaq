@@ -261,7 +261,10 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     << ". Want to add " << nevents << " events.";
 
   //wait for available capacity...
-  for(int i=0; (b.buffer.capacity()-b.buffer.size()) < nevents; i++) { std::cout<<(i?".":"no available capacity to save the events in FEBBuffers (I will be printing dots while waiting)!"); usleep(10); }
+  for(int i=0; (b.buffer.capacity()-b.buffer.size()) < nevents; i++) {
+    if(i%100000 == 0) std::cout<<"no available capacity to save the events in FEBBuffers"<<std::endl;
+    usleep(10);
+  }
   std::cout << "\nCheck the buffer after waiting for capacity: " << std::endl;	
   std::cout << "Buffer Capacity: " << std::setw(5) << b.buffer.capacity() << std::endl;
   std::cout << "Buffer Size: " << std::setw(6) << b.buffer.size() <<  std::endl;
