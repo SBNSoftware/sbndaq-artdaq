@@ -521,7 +521,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
       timestamp = mean_poll_time - mean_poll_time_ns + ts0;
     } 
 
-    TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<<__fu metadata;
+    TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
     TLOG(TLVL_SPECIAL)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
 
     //create our new fragment on the end of the frags vector
@@ -544,7 +544,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   //delete from the buffer all the events we've just put into frags
   TLOG(TLVL_DEBUG)<<__func__<<": FEB Buffer size before erase = "<<feb.buffer.size();
   size_t new_buffer_size = EraseFromFEBBuffer(feb,buffer_end);
-  TLOG(TLVL_DEBUG)<<__func__": FEB Buffer size after erase = "<<feb.buffer.size();
+  TLOG(TLVL_DEBUG)<<__func__<<": FEB Buffer size after erase = "<<feb.buffer.size();
 
   //update 
   std::string id_str = GetFEBIDString(feb_id);
