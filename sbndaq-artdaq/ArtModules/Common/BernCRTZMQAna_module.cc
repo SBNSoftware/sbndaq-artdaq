@@ -45,10 +45,6 @@ public:
 
 private:
   
-  //sample histogram
-  TH1F* fSampleHist;
-  TH1F* TS0;
-
   TTree * events;
 
    uint8_t mac5; //last 8 bits of FEB mac5 address
@@ -91,11 +87,6 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   //I do this here in the constructor to setup the histogram just once
   //but you can call the TFileService and make new objects from anywhere
   art::ServiceHandle<art::TFileService> tfs; //pointer to a file named tfs
-
-  //make the histogram
-  //the arguments are the same as what would get passed into ROOT
-  fSampleHist = tfs->make<TH1F>("hSampleHist","Sample Hist Title; x axis (units); y axis (units)",100,-50,50);
-  TS0 = tfs->make<TH1F>("hSampleHist_TS0","TS0 distribution; time [ns]; counts",1000,1e9-500,1e9+500);
 
   events = tfs->make<TTree>("events", "FEB events");
 
@@ -152,12 +143,6 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
   if (!rawFragHandle.isValid()) return;
 
 
-  std::cout << "######################################################################" << std::endl;
-  std::cout << std::endl;  
-  std::cout << "Run " << evt.run() << ", subrun " << evt.subRun()
-	    << ", event " << eventNumber << " has " << rawFragHandle->size()
-	    << " CRT fragment(s)." << std::endl;
-  
   for (size_t idx = 0; idx < rawFragHandle->size(); ++idx) { // loop over the fragments of an event
     
     const auto& frag((*rawFragHandle)[idx]); // use this fragment as a reference to the same data
@@ -166,7 +151,6 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
     BernCRTZMQFragment bern_fragment(frag);
 
     const BernCRTZMQFragmentMetadata* md = bern_fragment.metadata();
-    std::cout << *md << std::endl;
 
     //gets the number of CRT events (hits) inside this fragment
     n_events = md->n_events();
@@ -177,17 +161,6 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       //grab the pointer to the event
       BernCRTZMQEvent const* bevt = bern_fragment.eventdata(i_e);
       
-      //we can print this
-      std::cout << *bevt << std::endl;
-
-      //let's fill our sample hist with the Time_TS0()-1e9 if 
-      //it's a GPS reference pulse
-      if(bevt->IsReference_TS0()){
-	fSampleHist->Fill(bevt->Time_TS0()-1e9);
-      }
-
-      TS0 -> Fill(bevt->Time_TS0());
-
       //event data
       mac5     = bevt->MAC5();
       flags    = bevt->flags;
