@@ -17,6 +17,7 @@ namespace sbndaq {
     public:
 
       BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB);
+      BernCRTFEBConfiguration();
 
       uint8_t * GetProbeBitStream();
       int       GetProbeBitStreamNBytes();
@@ -24,6 +25,7 @@ namespace sbndaq {
       int       GetSlowControlBitStreamNBytes();
       std::string GetString(std::string separator=" # ");
       bool      GetHVOnPermission();
+      int32_t   GetPPSOffset();
 
     private:
       static const int PROBE_BITSTREAM_NBITS = 224;
@@ -31,6 +33,8 @@ namespace sbndaq {
       uint8_t ProbeBitStream[PROBE_BITSTREAM_NBITS/8];
       uint8_t SlowControlBitStream[SLOW_CONTROL_BITSTREAM_NBITS/8];
       bool hv_on_permission;
+      int32_t PPS_offset;
+
 
       static int GetBit(unsigned int bit_number, uint8_t * bitstream, unsigned int nBits);
       int GetBit(unsigned int bit_number);
