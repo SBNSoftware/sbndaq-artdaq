@@ -27,9 +27,11 @@ simple_plugin(SBNDInput "source"
   artdaq-utilities_Plugins
   artdaq-core_Utilities
   artdaq_ArtModules
+  artdaq_ArtModules_ArtdaqSharedMemoryService_service
   art_Framework_Core
   art_Framework_IO_Sources
   art_Framework_Principal
+  art_Framework_Services_Registry
   art_Persistency_Provenance
   art_Utilities
   MF_MessageLogger
