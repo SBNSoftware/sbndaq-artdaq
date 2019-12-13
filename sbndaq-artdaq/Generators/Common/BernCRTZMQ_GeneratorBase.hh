@@ -5,6 +5,8 @@
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
+#include "BernCRTFEBConfiguration.hh"
+
 #include <unistd.h>
 #include <vector>
 #include <deque>
@@ -20,12 +22,11 @@
 
 namespace sbndaq {    
 
-  class BernCRTZMQ_GeneratorBase : public artdaq::CommandableFragmentGenerator{
+  class BernCRTZMQ_GeneratorBase : public artdaq::CommandableFragmentGenerator {
   public:
     explicit BernCRTZMQ_GeneratorBase(fhicl::ParameterSet const & ps);
     virtual ~BernCRTZMQ_GeneratorBase();
 
-    //private:
   protected:
 
     bool getNext_(artdaq::FragmentPtrs & output) override;
@@ -36,8 +37,9 @@ namespace sbndaq {
     uint32_t RunNumber_;
     uint32_t SequenceTimeWindowSize_; //in nanoseconds
 
-    std::vector<uint64_t> FEBIDs_;
+    std::vector<uint8_t> FEBIDs_;
     size_t nFEBs() { return FEBIDs_.size(); }
+    std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration;
 
     std::vector<uint32_t> MaxTimeDiffs_;
 
@@ -46,7 +48,6 @@ namespace sbndaq {
 
     uint32_t current_subrun_;
     size_t event_number_;
-
 
     //These functions MUST be defined by the derived classes
     virtual void ConfigureStart() = 0; //called in start()
@@ -60,8 +61,6 @@ namespace sbndaq {
     size_t last_read_data_size_;
     int    last_status_;
 
-  protected:
-
     BernCRTZMQFragmentMetadata metadata_;
     fhicl::ParameterSet const ps_;
 
@@ -70,10 +69,10 @@ namespace sbndaq {
     virtual void Cleanup();        //called in destructor
 
     typedef boost::circular_buffer<BernCRTZMQEvent> EventBuffer_t;
+    typedef boost::circular_buffer<BernCRTZMQFragmentMetadata> EventMetadataBuffer_t;
     typedef boost::circular_buffer< std::pair<timeval,timeval> > EventTimeBuffer_t;
     typedef boost::circular_buffer<unsigned int> EventsDroppedBuffer_t;
     typedef boost::circular_buffer<uint64_t>     EventsCorrectedTimeBuffer_t;
-    //typedef std::deque<BernCRTZMQEvent> ZMQEventBuffer_t;
 
     typedef std::chrono::high_resolution_clock hires_clock;
 
@@ -85,7 +84,8 @@ namespace sbndaq {
     typedef struct FEBBuffer{
 
       EventBuffer_t               buffer;
-      EventTimeBuffer_t           timebuffer;
+      EventMetadataBuffer_t       metadata_buffer;
+      EventTimeBuffer_t           timebuffer; //TODO: note, this buffer, and the following ones are used only in commented code
       EventsDroppedBuffer_t       droppedbuffer;
       EventsCorrectedTimeBuffer_t correctedtimebuffer;
 
@@ -97,7 +97,8 @@ namespace sbndaq {
 
       FEBBuffer(uint32_t capacity, uint32_t td, uint64_t i)
 	: buffer(EventBuffer_t(capacity)),
-	  timebuffer(EventTimeBuffer_t(capacity)),
+          metadata_buffer(EventMetadataBuffer_t(capacity)),
+	  timebuffer(EventTimeBuffer_t(capacity)), 
 	  droppedbuffer(EventsDroppedBuffer_t(capacity)),
 	  correctedtimebuffer(EventsCorrectedTimeBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
@@ -119,7 +120,7 @@ namespace sbndaq {
 
     std::chrono::system_clock insertTimer_;
 
-    std::unordered_map< uint64_t, FEBBuffer_t  > FEBBuffers_; //TODO possibly we can optimize it by limiting MAC address to uint8_t
+    std::unordered_map< uint8_t, FEBBuffer_t  > FEBBuffers_; //first number is the mac address.
     uint32_t FEBBufferCapacity_;
 
     uint32_t SeqIDMinimumSec_;
@@ -136,37 +137,24 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
-	//my new variable
+	//my new variable (AA: Federico?)
+    //TODO: there is only a single set of variables for all FEBs read by a single board reader
+    //as a result e.g. PPS events in any board will cause the GPS counter to advance. This need
+    //to be rewritten
     size_t FragmentCounter_; //it counts the fragments in the buffer
     size_t GPSCounter_; // it counts how many GPS have occurred
     size_t event_in_clock; // it counts how many events are within a clock of the FEB
     size_t GPS_time; // time past from the very beginning of the DAQ_BEG - with respect to the GPS-PPS
 
-    timeval time_last_poll_start;
-    timeval time_last_poll_finished;
+    //AA: values read from the special last zeromq event, containing poll times
+    uint64_t this_poll_start;
+    uint64_t this_poll_end;
+    uint64_t last_poll_start;
+    uint64_t last_poll_end;
 
-    uint32_t feb_event_count;
-    uint32_t start_time_metadata_s;
-    uint32_t start_time_metadata_ns;
-    uint32_t time_poll_start_metadata_s;
-    uint32_t time_poll_start_metadata_ns;
-    uint32_t time_poll_finish_metadata_s;
-    uint32_t time_poll_finish_metadata_ns;
-    uint32_t time_last_poll_start_metadata_s;
-    uint32_t time_last_poll_start_metadata_ns;
-    uint32_t time_last_poll_finish_metadata_s;
-    uint32_t time_last_poll_finish_metadata_ns;
-    uint32_t fragment_fill_time_metadata_s;
-    uint32_t fragment_fill_time_metadata_ns;
+    uint32_t feb_event_count; //AA: number of events in a single poll (?)
+    uint64_t start_time_metadata;
 
-    std::vector<uint32_t> time_poll_start_store_sec;
-    std::vector<uint32_t> time_poll_start_store_nanosec;
-    std::vector<uint32_t> time_poll_finish_store_sec;
-    std::vector<uint32_t> time_poll_finish_store_nanosec;
-    std::vector<uint32_t> time_last_poll_start_store_sec;
-    std::vector<uint32_t> time_last_poll_start_store_nanosec;
-    std::vector<uint32_t> time_last_poll_finish_store_sec;
-    std::vector<uint32_t> time_last_poll_finish_store_nanosec;
   };
 }
 

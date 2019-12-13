@@ -2,6 +2,14 @@
 
 #define TRACE_NAME "BernCRTFEBConfiguration"
 
+sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
+  /**
+   * default constructor formally required by std::unordered_map
+   */
+  TLOG(TLVL_WARNING) <<__func__<<" default constructor should never be called";
+}
+
+
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
   /**
    * Constructor basing on FHiCL file
@@ -21,13 +29,21 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
     throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load Slow Control bit stream");
   }
   std::vector<bool> hv_on_permissions = ps_.get< std::vector<bool> >("TurnOnHV");
+  std::vector<int32_t> PPS_offsets = ps_.get< std::vector<int32_t> >("PPS_offset_ns");
   std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("FEBIDs"); //read MAC5 list for validation purposes only
-  if(hv_on_permissions.size() != mac5s.size()) { //validate size of the array in the FHiCL file
+
+  //validate size of the arrays in the FHiCL file
+  if(hv_on_permissions.size() != mac5s.size()) {
     TLOG(TLVL_ERROR)<< __func__ << " TurnOnHV array size differs from FEBIDs array size";
     throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " TurnOnHV array size differs from FEBIDs array size");
   }
-
   hv_on_permission = hv_on_permissions[iFEB];
+  
+  if(PPS_offsets.size() != mac5s.size()) {
+    TLOG(TLVL_ERROR)<< __func__ << " PPS_offset_ns array size differs from FEBIDs array size";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " PPS_offset_ns array size differs from FEBIDs array size");
+  }
+  PPS_offset = PPS_offsets[iFEB];
 }
 
 int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream, uint8_t *bitstream, unsigned int nBits) {
@@ -242,3 +258,4 @@ uint8_t * sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStream()       { ret
 int       sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStreamNBytes() { return SLOW_CONTROL_BITSTREAM_NBITS/8; }
 
 bool      sbndaq::BernCRTFEBConfiguration::GetHVOnPermission()             { return hv_on_permission; }
+int32_t   sbndaq::BernCRTFEBConfiguration::GetPPSOffset()                  { return PPS_offset; }

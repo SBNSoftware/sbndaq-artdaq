@@ -8,14 +8,14 @@
 using std::string;
 
 /**
- * \brief The icarus_artdaq namespace
+ * \brief The sbnd_artdaq namespace
  */
-namespace sbnddaq
+namespace sbnd
 {
 	/**
 	 * \brief DemoInput is an art::Source using the detail::RawEventQueueReader class
 	 */
-	typedef art::Source< artdaq::detail::SharedMemoryReader<sbndaq::makeFragmentTypeMap> > SBNDDAQInput;
+	typedef art::Source< artdaq::detail::SharedMemoryReader<sbndaq::makeFragmentTypeMap> > SBNDInput;
 }
 
 namespace art
@@ -31,4 +31,4 @@ namespace art
 	};
 }
 
-DEFINE_ART_INPUT_SOURCE(sbnddaq::SBNDDAQInput)
+DEFINE_ART_INPUT_SOURCE(sbnd::SBNDInput)

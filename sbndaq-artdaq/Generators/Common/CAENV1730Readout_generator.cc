@@ -704,12 +704,17 @@ void sbndaq::CAENV1730Readout::stop()
 
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
-  for(int32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
-    CAEN_DGTZ_ReadTemperature(fHandle,ch,&(ch_temps[ch]));
-    TLOG_ARB(TTEMP,TRACE_NAME) << "Channel " << ch
-			       <<" temp: " << ch_temps[ch] << "  C"
-			       << TLOG_ENDL;
-    //metric call here...
+  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
+    CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
+    TLOG_ARB(TTEMP,TRACE_NAME) << "Card: " << fBoardID
+                               << ", Channel: " << ch
+                               << ", temp: " << ch_temps[ch] << "  C"
+                               << TLOG_ENDL;
+    std::ostringstream tempStream;
+    tempStream << "Card: " << fBoardID
+               << ", Channel: " << ch << " temp.";
+    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+                          artdaq::MetricMode::Average, "CAENV1730");
   }
 
   return true;
@@ -936,6 +941,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
   metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
+
+  checkHWStatus_();
 
   TLOG(TGETNEXT) << __func__<< ": End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 
