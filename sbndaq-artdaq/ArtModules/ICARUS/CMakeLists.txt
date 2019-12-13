@@ -28,10 +28,11 @@ simple_plugin(IcarusInput "source"
   artdaq-core_Utilities
   rt
   artdaq_ArtModules
+  artdaq_ArtModules_ArtdaqSharedMemoryService_service
   art_Framework_Core
   art_Framework_IO_Sources
   art_Framework_Principal
-  art_Persistency_Provenance
+  art_Framework_Services_Registry
   art_Utilities
   MF_MessageLogger
   ${CETLIB_EXCEPT}
