@@ -23,6 +23,7 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   veto_host(ps.get<std::string>("VetoHost")),
   veto_host_port(ps.get<int>("VetoPort")),
   veto_udp(veto_host.c_str(),veto_host_port),
+  _doRedis(ps.get<bool>("doRedis",false)),
   _redisHost(ps.get<std::string>("redisHost","localhost")),
   _redisPort(ps.get<int>("redisPort",6379))
 {
@@ -43,22 +44,25 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   // SetDCOffset();
   // SetTestPulse();
 
-  _redisCtxt = redisConnect(_redisHost.c_str(),_redisPort);
-  if (_redisCtxt == NULL || _redisCtxt->err) {
-    if (_redisCtxt) {
-      printf("Error: %s\n", _redisCtxt->errstr);
-      // handle error
-    } else {
-      printf("Can't allocate redis context\n");
+  if(_doRedis){
+    _redisCtxt = redisConnect(_redisHost.c_str(),_redisPort);
+    if (_redisCtxt == NULL || _redisCtxt->err) {
+      if (_redisCtxt) {
+	printf("Error: %s\n", _redisCtxt->errstr);
+	// handle error
+      } else {
+	printf("Can't allocate redis context\n");
+      }
+      
+      throw cet::exception("PhysCrateData") << "Could not setup redis context without error";
     }
-
-    throw cet::exception("PhysCrateData") << "Could not setup redis context without error";
   }
 }
 
 icarus::PhysCrateData::~PhysCrateData()
 {
-  redisFree(_redisCtxt);
+  if(_doRedis)
+    redisFree(_redisCtxt);
 }
 
 void icarus::PhysCrateData::InitializeVeto(){
@@ -312,45 +316,65 @@ bool icarus::PhysCrateData::Monitor(){
   */
 
   uint16_t busy_mask=0,gbusy_mask=0;
+  int n_busy=0,n_gbusy=0,n_running=0,n_ready=0;
 
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto status = physCr->BoardStatus(ib);
-    std::cout << "Board " << ib << " status is " << status << std::endl;
+    //std::cout << "Board " << ib << " status is " << status << std::endl;
 
 
+    if( (status & 0x00000010) ) {
+      //std::cout << "BUSY on " << ib << "!" << std::endl;
+      ++n_running;
+    }
+    if( (status & 0x00000020) ) {
+      //std::cout << "BUSY on " << ib << "!" << std::endl;
+      ++n_ready;
+    }
     if( (status & 0x00000040) ) {
-      std::cout << "BUSY on " << ib << "!" << std::endl;
+      //std::cout << "BUSY on " << ib << "!" << std::endl;
       busy_mask = busy_mask | (0x1 << ib);
+      ++n_busy;
     }
     if( (status & 0x00000080) ){
-      std::cout << "GBUSY on " << ib << "!" << std::endl;
+      //std::cout << "GBUSY on " << ib << "!" << std::endl;
       gbusy_mask = gbusy_mask | (0x1 << ib);
+      ++n_gbusy;
     }
+
   }
 
   struct timeval ts;
   gettimeofday(&ts,NULL);
   char* tmp_str = (char*)malloc(150);
 
-  //redisReply reply;
-  if(busy_mask){
-    std::cout << "BUSY CONDITION!" << std::endl;
-    sprintf(tmp_str,"%s:%s_%s_%ul_%s_%ld.%ld","ARTDAQ","STATUSMSG","ICARUSTPCTEST",busy_mask,"BAD",ts.tv_sec,ts.tv_usec);
-    //reply = 
-    redisCommand(_redisCtxt, "SET IM:STATUSMSG_ICARUSTPCTEST %s", tmp_str);
+  if(_doRedis){
+    //redisReply reply;
+    if(busy_mask){
+      //std::cout << "BUSY CONDITION!" << std::endl;
+      sprintf(tmp_str,"%s:%s_%s_%ul_%s_%ld.%ld","ARTDAQ","STATUSMSG","ICARUSTPCTEST",busy_mask,"BAD",ts.tv_sec,ts.tv_usec);
+      //reply = 
+      redisCommand(_redisCtxt, "SET IM:STATUSMSG_ICARUSTPCTEST %s", tmp_str);
+    }
+    else{
+      sprintf(tmp_str,"%s:%s_%s_%ul_%s_%ld.%ld","ARTDAQ","STATUSMSG","ICARUSTPCTEST",busy_mask,"GOOD",ts.tv_sec,ts.tv_usec);
+      //reply =
+      redisCommand(_redisCtxt, "SET IM:STATUSMSG_ICARUSTPCTEST %s", tmp_str);
+    }
   }
-  else{
-    sprintf(tmp_str,"%s:%s_%s_%ul_%s_%ld.%ld","ARTDAQ","STATUSMSG","ICARUSTPCTEST",busy_mask,"GOOD",ts.tv_sec,ts.tv_usec);
-    //reply =
-    redisCommand(_redisCtxt, "SET IM:STATUSMSG_ICARUSTPCTEST %s", tmp_str);
-  }
+
+  metricMan->sendMetric(".Status.N_Running",n_running,"boards",1,artdaq::MetricMode::Minimum); //use minimum for running
+  metricMan->sendMetric(".Status.N_DataReady",n_ready,"boards",1,artdaq::MetricMode::LastPoint); //use last point for ready...
+  metricMan->sendMetric(".Status.N_Busy",n_busy,"boards",1,artdaq::MetricMode::Maximum); //maximum for the busy signals...
+  metricMan->sendMetric(".Status.N_GBusy",n_gbusy,"boards",1,artdaq::MetricMode::Maximum);
+
   
   /*
   if(!reply)
     std::cout << "WE HAD AN ERROR!" << std::endl;
   */
 
-  usleep(10000000);
+  usleep(10000);
   return true; 
 }
 
@@ -377,7 +401,7 @@ int icarus::PhysCrateData::GetData(){
   _tloop_end = std::chrono::high_resolution_clock::now();
   UpdateDuration();
   TRACEN("PhysCrateData",TR_TIMER,"GetData : waitData loop time was %lf seconds",_tloop_duration.count());
-  //GAL: metricMan->sendMetric(".GetData.ReturnTime.last",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
+  metricMan->sendMetric(".GetData.ReturnTime.last",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.ReturnTime.max",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
 
   TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Calling waitData()");
@@ -388,7 +412,7 @@ int icarus::PhysCrateData::GetData(){
 
   _tloop_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_end-_tloop_start);
   TRACEN("PhysCrateData",TR_TIMER,"GetData : waitData call time was %lf seconds",_tloop_duration.count());
-  //GAL: metricMan->sendMetric(".GetData.WaitTime.last",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
+  metricMan->sendMetric(".GetData.WaitTime.last",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
   //GAL: metricMan->sendMetric(".GetData.WaitTime.max",_tloop_duration.count()*1000.,"ms",1,artdaq::MetricMode::LastPoint);
 
   // Yun-Tse: ugly and tentative workaround at this moment...  need to change!!

@@ -71,6 +71,7 @@ namespace icarus {
 
     //for redis connection...
     redisContext *_redisCtxt;
+    bool        _doRedis;
     std::string _redisHost;
     int _redisPort;
 
