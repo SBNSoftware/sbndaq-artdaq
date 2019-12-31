@@ -145,15 +145,22 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   size_t data_size_bytes = 0;
   TLOG(TLVL_DEBUG) << "PhysCrate_GeneratorBase::getNext_ : nBoards_: " << nBoards_;
 
+  if( fCircularBuffer.Size() <= least_data_block_bytes_/sizeof(uint16_t)*(size_t)( nBoards_ ) ){
+    TRACE(TR_LOG,"PhysCrate_GeneratorBase::getNext_(frags) not enough data in circular buffer.");
+    usleep(1000);
+    return true;
+  }
+
   uint16_t iBoard = 0;
   uint16_t const* first_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData();
+
 
   do {
 
     do {
       std::this_thread::sleep_for(1us);
       TLOG(15) << "data_size_bytes/sizeof(uint16_t): " << data_size_bytes/sizeof(uint16_t);
-    } while ( fCircularBuffer.Size() <= least_data_block_bytes_/sizeof(uint16_t)*(size_t)( iBoard + nBoards_ ) );
+    } while ( fCircularBuffer.Size() <= least_data_block_bytes_/sizeof(uint16_t)*(size_t)( nBoards_ - iBoard ) );
 
     auto const* first_dt = reinterpret_cast< DataTile const* >(first_dt_begin_ptr);
     //  the Tile Header is at the beginning of the board data:
@@ -224,10 +231,10 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   for ( uint16_t jBoard = 1; jBoard < nBoards_; ++jBoard ) {
     if ( newfrag.BoardEventNumber(jBoard) != ev_num ) {
-      for ( uint16_t kB = 0; kB < nBoards_; ++kB ){
-        TLOG(20) << "PhysCrate_GeneratorBase: Board " << kB << " event number: " << newfrag.BoardEventNumber(kB) << ", timestamp: " << newfrag.BoardTimeStamp(kB) << ", DataTileHeaderLocation: " << newfrag.DataTileHeaderLocation(kB);
+      //for ( uint16_t kB = 0; kB < nBoards_; ++kB ){
+      //TLOG(20) << "PhysCrate_GeneratorBase: Board " << kB << " event number: " << newfrag.BoardEventNumber(kB) << ", timestamp: " << newfrag.BoardTimeStamp(kB) << ", DataTileHeaderLocation: " << newfrag.DataTileHeaderLocation(kB);
 	//throw cet::exception("PhysCrate_GeneratorBase") << "Inconsistent event numbers in one fragment: Event " << ev_num << " in Board 0 while Event " << newfrag.BoardEventNumber(jBoard) << " in Board " << jBoard;
-      }
+      //}
 
       if( std::abs((int)newfrag.BoardEventNumber(jBoard) - (int)newfrag.BoardEventNumber(0))>max_ev_num_diff )
 	max_ev_num_diff = std::abs((int)newfrag.BoardEventNumber(jBoard) - (int)newfrag.BoardEventNumber(0));
