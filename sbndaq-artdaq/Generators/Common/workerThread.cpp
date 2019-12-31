@@ -51,10 +51,14 @@ void share::WorkerThread::stop(){
     std::cout << "ERROR! Cannot stop " << _functor->name() << std::endl;
   }
   //throw RuntimeErrorException ( "Unable to stop WorkerThread task:" +  _functor->name());
-  std::cout << "WorkerThread: " << _functor->name() << " exit code=" << _worker_thread_result.get() << std::endl;
+  _worker_thread_result.get();
+  std::cout << "WorkerThread: " << _functor->name() 
+    //<< " exit code=" << _worker_thread_result.get() 
+	    << std::endl;
 }
 
-uint64_t share::WorkerThread::run() {
+//uint64_t share::WorkerThread::run() {
+void share::WorkerThread::run() {
     uint64_t iterationCount = 0;
     std::cout << "WorkerThread: " << _functor->name() << " started running." << std::endl;;
 
@@ -73,7 +77,7 @@ uint64_t share::WorkerThread::run() {
     
     _stop_running=true;
     
-    return iterationCount;
+    //return iterationCount;
 }
 
 // kate: indent-mode cstyle; indent-width 1; replace-tabs on; ;

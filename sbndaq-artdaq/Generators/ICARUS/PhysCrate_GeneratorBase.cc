@@ -80,6 +80,9 @@ void icarus::PhysCrate_GeneratorBase::start() {
   Monitor_thread_.swap(monitor_worker);
 
   Monitor_thread_->start();
+
+  _tloop_getnext_end = std::chrono::high_resolution_clock::now();
+  _tloop_getnext_start = std::chrono::high_resolution_clock::now();
 }
 
 void icarus::PhysCrate_GeneratorBase::stop() {
@@ -96,6 +99,12 @@ icarus::PhysCrate_GeneratorBase::~PhysCrate_GeneratorBase(){
 }
 
 bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
+
+  _tloop_getnext_end = std::chrono::high_resolution_clock::now();
+  auto _tloop_getnext_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_getnext_end-_tloop_getnext_start);
+  metricMan->sendMetric(".getNext.ReturnTime",_tloop_getnext_duration.count()*1000.,"ms",1,
+			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
+
 
   //throttling...
   if (throttle_usecs_ > 0) {
@@ -117,6 +126,10 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   // Set fragment's metadata
 
   TRACE(TR_LOG,"PhysCrate_GeneratorBase::getNext_(frags) called.");
+
+  metricMan->sendMetric(".getNext.CircularBufferOccupancy",fCircularBuffer.Size()/2,"bytes",1,
+			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Maximum|artdaq::MetricMode::Minimum|artdaq::MetricMode::Average);
+
 
   if ( fCircularBuffer.Buffer().empty() ) {
     TRACE(TR_LOG,"PhysCrate_GeneratorBase::getNext_(frags) no data in circular buffer.");
@@ -164,10 +177,8 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   } while ( iBoard < nBoards_ );
 
   // std::cout << "Go to a new event..." << std::endl;
-  //GAL: metricMan->sendMetric(".GetData.Size",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
-  //GAL: metricMan->sendMetric(".GetData.Size.last",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
-  //GAL: metricMan->sendMetric(".GetData.Size.min",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
-  //GAL: metricMan->sendMetric(".GetData.Size.max",last_read_data_size_,"bytes",1,artdaq::MetricMode::LastPoint);
+  metricMan->sendMetric(".getNext.Size",last_read_data_size_,"bytes",1,
+			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
   
   frags.emplace_back( artdaq::Fragment::FragmentBytes( data_size_bytes,
 						      0, fragment_id(),
@@ -202,14 +213,40 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   TLOG(TLVL_DEBUG) << "ev_num: " << ev_num;
   // TLOG(20) << "PhysCrate_GeneratorBase: event number: " << ev_num << ", DataPayloadSize: " << newfrag.DataPayloadSize();
 
+  metricMan->sendMetric(".getNext.BoardEventNumber",(int)ev_num,"events",1,
+			artdaq::MetricMode::LastPoint);
+  metricMan->sendMetric(".getNext.BoardTimeStamp",(long unsigned int)newfrag.BoardTimeStamp(),"ticks",1,
+			artdaq::MetricMode::LastPoint);
+
+  int max_ev_num_diff=0;
+  int max_ts_diff=0;
+
+
   for ( uint16_t jBoard = 1; jBoard < nBoards_; ++jBoard ) {
     if ( newfrag.BoardEventNumber(jBoard) != ev_num ) {
-      for ( uint16_t kB = 0; kB < nBoards_; ++kB )
+      for ( uint16_t kB = 0; kB < nBoards_; ++kB ){
         TLOG(20) << "PhysCrate_GeneratorBase: Board " << kB << " event number: " << newfrag.BoardEventNumber(kB) << ", timestamp: " << newfrag.BoardTimeStamp(kB) << ", DataTileHeaderLocation: " << newfrag.DataTileHeaderLocation(kB);
+	//throw cet::exception("PhysCrate_GeneratorBase") << "Inconsistent event numbers in one fragment: Event " << ev_num << " in Board 0 while Event " << newfrag.BoardEventNumber(jBoard) << " in Board " << jBoard;
+      }
 
-      throw cet::exception("PhysCrate_GeneratorBase") << "Inconsistent event numbers in one fragment: Event " << ev_num << " in Board 0 while Event " << newfrag.BoardEventNumber(jBoard) << " in Board " << jBoard;
+      if( std::abs((int)newfrag.BoardEventNumber(jBoard) - (int)newfrag.BoardEventNumber(0))>max_ev_num_diff )
+	max_ev_num_diff = std::abs((int)newfrag.BoardEventNumber(jBoard) - (int)newfrag.BoardEventNumber(0));
+
+      if( std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0))>max_ev_num_diff )
+	max_ts_diff = std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0));
+
+      TLOG(TLVL_ERROR) << "Inconsistent event numbers in one fragment: Event " 
+		       << ev_num << " in Board 0 while Event " 
+		       << newfrag.BoardEventNumber(jBoard) 
+		       << " in Board " << jBoard;
     }
   }
+
+  metricMan->sendMetric("MaxBoardEventNumDiff",max_ev_num_diff,"events",1,
+			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
+  metricMan->sendMetric("MaxBoardTimeStampDiff",max_ts_diff,"ticks",1,
+			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
+
   frags.back()->setSequenceID(ev_num);
 
   //GAL: metricMan->sendMetric(".getNext.EventNumber.last",(int)ev_num,"events",1,artdaq::MetricMode::LastPoint);
@@ -228,8 +265,15 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     //GAL: metricMan->sendMetric("Fragments Sent",ev_counter(), "Events", 1,artdaq::MetricMode::LastPoint);
   }
   */
+  
+  metricMan->sendMetric("FragmentsSent",ev_counter(), "Events", 1,artdaq::MetricMode::LastPoint);
 
   TRACE(TR_LOG,"PhysCrate_GeneratorBase::getNext_ completed.");
+  _tloop_getnext_start = std::chrono::high_resolution_clock::now();
+  _tloop_getnext_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_getnext_start-_tloop_getnext_end);
+  metricMan->sendMetric(".getNext.FinishTime",_tloop_getnext_duration.count()*1000.,"ms",1,
+			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
+
   return true;
 
 }

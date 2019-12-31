@@ -77,6 +77,9 @@ namespace icarus {
   private:
     
     share::WorkerThreadUPtr Monitor_thread_;
+
+    std::chrono::high_resolution_clock::time_point _tloop_getnext_start;
+    std::chrono::high_resolution_clock::time_point _tloop_getnext_end;
     
   };
 }
