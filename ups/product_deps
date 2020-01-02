@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq    v0_04_00
+parent sbndaq_artdaq    v0_04_01
 defaultqual     e17
 
 # These optional lines define the installed directories where
@@ -18,7 +18,7 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_07_01
+artdaq                v3_07_01FB23599
 sbndaq_artdaq_core    v0_04_00
 caencomm              v1_2a
 caenvme               v2_50
@@ -46,28 +46,24 @@ e17:prof:s67:icarus     e17:s67:prof      e17:prof:s67        -nq-    -nq-     -
 e17:debug:s67:icarus    e17:s67:debug     e17:debug:s67       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  -         -
 e17:prof:s67:sbnd       e17:s67:prof      e17:prof:s67        -nq-    -nq-     -nq-          -                    e17:p2715a:prof    e17   e17:prof   e17       prof
 e17:debug:s67:sbnd      e17:s67:debug     e17:debug:s67       -nq-    -nq-     -nq-          -                    e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:debug:s67           e17:s67:debug     e17:debug:s67       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  e17       debug
 e17:prof:s82            e17:s82:prof      e17:prof:s82        -nq-    -nq-     -nq-          e17:prof             e17:p2715a:prof    e17   e17:prof   e17       prof
 e17:debug:s82           e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  e17       debug
 e17:prof:s82:icarus     e17:s82:prof      e17:prof:s82        -nq-    -nq-     -nq-          e17:prof             e17:p2715a:prof    e17   e17:prof   -         -
 e17:debug:s82:icarus    e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  -         -
 e17:prof:s82:sbnd       e17:s82:prof      e17:prof:s82        -nq-    -nq-     -nq-          -                    e17:p2715a:prof    e17   e17:prof   e17       prof
 e17:debug:s82:sbnd      e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          -                    e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:debug:s82           e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  e17       debug
 e17:prof:s83            e17:s83:prof      e17:prof:s83        -nq-    -nq-     -nq-          e17:prof             e17:p2715a:prof    e17   e17:prof   e17       prof
 e17:debug:s83           e17:s83:debug     e17:debug:s83       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  e17       debug
 e17:prof:s83:icarus     e17:s83:prof      e17:prof:s83        -nq-    -nq-     -nq-          e17:prof             e17:p2715a:prof    e17   e17:prof   -         -
 e17:debug:s83:icarus    e17:s83:debug     e17:debug:s83       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  -         -
 e17:prof:s83:sbnd       e17:s83:prof      e17:prof:s83        -nq-    -nq-     -nq-          -                    e17:p2715a:prof    e17   e17:prof   e17       prof
 e17:debug:s83:sbnd      e17:s83:debug     e17:debug:s83       -nq-    -nq-     -nq-          -                    e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:debug:s83           e17:s83:debug     e17:debug:s83       -nq-    -nq-     -nq-          e17:debug            e17:p2715a:debug   e17   e17:debug  e17       debug
 e19:prof:s82            e19:s82:prof      e19:prof:s82        -nq-    -nq-     -nq-          e19:prof             e19:p2715a:prof    e19   e19:prof   e19       prof
 e19:debug:s82           e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          e19:debug            e19:p2715a:debug   e19   e19:debug  e19       debug
 e19:prof:s82:icarus     e19:s82:prof      e19:prof:s82        -nq-    -nq-     -nq-          e19:prof             e19:p2715a:prof    e19   e19:prof   -         -
 e19:debug:s82:icarus    e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          e19:debug            e19:p2715a:debug   e19   e19:debug  -         -
 e19:prof:s82:sbnd       e19:s82:prof      e19:prof:s82        -nq-    -nq-     -nq-          -                    e19:p2715a:prof    e19   e19:prof   e19       prof
 e19:debug:s82:sbnd      e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          -                    e19:p2715a:debug   e19   e19:debug  e19       debug
-e19:debug:s82           e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          e19:debug            e19:p2715a:debug   e19   e19:debug  e19       debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
