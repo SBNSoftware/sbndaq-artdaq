@@ -350,7 +350,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & b, siz
 
 bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
-  TLOG(TLVL_DEBUG) << "BernCRTZMQ_GeneratorBase::GetData() called";
+  TLOG(TLVL_DEBUG) <<__func__<< "() called";
 
   if( GetDataSetup()!=1 ) return false; //TODO do we need GetDataSetup and this check at all?
 
@@ -439,22 +439,31 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
        * the code may not work properly -> write something more robust.
        */
 
-      TLOG(TLVL_DEBUG)<<"BernCRTZMQ::GetData() found new MAC ("<<this_event.MAC5()
+      TLOG(TLVL_DEBUG)<<__func__<<": found new MAC ("<<this_event.MAC5()
                       <<")! prev_mac="<<prev_mac
                       <<", iterator="<<i_e
                       <<" this_events="<<this_n_events;
 
-      //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
-      size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events, total_events);
+      //Verify if a buffer is created for given mac address (in case we receive incorrect mac address in the data)
+      if (FEBBuffers_.find(prev_mac) == FEBBuffers_.end()) {
+        TLOG(TLVL_ERROR)<<TRACE_NAME<<"::"<<__func__<<" Data corruption! Unexpected MAC address received in the data: "<<prev_mac;
+//        throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+" Data corruption! Unexpected MAC address received in the data: "+std::to_string(prev_mac));
+      }
+      else {
+        //temporary fix, don't fill data for unexpected MAC addresses
+        //TODO: understand why there is sometimes MAC address = 0
+        
+        //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
+        size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events, total_events);
 
-      TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() ... id="<<FEBBuffers_[prev_mac].id
-                      <<", n_events="<<this_n_events
-                      <<", buffer_size="<<FEBBuffers_[prev_mac].buffer.size();
+        TLOG(TLVL_DEBUG)<<__func__<<": ... id="<<FEBBuffers_[prev_mac].id
+          <<", n_events="<<this_n_events
+          <<", buffer_size="<<FEBBuffers_[prev_mac].buffer.size();
 
-      //auto id_str = GetFEBIDString(prev_mac);
-      //metricMan->sendMetric("EventsAdded_"+id_str,this_n_events,"events",5,true,"BernCRTZMQGenerator");
-      UpdateBufferOccupancyMetrics(prev_mac, new_buffer_size); //TODO: this function does nothing as of now!
-
+        //auto id_str = GetFEBIDString(prev_mac);
+        //metricMan->sendMetric("EventsAdded_"+id_str,this_n_events,"events",5,true,"BernCRTZMQGenerator");
+        UpdateBufferOccupancyMetrics(prev_mac, new_buffer_size); //TODO: this function does nothing as of now!
+      }
       this_n_events=0;
     }
 
