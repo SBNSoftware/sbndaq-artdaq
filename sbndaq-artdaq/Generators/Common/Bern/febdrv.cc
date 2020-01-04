@@ -38,7 +38,8 @@ FEBDTP_PKT_t spkt,rpkt; //send and receive packets
 FEBDTP_PKT_t ipkt[FEB_MAX_CHAIN]; // store info packets
 sbndaq::BernCRTZMQEvent evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event. 256: max number of FEBs; +1 to accomodate extra event with timing information
 int evnum[NBUFS]; //number of good events in the buffer fields //AA: TODO change this to int32_t to make sure it will always be sent properly via zmq
-int evbufstat[NBUFS]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
+enum BUFFER_STATUS { EMPTY = 0, FILLING = 1, FULL = 2, SENDING = 3 };
+uint8_t evbufstat[NBUFS]; //status of buffer
 int evtsperpoll[256];
 int msperpoll=0;
 int lostperpoll_cpu[256];
@@ -411,7 +412,7 @@ int startDAQ(uint8_t mac5) {
   
   memset(evbuf,0, sizeof(evbuf)); //clean zmq buffer
   memset(evnum,0, sizeof(evnum));
-  memset(evbufstat,0, sizeof(evbufstat));
+  memset(evbufstat, EMPTY, sizeof(evbufstat));
   
   nreplies=0;
   sendcommand(dstmac,FEB_GEN_INIT,0,buf); //stop DAQ on the FEB
@@ -515,19 +516,19 @@ sbndaq::BernCRTZMQEvent * getnextevent() {
   // check for available buffers
   // first see if there are buffers being filled presently 
   for(int sbi=0;sbi<NBUFS;sbi++) {
-    if(evbufstat[sbi]==1) { //check for buffer being filled
+    if(evbufstat[sbi] == FILLING) {
       sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][evnum[sbi]]);
       evnum[sbi]++;
-      if(evnum[sbi]==EVSPERFEB*256)  evbufstat[sbi]=2; //buffer full, set to ready
+      if(evnum[sbi]==EVSPERFEB*256)  evbufstat[sbi] = FULL; //buffer full, set to ready
       return retval; //found buffer being filled, return pointer
     }
   }
   //if failed, try to start filling next empty buffer
   for(int sbi=0;sbi<NBUFS;sbi++) {
-    if(evbufstat[sbi]==0) { //check for empty buffer
+    if(evbufstat[sbi] == EMPTY) {
       sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][0]);
       evnum[sbi]=1;
-      evbufstat[sbi]=1; //buffer being filled
+      evbufstat[sbi] = FILLING;
       return retval; //started new buffer, return pointer
     }
   }
@@ -541,7 +542,7 @@ void free_subbufer (void *data, void *hint) //call back from ZMQ sent function, 
 {
   uint64_t sbi;
   sbi =  (uint64_t)hint; //reset buffer status to empty
-  evbufstat[sbi]=0;
+  evbufstat[sbi] = EMPTY;
   evnum[sbi]=0; 
 }
 
@@ -551,12 +552,11 @@ int senddata() {
    */
   int64_t sbitosend=-1; // check for filled buffers
   for(int sbi=0; sbi<NBUFS; sbi++) {
-    if(evbufstat[sbi]==1) sbitosend=sbi;  //the if there is being filled buffer
-    if(evbufstat[sbi]==2) sbitosend=sbi;  //first check for buffer that is full
+    if(evbufstat[sbi]==FILLING || evbufstat[sbi]==FULL) sbitosend=sbi;
   }
   if(sbitosend==-1) return 0; //no buffers to send out
   
-  evbufstat[sbitosend]=3; //  reset to 0 by the callback only when transmission is done!
+  evbufstat[sbitosend] = SENDING; //  reset to 0 by the callback only when transmission is done!
   //fill buffer trailer in the last event
   //AA: please note that the code below does not fill all consecutive bytes
   //    of the event structure, e.g. there are fields lostcpu and lostfpga
@@ -783,7 +783,7 @@ int main (int argc, char **argv) {
   printf("The poll duration is set to at least %d ms.\n",polldelay);
   memset(evbuf,0, sizeof(evbuf));
   memset(evnum,0, sizeof(evnum));
-  memset(evbufstat,0, sizeof(evbufstat));
+  memset(evbufstat, EMPTY, sizeof(evbufstat));
   
   memset(FEB_configured,0,256);
   memset(FEB_daqon,0,256);
