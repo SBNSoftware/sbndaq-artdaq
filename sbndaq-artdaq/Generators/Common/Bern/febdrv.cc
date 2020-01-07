@@ -563,14 +563,10 @@ int senddata() {
   
   evbufstat[sbitosend] = SENDING; //  reset to 0 by the callback only when transmission is done!
   //fill buffer trailer in the last event
-  //AA: please note that the code below does not fill all consecutive bytes
-  //    of the event structure, e.g. there are fields lostcpu and lostfpga
-  //    between mac5 and ts0 which are not set. Apparently the person who
-  //    added these fields didn't care to update this function. This means
-  //    the last event format is no longer described febrv manual (v Sep 2016).
-  //    Therefore, unless we decide to update this code, the "point of reference"
-  //    to retrieve the number of events and poll times is the adc[0] field.
-  //    TODO: fix this
+  //AA NOTE: the format of the last event was modified w.r.t. the febdrv
+  //distributed by Igor and Umut. The changes include:
+  //- timestamp value is sent in ns since epoch of the system clock
+  //- new variables allow to control deviation of the system clock w.r.t. the steady_clock
   
   sbndaq::BernCRTZMQEventUnion last_event;
   last_event.last_event.mac5  = 0xffff;

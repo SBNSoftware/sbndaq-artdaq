@@ -14,8 +14,6 @@
 #include <stdlib.h>
 #include <string>
 #include <time.h>
-#include <sys/time.h>
-#include <sys/timeb.h>
 
 #define TRACE_NAME "BernCRTZMQ_GeneratorBase"
 
@@ -218,6 +216,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
       this_poll_end,
       last_poll_start,
       last_poll_end,
+      system_clock_deviation,
       nevents,
       7, //GPSCounter_, (temporary placeholder, a random number obtained using a fair dice)
       0, //events_in_data_packet
@@ -381,34 +380,40 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   //      I'm not sure if this will be true if we decrease the poll length.
   //TODO: Test it at short poll times, and allow for several polls in a zmq paquet
   TLOG(TLVL_DEBUG)<<"Reading information from the last zeromq event";
-  /*
-   * AA: I apologize for the ugly pointer arithmetics below. The situation
-   *     is that the structure sent by the present version of febdrv (see
-   *     function senddata) does not follow the documentation. Perhaps all
-   *     this should be reviewed and fixed, but for now I want to get it
-   *     running properly.
-   *     TODO: change it to use the same structure here and in febdrv
-   */
-  uint8_t* last_event_ptr = (uint8_t*)&(ZMQBufferUPtr[total_events-1].adc[0]);
-  uint32_t n_events;
-  timeb    poll_time_start;
-  timeb    poll_time_end; 
-  memcpy(&n_events,        last_event_ptr, sizeof(uint32_t)); last_event_ptr += sizeof(uint32_t);
-  memcpy(&poll_time_start, last_event_ptr, sizeof(timeb));    last_event_ptr += sizeof(timeb);
-  memcpy(&poll_time_end,   last_event_ptr, sizeof(timeb));
+  sbndaq::BernCRTZMQEventUnion last_event;
+  last_event.event = ZMQBufferUPtr[total_events-1];
   
-  //convert to ns since epoch
-  this_poll_start = poll_time_start.time * 1000*1000*1000 + poll_time_start.millitm * 1000*1000;
-  this_poll_end   = poll_time_end  .time * 1000*1000*1000 + poll_time_end  .millitm * 1000*1000;
+  //sanity checks
+  if(
+      last_event.last_event.mac5 != 0xffff
+      || last_event.last_event.flags != 0xffff
+      || last_event.last_event.magic_number0 != 0xaa55aa55
+      || last_event.last_event.magic_number1 != 0xaa55aa55) {
+    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields in the last event failed!"; //TODO: crash DAQ
+  }
 
+  uint32_t n_events = last_event.last_event.n_events;
+  
+  this_poll_start = last_event.last_event.poll_time_start;
+  this_poll_end   = last_event.last_event.poll_time_end;
+  int32_t poll_start_deviation = last_event.last_event.poll_start_deviation;
+  int32_t poll_end_deviation   = last_event.last_event.poll_end_deviation;
+
+  //calculate maximum deviation, to be stored in metadata
+  if(abs(poll_start_deviation) > abs(poll_end_deviation))
+    system_clock_deviation = poll_start_deviation;
+  else
+    system_clock_deviation = poll_end_deviation;
+
+  
   if(last_poll_start == 0) { //fix the poll timestamp for the very first poll, other wise the numbers won't make any sense (they still may make no sense, though...)
     last_poll_start = this_poll_start - 300*1000*1000;//TODO dummy value... move to fhicl file?
     last_poll_end   = this_poll_end   - 300*1000*1000;//TODO dummy value... move to fhicl file?
   }
 
   TLOG(TLVL_DEBUG)<<"Number of events is "<<n_events;
-  TLOG(TLVL_DEBUG)<<"this_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_start);
-  TLOG(TLVL_DEBUG)<<"this_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_end);
+  TLOG(TLVL_DEBUG)<<"this_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_start) <<" (deviation from steady clock "<<poll_start_deviation<<" ns)";
+  TLOG(TLVL_DEBUG)<<"this_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_end) <<" (deviation from steady clock "<<poll_end_deviation<<" ns)";
   TLOG(TLVL_DEBUG)<<"last_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_start);
   TLOG(TLVL_DEBUG)<<"last_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_end);
 

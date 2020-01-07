@@ -14,7 +14,6 @@
 #include <atomic>
 #include <mutex>
 #include <boost/circular_buffer.hpp>
-#include <sys/time.h>
 
 #include "workerThread.hh"
 
@@ -151,6 +150,7 @@ namespace sbndaq {
     uint64_t this_poll_end;
     uint64_t last_poll_start;
     uint64_t last_poll_end;
+    int32_t  system_clock_deviation;
 
     uint32_t feb_event_count; //AA: number of events in a single poll (?)
     uint64_t start_time_metadata;
