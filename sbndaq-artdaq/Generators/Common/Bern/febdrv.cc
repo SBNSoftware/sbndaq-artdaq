@@ -46,7 +46,8 @@ int lostperpoll_cpu[256];
 int lostperpoll_fpga[256];
 uint8_t ts0ok[256],ts1ok[256];
 uint64_t poll_start, poll_end;
-int32_t poll_start_offset, poll_end_offset;
+int64_t steady_clock_offset; //difference between system and steady clock
+int32_t poll_start_deviation, poll_end_deviation;
 
 
 int nclients=0;
@@ -417,6 +418,9 @@ int startDAQ(uint8_t mac5) {
   
   nreplies=0;
   sendcommand(dstmac,FEB_GEN_INIT,0,buf); //stop DAQ on the FEB
+
+  //calibrate offset between system and steady clock
+  steady_clock_offset = std::chrono::system_clock::now().time_since_epoch().count() - std::chrono::steady_clock::now().time_since_epoch().count();
   
   while(recvfromfeb(10000)) 
     { 
@@ -578,6 +582,8 @@ int senddata() {
   
   last_event.last_event.poll_time_start = poll_start;
   last_event.last_event.poll_time_end   = poll_end;
+  last_event.last_event.poll_start_deviation = poll_start_deviation;
+  last_event.last_event.poll_end_deviation   = poll_end_deviation;
 
   //use union magic to assign BernCRTZMQLastEvent to BernCRTZMQEvent 
   evbuf[sbitosend][evnum[sbitosend]] = last_event.event;
@@ -591,8 +597,7 @@ int senddata() {
   return 0;
 }
 
-int sendstats2() //send statistics in binary packet format
-{
+int sendstats2() { //send statistics in binary packet format
   // float Rate;
   void* ptr;
   DRIVER_STATUS_t ds;
@@ -638,8 +643,7 @@ int sendstats2() //send statistics in binary packet format
   return 1; 
 } //sendstats2
 
-int sendstats()
-{
+int sendstats() {
   //printf("enter sendtats()\n");
   char str[8192]; //stats string
   float Rate;
@@ -693,6 +697,7 @@ void polldata() {
   if(GLOB_daqon==0) {sleep(1); return;} //if no DAQ running - just delay for not too fast ping
 
   poll_start = std::chrono::system_clock::now().time_since_epoch().count();
+  poll_start_deviation = poll_start - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
 
   for(int f=0; f<nclients;f++) { //loop on all connected febs : macs[f][6]
     uint32_t overwritten=0;
@@ -768,6 +773,7 @@ void polldata() {
   }
 
   poll_end = std::chrono::system_clock::now().time_since_epoch().count();
+  poll_end_deviation = poll_end - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
   nsperpoll = poll_start - poll_end;
   return;
 } //polldata
