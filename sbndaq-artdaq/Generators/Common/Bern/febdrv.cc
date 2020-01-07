@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <netinet/ether.h>
-#include <sys/timeb.h>
+#include <chrono>
 #include <string>
 #include "febdrv.h"
 #include "febevt.h"
@@ -41,11 +41,12 @@ int evnum[NBUFS]; //number of good events in the buffer fields //AA: TODO change
 enum BUFFER_STATUS { EMPTY = 0, FILLING = 1, FULL = 2, SENDING = 3 };
 uint8_t evbufstat[NBUFS]; //status of buffer
 int evtsperpoll[256];
-int msperpoll=0;
+int32_t nsperpoll=0;
 int lostperpoll_cpu[256];
 int lostperpoll_fpga[256];
 uint8_t ts0ok[256],ts1ok[256];
-struct timeb mstime0, mstime1;
+uint64_t poll_start, poll_end;
+int32_t poll_start_offset, poll_end_offset;
 
 
 int nclients=0;
@@ -566,16 +567,20 @@ int senddata() {
   //    Therefore, unless we decide to update this code, the "point of reference"
   //    to retrieve the number of events and poll times is the adc[0] field.
   //    TODO: fix this
-  evbuf[sbitosend][evnum[sbitosend]].flags=0xFFFF;
-  evbuf[sbitosend][evnum[sbitosend]].mac5=0xFFFF;
-  evbuf[sbitosend][evnum[sbitosend]].ts0=MAGICWORD32;
-  evbuf[sbitosend][evnum[sbitosend]].ts1=MAGICWORD32;
-  evbuf[sbitosend][evnum[sbitosend]].coinc=MAGICWORD32;
   
-  void * bptr=&(evbuf[sbitosend][evnum[sbitosend]].adc[0]); //pointer to start of ADC field
-  memcpy(bptr,&(evnum[sbitosend]),sizeof(int));  bptr=bptr+sizeof(int);
-  memcpy(bptr,&mstime0,sizeof(struct timeb));    bptr=bptr+sizeof(struct timeb); //start of poll time
-  memcpy(bptr,&mstime1,sizeof(struct timeb));    bptr=bptr+sizeof(struct timeb);  //end of poll time
+  sbndaq::BernCRTZMQEventUnion last_event;
+  last_event.last_event.mac5  = 0xffff;
+  last_event.last_event.flags = 0xffff;
+  last_event.last_event.magic_number0 = MAGICWORD32;
+  last_event.last_event.magic_number1 = MAGICWORD32;
+
+  last_event.last_event.n_events = evnum[sbitosend];
+  
+  last_event.last_event.poll_time_start = poll_start;
+  last_event.last_event.poll_time_end   = poll_end;
+
+  //use union magic to assign BernCRTZMQLastEvent to BernCRTZMQEvent 
+  evbuf[sbitosend][evnum[sbitosend]] = last_event.event;
   
   evnum[sbitosend]++;
   zmq_msg_t msg;
@@ -597,7 +602,7 @@ int sendstats2() //send statistics in binary packet format
   ds.daqon=GLOB_daqon;  
   ds.status=driver_state;
   ds.nfebs=nclients;  
-  ds.msperpoll=msperpoll;
+  ds.msperpoll=nsperpoll/1000000;
   zmq_msg_t msg;
   zmq_msg_init_size (&msg, sizeof(ds)+nclients*sizeof(fs));
   ptr=zmq_msg_data (&msg);
@@ -665,7 +670,7 @@ int sendstats()
 	}
       sprintf(str+strlen(str), "rate %5.1f Hz\n",Rate);
     }
-  if(GLOB_daqon) sprintf(str+strlen(str), "Poll %d ms.\n",msperpoll);
+  if(GLOB_daqon) sprintf(str+strlen(str), "Poll %d ns.\n",nsperpoll);
   
   zmq_msg_t msg;
   zmq_msg_init_size (&msg, strlen(str)+1);
@@ -680,13 +685,14 @@ void polldata() {
   /**
    * poll data from daisy-chain and send it to the publisher socket
    */
-  ftime(&mstime0); //http://man7.org/linux/man-pages/man3/ftime.3.html : "This function is obsolete.  Don't use it." TODO: fix
-  msperpoll=0;
+  nsperpoll=0;
   memset(lostperpoll_cpu,0,sizeof(lostperpoll_cpu));
   memset(lostperpoll_fpga,0,sizeof(lostperpoll_fpga));
   memset(evtsperpoll,0,sizeof(evtsperpoll));
 
   if(GLOB_daqon==0) {sleep(1); return;} //if no DAQ running - just delay for not too fast ping
+
+  poll_start = std::chrono::system_clock::now().time_since_epoch().count();
 
   for(int f=0; f<nclients;f++) { //loop on all connected febs : macs[f][6]
     uint32_t overwritten=0;
@@ -761,8 +767,8 @@ void polldata() {
     printdate(); printf("Some events skipped due to buffer overrun!\n"); 
   }
 
-  ftime(&mstime1);
-  msperpoll=(mstime1.time-mstime0.time)*1000+(mstime1.millitm-mstime0.millitm);
+  poll_end = std::chrono::system_clock::now().time_since_epoch().count();
+  nsperpoll = poll_start - poll_end;
   return;
 } //polldata
 
