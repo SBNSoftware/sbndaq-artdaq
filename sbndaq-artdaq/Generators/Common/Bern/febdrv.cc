@@ -585,6 +585,13 @@ int senddata() {
   last_event.last_event.poll_start_deviation = poll_start_deviation;
   last_event.last_event.poll_end_deviation   = poll_end_deviation;
 
+  last_event.last_event.zero_padding0 = 0;
+  last_event.last_event.zero_padding1 = 0;
+  last_event.last_event.zero_padding2 = 0;
+  last_event.last_event.zero_padding3 = 0;
+  last_event.last_event.zero_padding4 = 0;
+  last_event.last_event.zero_padding5 = 0;
+
   //use union magic to assign BernCRTZMQLastEvent to BernCRTZMQEvent 
   evbuf[sbitosend][evnum[sbitosend]] = last_event.event;
   
