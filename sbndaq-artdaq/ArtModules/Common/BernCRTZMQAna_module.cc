@@ -62,7 +62,6 @@ private:
    uint64_t  last_poll_end;
    int32_t   system_clock_deviation;
    uint32_t  feb_event_count;
-   uint32_t  gps_counter;
    uint32_t  events_in_data_packet;
    uint32_t  sequence_number;
 
@@ -107,7 +106,6 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   events->Branch("last_poll_end",             &last_poll_end,               "last_poll_end/l");
   events->Branch("system_clock_deviation",    &system_clock_deviation,      "system_clock_deviation/I");
   events->Branch("feb_event_count",           &feb_event_count,             "feb_event_count/i");
-  events->Branch("gps_counter",               &gps_counter,                 "gps_counter/i");
   events->Branch("events_in_data_packet",     &events_in_data_packet,       "events_in_data_packet/i");
   events->Branch("sequence_number",           &sequence_number,             "sequence_number/i");
 
@@ -180,7 +178,6 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       last_poll_end             = md->last_poll_end();
       system_clock_deviation    = md->system_clock_deviation();
       feb_event_count           = md->feb_event_count();
-      gps_counter               = md->gps_count();
       events_in_data_packet     = md->event_packet();
       sequence_number           = md->sequence_number();
 

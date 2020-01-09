@@ -102,9 +102,7 @@ namespace sbndaq {
     //as a result e.g. PPS events in any board will cause the GPS counter to advance. This need
     //to be rewritten
     size_t FragmentCounter_; //it counts the fragments in the buffer
-    size_t GPSCounter_; // it counts how many GPS have occurred
     size_t event_in_clock; // it counts how many events are within a clock of the FEB
-    size_t GPS_time; // time past from the very beginning of the DAQ_BEG - with respect to the GPS-PPS
 
     //AA: values read from the special last zeromq event, containing poll times
     uint64_t this_poll_start;

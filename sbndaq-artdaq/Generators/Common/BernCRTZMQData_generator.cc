@@ -333,6 +333,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
   
   size_t data_size=0;
   size_t wait_count=0;
+  size_t events = 0;
   
   zmq_msg_t feb_data_msg;
   zmq_msg_init(&feb_data_msg);
@@ -348,7 +349,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
     ++wait_count;
     
     if( (wait_count%500) == 0 ) {
-      TLOG(TLVL_DEBUG) << __func__ << ": wait count: " << wait_count;
+      TLOG(TLVL_DEBUG) << __func__ << ": waiting for data : " << wait_count;
     }
   }
   
@@ -356,28 +357,24 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
   
   if(zmq_msg_size(&feb_data_msg)>0) {
     TLOG(TLVL_DEBUG) << __func__ << ": about to copy " <<zmq_msg_size(&feb_data_msg)<< " bytes";
+
+    events = zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
+    data_size = zmq_msg_size(&feb_data_msg);
+
+    //check : is this too much data for the buffer? //TODO: shouldn't we check it before copying?
+    if( events > ZMQBufferCapacity_ ) {
+      TLOG(TLVL_ERROR) << __func__ << " Too many events for ZMQ buffer! " << std::to_string(events);
+      throw cet::exception(std::string(TRACE_NAME) + " " + __func__ + " Too many events for ZMQ buffer!");
+    }
     
     std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
 	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
 	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[0]));
-    
-    TLOG(TLVL_DEBUG) << __func__ << " copied!";
-    
-    size_t events = zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
-    data_size = zmq_msg_size(&feb_data_msg);
-
-    TLOG(TLVL_DEBUG) << __func__ << " copied " << std::to_string(events) << " events of size of " << std::to_string(data_size);
-
-    //check : is this too much data for the buffer? //TODO: shouldn't we check it before copying?
-    if( events > ZMQBufferCapacity_ ) {
-      TLOG(TLVL_ERROR) << __func__ << " Too many events in ZMQ buffer! " << std::to_string(events);
-      throw cet::exception(std::string(TRACE_NAME) + " " + __func__ + " Too many events in ZMQ buffer!");
-    }
   }
 
   zmq_msg_close(&feb_data_msg);
 
-  TLOG(TLVL_DEBUG) << __func__ << " size returned was " + std::to_string(data_size);
+  TLOG(TLVL_DEBUG) << __func__ << " copied " << std::to_string(events) << " events of size of " << std::to_string(data_size);
 
   return data_size;
 } //GetZMQData

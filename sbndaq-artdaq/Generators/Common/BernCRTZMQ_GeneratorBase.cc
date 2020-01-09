@@ -42,9 +42,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   //new variable added by me (see the header file)
   //TODO possibly all this need to be removed
   FragmentCounter_ = 0;
-  GPSCounter_= 0;
   event_in_clock = 0;
-  GPS_time = 0;
 
   //reset last poll value
   last_poll_start = 0;
@@ -68,16 +66,13 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   }
   ZMQBufferUPtr.reset(new BernCRTZMQEvent[ZMQBufferCapacity_]);
 
-  TLOG(TLVL_DEBUG) << "\tMade %lu ZMQBuffers",FEBIDs_.size();
+  TLOG(TLVL_DEBUG)<< __func__ << " Created ZMQBuffer of size of "<<ZMQBufferCapacity_;
 
-  TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::Initialize() completed";
-
-  TLOG(TLVL_INFO)<<"BernCRTZMQ_GeneratorBase::Initialize() ... starting GetData worker thread.";
+  TLOG(TLVL_INFO)<<__func__<<" completed ... starting GetData worker thread.";
   share::ThreadFunctor functor = std::bind(&BernCRTZMQ_GeneratorBase::GetData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
   auto getData_worker = share::WorkerThread::createWorkerThread(worker_functor);
   GetData_thread_.swap(getData_worker);
-
 } //Initialize
 
 /*-----------------------------------------------------------------------*/
@@ -89,9 +84,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::start() {
   start_time_metadata = std::chrono::system_clock::now().time_since_epoch().count();
   TLOG(TLVL_DEBUG)<<__func__<<" Run start time: " << sbndaq::BernCRTZMQFragment::print_timestamp(start_time_metadata);
 
-  for(auto & buf : FEBBuffers_)
-    buf.second.Init();
-  
   ConfigureStart();
   GetData_thread_->start();
 
@@ -200,10 +192,8 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
       last_poll_end,
       system_clock_deviation,
       nevents,
-      7, //GPSCounter_, (temporary placeholder, a random number obtained using a fair dice)
-      0, //events_in_data_packet
+      1, //events_in_data_packet
       FragmentCounter_); //sequence number
-  metadata.inc_Events(); //increase number of events in fragment to 1
 
   for(size_t i_e=0; i_e<nevents; ++i_e) {
     metadata.inc_SequenceNumber();
@@ -261,8 +251,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   uint16_t prev_mac = ZMQBufferUPtr[0].MAC5();
 
   //Get the special last event and read the time information from it
-  //NOTE: The code below assumes we have only one poll in a single buffer.
-  //      I'm not sure if this will be true if we decrease the poll length.
   //TODO: Test it at short poll times, and allow for several polls in a zmq paquet
   TLOG(TLVL_DEBUG)<<"Reading information from the last zeromq event";
   sbndaq::BernCRTZMQEventUnion last_event;
@@ -274,7 +262,8 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
       || last_event.last_event.flags != 0xffff
       || last_event.last_event.magic_number0 != 0xaa55aa55
       || last_event.last_event.magic_number1 != 0xaa55aa55) {
-    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields in the last event failed!"; //TODO: crash DAQ
+    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields in the last event failed!";
+    //TODO: crash DAQ if this happens, print the values
   }
 
   uint32_t n_events = last_event.last_event.n_events;
@@ -324,9 +313,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
        *
        * Whenever we see a new MAC5 and we know the previous one is complete and we can insert it into the buffer.
        * The timing information event isn't inserted into buffer directly, but is accessed directly by InsertIntoFEBBuffer
-       *
-       * TODO: note that the above assumes the zmq packet contains a single poll only! If we start polling more often
-       * the code may not work properly -> write something more robust.
        */
 
       TLOG(TLVL_DEBUG)<<__func__<<": found new MAC ("<<this_event.MAC5()
@@ -341,7 +327,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
       }
       else {
         //temporary fix, don't fill data for unexpected MAC addresses
-        //TODO: understand why there is sometimes MAC address = 0
+        //TODO: crash if data is corrupted
         
         //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
         size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events, total_events);
