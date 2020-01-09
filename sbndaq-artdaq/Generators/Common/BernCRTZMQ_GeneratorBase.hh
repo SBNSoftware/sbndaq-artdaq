@@ -53,8 +53,7 @@ namespace sbndaq {
     virtual void Initialize();     //called in constructor
     virtual void Cleanup();        //called in destructor
 
-    typedef boost::circular_buffer<BernCRTZMQEvent> EventBuffer_t;
-    typedef boost::circular_buffer<BernCRTZMQFragmentMetadata> EventMetadataBuffer_t;
+    typedef boost::circular_buffer<BernCRTZMQDataPair> EventBuffer_t;
 
     std::unique_ptr<BernCRTZMQEvent[]> ZMQBufferUPtr;
     uint32_t ZMQBufferCapacity_;
@@ -64,21 +63,18 @@ namespace sbndaq {
     typedef struct FEBBuffer {
 
       EventBuffer_t               buffer;
-      EventMetadataBuffer_t       metadata_buffer;
 
       std::unique_ptr<std::mutex>  mutexptr;
       uint64_t                     id;
 
       FEBBuffer(uint32_t capacity, uint64_t i)
 	: buffer(EventBuffer_t(capacity)),
-          metadata_buffer(EventMetadataBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
 	  id(i)
       { Init(); }
       FEBBuffer() { FEBBuffer(0, 0); }
       void Init() {
 	buffer.clear();
-	metadata_buffer.clear();
 	mutexptr->unlock();
       }
     } FEBBuffer_t;
@@ -102,7 +98,6 @@ namespace sbndaq {
     //as a result e.g. PPS events in any board will cause the GPS counter to advance. This need
     //to be rewritten
     size_t FragmentCounter_; //it counts the fragments in the buffer
-    size_t event_in_clock; // it counts how many events are within a clock of the FEB
 
     //AA: values read from the special last zeromq event, containing poll times
     uint64_t this_poll_start;
