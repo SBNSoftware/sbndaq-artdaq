@@ -52,8 +52,7 @@ int main (int argc, char **argv)
 {
   int rv;
   char * iface;
-  int isim=0;
-  time_t t0,t1;
+  time_t t0;
   int dt,dt0;
   if(argc<2) { usage(); return 0;}
   iface=argv[1];

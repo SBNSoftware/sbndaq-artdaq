@@ -17,9 +17,6 @@
 #include <string>
 #include "febdrv.h"
 #include "febevt.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 
@@ -37,7 +34,7 @@ void *pubstats2 = NULL;
 FEBDTP_PKT_t spkt,rpkt; //send and receive packets
 FEBDTP_PKT_t ipkt[FEB_MAX_CHAIN]; // store info packets
 sbndaq::BernCRTZMQEvent evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event. 256: max number of FEBs; +1 to accomodate extra event with timing information
-int evnum[NBUFS]; //number of good events in the buffer fields //AA: TODO change this to int32_t to make sure it will always be sent properly via zmq
+int evnum[NBUFS]; //number of good events in the buffer fields
 enum BUFFER_STATUS { EMPTY = 0, FILLING = 1, FULL = 2, SENDING = 3 };
 uint8_t evbufstat[NBUFS]; //status of buffer
 int evtsperpoll[256];
@@ -543,10 +540,8 @@ sbndaq::BernCRTZMQEvent * getnextevent() {
 
 
 
-void free_subbufer (void *data, void *hint) //call back from ZMQ sent function, hint points to subbufer index
-{
-  uint64_t sbi;
-  sbi =  (uint64_t)hint; //reset buffer status to empty
+void free_subbufer (void *data, void *hint) { //call back from ZMQ sent function, hint points to subbufer index
+  uint64_t sbi =  (uint64_t)hint; //reset buffer status to empty
   evbufstat[sbi] = EMPTY;
   evnum[sbi]=0; 
 }
