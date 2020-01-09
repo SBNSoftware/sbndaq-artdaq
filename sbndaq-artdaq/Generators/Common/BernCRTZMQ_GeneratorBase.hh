@@ -17,8 +17,6 @@
 
 #include "workerThread.hh"
 
-#define FEB_OVRFLW_TIME 73741824 //2^30 - 1e9
-
 namespace sbndaq {    
 
   class BernCRTZMQ_GeneratorBase : public artdaq::CommandableFragmentGenerator {
@@ -33,20 +31,12 @@ namespace sbndaq {
     void stop() override;
     void stopNoMutex() override;
 
-    uint32_t RunNumber_;
-    uint32_t SequenceTimeWindowSize_; //in nanoseconds
-
     std::vector<uint8_t> FEBIDs_;
     size_t nFEBs() { return FEBIDs_.size(); }
-    std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration;
-
-    std::vector<uint32_t> MaxTimeDiffs_;
+    std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration; //first number is the mac address.
 
     std::size_t throttle_usecs_;        // Sleep at start of each call to getNext_(), in us
     std::size_t throttle_usecs_check_;  // Period between checks for stop/pause during the sleep (must be less than, and an integer divisor of, throttle_usecs_)
-
-    uint32_t current_subrun_;
-    size_t event_number_;
 
     //These functions MUST be defined by the derived classes
     virtual void ConfigureStart() = 0; //called in start()
@@ -57,10 +47,6 @@ namespace sbndaq {
     virtual int    GetDataSetup() { return 1; }
     virtual int    GetDataComplete() { return 1; }
 
-    size_t last_read_data_size_;
-    int    last_status_;
-
-    BernCRTZMQFragmentMetadata metadata_;
     fhicl::ParameterSet const ps_;
 
     //These functions could be overwritten by the derived class
@@ -69,60 +55,35 @@ namespace sbndaq {
 
     typedef boost::circular_buffer<BernCRTZMQEvent> EventBuffer_t;
     typedef boost::circular_buffer<BernCRTZMQFragmentMetadata> EventMetadataBuffer_t;
-    typedef boost::circular_buffer< std::pair<timeval,timeval> > EventTimeBuffer_t;
-    typedef boost::circular_buffer<unsigned int> EventsDroppedBuffer_t;
-    typedef boost::circular_buffer<uint64_t>     EventsCorrectedTimeBuffer_t;
-
-    typedef std::chrono::high_resolution_clock hires_clock;
 
     std::unique_ptr<BernCRTZMQEvent[]> ZMQBufferUPtr;
     uint32_t ZMQBufferCapacity_;
 
   private:
 
-    typedef struct FEBBuffer{
+    typedef struct FEBBuffer {
 
       EventBuffer_t               buffer;
       EventMetadataBuffer_t       metadata_buffer;
-      EventTimeBuffer_t           timebuffer; //TODO: note, this buffer, and the following ones are used only in commented code
-      EventsDroppedBuffer_t       droppedbuffer;
-      EventsCorrectedTimeBuffer_t correctedtimebuffer;
 
       std::unique_ptr<std::mutex>  mutexptr;
-      uint32_t                     overwritten_counter;
-      uint32_t                     max_time_diff;
       uint64_t                     id;
-      timeval                      last_timenow;
 
-      FEBBuffer(uint32_t capacity, uint32_t td, uint64_t i)
+      FEBBuffer(uint32_t capacity, uint64_t i)
 	: buffer(EventBuffer_t(capacity)),
           metadata_buffer(EventMetadataBuffer_t(capacity)),
-	  timebuffer(EventTimeBuffer_t(capacity)), 
-	  droppedbuffer(EventsDroppedBuffer_t(capacity)),
-	  correctedtimebuffer(EventsCorrectedTimeBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
-	  overwritten_counter(0),
-	  max_time_diff(td),
 	  id(i)
       { Init(); }
-      FEBBuffer() { FEBBuffer(0,10000000,0); }
+      FEBBuffer() { FEBBuffer(0, 0); }
       void Init() {
 	buffer.clear();
-	timebuffer.clear();
-	correctedtimebuffer.clear();
+	metadata_buffer.clear();
 	mutexptr->unlock();
-	overwritten_counter = 0;
-	last_timenow.tv_sec = 0;
-	last_timenow.tv_usec = 0;
       }
     } FEBBuffer_t;
 
-    std::chrono::system_clock insertTimer_;
-
     std::unordered_map< uint8_t, FEBBuffer_t  > FEBBuffers_; //first number is the mac address.
-    uint32_t FEBBufferCapacity_;
-
-    uint32_t SeqIDMinimumSec_;
 
     bool GetData();
     bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &);

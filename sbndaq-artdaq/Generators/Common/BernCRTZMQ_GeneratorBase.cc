@@ -37,7 +37,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   TLOG(TLVL_INFO)<<__func__<<" called";
 
-  RunNumber_ = 0;
   FEBIDs_ = ps_.get< std::vector<uint8_t> >("FEBIDs");
 
   //new variable added by me (see the header file)
@@ -51,21 +50,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   last_poll_start = 0;
   last_poll_end = 0;
 
-  FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
+  uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
   ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity");
-
-  MaxTimeDiffs_ = ps_.get< std::vector<uint32_t> >("MaxTimeDiffs",std::vector<uint32_t>(FEBIDs_.size()));
-
-  if(MaxTimeDiffs_.size() != FEBIDs_.size()) { //check FHiCL file validity
-    if(MaxTimeDiffs_.size()==1){
-      auto size = MaxTimeDiffs_.at(0);
-      MaxTimeDiffs_ = std::vector<uint32_t>(FEBIDs_.size(),size);
-    }
-    else{
-      throw cet::exception("BernCRTZMQ_GeneratorBase::Initialize")
-        << "MaxTimeDiffs must be same size as ZMQIDs in config!";
-    }
-  }
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
@@ -78,7 +64,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   //Initialize buffers
   for(size_t i_id=0; i_id<FEBIDs_.size(); ++i_id){
     auto const& id = FEBIDs_[i_id];
-    FEBBuffers_[id] = FEBBuffer_t(FEBBufferCapacity_,MaxTimeDiffs_[i_id],id);
+    FEBBuffers_[id] = FEBBuffer_t(FEBBufferCapacity_,id);
   }
   ZMQBufferUPtr.reset(new BernCRTZMQEvent[ZMQBufferCapacity_]);
 
@@ -92,7 +78,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   auto getData_worker = share::WorkerThread::createWorkerThread(worker_functor);
   GetData_thread_.swap(getData_worker);
 
-  SeqIDMinimumSec_ = 0;
 } //Initialize
 
 /*-----------------------------------------------------------------------*/
@@ -103,9 +88,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::start() {
 
   start_time_metadata = std::chrono::system_clock::now().time_since_epoch().count();
   TLOG(TLVL_DEBUG)<<__func__<<" Run start time: " << sbndaq::BernCRTZMQFragment::print_timestamp(start_time_metadata);
-
-  RunNumber_ = run_number();
-  current_subrun_ = 0;
 
   for(auto & buf : FEBBuffers_)
     buf.second.Init();
