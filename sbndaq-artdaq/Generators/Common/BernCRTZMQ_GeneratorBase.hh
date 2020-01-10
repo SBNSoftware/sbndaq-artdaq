@@ -65,7 +65,7 @@ namespace sbndaq {
       EventBuffer_t               buffer;
 
       std::unique_ptr<std::mutex>  mutexptr;
-      uint64_t                     id;
+      uint16_t                     id;
 
       FEBBuffer(uint32_t capacity, uint64_t i)
 	: buffer(EventBuffer_t(capacity)),
@@ -106,8 +106,7 @@ namespace sbndaq {
     uint64_t last_poll_end;
     int32_t  system_clock_deviation;
 
-    uint32_t feb_event_count; //AA: number of events in a single poll (?)
-    uint64_t start_time_metadata;
+    uint64_t run_start_time;
 
   };
 }

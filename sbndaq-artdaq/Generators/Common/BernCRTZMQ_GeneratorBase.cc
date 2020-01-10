@@ -80,8 +80,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 void sbndaq::BernCRTZMQ_GeneratorBase::start() {
   TLOG(TLVL_INFO)<<__func__<<" called";
 
-  start_time_metadata = std::chrono::system_clock::now().time_since_epoch().count();
-  TLOG(TLVL_DEBUG)<<__func__<<" Run start time: " << sbndaq::BernCRTZMQFragment::print_timestamp(start_time_metadata);
+  run_start_time = std::chrono::system_clock::now().time_since_epoch().count();
+  TLOG(TLVL_DEBUG)<<__func__<<" Run start time: " << sbndaq::BernCRTZMQFragment::print_timestamp(run_start_time);
 
   ConfigureStart();
   GetData_thread_->start();
@@ -182,7 +182,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 
   //prepare metadata object
   BernCRTZMQFragmentMetadata metadata(
-      start_time_metadata,
+      run_start_time,
       this_poll_start,
       this_poll_end,
       last_poll_start,
@@ -199,8 +199,6 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     b.buffer.push_back(std::make_pair(ZMQBufferUPtr[begin_index + i_e], metadata));
   }
   FragmentCounter_ += nevents;
-
-  feb_event_count = b.buffer.size();
 
   return b.buffer.size();
 } //InsertIntoFEBBuffer
@@ -279,7 +277,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     system_clock_deviation = poll_end_deviation;
 
   
-  if(last_poll_start == 0) { //fix the poll timestamp for the very first poll, other wise the numbers won't make any sense (they still may make no sense, though...)
+  if(last_poll_start == 0) { //fix the poll timestamp for the very first poll to attempt to estimate the timestamps
     last_poll_start = this_poll_start - 300*1000*1000;//TODO dummy value... move to fhicl file?
     last_poll_end   = this_poll_end   - 300*1000*1000;//TODO dummy value... move to fhicl file?
   }
@@ -295,7 +293,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     throw cet::exception("BernCRTZMQ::GetData() Data corruption! Number of events reported in the last zmq event differs from what you expect from the packet size ");
   }
 
-  TLOG(TLVL_DEBUG)<<"\tBernCRTZMQ::GetData() start sorting with mac="<<prev_mac;
+  TLOG(TLVL_DEBUG)<<__func__<<" start sorting with mac="<<prev_mac;
 
   for(size_t i_e = 0; i_e < total_events; i_e++) { //loop over events in ZMQBufferUPtr
 
