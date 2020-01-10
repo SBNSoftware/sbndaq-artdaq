@@ -229,12 +229,12 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   //simple check of data size validity
   if(data_size % sizeof(BernCRTZMQEvent)) {
-    TLOG(TLVL_ERROR)<<__func__<<": received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
-    throw cet::exception(std::string(TRACE_NAME) + __func__ + ": received data of " + std::to_string(data_size) + " bytes cannot be divided into " + std::to_string(sizeof(BernCRTZMQEvent)) + " chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
+    TLOG(TLVL_ERROR)<<__func__<<" received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
+    throw cet::exception(std::string(TRACE_NAME) + "::"+ __func__ + ": received data of " + std::to_string(data_size) + " bytes cannot be divided into " + std::to_string(sizeof(BernCRTZMQEvent)) + " chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
   }
   else if(data_size == 0) {
-    TLOG(TLVL_ERROR)<<"BernCRTZMQ::GetData() Obtained data size of 0. Stopping.";
-    throw cet::exception("BernCRTZMQ::GetData() Obtained data size of 0. Stopping");
+    TLOG(TLVL_ERROR)<<__func__<<" Obtained data size of 0. Stopping.";
+    throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+" Obtained data size of 0. Stopping");
     //TODO: note that we quit without turning off HV, but we can't turn off HV if zmq context is stopped, which is the reason of the failure here
   }
 
@@ -253,14 +253,17 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   sbndaq::BernCRTZMQEventUnion last_event;
   last_event.event = ZMQBufferUPtr[total_events-1];
   
-  //sanity checks
-  if(
-      last_event.last_event.mac5 != 0xffff
+  //data validity checks
+  if(last_event.last_event.mac5 != 0xffff
       || last_event.last_event.flags != 0xffff
-      || last_event.last_event.magic_number0 != 0xaa55aa55
-      || last_event.last_event.magic_number1 != 0xaa55aa55) {
-    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields in the last event failed!";
-    //TODO: crash DAQ if this happens, print the values
+      || last_event.last_event.magic_number != 0xaa55aa55) {
+    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields: "<<last_event.last_event.mac5<<", "<<last_event.last_event.flags<<", "<<last_event.last_event.magic_number<<" in the last event failed!";
+    throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+"Data corruption! Check of control fields failed");
+    //TODO throwing exception doesn't seem to crash the whole fragment generator, only the data reading part
+  }
+  if(last_event.last_event.febdrv_version != FEBDRV_VERSION) {
+    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Febdrv version in the data received "<<last_event.last_event.febdrv_version<<" doesn't match FragmentGenerator febdrv version "<<FEBDRV_VERSION<<"!!!";
+    throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+"Data corruption! Febdrv version mismatch");
   }
 
   uint32_t n_events = last_event.last_event.n_events;

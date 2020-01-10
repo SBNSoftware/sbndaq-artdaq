@@ -566,8 +566,8 @@ int senddata() {
   sbndaq::BernCRTZMQEventUnion last_event;
   last_event.last_event.mac5  = 0xffff;
   last_event.last_event.flags = 0xffff;
-  last_event.last_event.magic_number0 = MAGICWORD32;
-  last_event.last_event.magic_number1 = MAGICWORD32;
+  last_event.last_event.magic_number = MAGICWORD32;
+  last_event.last_event.febdrv_version = FEBDRV_VERSION;
 
   last_event.last_event.n_events = evnum[sbitosend];
   
