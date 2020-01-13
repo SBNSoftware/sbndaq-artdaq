@@ -18,7 +18,7 @@ void usage()
 
 void print_data(unsigned char * data, int size) {
   int event_size = 84;
-  printf("MAC FLG LC  LF  T0      T1      ADC     2       4       6       8       10      12      14      16      18      20      22      24      26      28      30      COINC..\n");
+  printf("\033[0;34mMAC FLG LC  LF  T0      T1      ADC     2       4       6       8       10      12      14      16      18      20      22      24      26      28      30      COINC..\n");
   for(int iByte = 0; iByte < size; iByte++) {
     switch(iByte%event_size%8) {
       case 1:
@@ -44,7 +44,7 @@ void print_data(unsigned char * data, int size) {
       printf("\n");
     }
   }
-  printf("MAC FLG magic0  magic1  #events poll_start      poll_end        start_d end_d   zeros...................................................................................\n");
+  printf("\033[0;34mMAC FLG magic   fb_ver  #events poll_start      poll_end        start_d end_d   zeros...................................................................................\n");
   printf("\n");
 }
 
