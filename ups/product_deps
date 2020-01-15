@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq    v0_04_00
+parent sbndaq_artdaq    v0_04_01
 defaultqual     e17
 
 # These optional lines define the installed directories where
@@ -18,7 +18,7 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_07_01
+artdaq                v3_07_01CH1e0901
 sbndaq_artdaq_core    v0_04_00
 caencomm              v1_2a
 caenvme               v2_50
@@ -69,6 +69,7 @@ e19:debug:s82:icarus    e19:s82:debug     e19:debug:s82       -nq-    -nq-     -
 e19:prof:s82:sbnd       e19:s82:prof      e19:prof:s82        -nq-    -nq-     -nq-          -                    e19:p2715a:prof    e19   e19:prof   e19       prof	  prof
 e19:debug:s82:sbnd      e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          -                    e19:p2715a:debug   e19   e19:debug  e19       debug	  debug
 e19:debug:s82           e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          e19:debug            e19:p2715a:debug   e19   e19:debug  e19       debug	  debug
+
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
