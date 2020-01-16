@@ -23,6 +23,10 @@ cet_make_exec(febmon
 		LIBRARIES zmq
 		       )
 
+cet_make_exec(febpeek
+		SOURCE febpeek.cc
+		LIBRARIES zmq
+		       )
 
 cet_make_exec(confsetbias
 		SOURCE confsetbias.cc

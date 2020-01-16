@@ -13,13 +13,10 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <netinet/ether.h>
-#include <sys/timeb.h>
+#include <chrono>
 #include <string>
 #include "febdrv.h"
 #include "febevt.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 
@@ -37,14 +34,17 @@ void *pubstats2 = NULL;
 FEBDTP_PKT_t spkt,rpkt; //send and receive packets
 FEBDTP_PKT_t ipkt[FEB_MAX_CHAIN]; // store info packets
 sbndaq::BernCRTZMQEvent evbuf[NBUFS][256*EVSPERFEB+1]; //0MQ backend event buffer, first index-triple-buffering, second - feb, third-event. 256: max number of FEBs; +1 to accomodate extra event with timing information
-int evnum[NBUFS]; //number of good events in the buffer fields //AA: TODO change this to int32_t to make sure it will always be sent properly via zmq
-int evbufstat[NBUFS]; //flag, showing current status of sub-buffer: 0= empty, 1= being filled, 2= full, 3=being sent out
+int evnum[NBUFS]; //number of good events in the buffer fields
+enum BUFFER_STATUS { EMPTY = 0, FILLING = 1, FULL = 2, SENDING = 3 };
+uint8_t evbufstat[NBUFS]; //status of buffer
 int evtsperpoll[256];
-int msperpoll=0;
+int32_t nsperpoll=0;
 int lostperpoll_cpu[256];
 int lostperpoll_fpga[256];
 uint8_t ts0ok[256],ts1ok[256];
-struct timeb mstime0, mstime1;
+uint64_t poll_start, poll_end;
+int64_t steady_clock_offset; //difference between system and steady clock
+int32_t poll_start_deviation, poll_end_deviation;
 
 
 int nclients=0;
@@ -411,10 +411,13 @@ int startDAQ(uint8_t mac5) {
   
   memset(evbuf,0, sizeof(evbuf)); //clean zmq buffer
   memset(evnum,0, sizeof(evnum));
-  memset(evbufstat,0, sizeof(evbufstat));
+  memset(evbufstat, EMPTY, sizeof(evbufstat));
   
   nreplies=0;
   sendcommand(dstmac,FEB_GEN_INIT,0,buf); //stop DAQ on the FEB
+
+  //calibrate offset between system and steady clock
+  steady_clock_offset = std::chrono::system_clock::now().time_since_epoch().count() - std::chrono::steady_clock::now().time_since_epoch().count();
   
   while(recvfromfeb(10000)) 
     { 
@@ -515,19 +518,19 @@ sbndaq::BernCRTZMQEvent * getnextevent() {
   // check for available buffers
   // first see if there are buffers being filled presently 
   for(int sbi=0;sbi<NBUFS;sbi++) {
-    if(evbufstat[sbi]==1) { //check for buffer being filled
+    if(evbufstat[sbi] == FILLING) {
       sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][evnum[sbi]]);
       evnum[sbi]++;
-      if(evnum[sbi]==EVSPERFEB*256)  evbufstat[sbi]=2; //buffer full, set to ready
+      if(evnum[sbi]==EVSPERFEB*256)  evbufstat[sbi] = FULL; //buffer full, set to ready
       return retval; //found buffer being filled, return pointer
     }
   }
   //if failed, try to start filling next empty buffer
   for(int sbi=0;sbi<NBUFS;sbi++) {
-    if(evbufstat[sbi]==0) { //check for empty buffer
+    if(evbufstat[sbi] == EMPTY) {
       sbndaq::BernCRTZMQEvent * retval = &(evbuf[sbi][0]);
       evnum[sbi]=1;
-      evbufstat[sbi]=1; //buffer being filled
+      evbufstat[sbi] = FILLING;
       return retval; //started new buffer, return pointer
     }
   }
@@ -537,11 +540,9 @@ sbndaq::BernCRTZMQEvent * getnextevent() {
 
 
 
-void free_subbufer (void *data, void *hint) //call back from ZMQ sent function, hint points to subbufer index
-{
-  uint64_t sbi;
-  sbi =  (uint64_t)hint; //reset buffer status to empty
-  evbufstat[sbi]=0;
+void free_subbufer (void *data, void *hint) { //call back from ZMQ sent function, hint points to subbufer index
+  uint64_t sbi =  (uint64_t)hint; //reset buffer status to empty
+  evbufstat[sbi] = EMPTY;
   evnum[sbi]=0; 
 }
 
@@ -551,31 +552,39 @@ int senddata() {
    */
   int64_t sbitosend=-1; // check for filled buffers
   for(int sbi=0; sbi<NBUFS; sbi++) {
-    if(evbufstat[sbi]==1) sbitosend=sbi;  //the if there is being filled buffer
-    if(evbufstat[sbi]==2) sbitosend=sbi;  //first check for buffer that is full
+    if(evbufstat[sbi]==FILLING || evbufstat[sbi]==FULL) sbitosend=sbi;
   }
   if(sbitosend==-1) return 0; //no buffers to send out
   
-  evbufstat[sbitosend]=3; //  reset to 0 by the callback only when transmission is done!
+  evbufstat[sbitosend] = SENDING; //  reset to 0 by the callback only when transmission is done!
   //fill buffer trailer in the last event
-  //AA: please note that the code below does not fill all consecutive bytes
-  //    of the event structure, e.g. there are fields lostcpu and lostfpga
-  //    between mac5 and ts0 which are not set. Apparently the person who
-  //    added these fields didn't care to update this function. This means
-  //    the last event format is no longer described febrv manual (v Sep 2016).
-  //    Therefore, unless we decide to update this code, the "point of reference"
-  //    to retrieve the number of events and poll times is the adc[0] field.
-  //    TODO: fix this
-  evbuf[sbitosend][evnum[sbitosend]].flags=0xFFFF;
-  evbuf[sbitosend][evnum[sbitosend]].mac5=0xFFFF;
-  evbuf[sbitosend][evnum[sbitosend]].ts0=MAGICWORD32;
-  evbuf[sbitosend][evnum[sbitosend]].ts1=MAGICWORD32;
-  evbuf[sbitosend][evnum[sbitosend]].coinc=MAGICWORD32;
+  //AA NOTE: the format of the last event was modified w.r.t. the febdrv
+  //distributed by Igor and Umut. The changes include:
+  //- timestamp value is sent in ns since epoch of the system clock
+  //- new variables allow to control deviation of the system clock w.r.t. the steady_clock
   
-  void * bptr=&(evbuf[sbitosend][evnum[sbitosend]].adc[0]); //pointer to start of ADC field
-  memcpy(bptr,&(evnum[sbitosend]),sizeof(int));  bptr=bptr+sizeof(int);
-  memcpy(bptr,&mstime0,sizeof(struct timeb));    bptr=bptr+sizeof(struct timeb); //start of poll time
-  memcpy(bptr,&mstime1,sizeof(struct timeb));    bptr=bptr+sizeof(struct timeb);  //end of poll time
+  sbndaq::BernCRTZMQEventUnion last_event;
+  last_event.last_event.mac5  = 0xffff;
+  last_event.last_event.flags = 0xffff;
+  last_event.last_event.magic_number = MAGICWORD32;
+  last_event.last_event.febdrv_version = FEBDRV_VERSION;
+
+  last_event.last_event.n_events = evnum[sbitosend];
+  
+  last_event.last_event.poll_time_start = poll_start;
+  last_event.last_event.poll_time_end   = poll_end;
+  last_event.last_event.poll_start_deviation = poll_start_deviation;
+  last_event.last_event.poll_end_deviation   = poll_end_deviation;
+
+  last_event.last_event.zero_padding0 = 0;
+  last_event.last_event.zero_padding1 = 0;
+  last_event.last_event.zero_padding2 = 0;
+  last_event.last_event.zero_padding3 = 0;
+  last_event.last_event.zero_padding4 = 0;
+  last_event.last_event.zero_padding5 = 0;
+
+  //use union magic to assign BernCRTZMQLastEvent to BernCRTZMQEvent 
+  evbuf[sbitosend][evnum[sbitosend]] = last_event.event;
   
   evnum[sbitosend]++;
   zmq_msg_t msg;
@@ -586,8 +595,7 @@ int senddata() {
   return 0;
 }
 
-int sendstats2() //send statistics in binary packet format
-{
+int sendstats2() { //send statistics in binary packet format
   // float Rate;
   void* ptr;
   DRIVER_STATUS_t ds;
@@ -597,7 +605,7 @@ int sendstats2() //send statistics in binary packet format
   ds.daqon=GLOB_daqon;  
   ds.status=driver_state;
   ds.nfebs=nclients;  
-  ds.msperpoll=msperpoll;
+  ds.msperpoll=nsperpoll/1000000;
   zmq_msg_t msg;
   zmq_msg_init_size (&msg, sizeof(ds)+nclients*sizeof(fs));
   ptr=zmq_msg_data (&msg);
@@ -633,8 +641,7 @@ int sendstats2() //send statistics in binary packet format
   return 1; 
 } //sendstats2
 
-int sendstats()
-{
+int sendstats() {
   //printf("enter sendtats()\n");
   char str[8192]; //stats string
   float Rate;
@@ -665,7 +672,7 @@ int sendstats()
 	}
       sprintf(str+strlen(str), "rate %5.1f Hz\n",Rate);
     }
-  if(GLOB_daqon) sprintf(str+strlen(str), "Poll %d ms.\n",msperpoll);
+  if(GLOB_daqon) sprintf(str+strlen(str), "Poll %d ns.\n",nsperpoll);
   
   zmq_msg_t msg;
   zmq_msg_init_size (&msg, strlen(str)+1);
@@ -680,13 +687,15 @@ void polldata() {
   /**
    * poll data from daisy-chain and send it to the publisher socket
    */
-  ftime(&mstime0); //http://man7.org/linux/man-pages/man3/ftime.3.html : "This function is obsolete.  Don't use it." TODO: fix
-  msperpoll=0;
+  nsperpoll=0;
   memset(lostperpoll_cpu,0,sizeof(lostperpoll_cpu));
   memset(lostperpoll_fpga,0,sizeof(lostperpoll_fpga));
   memset(evtsperpoll,0,sizeof(evtsperpoll));
 
   if(GLOB_daqon==0) {sleep(1); return;} //if no DAQ running - just delay for not too fast ping
+
+  poll_start = std::chrono::system_clock::now().time_since_epoch().count();
+  poll_start_deviation = poll_start - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
 
   for(int f=0; f<nclients;f++) { //loop on all connected febs : macs[f][6]
     uint32_t overwritten=0;
@@ -761,8 +770,9 @@ void polldata() {
     printdate(); printf("Some events skipped due to buffer overrun!\n"); 
   }
 
-  ftime(&mstime1);
-  msperpoll=(mstime1.time-mstime0.time)*1000+(mstime1.millitm-mstime0.millitm);
+  poll_end = std::chrono::system_clock::now().time_since_epoch().count();
+  poll_end_deviation = poll_end - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
+  nsperpoll = poll_start - poll_end;
   return;
 } //polldata
 
@@ -783,7 +793,7 @@ int main (int argc, char **argv) {
   printf("The poll duration is set to at least %d ms.\n",polldelay);
   memset(evbuf,0, sizeof(evbuf));
   memset(evnum,0, sizeof(evnum));
-  memset(evbufstat,0, sizeof(evbufstat));
+  memset(evbufstat, EMPTY, sizeof(evbufstat));
   
   memset(FEB_configured,0,256);
   memset(FEB_daqon,0,256);
