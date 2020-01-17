@@ -74,6 +74,8 @@ namespace icarus {
     sbndaq::CircularBuffer<uint16_t> fCircularBuffer;
     size_t fCircularBufferSize;
 
+    uint32_t fTimeOffsetNanoSec; //offset to be used for fragment timestamp
+
   private:
     
     share::WorkerThreadUPtr Monitor_thread_;
