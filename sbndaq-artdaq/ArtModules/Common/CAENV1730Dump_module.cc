@@ -70,6 +70,8 @@ private:
 
   TTree* fEventTree;
   int fRun, fEvent;
+  size_t fNumBoards;
+  std::vector<int> fFragID;
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
   
@@ -97,6 +99,8 @@ void sbndaq::CAENV1730Dump::beginJob()
   fEventTree = tfs->make<TTree>("events","waveform tree");
   fEventTree->Branch("fRun",&fRun,"fRun/I");
   fEventTree->Branch("fEvent",&fEvent,"fEvent/I");
+  fEventTree->Branch("fNumBoards",&fNumBoards,"fNumbBoards/I");
+  fEventTree->Branch("fFragID",&fFragID);
   fEventTree->Branch("fTicksVec",&fTicksVec);
   fEventTree->Branch("fWvfmsVec",&fWvfmsVec);
 }
@@ -117,16 +121,11 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
 
   fRun = evt.run();
   fEvent = evt.event();
+  fFragID.clear();
     
   /************************************************************************************************/
   art::Handle< std::vector<artdaq::Fragment> > rawFragHandle;
-  //evt.getByLabel("daq","CAENV1730", rawFragHandle); 
-  //evt.getByLabel(fDataLabel,"CAENV1730", rawFragHandle); 
-  //<--std::vector<art::Ptr<artdaq::Fragment>> Frags;
   if ( !evt.getByLabel(fDataLabel, rawFragHandle) ) {
-//    art::fill_ptr_vector(Frags,rawFragHandle);
-//  }
-//  else {
     std::cout << "Requested fragments with label : " << fDataLabel << "but none exist\n";
     return;
   }
@@ -139,9 +138,18 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
               << " fragment(s).\n";
 
     //bool firstEvt = true;
-    for (size_t idx = 0; idx < rawFragHandle->size(); ++idx) { /*loop over the fragments*/
+    fNumBoards = rawFragHandle->size();
+    int fragID = -1, it = 0;
+    for (auto const& frag: *rawFragHandle) { /*loop over the fragments*/
+
+      //--Retrive the fragment id which distinguishes each V1730 board and is set in their
+      //-- respective .fcl file
+      fragID = static_cast<int>(frag.fragmentID());
+      fFragID.push_back(fragID);
+      std::cout << "Retrieved fragment id for fragment number " << (it+1) << "-of-" << fNumBoards
+                << " is : " << fragID << std::endl;
+
       //--use this fragment as a reference to the same data
-      const auto& frag((*rawFragHandle)[idx]); 
       CAENV1730Fragment bb(frag);
       auto const* md = bb.Metadata();
       CAENV1730Event const* event_ptr = bb.Event();
@@ -200,6 +208,7 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
         } //--end loop samples
         firstEvt = false;
       } //--end loop channels
+      ++it;
     } //--end loop fragments 
      
   fEventTree->Fill();
