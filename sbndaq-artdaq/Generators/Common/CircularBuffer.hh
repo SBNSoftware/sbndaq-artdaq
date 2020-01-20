@@ -55,7 +55,7 @@ namespace sbndaq{
 	  n_obj,buffer.size(),buffer.capacity());
     
     //don't fill while we wait for available capacity...
-    while( (buffer.capacity()-buffer.size()) < n_obj){ usleep(10); }
+    while( (buffer.capacity()-buffer.size()) < n_obj){ usleep(100); }
     
     //obtain the lock
     std::unique_lock<std::mutex> lock(*(mutexptr));
@@ -76,7 +76,7 @@ namespace sbndaq{
           n_obj,buffer.size(),buffer.capacity());
 
     //don't fill while we wait for available capacity...
-    while( (buffer.capacity()-buffer.size()) < n_obj){ usleep(10); }
+    while( (buffer.capacity()-buffer.size()) < n_obj){ usleep(100); }
 
     //obtain the lock
     std::unique_lock<std::mutex> lock(*(mutexptr));
