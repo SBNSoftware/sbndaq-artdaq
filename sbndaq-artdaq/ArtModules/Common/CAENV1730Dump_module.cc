@@ -69,9 +69,8 @@ private:
   TH1F*    h_wvfm_ev0_ch0;
 
   TTree* fEventTree;
-  int fRun, fEvent;
+  int fRun, fEvent, fFragID;
   size_t fNumBoards;
-  std::vector<int> fFragID;
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
   
@@ -121,7 +120,6 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
 
   fRun = evt.run();
   fEvent = evt.event();
-  fFragID.clear();
     
   /************************************************************************************************/
   art::Handle< std::vector<artdaq::Fragment> > rawFragHandle;
@@ -145,7 +143,8 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
       //--Retrive the fragment id which distinguishes each V1730 board and is set in their
       //-- respective .fcl file
       fragID = static_cast<int>(frag.fragmentID());
-      fFragID.push_back(fragID);
+      fFragID=fragID;
+      //<--fFragID.push_back(fragID);
       std::cout << "Retrieved fragment id for fragment number " << (it+1) << "-of-" << fNumBoards
                 << " is : " << fragID << std::endl;
 
@@ -209,9 +208,10 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
         firstEvt = false;
       } //--end loop channels
       ++it;
+      fEventTree->Fill();
     } //--end loop fragments 
      
-  fEventTree->Fill();
+  //<--fEventTree->Fill();
 
   } //--valid fragments
 }
