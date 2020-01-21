@@ -31,8 +31,8 @@ namespace sbndaq {
     void stop() override;
     void stopNoMutex() override;
 
-    std::vector<uint8_t> FEBIDs_;
-    size_t nFEBs() { return FEBIDs_.size(); }
+    std::vector<uint8_t> MAC5s_;
+    size_t nFEBs() { return MAC5s_.size(); }
     std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration; //first number is the mac address.
 
     std::size_t throttle_usecs_;        // Sleep at start of each call to getNext_(), in us
@@ -65,14 +65,16 @@ namespace sbndaq {
       EventBuffer_t               buffer;
 
       std::unique_ptr<std::mutex>  mutexptr;
-      uint16_t                     id;
+      uint8_t                      MAC5;
+      uint16_t                     fragment_id;
 
-      FEBBuffer(uint32_t capacity, uint64_t i)
+      FEBBuffer(uint32_t capacity, uint8_t mac5, uint16_t id)
 	: buffer(EventBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
-	  id(i)
+	  MAC5(mac5),
+          fragment_id(id)
       { Init(); }
-      FEBBuffer() { FEBBuffer(0, 0); }
+      FEBBuffer() { FEBBuffer(0, 0, 0); }
       void Init() {
 	buffer.clear();
 	mutexptr->unlock();

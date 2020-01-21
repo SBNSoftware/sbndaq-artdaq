@@ -33,8 +33,8 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   febctl(GETINFO);
   
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TLOG(TLVL_DEBUG) << __func__ << " Reading bitstream configuration for FEBID " << std::to_string(iFEB) << ": " << std::to_string(FEBIDs_[iFEB]);
-    feb_configuration[FEBIDs_[iFEB]] = sbndaq::BernCRTFEBConfiguration(ps_, iFEB); //create configuration object
+    TLOG(TLVL_DEBUG) << __func__ << " Reading bitstream configuration for MAC5 " << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
+    feb_configuration[MAC5s_[iFEB]] = sbndaq::BernCRTFEBConfiguration(ps_, iFEB); //create configuration object
   }
 
   TLOG(TLVL_INFO) << __func__ << " constructor completed";  
@@ -60,8 +60,8 @@ void sbndaq::BernCRTZMQData::ConfigureStart() {
   febctl(BIAS_OF);
 
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    feb_send_bitstreams(FEBIDs_[iFEB]); //send PROBE and SC configuration to FEB
-    if(feb_configuration[FEBIDs_[iFEB]].GetHVOnPermission()) febctl(BIAS_ON, FEBIDs_[iFEB]); //turn on SiPM HV (if FHiCL file allows it)
+    feb_send_bitstreams(MAC5s_[iFEB]); //send PROBE and SC configuration to FEB
+    if(feb_configuration[MAC5s_[iFEB]].GetHVOnPermission()) febctl(BIAS_ON, MAC5s_[iFEB]); //turn on SiPM HV (if FHiCL file allows it)
   }
   febctl(DAQ_BEG); //start data taking mode for all boards 
 
@@ -131,8 +131,8 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
   }
 
   if(mac5 != 255 && feb_configuration.find(mac5) == feb_configuration.end()) {
-    TLOG(TLVL_ERROR) << __func__ << " Could not find FEB " << std::to_string(mac5) << " in the FEBIDs!";
-    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(mac5) + " in the FEBIDs!");
+    TLOG(TLVL_ERROR) << __func__ << " Could not find FEB " << std::to_string(mac5) << " in the MAC5s!";
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(mac5) + " in the MAC5s!");
   }
 
   zmq_msg_t request;
@@ -206,7 +206,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
         for(unsigned int iFEB = 0; iFEB < mac5s.size(); iFEB++) {
           bool mac_found = false;
           for(unsigned int jFEB = 0; jFEB < nFEBs(); jFEB++) {
-            if(mac5s[iFEB] == FEBIDs_[jFEB]) {
+            if(mac5s[iFEB] == MAC5s_[jFEB]) {
               if(fcl_mac_found[jFEB]) {
                 TLOG(TLVL_ERROR) <<  __func__ << " MAC address ending with " << std::to_string(mac5) << " (dec) found twice by febdrv. Check hardware MAC configuration!";
                 throw cet::exception( std::string(TRACE_NAME) + __func__ + " MAC address ending with " +std::to_string(mac5) + " (dec) found twice by febdrv. Check hardware MAC configuration!");
@@ -255,8 +255,8 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
    */
 
   if(feb_configuration.find(mac5) == feb_configuration.end()) {
-    TLOG(TLVL_ERROR) <<  __func__ << " Could not find FEB " << mac5 << " in the FEBIDs!";
-    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(mac5) + " in the FEBIDs!");
+    TLOG(TLVL_ERROR) <<  __func__ << " Could not find FEB " << mac5 << " in MAC5s!";
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(mac5) + " in MAC5s!");
   }
 
   if(mac5==255) {

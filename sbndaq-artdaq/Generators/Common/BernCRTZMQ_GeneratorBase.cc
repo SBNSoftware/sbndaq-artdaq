@@ -37,13 +37,15 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   TLOG(TLVL_INFO)<<__func__<<" called";
 
-  FEBIDs_ = ps_.get< std::vector<uint8_t> >("FEBIDs");
+  uint16_t fragment_id_base = ps_.get<uint16_t>("fragment_id_base");
+
+  MAC5s_ = ps_.get< std::vector<uint8_t> >("MAC5s");
 
   //new variable added by me (see the header file)
   //TODO possibly all this need to be removed
   FragmentCounter_ = 0;
 
-  //reset last poll value
+  //reset last poll times
   last_poll_start = 0;
   last_poll_end = 0;
 
@@ -59,9 +61,9 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   }
 
   //Initialize buffers
-  for(size_t i_id=0; i_id<FEBIDs_.size(); ++i_id){
-    auto const& id = FEBIDs_[i_id];
-    FEBBuffers_[id] = FEBBuffer_t(FEBBufferCapacity_,id);
+  for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
+    const uint8_t& MAC5 = MAC5s_[iMAC5];
+    FEBBuffers_[MAC5] = FEBBuffer_t(FEBBufferCapacity_, MAC5, fragment_id_base | MAC5);
   }
   ZMQBufferUPtr.reset(new BernCRTZMQEvent[ZMQBufferCapacity_]);
 
@@ -158,7 +160,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
 							      size_t nevents,
                                                               size_t /* */){ //TODO perhaps we can get rid of this?
 
-  TLOG(TLVL_DEBUG) << __func__ << ": FEB ID " << b.id
+  TLOG(TLVL_DEBUG) << __func__ << ": FEB ID " << b.MAC5
     << ". Current buffer size " << b.buffer.size() << " / " << b.buffer.capacity()
     << ". Want to add " << nevents << " events.";
 
@@ -172,7 +174,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
   //obtain the lock
   std::unique_lock<std::mutex> lock(*(b.mutexptr));
 
-  TLOG(TLVL_DEBUG) << "FEB ID " << b.id
+  TLOG(TLVL_DEBUG) << "FEB ID " << b.MAC5
     << ". Current FEB buffer size " << b.buffer.size()
     << " with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.front().first.Time_TS0())
     << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.back().first.Time_TS0()) << "].";
@@ -332,7 +334,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
         //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
         size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events, total_events);
 
-        TLOG(TLVL_DEBUG)<<__func__<<": ... id="<<FEBBuffers_[prev_mac].id
+        TLOG(TLVL_DEBUG)<<__func__<<": ... id="<<FEBBuffers_[prev_mac].MAC5
           <<", n_events="<<this_n_events
           <<", buffer_size="<<FEBBuffers_[prev_mac].buffer.size();
 
@@ -406,7 +408,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
           sizeof(BernCRTZMQEvent),  
           metadata.sequence_number(),
-          feb_id,
+          feb.fragment_id,
           sbndaq::detail::FragmentType::BERNCRTZMQ,
           metadata,
           timestamp
@@ -474,9 +476,9 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     }
   }
   
-  for(auto const& id : FEBIDs_){
+  for(auto const& MAC5 : MAC5s_){
     while(true){
-      if(!FillFragment(id, frags)) break;
+      if(!FillFragment(MAC5, frags)) break;
     }
   }
 
