@@ -41,13 +41,11 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   MAC5s_ = ps_.get< std::vector<uint8_t> >("MAC5s");
 
-  //new variable added by me (see the header file)
-  //TODO possibly all this need to be removed
-  FragmentCounter_ = 0;
-
   //reset last poll times
   last_poll_start = 0;
   last_poll_end = 0;
+
+  sequence_id_ = 0;
 
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
   ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity");
@@ -182,7 +180,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
     << " events with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index].Time_TS0())
     << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index+nevents-1].Time_TS0()) << "].";
 
-  //prepare metadata object
+  //prepare metadata object (it is the same for all all events in the poll)
   BernCRTZMQFragmentMetadata metadata(
       run_start_time,
       this_poll_start,
@@ -190,17 +188,13 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
       last_poll_start,
       last_poll_end,
       system_clock_deviation,
-      nevents, //_feb_event_count
-      0, //events_in_zmq_packet
-      FragmentCounter_); //sequence number
+      nevents); //_feb_events_per_poll
   metadata.inc_Events(); //there is one event in a fragment
 
   //Insert events into FEBBuffer
   for(size_t i_e=0; i_e<nevents; ++i_e) {
-    metadata.inc_SequenceNumber();
     b.buffer.push_back(std::make_pair(ZMQBufferUPtr[begin_index + i_e], metadata));
   }
-  FragmentCounter_ += nevents;
 
   return b.buffer.size();
 } //InsertIntoFEBBuffer
@@ -403,11 +397,11 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
     TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
     TLOG(TLVL_SPECIAL)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
-
+    
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
-          sizeof(BernCRTZMQEvent),  
-          metadata.sequence_number(),
+          sizeof(BernCRTZMQEvent), //payload_size 
+          sequence_id_++,
           feb.fragment_id,
           sbndaq::detail::FragmentType::BERNCRTZMQ,
           metadata,

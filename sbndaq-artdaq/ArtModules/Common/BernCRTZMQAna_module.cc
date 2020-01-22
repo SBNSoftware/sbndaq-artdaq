@@ -61,9 +61,8 @@ private:
    uint64_t  last_poll_start;
    uint64_t  last_poll_end;
    int32_t   system_clock_deviation;
-   uint32_t  feb_event_count;
-   uint32_t  events_in_data_packet;
-   uint32_t  sequence_number;
+   uint32_t  feb_events_per_poll;
+   uint32_t  sequence_id;
 
    uint32_t missed_events;
    uint32_t overwritten_events;
@@ -105,9 +104,8 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   events->Branch("last_poll_start",           &last_poll_start,             "last_poll_start/l");
   events->Branch("last_poll_end",             &last_poll_end,               "last_poll_end/l");
   events->Branch("system_clock_deviation",    &system_clock_deviation,      "system_clock_deviation/I");
-  events->Branch("feb_event_count",           &feb_event_count,             "feb_event_count/i");
-  events->Branch("events_in_data_packet",     &events_in_data_packet,       "events_in_data_packet/i");
-  events->Branch("sequence_number",           &sequence_number,             "sequence_number/i");
+  events->Branch("feb_events_per_poll",       &feb_events_per_poll,         "feb_events_per_poll/i");
+  events->Branch("sequence_id",               &sequence_id,                 "sequence_id/i");
 
   events->Branch("missed_events",             &missed_events,               "missed_events/i");
   events->Branch("overwritten_events",        &overwritten_events,          "overwritten_events/i");
@@ -177,9 +175,7 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       last_poll_start           = md->last_poll_start();
       last_poll_end             = md->last_poll_end();
       system_clock_deviation    = md->system_clock_deviation();
-      feb_event_count           = md->feb_event_count();
-      events_in_data_packet     = md->event_packet();
-      sequence_number           = md->sequence_number();
+      feb_events_per_poll       = md->feb_events_per_poll();
 
       missed_events             = md->missed_events();
       overwritten_events        = md->overwritten_events();
@@ -188,6 +184,7 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       n_datagrams               = md->n_datagrams();
 
       fragment_timestamp        = frag.timestamp();
+      sequence_id               = frag.sequenceID();
 
       events->Fill();
 

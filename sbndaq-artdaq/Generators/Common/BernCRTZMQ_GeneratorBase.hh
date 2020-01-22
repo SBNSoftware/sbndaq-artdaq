@@ -95,11 +95,8 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
-	//my new variable (AA: Federico?)
-    //TODO: there is only a single set of variables for all FEBs read by a single board reader
-    //as a result e.g. PPS events in any board will cause the GPS counter to advance. This need
-    //to be rewritten
-    size_t FragmentCounter_; //it counts the fragments in the buffer
+    //sequence id is unique for any fragment coming from this Fragment Generator
+    uint32_t sequence_id_;
 
     //AA: values read from the special last zeromq event, containing poll times
     uint64_t this_poll_start;
