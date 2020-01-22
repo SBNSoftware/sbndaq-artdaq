@@ -529,6 +529,11 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
     }
   }
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width (maybe?) to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,0x8070,fCAEN.triggerPulseWidth);
+  sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,0x8070,&readback);
+  CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
 
   ConfigureLVDS();
   ConfigureSelfTriggerMode();
