@@ -61,7 +61,8 @@ private:
                             unsigned int usec_delay_if_failed=10e3,
                             unsigned int max_stop_tries=10 );
 
-    uint64_t run();
+    //uint64_t run();
+    void run();
 
     WorkerThread() = delete;
     WorkerThread ( WorkerThread const & ) = delete;
@@ -75,7 +76,8 @@ private:
     std::atomic_bool        _stop_running;
     const unsigned int      _usec_delay_iffailed;
     const unsigned int      _maxStopAttempts;
-    std::future<uint64_t>   _worker_thread_result;
+    //std::future<uint64_t>   _worker_thread_result;
+    std::future<void>   _worker_thread_result;
 
 };
 

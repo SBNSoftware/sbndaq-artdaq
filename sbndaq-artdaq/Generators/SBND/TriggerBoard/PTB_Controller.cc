@@ -4,8 +4,8 @@
 #include <sstream>
 
 #include "sbndaq-artdaq-core/Trace/trace_defines.h"
-#include <json/json.h>
-#include <json/reader.h>
+#include "json/json.h"
+#include "json/reader.h"
 
 PTB_Controller::PTB_Controller( const std::string & host, const uint16_t & port ) :
   _ios(),
