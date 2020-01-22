@@ -4,9 +4,8 @@
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
   /**
-   * default constructor formally required by std::unordered_map
+   * default constructor required by std::unordered_map
    */
-  TLOG(TLVL_WARNING) <<__func__<<" default constructor should never be called";
 }
 
 
