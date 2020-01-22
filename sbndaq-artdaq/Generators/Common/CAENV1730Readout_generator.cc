@@ -315,8 +315,6 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_IO_CONTROL, &ioMode);
   sbndaq::CAENDecoder::checkError(retcod,"ReadFPOutputConfig",fBoardID);
 
-  ioMode = readBack;
-
   // Construct mode mask
   data = fModeLVDS | (fModeLVDS << 4) | (fModeLVDS << 8) | (fModeLVDS << 12);
 
