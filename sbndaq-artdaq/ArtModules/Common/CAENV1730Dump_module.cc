@@ -27,6 +27,7 @@
 #include <iomanip>
 #include <vector>
 #include <iostream>
+#include <bitset>
 
 namespace sbndaq {
   class CAENV1730Dump;
@@ -71,7 +72,8 @@ private:
   int fRun, fEvent;
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
-
+  
+  bool firstEvt = true;
   art::InputTag fDataLabel;
 
 }; //--class CAENV1730Dump
@@ -136,6 +138,7 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
               << ", event " << fEvent << " has " << rawFragHandle->size()
               << " fragment(s).\n";
 
+    //bool firstEvt = true;
     for (size_t idx = 0; idx < rawFragHandle->size(); ++idx) { /*loop over the fragments*/
       //--use this fragment as a reference to the same data
       const auto& frag((*rawFragHandle)[idx]); 
@@ -153,6 +156,7 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
       hTriggerTimeTag->Fill(t0);
       nt_header->Fill(fEvent,header.eventCounter,t0);
       nChannels = md->nChannels;
+      std::cout << "\tNumber of channels: " << nChannels << "\n";
       fWvfmsVec.resize(nChannels);
 
       //--get the number of 32-bit words (quad_bytes) from the header
@@ -172,22 +176,29 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
                                  + sizeof(CAENV1730EventHeader));
 
       const uint16_t* value_ptr =  data_begin;
-      uint16_t ch_offset = 0;
-      uint16_t value;
+      uint16_t value = 0;
+      size_t ch_offset = 0;
       //--loop over channels
       for (size_t i_ch=0; i_ch<nChannels; ++i_ch){
         fWvfmsVec[i_ch].resize(wfm_length);
-        ch_offset = i_ch * wfm_length;
+        ch_offset = (size_t)(i_ch * wfm_length);
+        //std::cout << "ch" << i_ch << " offset =" << ch_offset << std::endl;
 
         //--loop over waveform samples
         for(size_t i_t=0; i_t<wfm_length; ++i_t){ 
           fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   /*timestamps, event level*/
           value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
-	  //value_ptr = (i_t%2 == 0) ? (index+1) : (index-1); 
           value = *(value_ptr);
-          if (i_ch == 0 && fEvent == 0) h_wvfm_ev0_ch0->SetBinContent(i_t,value);
+
+          if (i_ch == 0 && firstEvt) { 
+            h_wvfm_ev0_ch0->SetBinContent(i_t,value);
+            //std::cout << "ch" << std::to_string(i_ch) << "[" << i_t << "] = " << value <<  "= 0b" << std::bitset<16>(value) 
+            //          << std::endl;
+          }
+
           fWvfmsVec[i_ch][i_t] = value;
         } //--end loop samples
+        firstEvt = false;
       } //--end loop channels
     } //--end loop fragments 
      

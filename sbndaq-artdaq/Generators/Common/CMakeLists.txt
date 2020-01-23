@@ -122,6 +122,7 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
 			artdaq-core_Utilities
 			artdaq-core_Data
 			artdaq-utilities_Plugins
+                        BernCRTFEBConfiguration
 			#${ARTDAQ_UTILITIES}
 			${ART_UTILITIES}
 			${FHICLCPP}

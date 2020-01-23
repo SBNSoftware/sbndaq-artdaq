@@ -1,11 +1,11 @@
-#ifndef icarus_artdaq_BuildInfo_GetPackageBuildInfo_hh
-#define icarus_artdaq_BuildInfo_GetPackageBuildInfo_hh
+#ifndef sbndaq_artdaq_BuildInfo_GetPackageBuildInfo_hh
+#define sbndaq_artdaq_BuildInfo_GetPackageBuildInfo_hh
 
 #include "artdaq-core/Data/PackageBuildInfo.hh"
 
 #include <string>
 
-namespace icarus {
+namespace sbndaq {
 
   struct GetPackageBuildInfo {
 
@@ -14,4 +14,4 @@ namespace icarus {
 
 }
 
-#endif /* icarus_artdaq_BuildInfo_GetPackageBuildInfo_hh */
+#endif /* sbndaq_artdaq_BuildInfo_GetPackageBuildInfo_hh */

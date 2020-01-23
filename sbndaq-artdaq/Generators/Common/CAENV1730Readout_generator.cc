@@ -67,13 +67,15 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   Configure();
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << "=0x" << data;
+  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
+    "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL,&data);
   TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_LVDS_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << data << std::dec;
+  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
+    data << std::dec;
 
   
   //<--  configureInterrupts();
@@ -237,10 +239,10 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fCombineReadoutWindows = ps.get<bool>("CombineReadoutWindows");
   TLOG(TINFO) <<__func__ << ": CombineReadoutWindows=" << fCombineReadoutWindows;
 
-  fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig",false);
+  fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig");
   TLOG(TINFO) <<__func__ <<": CalibrateOnConfig=" << fCalibrateOnConfig;
 
-  fGetNextFragmentBunchSize  = ps.get<uint32_t>("fGetNextFragmentBunchSize",20);
+  fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
 }
@@ -291,7 +293,7 @@ void sbndaq::CAENV1730Readout::Configure()
 
 void sbndaq::CAENV1730Readout::RunADCCalibration()
 {
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
+  TLOG_ARB(TINFO,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
   auto retcode = CAEN_DGTZ_Calibrate(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
 }
@@ -315,8 +317,6 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   // Always set output to "New LVDS features"
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_IO_CONTROL, &ioMode);
   sbndaq::CAENDecoder::checkError(retcod,"ReadFPOutputConfig",fBoardID);
-
-  ioMode = readBack;
 
   // Construct mode mask
   data = fModeLVDS | (fModeLVDS << 4) | (fModeLVDS << 8) | (fModeLVDS << 12);
@@ -532,6 +532,11 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
     }
   }
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width (maybe?) to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,0x8070,fCAEN.triggerPulseWidth);
+  sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,0x8070,&readback);
+  CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
 
   ConfigureLVDS();
   ConfigureSelfTriggerMode();
@@ -711,12 +716,17 @@ void sbndaq::CAENV1730Readout::stop()
 
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
-  for(int32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
-    CAEN_DGTZ_ReadTemperature(fHandle,ch,&(ch_temps[ch]));
-    TLOG_ARB(TTEMP,TRACE_NAME) << "Channel " << ch
-			       <<" temp: " << ch_temps[ch] << "  C"
-			       << TLOG_ENDL;
-    //metric call here...
+  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
+    CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
+    TLOG_ARB(TTEMP,TRACE_NAME) << "Card: " << fBoardID
+                               << ", Channel: " << ch
+                               << ", temp: " << ch_temps[ch] << "  C"
+                               << TLOG_ENDL;
+    std::ostringstream tempStream;
+    tempStream << "Card: " << fBoardID
+               << ", Channel: " << ch << " temp.";
+    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+                          artdaq::MetricMode::Average, "CAENV1730");
   }
 
   return true;
@@ -943,6 +953,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
   metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
+
+  checkHWStatus_();
 
   TLOG(TGETNEXT) << __func__<< ": End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 

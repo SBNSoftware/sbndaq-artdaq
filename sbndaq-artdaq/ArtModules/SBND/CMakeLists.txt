@@ -6,7 +6,7 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
  	       sbndaq-artdaq-core_Overlays_SBND
 )
 
-simple_plugin(SBNDDAQArtdaqBuildInfo "module"
+simple_plugin(SBNDArtdaqBuildInfo "module"
   artdaq_DAQdata
   artdaq_BuildInfo
   artdaq-core_BuildInfo
@@ -18,7 +18,7 @@ simple_plugin(SBNDDAQArtdaqBuildInfo "module"
   ${CETLIB_EXCEPT}
 )
 
-simple_plugin(SBNDDAQInput "source"
+simple_plugin(SBNDInput "source"
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq-core_Overlays_SBND
@@ -27,9 +27,11 @@ simple_plugin(SBNDDAQInput "source"
   artdaq-utilities_Plugins
   artdaq-core_Utilities
   artdaq_ArtModules
+  artdaq_ArtModules_ArtdaqSharedMemoryService_service
   art_Framework_Core
   art_Framework_IO_Sources
   art_Framework_Principal
+  art_Framework_Services_Registry
   art_Persistency_Provenance
   art_Utilities
   MF_MessageLogger
