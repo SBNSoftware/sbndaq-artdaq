@@ -82,6 +82,7 @@ namespace sbndaq
 
     typedef enum {
       DYNAMIC_RANGE      = 0x8028,
+      TRG_OUT_DELAY      = 0x8070,
       ACQ_CONTROL        = 0x8100,
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,
@@ -130,6 +131,7 @@ namespace sbndaq
     uint32_t fSelfTriggerMode;
     uint32_t fSelfTriggerMask;
     uint32_t fModeLVDS;
+    uint32_t fTrigOutDelay;
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
     uint32_t fFragmentID;
