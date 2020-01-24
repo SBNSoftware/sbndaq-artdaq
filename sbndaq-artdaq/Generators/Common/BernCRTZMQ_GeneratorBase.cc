@@ -155,8 +155,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t con
 
 size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & buffer,
 							      size_t begin_index,
-							      size_t nevents,
-                                                              size_t /* */){ //TODO perhaps we can get rid of this?
+							      size_t nevents){
 
   TLOG(TLVL_DEBUG) << __func__ << ": MAC5 " << buffer.MAC5
     << ". Current buffer size " << buffer.buffer.size() << " / " << buffer.buffer.capacity()
@@ -220,8 +219,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   TLOG(TLVL_DEBUG) <<__func__<< "() called";
 
-  if( GetDataSetup()!=1 ) return false; //TODO do we need GetDataSetup and this check at all?
-
   const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
 
   //simple check of data size validity
@@ -245,7 +242,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   uint16_t prev_mac = ZMQBufferUPtr[0].MAC5();
 
   //Get the special last event and read the time information from it
-  //TODO: Test it at short poll times, and allow for several polls in a zmq paquet
+  //TODO: Test it at short poll times, and allow for several polls in a zmq packet
   TLOG(TLVL_DEBUG)<<"Reading information from the last zeromq event";
   sbndaq::BernCRTZMQEventUnion last_event;
   last_event.event = ZMQBufferUPtr[total_events-1];
@@ -256,7 +253,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
       || last_event.last_event.magic_number != 0xaa55aa55) {
     TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields: "<<last_event.last_event.mac5<<", "<<last_event.last_event.flags<<", "<<last_event.last_event.magic_number<<" in the last event failed!";
     throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+"Data corruption! Check of control fields failed");
-    //TODO throwing exception doesn't seem to crash the whole fragment generator, only the data reading part
+    //TODO throwing exception should crash the whole fragment generator, but it seems to crash only the data reading part
   }
   if(last_event.last_event.febdrv_version != FEBDRV_VERSION) {
     TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Febdrv version in the data received "<<last_event.last_event.febdrv_version<<" doesn't match FragmentGenerator febdrv version "<<FEBDRV_VERSION<<"!!!";
@@ -327,7 +324,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
         //TODO: crash if data is corrupted
         
         //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
-        size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events, total_events);
+        size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events);
 
         TLOG(TLVL_DEBUG)<<__func__<<": ... id="<<FEBBuffers_[prev_mac].MAC5
           <<", n_events="<<this_n_events

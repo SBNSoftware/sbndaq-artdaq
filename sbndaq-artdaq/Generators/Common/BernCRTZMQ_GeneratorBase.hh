@@ -44,8 +44,6 @@ namespace sbndaq {
 
     //gets the data. Output is size of data filled. Input is FEM ID.
     virtual size_t GetZMQData() = 0;
-    virtual int    GetDataSetup() { return 1; }
-    virtual int    GetDataComplete() { return 1; }
 
     fhicl::ParameterSet const ps_;
 
@@ -88,7 +86,7 @@ namespace sbndaq {
     bool GetData();
     bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
-    size_t InsertIntoFEBBuffer(FEBBuffer_t &,size_t,size_t,size_t);
+    size_t InsertIntoFEBBuffer(FEBBuffer_t &,size_t,size_t);
     size_t EraseFromFEBBuffer(FEBBuffer_t &, size_t const&);
 
     std::string GetFEBIDString(uint64_t const& id) const;

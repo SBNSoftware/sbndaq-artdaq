@@ -92,14 +92,6 @@ void sbndaq::BernCRTZMQData::ConfigureStop() {
   TLOG(TLVL_INFO) << __func__ << "() completed";
 } //ConfigureStop
 
-int sbndaq::BernCRTZMQData::GetDataSetup() {
-  return 1;
-}
-
-int sbndaq::BernCRTZMQData::GetDataComplete() {
-  return 1;
-}
-
 void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
 /**
  * Copied functionality of febctl tool from febdriver
@@ -361,7 +353,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
     events = zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
     data_size = zmq_msg_size(&feb_data_msg);
 
-    //check : is this too much data for the buffer? //TODO: shouldn't we check it before copying?
+    //can data fit in the buffer?
     if( events > ZMQBufferCapacity_ ) {
       TLOG(TLVL_ERROR) << __func__ << " Too many events for ZMQ buffer! " << std::to_string(events);
       throw cet::exception(std::string(TRACE_NAME) + " " + __func__ + " Too many events for ZMQ buffer!");
