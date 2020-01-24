@@ -67,12 +67,14 @@ namespace sbndaq {
       std::unique_ptr<std::mutex>  mutexptr;
       uint8_t                      MAC5;
       uint16_t                     fragment_id;
+      uint32_t                     event_number; //for given FEB
 
       FEBBuffer(uint32_t capacity, uint8_t mac5, uint16_t id)
 	: buffer(EventBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
 	  MAC5(mac5),
-          fragment_id(id)
+          fragment_id(id),
+          event_number(0)
       { Init(); }
       FEBBuffer() { FEBBuffer(0, 0, 0); }
       void Init() {

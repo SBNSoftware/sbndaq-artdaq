@@ -187,13 +187,16 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & buffe
       last_poll_start,
       last_poll_end,
       system_clock_deviation,
-      nevents); //_feb_events_per_poll
-  metadata.inc_Events(); //there is one event in a fragment
+      nevents, //_feb_events_per_poll
+      buffer.event_number);
 
   //Insert events into FEBBuffer
   for(size_t i_e=0; i_e<nevents; ++i_e) {
     buffer.buffer.push_back(std::make_pair(ZMQBufferUPtr[begin_index + i_e], metadata));
+    metadata.increment_feb_events();
   }
+
+  buffer.event_number += nevents;
 
   return buffer.buffer.size();
 } //InsertIntoFEBBuffer

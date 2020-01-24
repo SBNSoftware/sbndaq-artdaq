@@ -45,6 +45,7 @@ private:
   
   TTree * events;
 
+//data payload
    uint8_t mac5; //last 8 bits of FEB mac5 address
    uint16_t flags;
    uint16_t lostcpu;
@@ -62,15 +63,11 @@ private:
    uint64_t  last_poll_end;
    int32_t   system_clock_deviation;
    uint32_t  feb_events_per_poll;
+   uint32_t  feb_event_number;
+
+   //information from fragment header
    uint32_t  sequence_id;
-
-   uint32_t missed_events;
-   uint32_t overwritten_events;
-   uint32_t dropped_events;
-   uint32_t n_events;
-   uint32_t n_datagrams;
-
-   uint64_t fragment_timestamp;
+   uint64_t  fragment_timestamp;
 
   
 };
@@ -105,14 +102,9 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   events->Branch("last_poll_end",             &last_poll_end,               "last_poll_end/l");
   events->Branch("system_clock_deviation",    &system_clock_deviation,      "system_clock_deviation/I");
   events->Branch("feb_events_per_poll",       &feb_events_per_poll,         "feb_events_per_poll/i");
+  events->Branch("feb_event_number",          &feb_event_number,            "feb_event_number/i");
+
   events->Branch("sequence_id",               &sequence_id,                 "sequence_id/i");
-
-  events->Branch("missed_events",             &missed_events,               "missed_events/i");
-  events->Branch("overwritten_events",        &overwritten_events,          "overwritten_events/i");
-  events->Branch("dropped_events",            &dropped_events,              "dropped_events/i");
-  events->Branch("n_events",                  &n_events,                    "n_events/i");
-  events->Branch("n_datagrams",               &n_datagrams,                 "n_datagrams/i");
-
   events->Branch("fragment_timestamp",        &fragment_timestamp,          "fragment_timestamp/l");
 }
 
@@ -140,55 +132,42 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 
 
   for (size_t idx = 0; idx < rawFragHandle->size(); ++idx) { // loop over the fragments of an event
-    
+
     const auto& frag((*rawFragHandle)[idx]); // use this fragment as a reference to the same data
 
     //this applies the 'overlay' to the fragment, to tell it to treat it like a BernCRTZMQ fragment
     BernCRTZMQFragment bern_fragment(frag);
+    
+    fragment_timestamp        = frag.timestamp();
+    sequence_id               = frag.sequenceID();
 
+    //event data
+    BernCRTZMQEvent const* bevt = bern_fragment.eventdata();
+
+    mac5     = bevt->MAC5();
+    flags    = bevt->flags;
+    lostcpu  = bevt->lostcpu;
+    lostfpga = bevt->lostfpga;
+    ts0      = bevt->Time_TS0();
+    ts1      = bevt->Time_TS1();
+    coinc    = bevt->coinc;
+
+    for(int ch=0; ch<32; ch++) adc[ch] = bevt->ADC(ch);
+
+    //metadata
     const BernCRTZMQFragmentMetadata* md = bern_fragment.metadata();
 
-    //gets the number of CRT events (hits) inside this fragment
-    n_events = md->n_events();
+    run_start_time            = md->run_start_time();
+    this_poll_start           = md->this_poll_start();
+    this_poll_end             = md->this_poll_end();
+    last_poll_start           = md->last_poll_start();
+    last_poll_end             = md->last_poll_end();
+    system_clock_deviation    = md->system_clock_deviation();
+    feb_events_per_poll       = md->feb_events_per_poll();
+    feb_event_number          = md->feb_event_number();
 
-    //loop over the events in the fragment ...
-    for(size_t i_e=0; i_e<n_events; ++i_e) {
+    events->Fill();
 
-      //grab the pointer to the event
-      BernCRTZMQEvent const* bevt = bern_fragment.eventdata(i_e);
-      
-      //event data
-      mac5     = bevt->MAC5();
-      flags    = bevt->flags;
-      lostcpu  = bevt->lostcpu;
-      lostfpga = bevt->lostfpga;
-      ts0      = bevt->Time_TS0();
-      ts1      = bevt->Time_TS1();
-      coinc    = bevt->coinc;
-
-      for(int ch=0; ch<32; ch++) adc[ch] = bevt->ADC(ch);
-
-      //metadata
-      run_start_time            = md->run_start_time();
-      this_poll_start           = md->this_poll_start();
-      this_poll_end             = md->this_poll_end();
-      last_poll_start           = md->last_poll_start();
-      last_poll_end             = md->last_poll_end();
-      system_clock_deviation    = md->system_clock_deviation();
-      feb_events_per_poll       = md->feb_events_per_poll();
-
-      missed_events             = md->missed_events();
-      overwritten_events        = md->overwritten_events();
-      dropped_events            = md->dropped_events();
-      n_events                  = md->n_events();
-      n_datagrams               = md->n_datagrams();
-
-      fragment_timestamp        = frag.timestamp();
-      sequence_id               = frag.sequenceID();
-
-      events->Fill();
-
-    }//end loop over events in a fragment
   }//end loop over fragments
 }
 
