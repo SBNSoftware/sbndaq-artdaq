@@ -48,7 +48,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   sequence_id_ = 0;
 
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
-  ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity");
+  ZMQBufferCapacity_ = nFEBs()*1024 + 1;
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
