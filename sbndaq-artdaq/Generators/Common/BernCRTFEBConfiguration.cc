@@ -4,9 +4,8 @@
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
   /**
-   * default constructor formally required by std::unordered_map
+   * default constructor required by std::unordered_map
    */
-  TLOG(TLVL_WARNING) <<__func__<<" default constructor should never be called";
 }
 
 
@@ -30,18 +29,18 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
   }
   std::vector<bool> hv_on_permissions = ps_.get< std::vector<bool> >("TurnOnHV");
   std::vector<int32_t> PPS_offsets = ps_.get< std::vector<int32_t> >("PPS_offset_ns");
-  std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("FEBIDs"); //read MAC5 list for validation purposes only
+  std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("MAC5s"); //read MAC5 list for validation purposes only
 
   //validate size of the arrays in the FHiCL file
   if(hv_on_permissions.size() != mac5s.size()) {
-    TLOG(TLVL_ERROR)<< __func__ << " TurnOnHV array size differs from FEBIDs array size";
-    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " TurnOnHV array size differs from FEBIDs array size");
+    TLOG(TLVL_ERROR)<< __func__ << " TurnOnHV array size differs from MAC5s array size";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " TurnOnHV array size differs from MAC5s array size");
   }
   hv_on_permission = hv_on_permissions[iFEB];
   
   if(PPS_offsets.size() != mac5s.size()) {
-    TLOG(TLVL_ERROR)<< __func__ << " PPS_offset_ns array size differs from FEBIDs array size";
-    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " PPS_offset_ns array size differs from FEBIDs array size");
+    TLOG(TLVL_ERROR)<< __func__ << " PPS_offset_ns array size differs from MAC5s array size";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " PPS_offset_ns array size differs from MAC5s array size");
   }
   PPS_offset = PPS_offsets[iFEB];
 }

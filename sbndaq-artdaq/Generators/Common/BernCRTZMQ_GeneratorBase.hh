@@ -31,8 +31,8 @@ namespace sbndaq {
     void stop() override;
     void stopNoMutex() override;
 
-    std::vector<uint8_t> FEBIDs_;
-    size_t nFEBs() { return FEBIDs_.size(); }
+    std::vector<uint8_t> MAC5s_;
+    size_t nFEBs() { return MAC5s_.size(); }
     std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration; //first number is the mac address.
 
     std::size_t throttle_usecs_;        // Sleep at start of each call to getNext_(), in us
@@ -44,8 +44,6 @@ namespace sbndaq {
 
     //gets the data. Output is size of data filled. Input is FEM ID.
     virtual size_t GetZMQData() = 0;
-    virtual int    GetDataSetup() { return 1; }
-    virtual int    GetDataComplete() { return 1; }
 
     fhicl::ParameterSet const ps_;
 
@@ -65,14 +63,18 @@ namespace sbndaq {
       EventBuffer_t               buffer;
 
       std::unique_ptr<std::mutex>  mutexptr;
-      uint16_t                     id;
+      uint8_t                      MAC5;
+      uint16_t                     fragment_id;
+      uint32_t                     event_number; //for given FEB
 
-      FEBBuffer(uint32_t capacity, uint64_t i)
+      FEBBuffer(uint32_t capacity, uint8_t mac5, uint16_t id)
 	: buffer(EventBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
-	  id(i)
+	  MAC5(mac5),
+          fragment_id(id),
+          event_number(0)
       { Init(); }
-      FEBBuffer() { FEBBuffer(0, 0); }
+      FEBBuffer() { FEBBuffer(0, 0, 0); }
       void Init() {
 	buffer.clear();
 	mutexptr->unlock();
@@ -84,7 +86,7 @@ namespace sbndaq {
     bool GetData();
     bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
-    size_t InsertIntoFEBBuffer(FEBBuffer_t &,size_t,size_t,size_t);
+    size_t InsertIntoFEBBuffer(FEBBuffer_t &,size_t,size_t);
     size_t EraseFromFEBBuffer(FEBBuffer_t &, size_t const&);
 
     std::string GetFEBIDString(uint64_t const& id) const;
@@ -93,11 +95,8 @@ namespace sbndaq {
     
     share::WorkerThreadUPtr GetData_thread_;
 
-	//my new variable (AA: Federico?)
-    //TODO: there is only a single set of variables for all FEBs read by a single board reader
-    //as a result e.g. PPS events in any board will cause the GPS counter to advance. This need
-    //to be rewritten
-    size_t FragmentCounter_; //it counts the fragments in the buffer
+    //sequence id is unique for any fragment coming from this Fragment Generator
+    uint32_t sequence_id_;
 
     //AA: values read from the special last zeromq event, containing poll times
     uint64_t this_poll_start;

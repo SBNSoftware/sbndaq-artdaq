@@ -37,18 +37,18 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   TLOG(TLVL_INFO)<<__func__<<" called";
 
-  FEBIDs_ = ps_.get< std::vector<uint8_t> >("FEBIDs");
+  uint16_t fragment_id_base = ps_.get<uint16_t>("fragment_id_base");
 
-  //new variable added by me (see the header file)
-  //TODO possibly all this need to be removed
-  FragmentCounter_ = 0;
+  MAC5s_ = ps_.get< std::vector<uint8_t> >("MAC5s");
 
-  //reset last poll value
+  //reset last poll times
   last_poll_start = 0;
   last_poll_end = 0;
 
+  sequence_id_ = 0;
+
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
-  ZMQBufferCapacity_ = ps_.get<uint32_t>("ZMQBufferCapacity");
+  ZMQBufferCapacity_ = nFEBs()*1024 + 1;
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
@@ -59,9 +59,9 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   }
 
   //Initialize buffers
-  for(size_t i_id=0; i_id<FEBIDs_.size(); ++i_id){
-    auto const& id = FEBIDs_[i_id];
-    FEBBuffers_[id] = FEBBuffer_t(FEBBufferCapacity_,id);
+  for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
+    const uint8_t& MAC5 = MAC5s_[iMAC5];
+    FEBBuffers_[MAC5] = FEBBuffer_t(FEBBufferCapacity_, MAC5, fragment_id_base | (MAC5 & 0xff));
   }
   ZMQBufferUPtr.reset(new BernCRTZMQEvent[ZMQBufferCapacity_]);
 
@@ -153,34 +153,32 @@ void sbndaq::BernCRTZMQ_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t con
 /*-----------------------------------------------------------------------*/
 
 
-size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
+size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & buffer,
 							      size_t begin_index,
-							      size_t nevents,
-                                                              size_t /* */){ //TODO perhaps we can get rid of this?
+							      size_t nevents){
 
-  TLOG(TLVL_DEBUG) << __func__ << ": FEB ID " << b.id
-    << ". Current buffer size " << b.buffer.size() << " / " << b.buffer.capacity()
+  TLOG(TLVL_DEBUG) << __func__ << ": MAC5 " << buffer.MAC5
+    << ". Current buffer size " << buffer.buffer.size() << " / " << buffer.buffer.capacity()
     << ". Want to add " << nevents << " events.";
 
   //wait for available capacity...
-  for(int i=0; (b.buffer.capacity()-b.buffer.size()) < nevents; i++) {
-    //TODO make use of circular buffer and overwrite old events if buffer is full
+  for(int i=0; (buffer.buffer.capacity()-buffer.buffer.size()) < nevents; i++) {
     if(i%100000 == 0) TLOG(TLVL_WARNING)<<"No available capacity to save the events in FEBBuffers!";
     usleep(10);
   }
 
   //obtain the lock
-  std::unique_lock<std::mutex> lock(*(b.mutexptr));
+  std::unique_lock<std::mutex> lock(*(buffer.mutexptr));
 
-  TLOG(TLVL_DEBUG) << "FEB ID " << b.id
-    << ". Current FEB buffer size " << b.buffer.size()
-    << " with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.front().first.Time_TS0())
-    << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(b.buffer.back().first.Time_TS0()) << "].";
+  TLOG(TLVL_DEBUG) << "FEB ID " << buffer.MAC5
+    << ". Current FEB buffer size " << buffer.buffer.size()
+    << " with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(buffer.buffer.front().first.Time_TS0())
+    << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(buffer.buffer.back().first.Time_TS0()) << "].";
   TLOG(TLVL_DEBUG) << "Want to add " << nevents
     << " events with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index].Time_TS0())
     << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index+nevents-1].Time_TS0()) << "].";
 
-  //prepare metadata object
+  //prepare metadata object (it is the same for all all events in the poll)
   BernCRTZMQFragmentMetadata metadata(
       run_start_time,
       this_poll_start,
@@ -188,33 +186,31 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & b,
       last_poll_start,
       last_poll_end,
       system_clock_deviation,
-      nevents, //_feb_event_count
-      0, //events_in_zmq_packet
-      FragmentCounter_); //sequence number
-  metadata.inc_Events(); //there is one event in a fragment
+      nevents, //_feb_events_per_poll
+      buffer.event_number);
 
   //Insert events into FEBBuffer
   for(size_t i_e=0; i_e<nevents; ++i_e) {
-    metadata.inc_SequenceNumber();
-    b.buffer.push_back(std::make_pair(ZMQBufferUPtr[begin_index + i_e], metadata));
+    buffer.buffer.push_back(std::make_pair(ZMQBufferUPtr[begin_index + i_e], metadata));
+    metadata.increment_feb_events();
   }
-  FragmentCounter_ += nevents;
 
-  return b.buffer.size();
+  buffer.event_number += nevents;
+
+  return buffer.buffer.size();
 } //InsertIntoFEBBuffer
 
 /*-----------------------------------------------------------------------*/
 
 
-size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & b, size_t const& nevents){
+size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & buffer, size_t const& nevents){
 
-  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size before erasing the events: " << std::setw(3) << b.buffer.size() << " events";
+  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size before erasing the events: " << std::setw(3) << buffer.buffer.size() << " events";
 
-  std::unique_lock<std::mutex> lock(*(b.mutexptr));
-  b.buffer.erase_begin(nevents);
-//  b.metadata_buffer.erase_begin(nevents);
-  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size after erasing the events: " << std::setw(4) << b.buffer.size() << " events";
-  return b.buffer.size();
+  std::unique_lock<std::mutex> lock(*(buffer.mutexptr));
+  buffer.buffer.erase_begin(nevents);
+  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size after erasing the events: " << std::setw(4) << buffer.buffer.size() << " events";
+  return buffer.buffer.size();
 } //EraseFromFEBBuffer
 
 /*-----------------------------------------------------------------------*/
@@ -222,8 +218,6 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & b, siz
 bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   TLOG(TLVL_DEBUG) <<__func__<< "() called";
-
-  if( GetDataSetup()!=1 ) return false; //TODO do we need GetDataSetup and this check at all?
 
   const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
 
@@ -248,7 +242,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   uint16_t prev_mac = ZMQBufferUPtr[0].MAC5();
 
   //Get the special last event and read the time information from it
-  //TODO: Test it at short poll times, and allow for several polls in a zmq paquet
+  //TODO: Test it at short poll times, and allow for several polls in a zmq packet
   TLOG(TLVL_DEBUG)<<"Reading information from the last zeromq event";
   sbndaq::BernCRTZMQEventUnion last_event;
   last_event.event = ZMQBufferUPtr[total_events-1];
@@ -259,7 +253,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
       || last_event.last_event.magic_number != 0xaa55aa55) {
     TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields: "<<last_event.last_event.mac5<<", "<<last_event.last_event.flags<<", "<<last_event.last_event.magic_number<<" in the last event failed!";
     throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+"Data corruption! Check of control fields failed");
-    //TODO throwing exception doesn't seem to crash the whole fragment generator, only the data reading part
+    //TODO throwing exception should crash the whole fragment generator, but it seems to crash only the data reading part
   }
   if(last_event.last_event.febdrv_version != FEBDRV_VERSION) {
     TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Febdrv version in the data received "<<last_event.last_event.febdrv_version<<" doesn't match FragmentGenerator febdrv version "<<FEBDRV_VERSION<<"!!!";
@@ -330,9 +324,9 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
         //TODO: crash if data is corrupted
         
         //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
-        size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events, total_events);
+        size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events);
 
-        TLOG(TLVL_DEBUG)<<__func__<<": ... id="<<FEBBuffers_[prev_mac].id
+        TLOG(TLVL_DEBUG)<<__func__<<": ... id="<<FEBBuffers_[prev_mac].MAC5
           <<", n_events="<<this_n_events
           <<", buffer_size="<<FEBBuffers_[prev_mac].buffer.size();
 
@@ -361,28 +355,27 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 						    artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) << __func__<<"(feb_id=" << feb_id << ") called";
+  TLOG(TLVL_DEBUG) << __func__<<" (feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
-  TLOG(TLVL_DEBUG) <<__func__<< " STARTING SIZE OF FRAGS IN FILL FRAGMENT IS " << frags.size() << std::endl;
+  FEBBuffer_t & buffer = FEBBuffers_[feb_id];
 
-  FEBBuffer_t & feb = (FEBBuffers_[feb_id]);
-
-  size_t buffer_end = feb.buffer.size(); 
+  size_t buffer_end = buffer.buffer.size(); 
 
   TLOG(TLVL_DEBUG) <<__func__ << " Current size of the FEB buffer: " << buffer_end << " events";
   if(metricMan != nullptr) metricMan->sendMetric("feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Average);
 
   //loop over all the CRTHit events in our buffer (for this FEB)
   for(size_t i_e=0; i_e<buffer_end; ++i_e) {
-    BernCRTZMQEvent const& data = feb.buffer[i_e].first;
-    BernCRTZMQFragmentMetadata const& metadata = feb.buffer[i_e].second;
+    BernCRTZMQEvent const& data = buffer.buffer[i_e].first;
+    BernCRTZMQFragmentMetadata const& metadata = buffer.buffer[i_e].second;
 
-    //assign timestamp to the event
+    //calculate timestamp based on nanosecond from FEB and poll times measured by server
+    //see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
     int ts0  = data.ts0;
 
-    //add PPS cable offset modulo 1s
+    //add PPS cable length offset modulo 1s
     ts0 = (ts0 + feb_configuration[data.mac5].GetPPSOffset()) % (1000*1000*1000);
-    if(ts0 < 0) ts0 += 1000*1000*1000;
+    if(ts0 < 0) ts0 += 1000*1000*1000; //just in case the cable offset is negative (should be positive normally)
 
     uint64_t mean_poll_time = metadata.last_poll_start()/2 + metadata.this_poll_end()/2;
     int mean_poll_time_ns = mean_poll_time % (1000*1000*1000); 
@@ -401,12 +394,12 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
     TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
     TLOG(TLVL_SPECIAL)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
-
+    
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
-          sizeof(BernCRTZMQEvent),  
-          metadata.sequence_number(),
-          feb_id,
+          sizeof(BernCRTZMQEvent), //payload_size 
+          sequence_id_++,
+          buffer.fragment_id,
           sbndaq::detail::FragmentType::BERNCRTZMQ,
           metadata,
           timestamp
@@ -418,7 +411,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   } //loop over events in feb buffer
 
   //delete from the buffer all the events we've just put into frags
-  size_t new_buffer_size = EraseFromFEBBuffer(feb,buffer_end);
+  size_t new_buffer_size = EraseFromFEBBuffer(buffer, buffer_end);
 
   //update 
   std::string id_str = GetFEBIDString(feb_id);
@@ -474,9 +467,9 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     }
   }
   
-  for(auto const& id : FEBIDs_){
+  for(auto const& MAC5 : MAC5s_){
     while(true){
-      if(!FillFragment(id, frags)) break;
+      if(!FillFragment(MAC5, frags)) break;
     }
   }
 
