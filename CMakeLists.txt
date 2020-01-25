@@ -96,7 +96,9 @@ find_ups_product (jsoncpp v1_7_7c)
 find_ups_product( redis v5_0_5 )
 
 #include CAEN directories...
-include_directories($ENV{CAENCOMMDIR}/include)
+include_directories($ENV{CAENCOMM_INC})
+link_directories($ENV{CAENCOMM_LIB})
+
 
 #define redis lib
 cet_find_library( REDIS         NAMES hiredis         PATHS ENV REDIS_LIB        NO_DEFAULT_PATH )
@@ -104,7 +106,7 @@ cet_find_library( REDIS         NAMES hiredis         PATHS ENV REDIS_LIB       
 
 #experiment specific products needed
 IF(ICARUS_BUILD)
-  find_ups_product( icarus_artdaq_base v0_09_00 )
+  #find_ups_product( icarus_artdaq_base v0_09_00 )
 ENDIF()
 
 IF(SBND_BUILD)
