@@ -75,6 +75,9 @@ namespace icarus {
     std::string _redisHost;
     int _redisPort;
 
+    //if not using trigger board, issue our own start
+    bool _issueStart;
+
  };
 }
 
