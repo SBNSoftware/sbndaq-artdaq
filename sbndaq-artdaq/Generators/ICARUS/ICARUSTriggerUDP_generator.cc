@@ -160,12 +160,28 @@ void sbndaq::ICARUSTriggerUDP::send(CommandType command)
       std::cout << "Going to send a command! " << (int)command << std::endl;
       usleep(1e6);
 
+      /*
       CommandPacket packet;
       packet.type = command;
-      packet.dataSize = 0;
+      packet.dataSize = 182;
+
+      for(size_t i_d=0; i_d<182; ++i_d)
+	packet.data[i_d] = i_d;
 
       std::cout << "\tpacket size is " << sizeof(packet) << std::endl;
-      sendto(datasocket_, &packet, sizeof(packet), 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
+      */
+
+      //std::string send_str("READY TO RUN!");
+
+      char send_str[16];
+      sprintf(send_str,"%s","READY TO RUN   ");
+
+      std::cout << "\tSending ... " << send_str << " which is of length " << sizeof(send_str) << std::endl;
+
+
+      //sendto(datasocket_, &packet, sizeof(packet), 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
+
+      sendto(datasocket_,&send_str,sizeof(send_str), 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
 
       std::cout << "Send command!" << std::endl;
 
