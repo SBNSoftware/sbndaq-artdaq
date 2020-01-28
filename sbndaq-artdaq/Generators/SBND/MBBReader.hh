@@ -28,7 +28,9 @@ namespace sbndaq
      bool getNext_(artdaq::FragmentPtrs& output) override;
      void stopNoMutex() override {}
 
-     int setupMBB(fhicl::ParameterSet const& ps);
+     void setupMBB(fhicl::ParameterSet const& MBB_config);
+     void setupPTC(size_t icrate);
+
      std::unique_ptr<MBB> mbb;
   };
 }
