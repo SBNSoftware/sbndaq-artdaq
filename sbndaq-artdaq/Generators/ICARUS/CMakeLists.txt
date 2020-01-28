@@ -65,3 +65,17 @@ simple_plugin(PhysCrateData "generator"
 #   ${CETLIB}
 #   ${CETLIB_EXCEPT}
 #   )
+
+simple_plugin(ICARUSTriggerUDP "generator"
+#    artdaq-core-demo_Overlays
+    artdaq_Generators
+    artdaq_DAQdata
+    artdaq-core_Utilities
+    artdaq-core_Data
+  ${Boost_SYSTEM_LIBRARY}
+  canvas
+    ${FHICLCPP}
+  ${MESSAGEFACILITY_LIBS}
+    ${CETLIB}
+ ${CETLIB_EXCEPT}
+    )
