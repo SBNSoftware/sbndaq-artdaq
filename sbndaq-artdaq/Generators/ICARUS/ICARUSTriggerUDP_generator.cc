@@ -1,4 +1,5 @@
 #define TRACE_NAME "ICARUSTriggerUDP"
+#include "sbndaq-artdaq-core/Trace/trace_defines.h"
 
 #include "artdaq/DAQdata/Globals.hh"
 
@@ -22,14 +23,10 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   : CommandableFragmentGenerator(ps)
   , dataport_(ps.get<int>("port", 6343))
   , ip_(ps.get<std::string>("ip", "127.0.0.1"))
-  , expectedPacketNumber_(0)
-  , sendCommands_(ps.get<bool>("send_CAPTAN_commands", true))
-  , rawOutput_(ps.get<bool>("raw_output_enabled", false))
-  , rawPath_(ps.get<std::string>("raw_output_path", "/tmp"))
-  , n_sends_(ps.get<unsigned int>("n_sends",1))
+  , n_init_retries_(ps.get<int>("n_init_retries",10))
+  , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
 {
   datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-  //datasocket_ = socket(AF_INET, SOCK_DGRAM, 0);
   if (datasocket_ < 0)
     {
       throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
@@ -56,138 +53,133 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 }
 bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
 {
-  if (should_stop())
-    {
-      return false;
-    }
-
-  usleep(1e5);
-
-  std::cout << "Trying receive..." << std::endl;
-
-  struct pollfd ufds[1];
-  ufds[0].fd = datasocket_;
-  ufds[0].events = POLLIN | POLLPRI;
-  int rv = poll(ufds, 1, 1000);
-
-  if (rv > 0)
-    {
-      std::cout << "revents: " << ufds[0].revents << std::endl;
-      if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI)
-	{
-	  uint8_t peekBuffer[2];
-	  recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
-		   (struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
-
-	  std::cout << "\tRECEIVED PACKET! First 16 bits: 0x" << std::hex << *((uint16_t*)(peekBuffer)) << std::dec << std::endl;
-	  /*
-	  //	  TLOG(TLVL_INFO) << "Recieved UDP Packet with sequence number " << std::hex << (int)peekBuffer[1] << "!";
-	      //std::cout << "peekBuffer[1] == expectedPacketNumber_: " << std::hex << (int)peekBuffer[1] << " =?= " << (int)expectedPacketNumber_ << std::endl;
-	      //uint8_t seqNum = peekBuffer[1];
-	      //ReturnCode dataCode = getReturnCode(peekBuffer[0]);
-	      //if (seqNum >= expectedPacketNumber_ || (seqNum < 10 && expectedPacketNumber_ > 200) || droppedPackets > 0 || expectedPacketNumber_ - seqNum > 20)
-	  //{
-		  if (seqNum != expectedPacketNumber_ && (seqNum >= expectedPacketNumber_ || (seqNum < 10 && expectedPacketNumber_ > 200)))
-		    {
-		      int deltaHi = seqNum - expectedPacketNumber_;
-		      int deltaLo = 255 + seqNum - expectedPacketNumber_;
-		      droppedPackets += deltaLo < 255 ? deltaLo : deltaHi;
-		      TLOG(TLVL_WARNING) << "Dropped/Delayed packets detected: " << droppedPackets << std::endl;
-		      expectedPacketNumber_ = seqNum;
-		    }
-		  else if (seqNum != expectedPacketNumber_)
-		    {
-		      int delta = expectedPacketNumber_ - seqNum;
-		      TLOG(TLVL_WARNING) << "Sequence Number significantly different than expected! (delta: " << delta << ")";
-		    }
-		  if (dataCode == ReturnCode::Read || dataCode == ReturnCode::First)
-		    {
-		      packetBuffers_.clear();
-		      packetBuffer_t buffer;
-		      memset(&buffer[0], 0, sizeof(packetBuffer_t));
-		      recvfrom(datasocket_, &buffer[0], sizeof(packetBuffer_t), 0, (struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
-
-		    }
-		}
-	  */
-	}
-    }
-  else{
-    std::cout << "nope" << std::endl;
+  if (should_stop()){
+    return false;
   }
+
+  /*
+    //do something in here to get data...
+   */
+
+  poll_with_timeout(100);
+  send_TRIG_ALLW();
   
   return true;
 
 }
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  unsigned int counter=n_sends_;
-  while(counter!=0){
-    send(CommandType::Start_Burst);
-    --counter;
-  }
+  send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_);
+  send_TRIG_ALLW();
 }
 void sbndaq::ICARUSTriggerUDP::stop()
 {
-  unsigned int counter=n_sends_;
-  while(counter!=0){
-    send(CommandType::Stop_Burst);
-    --counter;
-  }
+  send_TRIG_VETO();
 }
 void sbndaq::ICARUSTriggerUDP::pause()
 {
-  unsigned int counter=n_sends_;
-  while(counter!=0){
-    send(CommandType::Stop_Burst);
-    --counter;
-  }
+  send_TRIG_VETO();
 }
 void sbndaq::ICARUSTriggerUDP::resume()
 {
-  unsigned int counter=n_sends_;
-  while(counter!=0){
-    send(CommandType::Start_Burst);
-  --counter;
+  send_TRIG_ALLW();
+}
+
+//send a command
+void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
+{
+  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
+
+  sendto(datasocket_,&cmd,sizeof(Command_t), 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
+
+  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
+}
+
+//return size of available data
+int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int timeout_ms)
+{
+
+  TRACE(TR_LOG,"poll:: DATA from %s with %d ms timeout",ip_.c_str(),timeout_ms);
+
+  struct pollfd ufds[1];
+  ufds[0].fd = datasocket_;
+  ufds[0].events = POLLIN | POLLPRI;
+  int rv = poll(ufds, 1, timeout_ms);
+
+  //have something
+  if (rv > 0){
+    TRACE(TR_LOG,"poll:: rv=%d with revents=%d",rv,ufds[0].revents);
+    
+    //have something good
+    if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
+      //do something to get data size here?
+      /*
+	uint8_t peekBuffer[2];
+	recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
+	(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
+	return (int)(peekBuffer[1]);
+      */
+      return 0;
+    }
+  }
+  //timeout
+  else if(rv==0){
+    TRACE(TR_LOG,"poll:: timed out after %d ms (rv=%d)",timeout_ms,rv);
+    return 0;
+  }
+  //error
+  else{
+    TRACE(TR_ERROR,"poll:: error in poll (rv=%d)",rv);
+    return -1;
   }
 
+  return -1;
+
 }
-void sbndaq::ICARUSTriggerUDP::send(CommandType command)
+
+//read data size from socket
+int sbndaq::ICARUSTriggerUDP::read(int size, uint16_t* buffer){
+  TRACE(TR_LOG,"read:: get %d bytes from %s\n",size,ip_.c_str());
+  int size_rcv = recvfrom(datasocket_, buffer, size, 0, (struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
+  
+  if(size_rcv<0) 
+    TRACE(TR_ERROR,"read:: error receiving data (%d bytes from %s)\n",size_rcv,ip_.c_str());
+  else
+    TRACE(TR_LOG,"read:: received %d bytes from %s\n",size_rcv,ip_.c_str());
+
+  return size_rcv;
+}
+
+
+int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
 {
-  if (sendCommands_)
-    {
-
-      std::cout << "Going to send a command! " << (int)command << std::endl;
-      usleep(1e6);
-
-      /*
-      CommandPacket packet;
-      packet.type = command;
-      packet.dataSize = 182;
-
-      for(size_t i_d=0; i_d<182; ++i_d)
-	packet.data[i_d] = i_d;
-
-      std::cout << "\tpacket size is " << sizeof(packet) << std::endl;
-      */
-
-      //std::string send_str("READY TO RUN!");
-
-      char send_str[16];
-      sprintf(send_str,"%s","READY TO RUN   ");
-
-      std::cout << "\tSending ... " << send_str << " which is of length " << sizeof(send_str) << std::endl;
-
-
-      //sendto(datasocket_, &packet, sizeof(packet), 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
-
-      sendto(datasocket_,&send_str,sizeof(send_str), 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
-
-      std::cout << "Send command!" << std::endl;
-
-      usleep(1e6);
-
+  while(retries>-1){
+  
+    send(TTLK_INIT);
+    int size_bytes = poll_with_timeout(sleep_time_ms);
+    if(size_bytes>0){
+      uint16_t buffer[size_bytes/2+1];
+      read(size_bytes,buffer);
+      return retries;
     }
+
+    retries--;
+  }
+
+  return retries;
+
 }
+
+//no need for confirmation on these...
+void sbndaq::ICARUSTriggerUDP::send_TRIG_VETO()
+{
+  send(TRIG_VETO);
+}
+
+void sbndaq::ICARUSTriggerUDP::send_TRIG_ALLW()
+{
+  send(TRIG_ALLW);
+}
+
 // The following macro is defined in artdaq's GeneratorMacros.hh header
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::ICARUSTriggerUDP)

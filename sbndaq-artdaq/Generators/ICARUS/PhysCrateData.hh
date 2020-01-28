@@ -3,9 +3,9 @@
 
 #include "sbndaq-artdaq/Generators/ICARUS/PhysCrate_GeneratorBase.hh"
 #include <chrono>
-#include "icarus-artdaq-base/VetoUDP.h"
-#include "hiredis/hiredis.h"
 
+#include "icarus-base/VetoUDP.h"
+#include "hiredis/hiredis.h"
 
 class PhysCrate;
 
@@ -74,6 +74,9 @@ namespace icarus {
     bool        _doRedis;
     std::string _redisHost;
     int _redisPort;
+
+    //if not using trigger board, issue our own start
+    bool _issueStart;
 
  };
 }
