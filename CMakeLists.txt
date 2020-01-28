@@ -96,7 +96,9 @@ find_ups_product (jsoncpp v1_7_7c)
 find_ups_product( redis v5_0_5 )
 
 #include CAEN directories...
-include_directories($ENV{CAENCOMMDIR}/include)
+include_directories($ENV{CAENCOMM_INC})
+link_directories($ENV{CAENCOMM_LIB})
+
 
 #define redis lib
 cet_find_library( REDIS         NAMES hiredis         PATHS ENV REDIS_LIB        NO_DEFAULT_PATH )
@@ -104,7 +106,7 @@ cet_find_library( REDIS         NAMES hiredis         PATHS ENV REDIS_LIB       
 
 #experiment specific products needed
 IF(ICARUS_BUILD)
-  find_ups_product( icarus_artdaq_base v0_09_00 )
+  #find_ups_product( icarus_artdaq_base v0_09_00 )
 ENDIF()
 
 IF(SBND_BUILD)
@@ -141,6 +143,15 @@ list(GET MESSAGEFACILITY_VERSION_LIST 1 MESSAGEFACILITY_MINOR_VERSION)
 list(GET MESSAGEFACILITY_VERSION_LIST 2 MESSAGEFACILITY_PATCH_VERSION)
 message("-DMESSAGEFACILITY_HEX_VERSION=0x${MESSAGEFACILITY_MAJOR_VERSION}${MESSAGEFACILITY_MINOR_VERSION}${MESSAGEFACILITY_PATCH_VERSION}")
 add_definitions(-DMESSAGEFACILITY_HEX_VERSION=0x${MESSAGEFACILITY_MAJOR_VERSION}${MESSAGEFACILITY_MINOR_VERSION}${MESSAGEFACILITY_PATCH_VERSION})
+
+# as of art v2_11_00, messagefacility has a single library
+check_ups_version(messagefacility $ENV{MESSAGEFACILITY_VERSION} v2_02_00 PRODUCT_MATCHES_VAR ONE_MF_LIBRARY)
+if(ONE_MF_LIBRARY)
+    set( MESSAGEFACILITY_LIBS MF_MessageLogger)
+else()
+    set( MESSAGEFACILITY_LIBS MF_MessageLogger MF_Utilities)
+endif()
+
 string(REGEX MATCHALL "[0-9][0-9]?[0-9]?" CANVAS_VERSION_LIST "$ENV{CANVAS_VERSION}")
 list(GET CANVAS_VERSION_LIST 0 CANVAS_MAJOR_VERSION)
 list(GET CANVAS_VERSION_LIST 1 CANVAS_MINOR_VERSION)

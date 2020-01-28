@@ -54,6 +54,8 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   pcieLinks_ = ps_.get< std::vector<int> >("pcieLinks",std::vector<int>());
 
   least_data_block_bytes_ = (size_t)SamplesPerChannel_*(size_t)ChannelsPerBoard_*2+12+32;
+
+  fTimeOffsetNanoSec = ps_.get<uint32_t>("TimeOffsetNanoSec",1200000); //1.2ms by default
 }
 
 void icarus::PhysCrate_GeneratorBase::start() {
@@ -177,12 +179,26 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   } while ( iBoard < nBoards_ );
 
+  //timestamp
+
+  artdaq::Fragment::timestamp_t ts(0);
+  {
+    using namespace boost::gregorian;
+    using namespace boost::posix_time;
+  
+    ptime t_now(second_clock::universal_time());
+    ptime time_t_epoch(date(1970,1,1));
+    time_duration diff = t_now - time_t_epoch;
+
+    ts = diff.total_nanoseconds() - fTimeOffsetNanoSec;
+  }
+
   metricMan->sendMetric(".getNext.Size",last_read_data_size_,"bytes",1,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
   
   frags.emplace_back( artdaq::Fragment::FragmentBytes( data_size_bytes,
 						      0, fragment_id(),
-						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_) );
+						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_, ts) );
   TLOG(TLVL_DEBUG +8 ) << __func__ << " : Initialized data of size " << frags.back()->dataSizeBytes();
   
   TLOG(TLVL_DEBUG +9 ) << __func__<<  " : Read data size was " << data_size_bytes;

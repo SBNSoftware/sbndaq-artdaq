@@ -1,3 +1,5 @@
+add_subdirectory(icarus-base)
+
 include_directories( ${CAENCOMM_INC} )
 #include_directories( ${CAENVME_INC} )
 #include_directories( ${CAENDIGITIZER_INC} )
@@ -29,9 +31,9 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 		)
 
 simple_plugin(PhysCrateData "generator"
-  icarus-artdaq-base_A2795Board
-  icarus-artdaq-base_VetoUDP
-  icarus-artdaq-base_PhysCrate
+  icarus-base_A2795Board
+  icarus-base_VetoUDP
+  icarus-base_PhysCrate
   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_ICARUS
@@ -65,3 +67,17 @@ simple_plugin(PhysCrateData "generator"
 #   ${CETLIB}
 #   ${CETLIB_EXCEPT}
 #   )
+
+simple_plugin(ICARUSTriggerUDP "generator"
+#    artdaq-core-demo_Overlays
+    artdaq_Generators
+    artdaq_DAQdata
+    artdaq-core_Utilities
+    artdaq-core_Data
+  ${Boost_SYSTEM_LIBRARY}
+  canvas
+    ${FHICLCPP}
+  ${MESSAGEFACILITY_LIBS}
+    ${CETLIB}
+ ${CETLIB_EXCEPT}
+    )

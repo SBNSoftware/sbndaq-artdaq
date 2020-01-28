@@ -220,6 +220,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fModeLVDS = ps.get<uint32_t>("ModeLVDS"); // LVDS output mode
   TLOG(TINFO)<<__func__ << ": ModeLVDS=" << fModeLVDS;
 
+  fTrigOutDelay = ps.get<uint32_t>("TrigOutDelay",0); // TRG_OUT delay, 16 nsec ticks
+  TLOG(TINFO)<<__func__ << ": TrigOutDelay=" << fTrigOutDelay;
+
   fSelfTriggerMode = ps.get<uint32_t>("SelfTriggerMode"); 
   TLOG(TINFO)<<__func__ << ": SelfTriggerMode=" << fSelfTriggerMode;
 
@@ -314,8 +317,6 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   // Always set output to "New LVDS features"
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_IO_CONTROL, &ioMode);
   sbndaq::CAENDecoder::checkError(retcod,"ReadFPOutputConfig",fBoardID);
-
-  ioMode = readBack;
 
   // Construct mode mask
   data = fModeLVDS | (fModeLVDS << 4) | (fModeLVDS << 8) | (fModeLVDS << 12);
@@ -531,9 +532,20 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
     }
   }
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width (maybe?) to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,0x8070,fCAEN.triggerPulseWidth);
+  sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,0x8070,&readback);
+  CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
 
   ConfigureLVDS();
   ConfigureSelfTriggerMode();
+
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTrigOutDelay" << fTrigOutDelay << TLOG_ENDL;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_DELAY,fTrigOutDelay);
+  sbndaq::CAENDecoder::checkError(retcode,"SetTrigOutputDelay",fBoardID);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,TRG_OUT_DELAY,&readback);
+  CheckReadback("SetTrigOutDelay", fBoardID,fTrigOutDelay,readback);  
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;
   retcode = CAEN_DGTZ_SetExtTriggerInputMode(fHandle,(CAEN_DGTZ_TriggerMode_t)(fCAEN.extTrgMode));
