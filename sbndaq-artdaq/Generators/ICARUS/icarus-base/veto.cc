@@ -12,7 +12,7 @@ int totp=0;
 int vetoOn()
 {
   char mhost[128];
-  char buf[128];
+  char buf[128] __attribute__ ((nonstring));
   //char myrec[256];
   char st[256];
   int retval=0;

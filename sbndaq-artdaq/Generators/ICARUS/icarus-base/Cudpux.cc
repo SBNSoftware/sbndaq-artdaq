@@ -98,31 +98,32 @@ int
 Cudp::Receive(char *buffer,int size,int timeout)
 {
    // printf ("waiting message %d\n",size);
-         fd_set rfds;
-		struct timeval tv;
+  fd_set rfds;
+  struct timeval tv;
   
-    FD_ZERO(&rfds);
-    FD_SET(sock,&rfds);
+  FD_ZERO(&rfds);
+  FD_SET(sock,&rfds);
 
-    tv.tv_sec = timeout;
-    tv.tv_usec = 0;
-
-     int retva;
-	  int nfd=sock;
-	  nfd++;
-     if (timeout==0)
-       retva = select (nfd,&rfds,0,&rfds,NULL);
-     else
-       retva = select (nfd,&rfds,0,&rfds,&tv);
-
-       	  TRACEN("Cudpx.cc",TLVL_ERROR, "select return: %d isset %d",retva,FD_ISSET(sock,&rfds));
-     
-     if (retva)
-     {
-             return  recvfrom (sock, buffer,size,0,
-                 (struct sockaddr *) &clientAddr,(socklen_t *)&sockAddrSize) ;
-     }
-     else return 0;
+  tv.tv_sec = timeout;
+  tv.tv_usec = 0;
+  
+  int retva;
+  int nfd=sock;
+  nfd++;
+  
+  if (timeout==0)
+    retva = select (nfd,&rfds,0,0,NULL);
+  else
+    retva = select (nfd,&rfds,0,0,&tv);
+  
+  TRACEN("Cudpx.cc",TLVL_ERROR, "select return: %d isset %d",retva,FD_ISSET(sock,&rfds));
+  
+  if (retva)
+    {
+      return  recvfrom (sock, buffer,size,0,
+			(struct sockaddr *) &clientAddr,(socklen_t *)&sockAddrSize) ;
+    }
+  else return 0;
 }
 
 int

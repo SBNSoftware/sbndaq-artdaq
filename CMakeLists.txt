@@ -71,6 +71,7 @@ find_ups_product( artdaq_utilities v1_05_02)
 find_ups_product( artdaq_core v3_05_07 )
 
 find_ups_product( art v3_02_04 )
+find_ups_product( art_root_io v1_00_00 )
 find_ups_product( fhiclcpp v4_09_03 )
 find_ups_product( messagefacility v2_04_03)
 find_ups_product( cetlib v3_07_02 )
@@ -160,7 +161,7 @@ message("-DCANVAS_HEX_VERSION=0x${CANVAS_MAJOR_VERSION}${CANVAS_MINOR_VERSION}${
 add_definitions(-DCANVAS_HEX_VERSION=0x${CANVAS_MAJOR_VERSION}${CANVAS_MINOR_VERSION}${CANVAS_PATCH_VERSION})
 
 # macros for art_dictionary and simple_plugin
-include(ArtDictionary)
+#include(ArtDictionary)
 include(ArtMake)
 include(BuildPlugins)
 include(CetTest)

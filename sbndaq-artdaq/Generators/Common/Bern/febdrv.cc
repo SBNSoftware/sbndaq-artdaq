@@ -131,6 +131,7 @@ int initif(char *iface)
   }
   struct ifreq ifreq_s;
   strncpy( ifreq_s.ifr_name, iface, IF_NAMESIZE );
+  ifreq_s.ifr_name[IF_NAMESIZE-1] = '\0';
   ioctl(sockfd_w, SIOCGIFINDEX, &ifreq_s );
   struct sockaddr_ll sockaddr_ll_s;
   memset(&sockaddr_ll_s, 0, sizeof(struct sockaddr_ll) );
@@ -164,7 +165,8 @@ int initif(char *iface)
   }
   /* Get the index of the interface to send on */
   memset(&if_idx, 0, sizeof(struct ifreq));
-  strncpy(if_idx.ifr_name, ifName, IFNAMSIZ-1);
+  strncpy(if_idx.ifr_name, ifName, IFNAMSIZ);
+  if_idx.ifr_name[IFNAMSIZ-1] = '\0';
   if (ioctl(sockfd_w, SIOCGIFINDEX, &if_idx) < 0)
     {
       perror("SIOCGIFINDEX"); 
@@ -172,7 +174,8 @@ int initif(char *iface)
     }
   /* Get the MAC address of the interface to send on */
   memset(&if_mac, 0, sizeof(struct ifreq));
-  strncpy(if_mac.ifr_name, ifName, IFNAMSIZ-1);
+  strncpy(if_mac.ifr_name, ifName, IFNAMSIZ);
+  if_idx.ifr_name[IFNAMSIZ-1] = '\0';
   if (ioctl(sockfd_w, SIOCGIFHWADDR, &if_mac) < 0)
     {
       perror("SIOCGIFHWADDR"); 
@@ -195,7 +198,8 @@ int sendtofeb(int len)  //sending spkt
   struct sockaddr_ll socket_address;
   /* Get the index of the interface to send on */
   memset(&if_idx, 0, sizeof(struct ifreq));
-  strncpy(if_idx.ifr_name, ifName, IFNAMSIZ-1);
+  strncpy(if_idx.ifr_name, ifName, IFNAMSIZ);
+  if_idx.ifr_name[IFNAMSIZ-1] = '\0';
   if (ioctl(sockfd_w, SIOCGIFINDEX, &if_idx) < 0)
   {
     perror("SIOCGIFINDEX"); 
@@ -203,7 +207,8 @@ int sendtofeb(int len)  //sending spkt
   }
   /* Get the MAC address of the interface to send on */
   memset(&if_mac, 0, sizeof(struct ifreq));
-  strncpy(if_mac.ifr_name, ifName, IFNAMSIZ-1);
+  strncpy(if_mac.ifr_name, ifName, IFNAMSIZ);
+  if_idx.ifr_name[IFNAMSIZ-1] = '\0';
   if (ioctl(sockfd_w, SIOCGIFHWADDR, &if_mac) < 0)
   {
     perror("SIOCGIFHWADDR");
