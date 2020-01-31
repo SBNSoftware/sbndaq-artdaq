@@ -220,6 +220,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fModeLVDS = ps.get<uint32_t>("ModeLVDS"); // LVDS output mode
   TLOG(TINFO)<<__func__ << ": ModeLVDS=" << fModeLVDS;
 
+  fTrigInLevel  = ps.get<uint32_t>("TrigInLevel",0); // TRG_IN on level (1) or edge (0)
+  TLOG(TINFO)<<__func__ << ": TrigInLevel=" << fTrigInLevel;
+
   fTrigOutDelay = ps.get<uint32_t>("TrigOutDelay",0); // TRG_OUT delay, 16 nsec ticks
   TLOG(TINFO)<<__func__ << ": TrigOutDelay=" << fTrigOutDelay;
 
@@ -357,6 +360,15 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   {
     // Put LVDS into INPUT mode
     ioMode &= ~(LVDS_IO | DISABLE_TRG_OUT_LEMO);
+  }
+
+  if ( fTrigInLevel )
+  {
+    ioMode |= TRG_IN_LEVEL;
+  }
+  else
+  {
+    ioMode &= ~(TRG_IN_LEVEL);
   }
 
   TLOG(TINFO) << __func__ << " FPOutputConfig: 0x" << 
