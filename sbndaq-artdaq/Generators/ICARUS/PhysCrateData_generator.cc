@@ -13,8 +13,8 @@
 
 #include "sbndaq-artdaq-core/Trace/trace_defines.h"
 
-#include "icarus-artdaq-base/PhysCrate.h"
-#include "icarus-artdaq-base/A2795.h"
+#include "icarus-base/PhysCrate.h"
+#include "icarus-base/A2795.h"
 #include "CAENComm.h"
 
 icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
@@ -25,7 +25,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   veto_udp(veto_host.c_str(),veto_host_port),
   _doRedis(ps.get<bool>("doRedis",false)),
   _redisHost(ps.get<std::string>("redisHost","localhost")),
-  _redisPort(ps.get<int>("redisPort",6379))
+  _redisPort(ps.get<int>("redisPort",6379)),
+  _issueStart(ps.get<bool>("issueStart",true))
 {
   InitializeHardware();
   InitializeVeto();
@@ -57,6 +58,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
       throw cet::exception("PhysCrateData") << "Could not setup redis context without error";
     }
   }
+
+  ForceClear();
 }
 
 icarus::PhysCrateData::~PhysCrateData()
@@ -201,6 +204,9 @@ void icarus::PhysCrateData::InitializeHardware(){
   physCr = std::make_unique<PhysCrate>();
   physCr->initialize(pcieLinks_);
   ForceReset();
+
+  SetDCOffset();
+  SetTestPulse();
 }
 
 BoardConf icarus::PhysCrateData::GetBoardConf(){
@@ -248,16 +254,17 @@ void icarus::PhysCrateData::ConfigureStart(){
   //physCr->configure(GetBoardConf());
   //VetoOff();
 
-  ForceClear();
-
-  physCr->start();
+  //ForceClear();
+  
+  if(_issueStart)
+    physCr->start();
 
   if(_doVetoTest)
     _vetoTestThread->start();
 
   GetData_thread_->start();
 
-  SetDCOffset();
+  //SetDCOffset();
   /* 
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto bdhandle = physCr->BoardHandle(ib);
@@ -270,7 +277,7 @@ void icarus::PhysCrateData::ConfigureStart(){
     std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << offset_d << std::endl;
   }
   */
-  SetTestPulse();
+  //SetTestPulse();
 }
 
 void icarus::PhysCrateData::ConfigureStop(){

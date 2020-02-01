@@ -5,7 +5,7 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateStatFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
-#include "icarus-artdaq-base/packs.h"
+//#include "icarus-base/packs.h"
 #include <unistd.h>
 #include <vector>
 #include <atomic>
@@ -73,6 +73,8 @@ namespace icarus {
 
     sbndaq::CircularBuffer<uint16_t> fCircularBuffer;
     size_t fCircularBufferSize;
+
+    uint32_t fTimeOffsetNanoSec; //offset to be used for fragment timestamp
 
   private:
     
