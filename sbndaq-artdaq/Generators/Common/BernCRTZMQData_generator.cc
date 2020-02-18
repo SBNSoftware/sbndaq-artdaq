@@ -63,7 +63,7 @@ void sbndaq::BernCRTZMQData::ConfigureStart() {
     feb_send_bitstreams(MAC5s_[iFEB]); //send PROBE and SC configuration to FEB
     if(feb_configuration[MAC5s_[iFEB]].GetHVOnPermission()) febctl(BIAS_ON, MAC5s_[iFEB]); //turn on SiPM HV (if FHiCL file allows it)
   }
-  febctl(DAQ_BEG); //start data taking mode for all boards 
+  StartFebdrv(); //start data taking mode for all boards 
 
   zmq_subscriber_ = zmq_socket(zmq_context_,ZMQ_SUB);
 
@@ -315,6 +315,16 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
   zmq_msg_close (&reply);
 } //feb_send_bitstreams
 
+void sbndaq::BernCRTZMQData::StartFebdrv() {
+  TLOG(TLVL_DEBUG)<< __func__<<": Starting febdrv";
+  febctl(DAQ_BEG);
+  last_restart_time = std::chrono::system_clock::now();
+}
+
+uint64_t sbndaq::BernCRTZMQData::GetTimeSinceLastRestart() {
+  return (std::chrono::system_clock::now() -  last_restart_time).count();
+}
+
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
 size_t sbndaq::BernCRTZMQData::GetZMQData() {
   /**
@@ -322,7 +332,7 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
    */
   
   TLOG(TLVL_DEBUG) << __func__ << "() called";
-  
+
   size_t data_size=0;
   size_t wait_count=0;
   size_t events = 0;

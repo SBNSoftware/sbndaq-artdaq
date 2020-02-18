@@ -21,6 +21,10 @@ namespace sbndaq {
 
     size_t GetZMQData();
 
+    void StartFebdrv();
+    uint64_t GetTimeSinceLastRestart();
+    std::chrono::time_point<std::chrono::system_clock> last_restart_time;
+
     std::string zmq_listening_port_;
     std::string zmq_data_pub_port_;
     void*  zmq_context_;

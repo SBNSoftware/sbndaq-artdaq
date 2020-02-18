@@ -45,6 +45,9 @@ namespace sbndaq {
     //gets the data. Output is size of data filled. Input is FEM ID.
     virtual size_t GetZMQData() = 0;
 
+    virtual void StartFebdrv() = 0;
+    virtual uint64_t GetTimeSinceLastRestart() = 0;
+
     fhicl::ParameterSet const ps_;
 
     //These functions could be overwritten by the derived class
@@ -66,13 +69,17 @@ namespace sbndaq {
       uint8_t                      MAC5;
       uint16_t                     fragment_id;
       uint32_t                     event_number; //for given FEB
+      uint64_t                     last_accepted_timestamp;
+      uint32_t                     omitted_events;
 
       FEBBuffer(uint32_t capacity, uint8_t mac5, uint16_t id)
 	: buffer(EventBuffer_t(capacity)),
 	  mutexptr(new std::mutex),
 	  MAC5(mac5),
           fragment_id(id),
-          event_number(0)
+          event_number(0),
+          last_accepted_timestamp(1), //use 1 as a flag in case events are omitted at the very beginning of the run
+          omitted_events(0)
       { Init(); }
       FEBBuffer() { FEBBuffer(0, 0, 0); }
       void Init() {
@@ -106,7 +113,13 @@ namespace sbndaq {
     int32_t  system_clock_deviation;
 
     uint64_t run_start_time;
-
   };
+
+  //workarounds for issues with FEBs, PPS
+  bool omit_out_of_order_events_;
+  bool omit_out_of_sync_events_;
+  int32_t out_of_sync_tolerance_ns_;
+
+  uint64_t febdrv_restart_period;
 }
 

@@ -96,6 +96,7 @@ namespace sbndaq
       ENABLE_EXT_TRIGGER   = 0x40000000,
       ENABLE_NEW_LVDS      = 0x100,
       ENABLE_TRG_OUT       = 0xFF,
+      TRG_IN_LEVEL         = 0x400,
       TRIGGER_LOGIC        = 0x1F00,
       DISABLE_TRG_OUT_LEMO = 0x2,
       LVDS_IO              = 0x3C,
@@ -133,6 +134,7 @@ namespace sbndaq
     uint32_t fSelfTriggerMask;
     uint32_t fModeLVDS;
     uint32_t fTrigOutDelay;
+    uint32_t fTrigInLevel;
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
     uint32_t fFragmentID;

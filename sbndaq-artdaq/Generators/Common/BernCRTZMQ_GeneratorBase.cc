@@ -37,21 +37,26 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   TLOG(TLVL_INFO)<<__func__<<" called";
 
-  uint16_t fragment_id_base = ps_.get<uint16_t>("fragment_id_base");
-
-  MAC5s_ = ps_.get< std::vector<uint8_t> >("MAC5s");
-
   //reset last poll times
   last_poll_start = 0;
   last_poll_end = 0;
-
   sequence_id_ = 0;
+
+  //read parameters from FHiCL file
+  uint16_t fragment_id_base = ps_.get<uint16_t>("fragment_id_base");
+  MAC5s_ = ps_.get< std::vector<uint8_t> >("MAC5s");
+
+  omit_out_of_order_events_ = ps_.get<bool>("omit_out_of_order_events");
+  omit_out_of_sync_events_  = ps_.get<bool>("omit_out_of_sync_events");
+  out_of_sync_tolerance_ns_ = 1000000 * ps_.get<uint32_t>("out_of_sync_tolerance_ms");
 
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
   ZMQBufferCapacity_ = nFEBs()*1024 + 1;
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
+
+  febdrv_restart_period = 1e9 * ps_.get<uint32_t>("febdrv_restart_period_s");
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
         throttle_usecs_ % throttle_usecs_check_ != 0) ) { //check FHiCL file validity
@@ -219,6 +224,13 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   TLOG(TLVL_DEBUG) <<__func__<< "() called";
 
+  //workaround for spike issue: periodically restart febdrv
+  if(febdrv_restart_period) {
+    if(GetTimeSinceLastRestart() > febdrv_restart_period) {
+      StartFebdrv(); //StartFebdrv is all we need to do to restart it
+    }
+  }
+
   const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
 
   //simple check of data size validity
@@ -274,9 +286,11 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     system_clock_deviation = poll_end_deviation;
 
   
-  if(last_poll_start == 0) { //fix the poll timestamp for the very first poll to attempt to estimate the timestamps
-    last_poll_start = this_poll_start - 300*1000*1000;//TODO dummy value... move to fhicl file?
-    last_poll_end   = this_poll_end   - 300*1000*1000;//TODO dummy value... move to fhicl file?
+  if(last_poll_start == 0) {
+    //we don't know the previous poll time for the very first poll, so we assign a dummy value of -300ms
+    //It should be OK even if the actual polling time is shorter
+    last_poll_start = this_poll_start - 300*1000*1000;
+    last_poll_end   = this_poll_end   - 300*1000*1000;
   }
 
   TLOG(TLVL_DEBUG)<<"Number of events is "<<n_events;
@@ -306,7 +320,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
        * - additional event with timing information (which has MAC5=0xffff)
        *
        * Whenever we see a new MAC5 and we know the previous one is complete and we can insert it into the buffer.
-       * The timing information event isn't inserted into buffer directly, but is accessed directly by InsertIntoFEBBuffer
+       * The timing information event isn't inserted into buffer, but it is saved in metadata for each event
        */
 
       TLOG(TLVL_DEBUG)<<__func__<<": found new MAC ("<<this_event.MAC5()
@@ -367,7 +381,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   //loop over all the CRTHit events in our buffer (for this FEB)
   for(size_t i_e=0; i_e<buffer_end; ++i_e) {
     BernCRTZMQEvent const& data = buffer.buffer[i_e].first;
-    BernCRTZMQFragmentMetadata const& metadata = buffer.buffer[i_e].second;
+    BernCRTZMQFragmentMetadata & metadata = buffer.buffer[i_e].second;
 
     //calculate timestamp based on nanosecond from FEB and poll times measured by server
     //see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
@@ -390,10 +404,56 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     }
     else {
       timestamp = mean_poll_time - mean_poll_time_ns + ts0;
-    } 
+    }
+
+    if(omit_out_of_sync_events_) {
+      /**
+       * Omit events in which T0 value from FEB seems out of sync with server clock.
+       * This is a method to alleviate problem of "spikes".  Otherwise it should not
+       * be needed.  Under normal conditions server clock can be off by up to 500ms
+       * before the data starts to be corrupted.
+       */
+      if(
+          timestamp < metadata.last_poll_start() - out_of_sync_tolerance_ns_
+       || timestamp > metadata.this_poll_end()   + out_of_sync_tolerance_ns_) {
+        if(!buffer.omitted_events) { //avoid spamming messages
+          TLOG(TLVL_WARNING)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
+          TLOG(TLVL_WARNING)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
+          TLOG(TLVL_WARNING) <<__func__<<"() Omitted FEB timestamp out of sync with server clock";
+        }
+        buffer.omitted_events++;
+        continue;
+      }
+    }
+
+    if(omit_out_of_order_events_) {
+      /**
+       * Omit events with nonmonotonically growing timestamp
+       * This is a method to alleviate problem of "spikes"
+       * Out of order events may appear due to corruption of FEB data
+       * or due to large desynchronisation of the server clock w.r.t. FEB PPS
+       */
+       if(timestamp <= buffer.last_accepted_timestamp) {
+         if(!buffer.omitted_events) {//avoid spamming messages
+           TLOG(TLVL_WARNING)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
+           TLOG(TLVL_WARNING)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
+           TLOG(TLVL_WARNING) <<__func__<<"() Omitted out of order timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" ≤ "<<sbndaq::BernCRTZMQFragment::print_timestamp(buffer.last_accepted_timestamp);
+         }
+         buffer.omitted_events++;
+         continue;
+       }
+    }
 
     TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
     TLOG(TLVL_SPECIAL)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
+
+    if(buffer.omitted_events) {
+      TLOG(TLVL_WARNING) <<__func__<<"() Accepted timestamp after omitting "<< buffer.omitted_events<<" of them. Timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" Timestamp of previously accepted event "<<sbndaq::BernCRTZMQFragment::print_timestamp(buffer.last_accepted_timestamp);
+      metadata.set_omitted_events(buffer.omitted_events);
+      buffer.omitted_events = 0;
+      metadata.set_last_accepted_timestamp(buffer.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
+    }
+    buffer.last_accepted_timestamp = timestamp;
     
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
