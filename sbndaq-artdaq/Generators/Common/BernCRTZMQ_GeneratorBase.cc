@@ -40,7 +40,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   //reset last poll times
   last_poll_start = 0;
   last_poll_end = 0;
-
   sequence_id_ = 0;
 
   //read parameters from FHiCL file
@@ -56,6 +55,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
+
+  febdrv_restart_period = 1e9 * ps_.get<uint32_t>("febdrv_restart_period_s");
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
         throttle_usecs_ % throttle_usecs_check_ != 0) ) { //check FHiCL file validity
@@ -222,6 +223,13 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & buffer
 bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   TLOG(TLVL_DEBUG) <<__func__<< "() called";
+
+  //workaround for spike issue: periodically restart febdrv
+  if(febdrv_restart_period) {
+    if(GetTimeSinceLastRestart() > febdrv_restart_period) {
+      StartFebdrv(); //StartFebdrv is all we need to do to restart it
+    }
+  }
 
   const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
 

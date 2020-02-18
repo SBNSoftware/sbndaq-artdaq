@@ -45,6 +45,9 @@ namespace sbndaq {
     //gets the data. Output is size of data filled. Input is FEM ID.
     virtual size_t GetZMQData() = 0;
 
+    virtual void StartFebdrv() = 0;
+    virtual uint64_t GetTimeSinceLastRestart() = 0;
+
     fhicl::ParameterSet const ps_;
 
     //These functions could be overwritten by the derived class
@@ -112,8 +115,11 @@ namespace sbndaq {
     uint64_t run_start_time;
   };
 
+  //workarounds for issues with FEBs, PPS
   bool omit_out_of_order_events_;
   bool omit_out_of_sync_events_;
   int32_t out_of_sync_tolerance_ns_;
+
+  uint64_t febdrv_restart_period;
 }
 
