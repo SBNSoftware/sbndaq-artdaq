@@ -52,7 +52,8 @@ namespace sbndaq
     
     void send(const Command_t);
     int poll_with_timeout(int);
-    int read(int,uint16_t*);
+    //int read(int,uint16_t*);
+    int read(int,char*);
     
     int send_TTLK_INIT(int,int);
     void send_TRIG_VETO();
