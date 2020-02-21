@@ -62,7 +62,16 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
    */
 
   poll_with_timeout(100);
-  send_TRIG_ALLW();
+  /*
+  int size_bytes = poll_with_timeout(sleep_time_ms);
+  if(size_bytes>0){
+    //uint16_t buffer[size_bytes/2+1];
+    char buffer[size_bytes];
+    read(size_bytes,buffer);
+    TRACE(TR_LOG,"received:: %s",buffer);
+  } 
+  */   
+//send_TRIG_ALLW();
   
   return true;
 
@@ -70,19 +79,19 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
 void sbndaq::ICARUSTriggerUDP::start()
 {
   send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_);
-  send_TRIG_ALLW();
+  //send_TRIG_ALLW();
 }
 void sbndaq::ICARUSTriggerUDP::stop()
 {
-  send_TRIG_VETO();
+  //send_TRIG_VETO();
 }
 void sbndaq::ICARUSTriggerUDP::pause()
 {
-  send_TRIG_VETO();
+  //send_TRIG_VETO();
 }
 void sbndaq::ICARUSTriggerUDP::resume()
 {
-  send_TRIG_ALLW();
+  //send_TRIG_ALLW();
 }
 
 //send a command
@@ -113,13 +122,14 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int timeout_ms)
     //have something good
     if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
       //do something to get data size here?
+      
       /*
 	uint8_t peekBuffer[2];
 	recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
 	(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
 	return (int)(peekBuffer[1]);
       */
-      return 0;
+      return 8;
     }
   }
   //timeout
@@ -138,7 +148,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int timeout_ms)
 }
 
 //read data size from socket
-int sbndaq::ICARUSTriggerUDP::read(int size, uint16_t* buffer){
+int sbndaq::ICARUSTriggerUDP::read(int size, char* buffer){
   TRACE(TR_LOG,"read:: get %d bytes from %s\n",size,ip_.c_str());
   int size_rcv = recvfrom(datasocket_, buffer, size, 0, (struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
   
@@ -155,11 +165,22 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
 {
   while(retries>-1){
   
-    send(TTLK_INIT);
+  char cmd[16];
+  sprintf(cmd,"%s","TTLK_CMD_INIT");
+
+  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
+  sendto(datasocket_,&cmd,16, 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
+
+  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
+
+  //send(TTLK_INIT);
     int size_bytes = poll_with_timeout(sleep_time_ms);
     if(size_bytes>0){
-      uint16_t buffer[size_bytes/2+1];
+      //uint16_t buffer[size_bytes/2+1];
+      char buffer[size_bytes];
       read(size_bytes,buffer);
+      TRACE(TR_LOG,"received:: %s",buffer);
+      
       return retries;
     }
 
