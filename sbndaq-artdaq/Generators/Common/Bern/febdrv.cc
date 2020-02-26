@@ -405,13 +405,15 @@ int stopDAQ() {
   return 1;
 }
 
-int startDAQ(uint8_t mac5) {
+int startDAQ(uint8_t mac5, bool clean_buffers = true) {
   int nreplies=0;
   dstmac[5]=mac5; 
   
-  memset(evbuf,0, sizeof(evbuf)); //clean zmq buffer
-  memset(evnum,0, sizeof(evnum));
-  memset(evbufstat, EMPTY, sizeof(evbufstat));
+  if(clean_buffers) {
+    memset(evbuf,0, sizeof(evbuf)); //clean zmq buffer
+    memset(evnum,0, sizeof(evnum));
+    memset(evbufstat, EMPTY, sizeof(evbufstat));
+  }
   
   nreplies=0;
   sendcommand(dstmac,FEB_GEN_INIT,0,buf); //stop DAQ on the FEB
@@ -775,7 +777,7 @@ void polldata() {
   nsperpoll = poll_start - poll_end;
 
   if(restart_FEBs) {
-    startDAQ(0xff); //startDAQ is sufficient to do restart
+    startDAQ(0xff, false); //startDAQ is sufficient to do restart
     printdate(); printf("Restarted DAQ\n"); 
     restart_FEBs = false;
   }
