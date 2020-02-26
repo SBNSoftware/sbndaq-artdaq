@@ -773,6 +773,13 @@ void polldata() {
   poll_end = std::chrono::system_clock::now().time_since_epoch().count();
   poll_end_deviation = poll_end - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
   nsperpoll = poll_start - poll_end;
+
+  if(restart_FEBs) {
+    startDAQ(0xff); //startDAQ is sufficient to do restart
+    printdate(); printf("Restarted DAQ\n"); 
+    restart_FEBs = false;
+  }
+
   return;
 } //polldata
 
@@ -872,8 +879,7 @@ int main (int argc, char **argv) {
     sprintf(cmd,"%s",(char*)zmq_msg_data(&request));
     printdate(); printf ("Received Command %s %02x  ",cmd, *(uint8_t*)(zmq_msg_data(&request)+8)); 
     rv=0;
-    if(nclients>0)
-    {
+    if(nclients>0) {
       if(strcmp(cmd, "BIAS_ON")==0) rv=biasON(*(uint8_t*)(zmq_msg_data(&request)+8)); //get 8-th byte of message - mac of target board
       else if (strcmp(cmd, "BIAS_OF")==0) rv=biasOFF(*(uint8_t*)(zmq_msg_data(&request)+8));
       else if (strcmp(cmd, "DAQ_BEG")==0) rv=startDAQ(*(uint8_t*)(zmq_msg_data(&request)+8));
@@ -881,16 +887,15 @@ int main (int argc, char **argv) {
       else if (strcmp(cmd, "SETCONF")==0) rv=configu(*(uint8_t*)(zmq_msg_data(&request)+8), (uint8_t*)(zmq_msg_data(&request)+9), zmq_msg_size (&request)-9); 
       else if (strcmp(cmd, "GET_SCR")==0) rv=getSCR(*(uint8_t*)(zmq_msg_data(&request)+8),buf); 
       else if (strcmp(cmd, "GETINFO")==0) rv=getInfo();
+      else if (strcmp(cmd, "RESTART")==0) rv = restart_FEBs = true;
     }
     //  Send reply back to client
     zmq_msg_t reply;
-    if (strcmp(cmd, "GET_SCR")==0) 
-    {
+    if (strcmp(cmd, "GET_SCR")==0) {
       zmq_msg_init_size (&reply, 1144/8);
       memcpy(zmq_msg_data (&reply),buf,1144/8);
     }
-    else if (strcmp(cmd, "GETINFO")==0) 
-    {
+    else if (strcmp(cmd, "GETINFO")==0) {
       if(nclients == 0) { //send GETINFO reply even if no FEBs are connected
         infoLength = 2;
         memcpy(&buf[0],"0\n",infoLength + 1);
@@ -898,8 +903,7 @@ int main (int argc, char **argv) {
       zmq_msg_init_size (&reply, infoLength+1);
       memcpy(zmq_msg_data (&reply),buf,infoLength+1);
     }
-    else
-    { 
+    else { 
       zmq_msg_init_size (&reply, 5);
       /* The following is really weird, right? */
       if(rv>0) sprintf((char *)zmq_msg_data (&reply), "OK");

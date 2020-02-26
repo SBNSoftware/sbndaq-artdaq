@@ -19,7 +19,7 @@ namespace sbndaq {
     void ConfigureStart(); //called in start()
     void ConfigureStop();  //called in stop()
 
-    size_t GetZMQData();
+    size_t GetZMQData(bool restart = false);
 
     void StartFebdrv();
     uint64_t GetTimeSinceLastRestart();
@@ -31,7 +31,7 @@ namespace sbndaq {
     void*  zmq_subscriber_;
     void*  zmq_requester_;
 
-    enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
+    enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO, RESTART };
     void febctl(feb_command command, uint8_t mac5 = 255);
 
     void feb_send_bitstreams(uint8_t mac5);

@@ -111,6 +111,7 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
     case BIAS_ON : strcpy ( command_string, "BIAS_ON");   break;
     case BIAS_OF : strcpy ( command_string, "BIAS_OF");   break;
     case GETINFO : strcpy ( command_string, "GETINFO");   break;
+    case RESTART : strcpy ( command_string, "RESTART");   break;
     default:
       TLOG(TLVL_ERROR) <<   __func__ << " Unrecognized command! [software error, this should never happen]";
       throw cet::exception( std::string(TRACE_NAME) +  __func__ + " Unrecognized command! [software error, this should never happen]");
@@ -326,16 +327,22 @@ uint64_t sbndaq::BernCRTZMQData::GetTimeSinceLastRestart() {
 }
 
 /*---------------BERN CRT ZMQ DATA-------------------------------------*/
-size_t sbndaq::BernCRTZMQData::GetZMQData() {
+size_t sbndaq::BernCRTZMQData::GetZMQData(bool restart) {
   /**
    * Reads data from febdrv via zeromq and copies it into ZMQBufferUPtr
    */
   
   TLOG(TLVL_DEBUG) << __func__ << "() called";
 
-  size_t data_size=0;
-  size_t wait_count=0;
-  size_t events = 0;
+  if(restart) {
+    TLOG(TLVL_WARNING)<< __func__<<": Requesting febdrv restart";
+    febctl(RESTART);
+    last_restart_time = std::chrono::system_clock::now();
+  }
+
+  size_t data_size  = 0;
+  size_t wait_count = 0;
+  size_t events     = 0;
   
   zmq_msg_t feb_data_msg;
   zmq_msg_init(&feb_data_msg);

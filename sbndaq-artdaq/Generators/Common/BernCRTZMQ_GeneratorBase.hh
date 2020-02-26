@@ -42,8 +42,8 @@ namespace sbndaq {
     virtual void ConfigureStart() = 0; //called in start()
     virtual void ConfigureStop() = 0;  //called in stop()
 
-    //gets the data. Output is size of data filled. Input is FEM ID.
-    virtual size_t GetZMQData() = 0;
+    //gets the data. Output is size of data filled.
+    virtual size_t GetZMQData(bool restart) = 0;
 
     virtual void StartFebdrv() = 0;
     virtual uint64_t GetTimeSinceLastRestart() = 0;

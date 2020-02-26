@@ -225,13 +225,14 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   TLOG(TLVL_DEBUG) <<__func__<< "() called";
 
   //workaround for spike issue: periodically restart febdrv
+  bool restart_FEB = false;
   if(febdrv_restart_period) {
     if(GetTimeSinceLastRestart() > febdrv_restart_period) {
-      StartFebdrv(); //StartFebdrv is all we need to do to restart it
+      restart_FEB = true;
     }
   }
 
-  const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
+  const size_t data_size = GetZMQData(restart_FEB); //read zmq data from febdrv and fill ZMQ buffer
 
   //simple check of data size validity
   if(data_size % sizeof(BernCRTZMQEvent)) {
