@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq    v0_05_00
+parent sbndaq_artdaq    v0_05_01
 defaultqual     e19:s87
 
 # These optional lines define the installed directories where
@@ -18,7 +18,7 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_07_02
+artdaq_demo	          v3_07_02CH3e50c3
 sbndaq_artdaq_core    v0_05_00
 caencomm              v1_2a
 caenvme               v2_50
@@ -37,7 +37,7 @@ end_product_list
 # -nq- here means there is no qualifier
 # a "-" here means the dependent product is not required by the parent and will not be setup
 
-qualifier                   artdaq               sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx               epics jsoncpp    wibtools       windriver redis
+qualifier                   artdaq_demo          sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx               epics jsoncpp    wibtools       windriver redis
 e17:prof:s83                e17:s83:prof         e17:prof:s83          -nq-    -nq-     -nq-          e17:p2715a:prof    e17   e17:prof   e17            prof      prof
 e17:debug:s83               e17:s83:debug        e17:debug:s83         -nq-    -nq-     -nq-          e17:p2715a:debug   e17   e17:debug  e17            debug     debug
 e17:prof:s83:icarus         e17:s83:prof         e17:prof:s83          -nq-    -nq-     -nq-          e17:p2715a:prof    e17   e17:prof   -              -         prof
