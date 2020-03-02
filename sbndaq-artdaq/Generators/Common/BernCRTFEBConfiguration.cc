@@ -10,6 +10,7 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
 
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
+  InitializeParameters();
 //Configuration in the FHiCL file can have two formats, and the format is detected automatically
 //if bitstream exists in FHiCL file, it is loaded, otherwise human readable format is used
   std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB), "failure");
@@ -223,8 +224,6 @@ void sbndaq::BernCRTFEBConfiguration::InitializeParameters() {
 }
 
 bool sbndaq::BernCRTFEBConfiguration::read_human_readable_parameters(fhicl::ParameterSet const & ps_, int MAC5) {
-  InitializeParameters();
-  
   //read global parameters
   for(auto parameter : boolean_parameters) {
     boolean_parameters[parameter.first].value = ps_.get<bool>(parameter.first);
@@ -424,7 +423,58 @@ std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int first_bit)
   return sbndaq::BernCRTFEBConfiguration::BitsToASCII(first_bit, first_bit);
 }
 
-std::string sbndaq::BernCRTFEBConfiguration::GetString(std::string separator) {
+std::string sbndaq::BernCRTFEBConfiguration::GetHumanReadableString(std::string separator) {
+  /**
+   * Returns human readable SlowControl configuration in FHiCL format
+   */
+  
+  std::string s="";
+  const int nCh = 32;
+  
+  //individual channel parameters are stored in an array
+  //they are stored in an array, which we will split into individual parameters
+  s += "channel_configuration : [\n";
+
+  for(int channel = 0; channel < 32; channel++) {
+    s += "[";
+    for(unsigned int parameter = 0; parameter < channel_parameter_names.size(); parameter++) {
+      std::string name = "channel"+std::to_string(channel)+"_"+channel_parameter_names[parameter];
+      //check if it is boolean parameter or numerical parameter
+      if(boolean_channel_parameters.count(name)) {
+        s += " " + std::to_string(boolean_channel_parameters[name].value);
+      }
+      else if(numerical_channel_parameters.count(name)) {
+        s += " " + std::to_string(numerical_channel_parameters[name].value);
+      }
+      if(parameter < channel_parameter_names.size() - 1)
+        s += ",";
+    }
+    s += "]";
+    if(channel < 31)
+      s += ",";
+    s += "\n";
+  }
+  s += "]\n\n";
+  
+  //global parameters
+  for(auto parameter : numerical_parameters) {
+    s += parameter.first + " : " + std::to_string(parameter.second.value);
+    if(parameter.second.comment.compare(""))
+      s += separator + parameter.second.comment;
+    s += "\n";
+  }
+  
+  for(auto parameter : boolean_parameters) {
+    s += parameter.first + " : " + std::to_string(parameter.second.value);
+    if(parameter.second.comment.compare(""))
+      s += separator + parameter.second.comment;
+    s += "\n";
+  }
+  
+  return s;
+}
+
+std::string sbndaq::BernCRTFEBConfiguration::GetBitStreamString(std::string separator) {
   /**
    * Returns ASCII representation of the full SlowControl BitStream, including the comments
    */

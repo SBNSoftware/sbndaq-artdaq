@@ -23,7 +23,8 @@ namespace sbndaq {
       int       GetProbeBitStreamNBytes();
       uint8_t * GetSlowControlBitStream();
       int       GetSlowControlBitStreamNBytes();
-      std::string GetString(std::string separator=" # ");
+      std::string GetBitStreamString(std::string separator=" # ");
+      std::string GetHumanReadableString(std::string separator=" # ");
       bool      GetHVOnPermission();
       int32_t   GetPPSOffset();
       
