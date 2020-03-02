@@ -36,14 +36,18 @@ namespace sbndaq {
       int32_t PPS_offset; //cable delay in ns
 
       //constructors
-      bool load_bitstream_format(fhicl::ParameterSet const & ps_, int iFEB);
-      bool load_readable_format(fhicl::ParameterSet const & ps_, int MAC5);
+      bool read_bitstream(fhicl::ParameterSet const & ps_, int iFEB);
+      bool read_human_readable_parameters(fhicl::ParameterSet const & ps_, int MAC5);
+      void HumanToBitstream();
+      void BitstreamToHuman();
       
       static int GetBit(unsigned int bit_number, uint8_t * bitstream, unsigned int nBits);
-      int GetBit(unsigned int bit_number);
+      uint16_t GetBits(unsigned int first_bit, unsigned int last_bit);
+      bool GetBit(unsigned int bit_number);
       static void SetBit(unsigned int bit_number, bool value, uint8_t * bitstream, unsigned int nBits);
+      void SetBits(unsigned int first_bit, unsigned int last_bit, uint16_t value);
       void SetBit(unsigned int bit_number, bool value);
-      std::string BitsToASCII(unsigned int firstBit, unsigned int lastBit);
+      std::string BitsToASCII(unsigned int first_bit, unsigned int last_bit);
       std::string BitsToASCII(unsigned int bit_number);
 
       static int ASCIIToBitStream(std::string ASCIIBitStream, uint8_t * bitstream, unsigned int nBits);
@@ -51,7 +55,7 @@ namespace sbndaq {
       //Human readable configuration
       struct boolean_parameter {
         bool        value;
-        uint16_t    bit;
+        uint16_t    bit_number;
         bool        inverted_logic; //if "true" corresponds to bit "0" in bit stream
         std::string comment;
       };
@@ -72,7 +76,6 @@ namespace sbndaq {
       static std::vector<std::string> channel_parameter_names;
       
       void InitializeParameters();
-      bool parameters_initialized;
   };
 }
 

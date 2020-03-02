@@ -10,19 +10,17 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
 
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
-  parameters_initialized = false;
-  
 //Configuration in the FHiCL file can have two formats, and the format is detected automatically
 //if bitstream exists in FHiCL file, it is loaded, otherwise human readable format is used
   std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB), "failure");
   if(s.compare("failure")) {
     TLOG(TLVL_INFO)<< __func__ << " Loading human-readable configuration for FEB" + iFEB;
-    if(!load_readable_format(ps_, iFEB))
+    if(!read_human_readable_parameters(ps_, iFEB))
       throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL configuration for FEB " + std::to_string(iFEB));
   }
   else {
     TLOG(TLVL_INFO)<< __func__ << " Loading bitstream configuration for FEB" + iFEB;
-    if(!load_bitstream_format(ps_, iFEB))
+    if(!read_bitstream(ps_, iFEB))
       throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL configuration for FEB " + std::to_string(iFEB));
   }
   
@@ -45,7 +43,7 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
   PPS_offset = PPS_offsets[iFEB];
 }
 
-bool sbndaq::BernCRTFEBConfiguration::load_bitstream_format(fhicl::ParameterSet const & ps_, int iFEB) {
+bool sbndaq::BernCRTFEBConfiguration::read_bitstream(fhicl::ParameterSet const & ps_, int iFEB) {
   /**
    * Constructor basing on FHiCL file
    */
@@ -65,6 +63,7 @@ bool sbndaq::BernCRTFEBConfiguration::load_bitstream_format(fhicl::ParameterSet 
     return false;
     throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load Slow Control bit stream");
   }
+  BitstreamToHuman();
   return true;
 }
 
@@ -106,9 +105,7 @@ void sbndaq::BernCRTFEBConfiguration::InitializeParameters() {
    * location in the bitstream, a comment (as needed) and, for the numerical values,
    * maximum allowed value
    */
-  
-  if(parameters_initialized) return;
-  else parameters_initialized = true;
+
   
   for(int channel = 0; channel < 32; channel++) {
     std::string ch = "channel"+std::to_string(channel)+"_";
@@ -225,7 +222,7 @@ void sbndaq::BernCRTFEBConfiguration::InitializeParameters() {
   
 }
 
-bool sbndaq::BernCRTFEBConfiguration::load_readable_format(fhicl::ParameterSet const & ps_, int MAC5) {
+bool sbndaq::BernCRTFEBConfiguration::read_human_readable_parameters(fhicl::ParameterSet const & ps_, int MAC5) {
   InitializeParameters();
   
   //read global parameters
@@ -273,7 +270,37 @@ bool sbndaq::BernCRTFEBConfiguration::load_readable_format(fhicl::ParameterSet c
       }
     }
   }
+  
+  HumanToBitstream();
   return true;
+}
+
+void sbndaq::BernCRTFEBConfiguration::HumanToBitstream() {
+  /**
+   * Converts parameters from human readable format to SlowControlBitStream
+   */
+  for(auto parameter : boolean_parameters)
+    SetBit(parameter.second.bit_number, parameter.second.value);
+  for(auto parameter : boolean_channel_parameters)
+    SetBit(parameter.second.bit_number, parameter.second.value);
+  for(auto parameter : numerical_parameters)
+    SetBits(parameter.second.first_bit, parameter.second.last_bit, parameter.second.value);
+  for(auto parameter : numerical_channel_parameters)
+    SetBits(parameter.second.first_bit, parameter.second.last_bit, parameter.second.value);
+}
+
+void sbndaq::BernCRTFEBConfiguration::BitstreamToHuman() {
+  /**
+   * Converts parameters from human readable format to SlowControlBitStream
+   */
+  for(auto parameter : boolean_parameters)
+    boolean_parameters[parameter.first].value = GetBit(parameter.second.bit_number);
+  for(auto parameter : boolean_channel_parameters)
+    boolean_channel_parameters[parameter.first].value = GetBit(parameter.second.bit_number);
+  for(auto parameter : numerical_parameters)
+    numerical_parameters[parameter.first].value = GetBits(parameter.second.first_bit, parameter.second.last_bit);
+  for(auto parameter : numerical_channel_parameters)
+    numerical_channel_parameters[parameter.first].value = GetBits(parameter.second.first_bit, parameter.second.last_bit);
 }
 
 int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream, uint8_t *bitstream, unsigned int nBits) {
@@ -317,7 +344,7 @@ int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream
 
 int sbndaq::BernCRTFEBConfiguration::GetBit(unsigned int bit_number, uint8_t * bitstream, unsigned int nBits) {
   /**
-   * returns value of the given bit from the SlowControl bitstream.
+   * returns value of the given bit from the SlowControlBitStream.
    * nBits is the total length of the bitstream
    */
   if(bit_number >= nBits) {
@@ -329,11 +356,29 @@ int sbndaq::BernCRTFEBConfiguration::GetBit(unsigned int bit_number, uint8_t * b
   return ( bitstream[byte] & (1<<bit) ) > 0;
 }
 
-int sbndaq::BernCRTFEBConfiguration::GetBit(unsigned int bit_number) {
+bool sbndaq::BernCRTFEBConfiguration::GetBit(unsigned int bit_number) {
   /**
    * Gets bit value of the Slow Control bit stream
    */
   return GetBit(bit_number, SlowControlBitStream, SLOW_CONTROL_BITSTREAM_NBITS);
+}
+
+void sbndaq::BernCRTFEBConfiguration::SetBits(unsigned int first_bit, unsigned int last_bit, uint16_t value) {
+  /**
+   * Set given range of bits from the SlowControlBitStream
+   */
+  for(unsigned int bit_number = first_bit; bit_number <= last_bit; bit_number++)
+    SetBit(bit_number, value & (1<<(bit_number-first_bit)));
+}
+
+uint16_t sbndaq::BernCRTFEBConfiguration::GetBits(unsigned int first_bit, unsigned int last_bit) {
+  /**
+   * Get given range of bits from the SlowControl bitstream
+   */
+  uint16_t r = 0;
+  for(unsigned int bit_number = first_bit; bit_number <= last_bit; bit_number++)
+    r |= GetBit(bit_number) << (bit_number-first_bit);
+  return r;
 }
 
 void sbndaq::BernCRTFEBConfiguration::SetBit(unsigned int bit_number, bool value, uint8_t * bitstream, unsigned int nBits) {
@@ -359,24 +404,24 @@ void sbndaq::BernCRTFEBConfiguration::SetBit(unsigned int bit_number, bool value
   SetBit(bit_number, value, SlowControlBitStream, SLOW_CONTROL_BITSTREAM_NBITS);
 }
 
-std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int firstBit, unsigned int lastBit) {
+std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int first_bit, unsigned int last_bit) {
   /**
    * Returns ASCII representation of given range in the Slow Control bitstream.
    * If last bit is not specified, only one bit is printed
    */
-  if(lastBit >= SLOW_CONTROL_BITSTREAM_NBITS) {
-    TLOG(TLVL_ERROR)<< __func__ << " Last bit " << std::to_string(lastBit) << "exceeds Slow Control bitstream length!";
+  if(last_bit >= SLOW_CONTROL_BITSTREAM_NBITS) {
+    TLOG(TLVL_ERROR)<< __func__ << " Last bit " << std::to_string(last_bit) << "exceeds Slow Control bitstream length!";
     return "-";
   }
   std::string s = "";
-  for(unsigned int iBit = firstBit; iBit <= lastBit; iBit++) {
+  for(unsigned int iBit = first_bit; iBit <= last_bit; iBit++) {
     s += std::to_string(GetBit(iBit));
   }
   return s;
 }
 
-std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int firstBit) {
-  return sbndaq::BernCRTFEBConfiguration::BitsToASCII(firstBit, firstBit);
+std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int first_bit) {
+  return sbndaq::BernCRTFEBConfiguration::BitsToASCII(first_bit, first_bit);
 }
 
 std::string sbndaq::BernCRTFEBConfiguration::GetString(std::string separator) {
