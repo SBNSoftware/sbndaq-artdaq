@@ -137,7 +137,7 @@ art_make_library( LIBRARY_NAME BernCRTFEBConfiguration
   LIBRARIES
     ${FHICLCPP}
     ${CETLIB_EXCEPT}
-)                  
+)
 
 simple_plugin(BernCRTZMQData "generator"
   sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase

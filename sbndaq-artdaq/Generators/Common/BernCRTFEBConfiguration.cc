@@ -11,18 +11,27 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
   InitializeParameters();
-//Configuration in the FHiCL file can have two formats, and the format is detected automatically
+//SlowControl configuration in the FHiCL file can have two formats, and the format is detected automatically
 //if bitstream exists in FHiCL file, it is loaded, otherwise human readable format is used
   std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB), "failure");
   if(s.compare("failure")) {
     TLOG(TLVL_INFO)<< __func__ << " Loading human-readable configuration for FEB" + iFEB;
     if(!read_human_readable_parameters(ps_, iFEB))
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL configuration for FEB " + std::to_string(iFEB));
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(iFEB));
   }
   else {
     TLOG(TLVL_INFO)<< __func__ << " Loading bitstream configuration for FEB" + iFEB;
     if(!read_bitstream(ps_, iFEB))
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL configuration for FEB " + std::to_string(iFEB));
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(iFEB));
+  }
+  
+  //Probe configuration is always in bitstream format
+  if(!ASCIIToBitStream(
+    ps_.get<std::string>("ProbeBitStream"),
+    ProbeBitStream,
+    PROBE_BITSTREAM_NBITS)) {
+      TLOG(TLVL_ERROR)<<__func__ << " Failed to load PROBE bit stream";
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL PROBE configuration for FEB " + std::to_string(iFEB));
   }
   
   //load HV on/off settings and cable delays
@@ -49,17 +58,9 @@ bool sbndaq::BernCRTFEBConfiguration::read_bitstream(fhicl::ParameterSet const &
    * Constructor basing on FHiCL file
    */
   if(!ASCIIToBitStream(
-        ps_.get<std::string>("ProbeBitStream"),
-        ProbeBitStream,
-        PROBE_BITSTREAM_NBITS)) {   
-    TLOG(TLVL_ERROR)<<__func__ << " Failed to load PROBE bit stream";
-    return false;
-    
-  }
-  if(!ASCIIToBitStream(
         ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB)),
         SlowControlBitStream,
-        SLOW_CONTROL_BITSTREAM_NBITS)) {   
+        SLOW_CONTROL_BITSTREAM_NBITS)) {
     TLOG(TLVL_ERROR)<< __func__  << " Failed to load Slow Control bit stream";
     return false;
     throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load Slow Control bit stream");
@@ -435,7 +436,7 @@ std::string sbndaq::BernCRTFEBConfiguration::GetHumanReadableString(std::string 
   //they are stored in an array, which we will split into individual parameters
   s += "channel_configuration : [\n";
 
-  for(int channel = 0; channel < 32; channel++) {
+  for(int channel = 0; channel < nCh; channel++) {
     s += "[";
     for(unsigned int parameter = 0; parameter < channel_parameter_names.size(); parameter++) {
       std::string name = "channel"+std::to_string(channel)+"_"+channel_parameter_names[parameter];
@@ -450,7 +451,7 @@ std::string sbndaq::BernCRTFEBConfiguration::GetHumanReadableString(std::string 
         s += ",";
     }
     s += "]";
-    if(channel < 31)
+    if(channel < nCh-1)
       s += ",";
     s += "\n";
   }
@@ -584,3 +585,4 @@ int       sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStreamNBytes() { ret
 
 bool      sbndaq::BernCRTFEBConfiguration::GetHVOnPermission()             { return hv_on_permission; }
 int32_t   sbndaq::BernCRTFEBConfiguration::GetPPSOffset()                  { return PPS_offset; }
+
