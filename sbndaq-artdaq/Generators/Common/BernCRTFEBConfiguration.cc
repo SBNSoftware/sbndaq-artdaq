@@ -11,18 +11,20 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
   InitializeParameters();
+  std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("MAC5s");
+  
 //SlowControl configuration in the FHiCL file can have two formats, and the format is detected automatically
 //if bitstream exists in FHiCL file, it is loaded, otherwise human readable format is used
-  std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB), "failure");
+  std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(mac5s[iFEB]), "failure");
   if(s.compare("failure")) {
-    TLOG(TLVL_INFO)<< __func__ << " Loading human-readable configuration for FEB" + iFEB;
-    if(!read_human_readable_parameters(ps_, iFEB))
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(iFEB));
+    TLOG(TLVL_INFO)<< __func__ << " Loading bitstream configuration for FEB" + mac5s[iFEB];
+    if(!read_bitstream(ps_, mac5s[iFEB]))
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5s[iFEB]));
   }
   else {
-    TLOG(TLVL_INFO)<< __func__ << " Loading bitstream configuration for FEB" + iFEB;
-    if(!read_bitstream(ps_, iFEB))
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(iFEB));
+    TLOG(TLVL_INFO)<< __func__ << " Loading human-readable configuration for FEB" + mac5s[iFEB];
+    if(!read_human_readable_parameters(ps_, mac5s[iFEB]))
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5s[iFEB]));
   }
   
   //Probe configuration is always in bitstream format
@@ -31,13 +33,13 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
     ProbeBitStream,
     PROBE_BITSTREAM_NBITS)) {
       TLOG(TLVL_ERROR)<<__func__ << " Failed to load PROBE bit stream";
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL PROBE configuration for FEB " + std::to_string(iFEB));
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL PROBE configuration for FEB " + std::to_string(mac5s[iFEB]));
   }
   
   //load HV on/off settings and cable delays
   std::vector<bool> hv_on_permissions = ps_.get< std::vector<bool> >("TurnOnHV");
   std::vector<int32_t> PPS_offsets = ps_.get< std::vector<int32_t> >("PPS_offset_ns");
-  std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("MAC5s"); //read MAC5 list for validation purposes only
+  
 
   //validate size of the arrays in the FHiCL file
   if(hv_on_permissions.size() != mac5s.size()) {
@@ -114,8 +116,8 @@ void sbndaq::BernCRTFEBConfiguration::InitializeParameters() {
     numerical_channel_parameters[ch+"time_threshold_adjustment"]   = {0, 15, uint16_t(  0 + channel* 4), uint16_t(  3 + channel* 4), ""};  
     numerical_channel_parameters[ch+"charge_threshold_adjustment"] = {0, 15, uint16_t(128 + channel* 4), uint16_t(131 + channel* 4), ""};  
     numerical_channel_parameters[ch+"hv"]                          = {0,255, uint16_t(331 + channel* 9), uint16_t(338 + channel* 9), ""};  
-    numerical_channel_parameters[ch+"HG_gain"]                     = {0, 31, uint16_t(619 + channel*15), uint16_t(624 + channel*15), ""};  
-    numerical_channel_parameters[ch+"LG_gain"]                     = {0, 31, uint16_t(625 + channel*15), uint16_t(630 + channel*15), ""};
+    numerical_channel_parameters[ch+"HG_gain"]                     = {0, 63, uint16_t(619 + channel*15), uint16_t(624 + channel*15), ""};  
+    numerical_channel_parameters[ch+"LG_gain"]                     = {0, 63, uint16_t(625 + channel*15), uint16_t(630 + channel*15), ""};
     boolean_channel_parameters  [ch+"activate_discriminator"] = {false, uint16_t(265 + channel* 1), false, ""};
     boolean_channel_parameters  [ch+"high_high_bias"]         = {false, uint16_t(339 + channel* 9), false, ""};
     boolean_channel_parameters  [ch+"test_HG"]                = {false, uint16_t(631 + channel*15), false, ""};
@@ -280,9 +282,9 @@ void sbndaq::BernCRTFEBConfiguration::HumanToBitstream() {
    * Converts parameters from human readable format to SlowControlBitStream
    */
   for(auto parameter : boolean_parameters)
-    SetBit(parameter.second.bit_number, parameter.second.value);
+    SetBit(parameter.second.bit_number, parameter.second.value ^ parameter.second.inverted_logic);
   for(auto parameter : boolean_channel_parameters)
-    SetBit(parameter.second.bit_number, parameter.second.value);
+    SetBit(parameter.second.bit_number, parameter.second.value ^ parameter.second.inverted_logic);
   for(auto parameter : numerical_parameters)
     SetBits(parameter.second.first_bit, parameter.second.last_bit, parameter.second.value);
   for(auto parameter : numerical_channel_parameters)
@@ -294,9 +296,9 @@ void sbndaq::BernCRTFEBConfiguration::BitstreamToHuman() {
    * Converts parameters from human readable format to SlowControlBitStream
    */
   for(auto parameter : boolean_parameters)
-    boolean_parameters[parameter.first].value = GetBit(parameter.second.bit_number);
+    boolean_parameters[parameter.first].value = GetBit(parameter.second.bit_number) ^ parameter.second.inverted_logic;
   for(auto parameter : boolean_channel_parameters)
-    boolean_channel_parameters[parameter.first].value = GetBit(parameter.second.bit_number);
+    boolean_channel_parameters[parameter.first].value = GetBit(parameter.second.bit_number) ^ parameter.second.inverted_logic;
   for(auto parameter : numerical_parameters)
     numerical_parameters[parameter.first].value = GetBits(parameter.second.first_bit, parameter.second.last_bit);
   for(auto parameter : numerical_channel_parameters)
@@ -363,21 +365,14 @@ bool sbndaq::BernCRTFEBConfiguration::GetBit(unsigned int bit_number) {
   return GetBit(bit_number, SlowControlBitStream, SLOW_CONTROL_BITSTREAM_NBITS);
 }
 
-void sbndaq::BernCRTFEBConfiguration::SetBits(unsigned int first_bit, unsigned int last_bit, uint16_t value) {
-  /**
-   * Set given range of bits from the SlowControlBitStream
-   */
-  for(unsigned int bit_number = first_bit; bit_number <= last_bit; bit_number++)
-    SetBit(bit_number, value & (1<<(bit_number-first_bit)));
-}
-
 uint16_t sbndaq::BernCRTFEBConfiguration::GetBits(unsigned int first_bit, unsigned int last_bit) {
   /**
    * Get given range of bits from the SlowControl bitstream
    */
   uint16_t r = 0;
+  //the first bit is the most significant and the last bit is the least significant
   for(unsigned int bit_number = first_bit; bit_number <= last_bit; bit_number++)
-    r |= GetBit(bit_number) << (bit_number-first_bit);
+    r |= GetBit(bit_number) << (last_bit - bit_number);
   return r;
 }
 
@@ -402,6 +397,15 @@ void sbndaq::BernCRTFEBConfiguration::SetBit(unsigned int bit_number, bool value
    * Sets bit value of the Slow Control bit stream
    */
   SetBit(bit_number, value, SlowControlBitStream, SLOW_CONTROL_BITSTREAM_NBITS);
+}
+
+void sbndaq::BernCRTFEBConfiguration::SetBits(unsigned int first_bit, unsigned int last_bit, uint16_t value) {
+  /**
+   * Set given range of bits from the SlowControlBitStream
+   */
+  //the first bit is the most significant and the last bit is the least significant
+  for(unsigned int bit_number = first_bit; bit_number <= last_bit; bit_number++)
+    SetBit(bit_number, value & (1<<(last_bit - bit_number)));
 }
 
 std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int first_bit, unsigned int last_bit) {
@@ -429,50 +433,56 @@ std::string sbndaq::BernCRTFEBConfiguration::GetHumanReadableString(std::string 
    * Returns human readable SlowControl configuration in FHiCL format
    */
   
-  std::string s="";
   const int nCh = 32;
+  std::ostringstream s;
   
   //individual channel parameters are stored in an array
   //they are stored in an array, which we will split into individual parameters
-  s += "channel_configuration : [\n";
-
+  s <<"#     time    charge activ.        HV  hi-hi        HG        LG   test   test enable"<<std::endl;
+  s <<"#threshold threshold discr.   adjust.   bias      gain      gain     HG     LG preamp"<<std::endl;
+  s <<"#  adjust.   adjust."<<std::endl;
+  s <<"#max:   15        15      1       255      1        31        31      1      1      1"<<std::endl;
+  s << "channel_configuration : [" << std::endl;
+  
   for(int channel = 0; channel < nCh; channel++) {
-    s += "[";
+    s << "[";
     for(unsigned int parameter = 0; parameter < channel_parameter_names.size(); parameter++) {
       std::string name = "channel"+std::to_string(channel)+"_"+channel_parameter_names[parameter];
       //check if it is boolean parameter or numerical parameter
       if(boolean_channel_parameters.count(name)) {
-        s += " " + std::to_string(boolean_channel_parameters[name].value);
+        s << " " << std::setw(5) << boolean_channel_parameters[name].value;
       }
       else if(numerical_channel_parameters.count(name)) {
-        s += " " + std::to_string(numerical_channel_parameters[name].value);
+        s << " " << std::setw(8) << numerical_channel_parameters[name].value;
       }
       if(parameter < channel_parameter_names.size() - 1)
-        s += ",";
+        s << ",";
     }
-    s += "]";
+    s << "]";
     if(channel < nCh-1)
-      s += ",";
-    s += "\n";
+      s << ",";
+    else
+      s <<" ";
+    s <<" # channel "<<channel<< std::endl;
   }
-  s += "]\n\n";
+  s << "]" << std::endl << std::endl;
   
   //global parameters
   for(auto parameter : numerical_parameters) {
-    s += parameter.first + " : " + std::to_string(parameter.second.value);
+    s << std::left << std::setw(36) << (parameter.first + " : ") << parameter.second.value;
     if(parameter.second.comment.compare(""))
-      s += separator + parameter.second.comment;
-    s += "\n";
+      s << separator << parameter.second.comment;
+    s << std::endl;
   }
   
   for(auto parameter : boolean_parameters) {
-    s += parameter.first + " : " + std::to_string(parameter.second.value);
+    s << std::left << std::setw(36) << (parameter.first + " : ") << std::boolalpha << parameter.second.value;
     if(parameter.second.comment.compare(""))
-      s += separator + parameter.second.comment;
-    s += "\n";
+      s << separator + parameter.second.comment;
+    s << "\n";
   }
   
-  return s;
+  return s.str();
 }
 
 std::string sbndaq::BernCRTFEBConfiguration::GetBitStreamString(std::string separator) {
@@ -480,101 +490,101 @@ std::string sbndaq::BernCRTFEBConfiguration::GetBitStreamString(std::string sepa
    * Returns ASCII representation of the full SlowControl BitStream, including the comments
    */
   const int nCh = 32;
-  std::string s="";
+  std::ostringstream s;
   for(int i = 0; i < nCh; i++) {
-    s += BitsToASCII(i*4, i*4+3)
-      + separator + "Ch"+std::to_string(i)+" 4-bit DAC_t ([0..3]), time trigger threshold\n";
+    s << BitsToASCII(i*4, i*4+3)
+      << separator << "Ch"<<i<<" 4-bit DAC_t ([0..3]), time trigger threshold" <<std::endl;
   }
   for(int i = 0; i < nCh; i++) {
-    s += BitsToASCII(128+i*4, 128+i*4+3)
-      + separator + "Ch"+std::to_string(i)+"  4-bit DAC ([0..3]) charge trigger threshold\n";
+    s << BitsToASCII(128+i*4, 128+i*4+3)
+      << separator << "Ch"<<i<<"  4-bit DAC ([0..3]) charge trigger threshold" <<std::endl;
   }
-  s += BitsToASCII(256) + separator + "Enable discriminator\n";
-  s += BitsToASCII(257) + separator + "Disable trigger discriminator power pulsing mode (force ON)\n";
-  s += BitsToASCII(258) + separator + "Select latched (RS : 1) or direct output (trigger : 0)\n";
-  s += BitsToASCII(259) + separator + "Enable Discriminator Two\n";
-  s += BitsToASCII(260) + separator + "Disable trigger discriminator power pulsing mode (force ON)\n";
-  s += BitsToASCII(261) + separator + "EN_4b_dac\n";
-  s += BitsToASCII(262) + separator + "PP: 4b_dac\n";
-  s += BitsToASCII(263) + separator + "EN_4b_dac_t\n";
-  s += BitsToASCII(264) + separator + "PP: 4b_dac_t\n";
-  s += BitsToASCII(265, 296) + separator + "Allows to Mask Discriminator (channel 0 to 31) [active low]\n";
-  s += BitsToASCII(297) + separator + "Disable High Gain Track & Hold power pulsing mode (force ON)\n";
-  s += BitsToASCII(298) + separator + "Enable High Gain Track & Hold\n";
-  s += BitsToASCII(299) + separator + "Disable Low Gain Track & Hold power pulsing mode (force ON)\n";
-  s += BitsToASCII(300) + separator + "Enable Low Gain Track & Hold\n";
-  s += BitsToASCII(301) + separator + "SCA bias ( 1 = weak bias, 0 = high bias 5MHz ReadOut Speed)\n";
-  s += BitsToASCII(302) + separator + "PP: HG Pdet\n";
-  s += BitsToASCII(303) + separator + "EN_HG_Pdet\n";
-  s += BitsToASCII(304) + separator + "PP: LG Pdet\n";
-  s += BitsToASCII(305) + separator + "EN_LG_Pdet\n";
-  s += BitsToASCII(306) + separator + "Sel SCA or PeakD HG\n";
-  s += BitsToASCII(307) + separator + "Sel SCA or PeakD LG\n";
-  s += BitsToASCII(308) + separator + "Bypass Peak Sensing Cell\n";
-  s += BitsToASCII(309) + separator + "Sel Trig Ext PSC\n";
-  s += BitsToASCII(310) + separator + "Disable fast shaper follower power pulsing mode (force ON)\n";
-  s += BitsToASCII(311) + separator + "Enable fast shaper\n";
-  s += BitsToASCII(312) + separator + "Disable fast shaper power pulsing mode (force ON)\n";
-  s += BitsToASCII(313) + separator + "Disable low gain slow shaper power pulsing mode (force ON)\n";
-  s += BitsToASCII(314) + separator + "Enable Low Gain Slow Shaper\n";
-  s += BitsToASCII(315, 317) + separator + "Low gain shaper time constant commands (0...2)  [active low] 100\n";
-  s += BitsToASCII(318) + separator + "Disable high gain slow shaper power pulsing mode (force ON)\n";
-  s += BitsToASCII(319) + separator + "Enable high gain Slow Shaper\n";
-  s += BitsToASCII(320, 322) + separator + "High gain shaper time constant commands (0...2)  [active low] 100\n";
-  s += BitsToASCII(323) + separator + "Low Gain PreAmp bias ( 1 = weak bias, 0 = normal bias)\n";
-  s += BitsToASCII(324) + separator + "Disable High Gain preamp power pulsing mode (force ON)\n";
-  s += BitsToASCII(325) + separator + "Enable High Gain preamp\n";
-  s += BitsToASCII(326) + separator + "Disable Low Gain preamp power pulsing mode (force ON)\n";
-  s += BitsToASCII(327) + separator + "Enable Low Gain preamp\n";
-  s += BitsToASCII(328) + separator + "Select LG PA to send to Fast Shaper\n";
-  s += BitsToASCII(329) + separator + "Enable 32 input 8-bit DACs\n";
-  s += BitsToASCII(330) + separator + "8-bit input DAC Voltage Reference (1 = external 4,5V , 0 = internal 2,5V)\n";
+  s << BitsToASCII(256) << separator << "Enable discriminator" <<std::endl;
+  s << BitsToASCII(257) << separator << "Disable trigger discriminator power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(258) << separator << "Select latched (RS : 1) or direct output (trigger : 0)" <<std::endl;
+  s << BitsToASCII(259) << separator << "Enable Discriminator Two" <<std::endl;
+  s << BitsToASCII(260) << separator << "Disable trigger discriminator power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(261) << separator << "EN_4b_dac" <<std::endl;
+  s << BitsToASCII(262) << separator << "PP: 4b_dac" <<std::endl;
+  s << BitsToASCII(263) << separator << "EN_4b_dac_t" <<std::endl;
+  s << BitsToASCII(264) << separator << "PP: 4b_dac_t" <<std::endl;
+  s << BitsToASCII(265, 296) << separator << "Allows to Mask Discriminator (channel 0 to 31) [active low]" <<std::endl;
+  s << BitsToASCII(297) << separator << "Disable High Gain Track & Hold power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(298) << separator << "Enable High Gain Track & Hold" <<std::endl;
+  s << BitsToASCII(299) << separator << "Disable Low Gain Track & Hold power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(300) << separator << "Enable Low Gain Track & Hold" <<std::endl;
+  s << BitsToASCII(301) << separator << "SCA bias ( 1 = weak bias, 0 = high bias 5MHz ReadOut Speed)" <<std::endl;
+  s << BitsToASCII(302) << separator << "PP: HG Pdet" <<std::endl;
+  s << BitsToASCII(303) << separator << "EN_HG_Pdet" <<std::endl;
+  s << BitsToASCII(304) << separator << "PP: LG Pdet" <<std::endl;
+  s << BitsToASCII(305) << separator << "EN_LG_Pdet" <<std::endl;
+  s << BitsToASCII(306) << separator << "Sel SCA or PeakD HG" <<std::endl;
+  s << BitsToASCII(307) << separator << "Sel SCA or PeakD LG" <<std::endl;
+  s << BitsToASCII(308) << separator << "Bypass Peak Sensing Cell" <<std::endl;
+  s << BitsToASCII(309) << separator << "Sel Trig Ext PSC" <<std::endl;
+  s << BitsToASCII(310) << separator << "Disable fast shaper follower power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(311) << separator << "Enable fast shaper" <<std::endl;
+  s << BitsToASCII(312) << separator << "Disable fast shaper power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(313) << separator << "Disable low gain slow shaper power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(314) << separator << "Enable Low Gain Slow Shaper" <<std::endl;
+  s << BitsToASCII(315, 317) << separator << "Low gain shaper time constant commands (0...2)  [active low] 100" <<std::endl;
+  s << BitsToASCII(318) << separator << "Disable high gain slow shaper power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(319) << separator << "Enable high gain Slow Shaper" <<std::endl;
+  s << BitsToASCII(320, 322) << separator << "High gain shaper time constant commands (0...2)  [active low] 100" <<std::endl;
+  s << BitsToASCII(323) << separator << "Low Gain PreAmp bias ( 1 = weak bias, 0 = normal bias)" <<std::endl;
+  s << BitsToASCII(324) << separator << "Disable High Gain preamp power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(325) << separator << "Enable High Gain preamp" <<std::endl;
+  s << BitsToASCII(326) << separator << "Disable Low Gain preamp power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(327) << separator << "Enable Low Gain preamp" <<std::endl;
+  s << BitsToASCII(328) << separator << "Select LG PA to send to Fast Shaper" <<std::endl;
+  s << BitsToASCII(329) << separator << "Enable 32 input 8-bit DACs" <<std::endl;
+  s << BitsToASCII(330) << separator << "8-bit input DAC Voltage Reference (1 = external 4,5V , 0 = internal 2,5V)" <<std::endl;
   for(int i = 0; i < nCh; i++) {
-    s += BitsToASCII(331+i*9, 331+i*9+7) + " "
-       + BitsToASCII(331+i*9+8)
-       + separator + "Input 8-bit DAC Data channel "+std::to_string(i)+" - (DAC7...DAC0 + DAC ON), higher-higher bias (HV bias adjustment)\n";
+    s << BitsToASCII(331+i*9, 331+i*9+7) << " "
+       << BitsToASCII(331+i*9+8)
+       << separator << "Input 8-bit DAC Data channel "<<i<<" - (DAC7...DAC0 << DAC ON), higher-higher bias (HV bias adjustment)" <<std::endl;
   }
   for(int i = 0; i < nCh; i++){
-    s += BitsToASCII(619+i*15, 619+i*15+5) + " "
-       + BitsToASCII(619+i*15+6, 619+i*15+11) + " "
-       + BitsToASCII(619+i*15+12, 619+i*15+14)
-       + separator + "Ch"+std::to_string(i)+" PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)\n";
+    s << BitsToASCII(619+i*15, 619+i*15+5) << " "
+       << BitsToASCII(619+i*15+6, 619+i*15+11) << " "
+       << BitsToASCII(619+i*15+12, 619+i*15+14)
+       << separator << "Ch"<<i<<" PreAmp config (HG gain[5..0], LG gain [5..0], CtestHG, CtestLG, PA disabled)" <<std::endl;
   }
-  s += BitsToASCII(1099) + separator + "Disable Temperature Sensor power pulsing mode (force ON)\n";
-  s += BitsToASCII(1100) + separator + "Enable Temperature Sensor\n";
-  s += BitsToASCII(1101) + separator + "Disable BandGap power pulsing mode (force ON)\n";
-  s += BitsToASCII(1102) + separator + "Enable BandGap\n";
-  s += BitsToASCII(1103) + separator + "Enable DAC1\n";
-  s += BitsToASCII(1104) + separator + "Disable DAC1 power pulsing mode (force ON)\n";
-  s += BitsToASCII(1105) + separator + "Enable DAC2\n";
-  s += BitsToASCII(1106) + separator + "Disable DAC2 power pulsing mode (force ON)\n";
-  s += BitsToASCII(1107, 1108) + " "
-     + BitsToASCII(1109, 1112) + " "
-     + BitsToASCII(1113, 1116)
-     + separator + "10-bit DAC1 (MSB-LSB): 00 1100 0000 for 0.5 p.e.\n";
-  s += BitsToASCII(1117, 1118) + " "
-     + BitsToASCII(1119, 1122) + " "
-     + BitsToASCII(1123, 1126)
-     + separator + "10-bit DAC2 (MSB-LSB): 00 1100 0000 for 0.5 p.e.\n";
-  s += BitsToASCII(1127) + separator + "Enable High Gain OTA -- start byte 2\n";  
-  s += BitsToASCII(1128) + separator + "Disable High Gain OTA power pulsing mode (force ON)\n";
-  s += BitsToASCII(1129) + separator + "Enable Low Gain OTA\n";
-  s += BitsToASCII(1130) + separator + "Disable Low Gain OTA power pulsing mode (force ON)\n";
-  s += BitsToASCII(1131) + separator + "Enable Probe OTA\n";
-  s += BitsToASCII(1132) + separator + "Disable Probe OTA power pulsing mode (force ON)\n";
-  s += BitsToASCII(1133) + separator + "Otaq test bit\n";
-  s += BitsToASCII(1134) + separator + "Enable Val_Evt receiver\n";
-  s += BitsToASCII(1135) + separator + "Disable Val_Evt receiver power pulsing mode (force ON)\n";
-  s += BitsToASCII(1136) + separator + "Enable Raz_Chn receiver\n";
-  s += BitsToASCII(1137) + separator + "Disable Raz Chn receiver power pulsing mode (force ON)\n";
-  s += BitsToASCII(1138) + separator + "Enable digital multiplexed output (hit mux out)\n";
-  s += BitsToASCII(1139) + separator + "Enable digital OR32 output\n";
-  s += BitsToASCII(1140) + separator + "Enable digital OR32 Open Collector output\n";
-  s += BitsToASCII(1141) + separator + "Trigger Polarity\n";
-  s += BitsToASCII(1142) + separator + "Enable digital OR32_T Open Collector output\n";
-  s += BitsToASCII(1143) + separator + "Enable 32 channels triggers outputs\n";
+  s << BitsToASCII(1099) << separator << "Disable Temperature Sensor power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1100) << separator << "Enable Temperature Sensor" <<std::endl;
+  s << BitsToASCII(1101) << separator << "Disable BandGap power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1102) << separator << "Enable BandGap" <<std::endl;
+  s << BitsToASCII(1103) << separator << "Enable DAC1" <<std::endl;
+  s << BitsToASCII(1104) << separator << "Disable DAC1 power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1105) << separator << "Enable DAC2" <<std::endl;
+  s << BitsToASCII(1106) << separator << "Disable DAC2 power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1107, 1108) << " "
+     << BitsToASCII(1109, 1112) << " "
+     << BitsToASCII(1113, 1116)
+     << separator << "10-bit DAC1 (MSB-LSB): 00 1100 0000 for 0.5 p.e." <<std::endl;
+  s << BitsToASCII(1117, 1118) << " "
+     << BitsToASCII(1119, 1122) << " "
+     << BitsToASCII(1123, 1126)
+     << separator << "10-bit DAC2 (MSB-LSB): 00 1100 0000 for 0.5 p.e." <<std::endl;
+  s << BitsToASCII(1127) << separator << "Enable High Gain OTA -- start byte 2" <<std::endl;  
+  s << BitsToASCII(1128) << separator << "Disable High Gain OTA power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1129) << separator << "Enable Low Gain OTA" <<std::endl;
+  s << BitsToASCII(1130) << separator << "Disable Low Gain OTA power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1131) << separator << "Enable Probe OTA" <<std::endl;
+  s << BitsToASCII(1132) << separator << "Disable Probe OTA power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1133) << separator << "Otaq test bit" <<std::endl;
+  s << BitsToASCII(1134) << separator << "Enable Val_Evt receiver" <<std::endl;
+  s << BitsToASCII(1135) << separator << "Disable Val_Evt receiver power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1136) << separator << "Enable Raz_Chn receiver" <<std::endl;
+  s << BitsToASCII(1137) << separator << "Disable Raz Chn receiver power pulsing mode (force ON)" <<std::endl;
+  s << BitsToASCII(1138) << separator << "Enable digital multiplexed output (hit mux out)" <<std::endl;
+  s << BitsToASCII(1139) << separator << "Enable digital OR32 output" <<std::endl;
+  s << BitsToASCII(1140) << separator << "Enable digital OR32 Open Collector output" <<std::endl;
+  s << BitsToASCII(1141) << separator << "Trigger Polarity" <<std::endl;
+  s << BitsToASCII(1142) << separator << "Enable digital OR32_T Open Collector output" <<std::endl;
+  s << BitsToASCII(1143) << separator << "Enable 32 channels triggers outputs" <<std::endl;
 
-  return s;
+  return s.str();
 }
 
 
@@ -585,4 +595,3 @@ int       sbndaq::BernCRTFEBConfiguration::GetSlowControlBitStreamNBytes() { ret
 
 bool      sbndaq::BernCRTFEBConfiguration::GetHVOnPermission()             { return hv_on_permission; }
 int32_t   sbndaq::BernCRTFEBConfiguration::GetPPSOffset()                  { return PPS_offset; }
-

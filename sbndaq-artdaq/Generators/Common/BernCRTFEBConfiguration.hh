@@ -4,6 +4,8 @@
 #include "fhiclcpp/ParameterSet.h"
 #include "trace.h"
 
+#include <sstream>
+
 namespace sbndaq {
 
   /**
