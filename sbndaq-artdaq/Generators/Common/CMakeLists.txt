@@ -129,7 +129,7 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
 			${MF_MESSAGELOGGER}
 			${MF_UTILITIES}
 			${CETLIB}
- 	    ${CETLIB_EXCEPT}	
+ 	    ${CETLIB_EXCEPT}
 )
 
 art_make_library( LIBRARY_NAME BernCRTFEBConfiguration 
@@ -137,6 +137,16 @@ art_make_library( LIBRARY_NAME BernCRTFEBConfiguration
   LIBRARIES
     ${FHICLCPP}
     ${CETLIB_EXCEPT}
+)
+
+cet_make_exec( ConvertCRTConfiguration 
+  SOURCE ConvertCRTConfiguration.cc
+  LIBRARIES
+    BernCRTFEBConfiguration
+    ${FHICLCPP}
+    ${CETLIB}
+    ${CETLIB_EXCEPT}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY_RELEASE}
 )
 
 simple_plugin(BernCRTZMQData "generator"
