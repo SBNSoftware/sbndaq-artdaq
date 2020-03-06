@@ -137,6 +137,9 @@ namespace sbndaq
     bool     fCalibrateOnConfig;
     uint32_t fFragmentID;
 
+    bool fUseTimeTagForTimeStamp;
+    uint32_t fTimeOffsetNanoSec;
+
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;

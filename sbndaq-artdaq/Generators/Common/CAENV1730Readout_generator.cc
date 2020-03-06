@@ -245,6 +245,11 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
+  fUseTimeTagForTimeStamp = ps.get<bool>("UseTimeTagForTimeStamp",true);
+  TLOG(TINFO) <<__func__ <<": fUseTimeTagForTimeStamp=" << fUseTimeTagForTimeStamp;
+
+  fTimeOffsetNanoSec = ps.get<uint32_t>("TimeOffsetNanoSec",0); //0ms by default
+  TLOG(TINFO) <<__func__ <<": fTimeOffsetNanoSec=" << fTimeOffsetNanoSec;
 }
 
 void sbndaq::CAENV1730Readout::Configure()
@@ -905,22 +910,37 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
     fragment_uptr->setSequenceID(readoutwindow_event_counter);
 
-    const auto TTT = uint32_t {header->triggerTimeTag};
+    if(fUseTimeTagForTimeStamp){
+      const auto TTT = uint32_t {header->triggerTimeTag};
 
-    using namespace boost::gregorian;
-    using namespace boost::posix_time;
+      using namespace boost::gregorian;
+      using namespace boost::posix_time;
+      
+      ptime t_now(second_clock::universal_time());
+      ptime time_t_epoch(date(1970,1,1));
+      time_duration diff = t_now - time_t_epoch;
+      uint32_t t_offset_s = diff.total_seconds();
+      uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+      uint64_t t_truetriggertime = t_offset_ticks + TTT;
+      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+      
+      artdaq::Fragment::timestamp_t ts = (t_truetriggertime*8); //in 1ns ticks
+      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
+      fragment_uptr->setTimestamp( ts );
+    }
+    else{
+      using namespace boost::gregorian;
+      using namespace boost::posix_time;
+      
+      ptime t_now(microsec_clock::universal_time());
+      ptime time_t_epoch(date(1970,1,1));
+      time_duration diff = t_now - time_t_epoch;
 
-    ptime t_now(second_clock::universal_time());
-    ptime time_t_epoch(date(1970,1,1));
-    time_duration diff = t_now - time_t_epoch;
-    uint32_t t_offset_s = diff.total_seconds();
-    uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
-    uint64_t t_truetriggertime = t_offset_ticks + TTT;
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+      artdaq::Fragment::timestamp_t ts = diff.total_nanoseconds() - fTimeOffsetNanoSec;;
 
-    artdaq::Fragment::timestamp_t ts = (t_truetriggertime*8); //in 1ns ticks
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
-    fragment_uptr->setTimestamp( ts );
+      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
+      fragment_uptr->setTimestamp( ts );
+    }
 
     auto readoutwindow_event_counter_gap= readoutwindow_event_counter - last_sent_rwcounter;
 
