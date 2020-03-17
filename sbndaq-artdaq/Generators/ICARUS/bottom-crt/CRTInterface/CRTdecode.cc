@@ -1,4 +1,6 @@
-/* Author: Matthew Strait <mstrait@fnal.gov> */
+/* Author: Matthew Strait <mstrait@fnal.gov> 
+ * Author: Ryan Howell    <rhowell3@ur.rochester.edu>
+*/
 
 #include "artdaq/DAQdata/Globals.hh" //For TRACE debugging
 
@@ -131,7 +133,7 @@ The serialized format of a module packet is:
 
   Time stamp: Unsigned 32 bit integer
 
-    Number of 20ns ticks since last sync pulse.  Shouldn't usually be
+    Number of 16ns ticks since last sync pulse.  Shouldn't usually be
     more than 2^29 - 1.
 
 The format of a hit is:

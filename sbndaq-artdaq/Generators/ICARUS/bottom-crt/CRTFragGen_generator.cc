@@ -94,8 +94,8 @@ bool CRT::FragGen::getNext_(
     //is, then we probably won't write any useful data. When maintaining this code,  
     //remember that the timing endpoint won't give us a good runstarttime until 
     //everything has finished the start() transition.
-    const uint64_t deltaT = labs(runstarttime*20/1.e9 - time(nullptr));
-    if(deltaT > alarmDeltaT) //Hardcoded 20 ns per timestamp tick for ProtoDUNE-SP timing system
+    const uint64_t deltaT = labs(runstarttime*16/1.e9 - time(nullptr));
+    if(deltaT > alarmDeltaT) //Hardcoded 16 ns per timestamp tick for ProtoDUNE-SP timing system
     {
       TLOG(TLVL_WARNING, "CRT") << "CRT board reader failed to get reasonable run start time "
                                 << "from timing endpoint.  Difference from UNIX time of " << deltaT
@@ -107,9 +107,9 @@ bool CRT::FragGen::getNext_(
     //runstarttime is OK if we got this far, so start sending back data.  
     //If it took more than 86 seconds to get a "good" runstarttime, then 
     //uppertime needs to be updated. 
-    uppertime = (uint64_t)(deltaT*1e9/20)/std::numeric_limits<uint32_t>::max();
+    uppertime = (uint64_t)(deltaT*1e9/16)/std::numeric_limits<uint32_t>::max();
     TLOG(TLVL_INFO, "CRT") << "Set run start time to " << runstarttime << ", or " 
-                              << (uint64_t)(runstarttime*20./1.e9) << " seconds at UNIX timestamp of "
+                              << (uint64_t)(runstarttime*16./1.e9) << " seconds at UNIX timestamp of "
                               << time(nullptr) << " seconds.  Looks like we skipped " << uppertime 
                               << " 32-bit rollovers, so set uppertime to " << uppertime << ".\n";
     gotRunStartTime = true;
@@ -216,14 +216,14 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
   //determine the number of reset that occurred if the time passed is greater than 86s
 
-  //uint64_t oldtimestamp = (((uint64_t)uppertime << 32) + lowertime + runstarttime)*20./1.e9;  //this is in sec.
+  //uint64_t oldtimestamp = (((uint64_t)uppertime << 32) + lowertime + runstarttime)*16./1.e9;  //this is in sec.
 
   uint64_t deltaUNIX = currentUNIX - oldUNIX; //this is in sec.
 
   //uint64_t deltaUNIX = currentUNIX - oldtimestamp; //difference in time in sec.
 
   if(deltaUNIX > 0 ){ // there is a difference, check if a reset happen ( @86 sec )
-    deltaUNIX /= (20./1.e9)*pow(2.,32.); //number of clock counter between two consecutive events considering the 20ns ticks=85.89s=86s
+    deltaUNIX /= (16./1.e9)*pow(2.,32.); //number of clock counter between two consecutive events considering the 16ns ticks=85.89s=86s
     deltaUNIX = (int)deltaUNIX; //lower end, need to check if it is off by one additional rollover    
     newUppertime += deltaUNIX; //adding an intenger number of seconds (86s) corresponding to how many resets we detect (should old do this when pausing the run)
   } 
@@ -253,7 +253,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   
   //Sanity check on timestamps, repeating somehow what we did before to cross check - TBF
 
-  const uint64_t inSeconds = timestamp_*20./1.e9; //20 nanosecond ticks in the ProtoDUNE-SP timing system
+  const uint64_t inSeconds = timestamp_*16./1.e9; //16 nanosecond ticks in the ProtoDUNE-SP timing system
 
   const int64_t deltaT = inSeconds - currentUNIX; //In seconds
 
@@ -278,7 +278,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
       timestamp_ = ((uint64_t)newUppertime << 32) + lowertime + runstarttime;
 
-      newtimediff = timestamp_*20./1.e9 - currentUNIX; //20 nanosecond ticks, convert timestamp in sec.
+      newtimediff = timestamp_*16./1.e9 - currentUNIX; //16 nanosecond ticks, convert timestamp in sec.
 
       TLOG(TLVL_WARNING, "CRT") << "deltaT=86s. Missed one reset cycle, try to correct it. deltaT = " 
 				<< deltaT << ", new deltaT = " << newtimediff << "\n";
