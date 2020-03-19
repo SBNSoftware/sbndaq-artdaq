@@ -186,7 +186,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     using namespace boost::gregorian;
     using namespace boost::posix_time;
   
-    ptime t_now(second_clock::universal_time());
+    ptime t_now(microsec_clock::universal_time());
     ptime time_t_epoch(date(1970,1,1));
     time_duration diff = t_now - time_t_epoch;
 
