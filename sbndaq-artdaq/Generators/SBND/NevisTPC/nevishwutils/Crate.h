@@ -12,7 +12,7 @@ namespace nevistpc{
   class Crate{
   public:
     //Crate();
-    Crate(ControllerModuleSPtr ctr, XMITReaderSPtr xmit_reader, fhicl::ParameterSet const& _p);
+    Crate(ControllerModuleSPtr ctr, XMITReaderSPtr nu_xmit_reader, fhicl::ParameterSet const& _p, XMITReaderSPtr sn_xmit_reader=NULL);
     Crate(ControllerModuleSPtr ctr, int xmit_module_number, int max_fem_slot);
     //~Crate();
     
@@ -21,6 +21,7 @@ namespace nevistpc{
     NevisTPCFEMSPtr getTPCFEM(uint i);
     XMITModuleSPtr getXMITModule();
     XMITReaderSPtr getXMITReader();
+    XMITReaderSPtr getXMITReader(std::string name); // Two-stream overload
     TriggerModuleSPtr getTriggerModule();
     
     bool hasTrigger;
@@ -29,7 +30,10 @@ namespace nevistpc{
     // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU stream with external triggers
     // It follows uboonedaq run2Stream but SN stream has been removed
     void runNUStream(fhicl::ParameterSet const& _p);
-    void run2Stream(fhicl::ParameterSet const& _p); // Only NU stream so far
+    // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU and SN streams with external triggers
+    void run2Stream(fhicl::ParameterSet const& _p);
+    void runControllerTrigger2Stream(fhicl::ParameterSet const& _p);
+    void runCalib2Stream(fhicl::ParameterSet const& _p);
     // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU stream with internal CALIB triggers
     // It follows partially https://github.com/NevisSBND/BoardTest/blob/master/bnlnevistest.c
     void runCalib(fhicl::ParameterSet const& _p);
@@ -37,7 +41,8 @@ namespace nevistpc{
   private:
     ControllerModuleSPtr 			_ctrlr_module;
     XMITModuleSPtr					_xmit_module;
-    XMITReaderSPtr					_xmit_reader;
+    XMITReaderSPtr					_xmit_reader; // Deafault (NU) stream
+    XMITReaderSPtr					_sn_xmit_reader; // SN stream
     std::vector < NevisTPCFEMSPtr > _fem_modules;
     TriggerModuleSPtr				_trigger_module;
     

@@ -140,7 +140,11 @@ namespace nevistpc {
   	BIPOLAR = 167,
 	LOAD_PRESAMPLE,
 	LOAD_POSTSAMPLE,
-	CHANNEL_THRESHOLD
+	CHANNEL_THRESHOLD,
+	LOAD_BASELINE_CHANNEL = 245,
+	LOAD_BASELINE = 246,
+	WRITE_BASELINE = 247
+
 	  };
     typedef chip_3 stratix_fpga;
 
@@ -248,6 +252,8 @@ namespace nevistpc {
     void setLoadPresample(data_payload_t const &size);
     void setLoadPostsample(data_payload_t const &size);
     void setChannelThreshold(data_payload_bool_t const &flag);
+    void setFEMBipolar(data_payload_t const &size);
+    void setLoadBaseline(data_payload_t const &chan, data_payload_t const &size);
 
     void runDefaultNUConfig(data_payload_t const&febChanID);
     void fem_setup(fhicl::ParameterSet const& configParams);

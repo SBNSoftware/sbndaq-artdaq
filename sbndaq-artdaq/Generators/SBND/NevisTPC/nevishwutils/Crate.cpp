@@ -15,7 +15,9 @@ namespace nevistpc{
     }
   }
 
-  Crate::Crate(ControllerModuleSPtr ctr, XMITReaderSPtr xmit_reader, fhicl::ParameterSet const& _p) : _ctrlr_module(ctr), _xmit_reader(xmit_reader){
+  // sn_xmit_reader is optional
+  Crate::Crate(ControllerModuleSPtr ctr, XMITReaderSPtr nu_xmit_reader, fhicl::ParameterSet const& _p, XMITReaderSPtr sn_xmit_reader) : 
+    _ctrlr_module(ctr), _xmit_reader(nu_xmit_reader), _sn_xmit_reader(sn_xmit_reader){
     
     fhicl::ParameterSet crateconfig;
     // NOTE: the name of the block in the fcl file must match 
@@ -66,6 +68,13 @@ namespace nevistpc{
   
   XMITReaderSPtr Crate::getXMITReader(){
     return _xmit_reader;
+  }
+
+  // Two-stream overload
+  XMITReaderSPtr Crate::getXMITReader(std::string name){
+    if( name == "NU" ) return _xmit_reader;
+    if( name == "SN" ) return _sn_xmit_reader;
+    else return NULL;
   }
   
   TriggerModuleSPtr Crate::getTriggerModule(){
@@ -161,7 +170,7 @@ namespace nevistpc{
     
     // Config trigger module
     if(hasTrigger)
-      getTriggerModule()->configureTrigger( _p );
+      getTriggerModule()->configureTrigger( _p ); // To do: move it with the other trigger instructions above
 
     // set up link
     linkSetup();
@@ -189,22 +198,251 @@ namespace nevistpc{
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
 
-  // Only NU stream so far
+  // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU and SN streams with external triggers
+  // It would be good to consolidate all the Crate::run... functions into a single one, with portions enabled by fcl parameters
   void Crate::run2Stream(fhicl::ParameterSet const& _p){ 
-    runNUStream( _p );
+    
+    fhicl::ParameterSet crateconfig;
+    // NOTE: the name of the block in the fcl file must match 
+    if( ! _p.get_if_present<fhicl::ParameterSet> ( "nevis_crate", crateconfig ) ){
+      TLOG(TLVL_ERROR) << "Crate: Missing nevis_crate configuration block in fcl file" ;
+    }
+    
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
+    // Setup XMIT reader for NU stream
+    getXMITReader("NU")->configureReader();
+    getXMITReader("NU")->initializePCIeCard();
+    // Setup XMIT reader for SN stream
+    getXMITReader("SN")->configureReader();
+    getXMITReader("SN")->initializePCIeCard();
+    
+    // Setup controller module
+    getControllerModule()->initialize();
+    getControllerModule()->testOn();
+    getControllerModule()->runOff();
+    getControllerModule()->testOff();
+    
+    if(hasTrigger){
+      getTriggerModule()->runOnSyncOff();
+      getTriggerModule()->disableTriggers(false);
+      getTriggerModule()->setDeadtimeSize(100);
+    }
+    
+    // Load xmit firmware
+    getXMITModule()->setMax3000Config();
+    getXMITModule()->programMax3000FPGAFirmware( crateconfig.get<std::string>( "xmit_fpga", "") );
+    
+    // Setup FEMs
+    if(getNumberOfTPCFEMs()){
+      // Loop over FEMs
+      for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+	usleep(10000);
+	// To do: This function needs to be updated/overloaded to configure the zero suppression
+	getTPCFEM(tpc_it)->fem_setup(crateconfig);
+	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
+      }
+    }
+
+    // Setup tx mode registers (this is done twice for some reason...)
+    getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("SN")->setupTXModeRegister();
+    
+    // Config trigger module
+    if(hasTrigger)
+      getTriggerModule()->configureTrigger( _p );
+
+    // set up link
+    linkSetup();
+    
+    // Enable triggered stream & Disable continuous stream
+    getXMITModule()->enableNUChanEvents(1);
+    getXMITModule()->enableSNChanEvents(1);
+    
+    // setup tx mode registers (again, I know)
+    getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("SN")->setupTXModeRegister();
+    getControllerModule()->setupTXModeRegister();
+    
+    /*
+      if (getTriggerModule()) {
+      tTriggerModule()->setupTXModeRegisters();
+      getXMITModule()->configureNUStreamReader_TRIGModuleTriggeredMode();
+      
+      }
+    */
+    
+    getTriggerModule()->enableTriggers();
+    getTriggerModule()->runOnSyncOn();
+
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
+  }
+
+  void Crate::runControllerTrigger2Stream(fhicl::ParameterSet const& _p){ 
+    
+    fhicl::ParameterSet crateconfig;
+    // NOTE: the name of the block in the fcl file must match 
+    if( ! _p.get_if_present<fhicl::ParameterSet> ( "nevis_crate", crateconfig ) ){
+      TLOG(TLVL_ERROR) << "Crate: Missing nevis_crate configuration block in fcl file" ;
+    }
+    
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
+    // Setup XMIT reader for NU stream
+    getXMITReader("NU")->configureReader();
+    getXMITReader("NU")->initializePCIeCard();
+    // Setup XMIT reader for SN stream
+    getXMITReader("SN")->configureReader();
+    getXMITReader("SN")->initializePCIeCard();
+    
+    // Setup controller module
+    getControllerModule()->initialize();
+    getControllerModule()->testOn();
+    getControllerModule()->runOff(); // using Controller triggers
+    //getControllerModule()->testOff(); // using CALIB triggers
+    // To do: move instructions below to fcl
+    getControllerModule()->setFrameLength(0xffff & 20479);
+    getControllerModule()->setNUTrigPosition(0xa);
+    
+    // Load xmit firmware
+    getXMITModule()->setMax3000Config();
+    getXMITModule()->programMax3000FPGAFirmware( crateconfig.get<std::string>( "xmit_fpga", "") );
+    
+    // Setup FEMs
+    if(getNumberOfTPCFEMs()){
+      // Loop over FEMs
+      for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+	usleep(10000);
+	// To do: This function needs to be updated/overloaded to configure the zero suppression
+	getTPCFEM(tpc_it)->fem_setup(crateconfig);
+	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
+      }
+    }
+
+    // Setup tx mode registers (this is done twice for some reason...)
+    getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("SN")->setupTXModeRegister();
+    
+    // set up link
+    linkSetup();
+    
+    // Enable triggered stream & Disable continuous stream
+    getXMITModule()->enableNUChanEvents(1);
+    getXMITModule()->enableSNChanEvents(1);
+    
+    // setup tx mode registers (again, I know)
+    getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("SN")->setupTXModeRegister();
+    getControllerModule()->setupTXModeRegister();
+    //getXMITModule()->configureSNStreamReader_SNRunOnSyncOnMode();
+    
+    getControllerModule()->runOn(); // calls runOnSyncOn
+
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
+  }
+
+  void Crate::runCalib2Stream(fhicl::ParameterSet const& _p){ 
+    
+    fhicl::ParameterSet crateconfig;
+    // NOTE: the name of the block in the fcl file must match 
+    if( ! _p.get_if_present<fhicl::ParameterSet> ( "nevis_crate", crateconfig ) ){
+      TLOG(TLVL_ERROR) << "Crate: Missing nevis_crate configuration block in fcl file" ;
+    }
+    
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
+    // Setup XMIT reader for NU stream
+    getXMITReader("NU")->configureReader();
+    getXMITReader("NU")->initializePCIeCard();
+    // Setup XMIT reader for SN stream
+    getXMITReader("SN")->configureReader();
+    getXMITReader("SN")->initializePCIeCard();
+    
+    // Setup controller module
+    getControllerModule()->initialize();
+    getControllerModule()->testOn();
+    //getControllerModule()->runOff(); // using CALIB triggers
+    //getControllerModule()->testOff(); // using CALIB triggers
+    
+    if(hasTrigger){
+      // using CALIB triggers
+      assert( getTriggerModule() ); // using CALIB triggers
+      getTriggerModule()->useController( getControllerModule() ); // using CALIB triggers
+
+
+      getTriggerModule()->runOnSyncOff();
+
+      ///////////////////////
+      // Temp: from CALIB, to avoid leaving the function generator on all weekend
+      getControllerModule()->testOff(); //v
+      // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
+      getTriggerModule()->setDeadtimeSize(0x1);//v
+      getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
+      getTriggerModule()->setCalibDelay(0x10);
+      getTriggerModule()->setFrameLength(0xffff & 20479);
+      ///////////////////////
+
+      getTriggerModule()->disableTriggers(false);
+      // getTriggerModule()->setDeadtimeSize(100); using CALIB triggers
+    }
+    
+    // Load xmit firmware
+    getXMITModule()->setMax3000Config();
+    getXMITModule()->programMax3000FPGAFirmware( crateconfig.get<std::string>( "xmit_fpga", "") );
+    
+    // Setup FEMs
+    if(getNumberOfTPCFEMs()){
+      // Loop over FEMs
+      for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+	usleep(10000);
+	// To do: This function needs to be updated/overloaded to configure the zero suppression
+	getTPCFEM(tpc_it)->fem_setup(crateconfig);
+	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
+      }
+    }
+
+    // Setup tx mode registers (this is done twice for some reason...)
+    getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("SN")->setupTXModeRegister();
+    
+    // Config trigger module
+    if(hasTrigger)
+      //getTriggerModule()->configureTrigger( _p ); // To do: move it with the other trigger instructions above // using CALIB triggers
+
+    // set up link
+    linkSetup();
+    
+    // Enable triggered stream & Disable continuous stream
+    getXMITModule()->enableNUChanEvents(1);
+    getXMITModule()->enableSNChanEvents(1);
+    
+    // setup tx mode registers (again, I know)
+    getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("SN")->setupTXModeRegister();
+    getControllerModule()->setupTXModeRegister();
+    //getXMITModule()->configureSNStreamReader_SNRunOnSyncOnMode();
+    
+    /*
+      if (getTriggerModule()) {
+      tTriggerModule()->setupTXModeRegisters();
+      getXMITModule()->configureNUStreamReader_TRIGModuleTriggeredMode();
+      
+      }
+    */
+    
+    getTriggerModule()->enableTriggers();
+    getTriggerModule()->runOnSyncOn();
+
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
 
   // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU stream with internal CALIB triggers
   // It follows partially https://github.com/NevisSBND/BoardTest/blob/master/bnlnevistest.c
   void Crate::runCalib( fhicl::ParameterSet const& _p ) {
-    TLOG(TLVL_INFO) << "Crate: start of "<< __func__ ;
 
     fhicl::ParameterSet crateconfig;
     // NOTE: the name of the block in the fcl file must match 
     if( ! _p.get_if_present<fhicl::ParameterSet> ( "nevis_crate", crateconfig ) ){
       TLOG(TLVL_ERROR) << "Crate: Missing nevis_crate configuration block in fcl file" ;
     }
-
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
     // Set up XMIT reader for the neutrino stream
     assert( getXMITReader() );
     getXMITReader()->configureReader();
@@ -223,6 +461,7 @@ namespace nevistpc{
       getTriggerModule()->useController( getControllerModule() );
       getTriggerModule()->runOnSyncOff(); //v
       getControllerModule()->testOff(); //v
+      // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
       getTriggerModule()->setDeadtimeSize(0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
@@ -267,6 +506,8 @@ namespace nevistpc{
 
     getTriggerModule()->enableTriggers();
     getTriggerModule()->runOnSyncOn();
+
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
 
 } // end of namespace nevistpc
