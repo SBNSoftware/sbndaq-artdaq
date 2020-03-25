@@ -537,7 +537,7 @@ namespace nevistpc {
 	}
 
 	void NevisTPCFEM::fem_setup(fhicl::ParameterSet const& crateConfig){
-	  mf::LogInfo("NevisTPCFEMs") << "FEM setup for slot " << _slot_number;
+	  mf::LogInfo("NevisTPCFEMs") << "FEM setup for slot " << (int)_slot_number;
 	  // Power On arria power supply
 	  powerOnArriaFPGA();
 	  // config on stratix fpga
