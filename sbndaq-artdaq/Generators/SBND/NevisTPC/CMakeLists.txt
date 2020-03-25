@@ -1,8 +1,7 @@
 add_subdirectory(nevishwutils)
 include_directories ( $ENV{WINDRIVER_INC} )
 
-
-SET_SOURCE_FILES_PROPERTIES(NevisTPCCrate_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
+SET_SOURCE_FILES_PROPERTIES(NevisTPC2StreamNUandSNXMIT_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCNUXMIT_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCCALIB_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 
@@ -43,7 +42,7 @@ simple_plugin(NevisTPCData "generator"
   ${CETLIB_EXCEPT}
   )
 
-simple_plugin(NevisTPCCrate "generator"
+simple_plugin(NevisTPC2StreamNUandSNXMIT "generator"
   sbndaq-artdaq_NevisTPCGeneratorBase
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq_nevishwutils
