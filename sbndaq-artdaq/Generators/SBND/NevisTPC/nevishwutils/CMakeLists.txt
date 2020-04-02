@@ -9,7 +9,6 @@ SET_SOURCE_FILES_PROPERTIES(NevisPCIeCard.cpp PROPERTIES COMPILE_FLAGS -Wno-erro
 SET_SOURCE_FILES_PROPERTIES(NevisReadoutPCIeCard.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisControllerPCIeCard.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 
-SET_SOURCE_FILES_PROPERTIES(CrateControllerModule.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(ControllerModule.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(Crate.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCFEM.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
@@ -27,7 +26,6 @@ cet_make( LIBRARY_NAME sbndaq-artdaq_nevishwutils
 			 NevisReadoutPCIeCard.cpp
 			 NevisControllerPCIeCard.cpp
 			 Crate.cpp
-			 CrateControllerModule.cpp
 			 ControllerModule.cpp
 			 NevisTPCFEM.cpp			
 			 TriggerModule.cpp
