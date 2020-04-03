@@ -1,0 +1,50 @@
+  ## Enable sending Data Request messages
+  send_requests: true
+  ## Port to send DataRequests on
+  request_port: 3001
+  ## How long to wait before sending new DataRequests
+  request_delay_ms: 1
+  ## How long to wait for pending requests to be sent at shutdown
+  request_shutdown_timeout_us: 1000000
+  ## Use this hostname for multicast output(to assign to the proper NIC)
+#  multicast_interface_ip: "0.0.0.0"  # default
+  multicast_interface_ip: "127.0.0.1"
+  ## Multicast address to send DataRequests to
+#  request_address: "227.128.12.26"  # default
+  request_address: "127.0.0.1"  # default
+  ## FHiCL table containing RoutingToken configuration
+  routing_token_config: {
+    ## True if using the Routing Master
+    use_routing_master: false  # default
+    ## Port to send tokens on
+    routing_token_port: 35555  # default
+    ## Hostname or IP of RoutingMaster
+    routing_master_hostname: "localhost"  # default
+  }
+  ## Whether to setup a RequestReceiver to verify that requests are being sent
+  use_receiver: false
+  ## Amount of time to wait for the receiver to receive a request message
+  receiver_timeout_ms: 10000  # default
+  ## Configuration for RequestReceiver, if used
+  receiver_config: {
+    ## Port to listen for request messages on
+    request_port: 3001  # default
+    ## Multicast address to listen for request messages on
+#    request_address: "227.128.12.26"  # default
+    request_address: "127.0.0.1"
+    ## Use this hostname for multicast (to assign to the proper NIC)
+#    multicast_interface_ip: "0.0.0.0"  # default
+    multicast_interface_ip: "127.0.0.1"  # default
+    ## Amount of time (in ms) to wait for no new requests when a Stop transition is pending
+    end_of_run_quiet_timeout_ms: 1000  # default
+    ## Expected increment of sequence ID between each request
+    request_increment: 1  # default
+  }
+  ## Number of requests to send
+  num_requests: 50 
+  ## Sequence ID of first request
+  starting_sequence_id: 1  # default
+  ## Amount to increment Sequence ID for each request
+  sequence_id_step: 1  # default
+  ## Number of milliseconds between requests
+  time_step_ms: 211  # default
