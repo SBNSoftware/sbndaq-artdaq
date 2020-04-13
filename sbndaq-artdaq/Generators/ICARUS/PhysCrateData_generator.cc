@@ -59,7 +59,6 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
     }
   }
 
-  ForceClear();
 }
 
 icarus::PhysCrateData::~PhysCrateData()
@@ -130,13 +129,14 @@ void icarus::PhysCrateData::SetDCOffset()
     CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00010000 | (dc_offset_b[ib] & 0xFFFF));
     CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00020000 | (dc_offset_c[ib] & 0xFFFF));
     CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00030000 | (dc_offset_d[ib] & 0xFFFF));
-    // uint32_t offset_c, offset_d;
-    // int res1, res2;
-    // res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
-    // res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
-    // std::cout << "Board " << ib << std::endl;
-    // std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << std::hex << offset_c << std::endl;
-    // std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << std::hex << offset_d << std::endl;
+    
+    uint32_t offset_c, offset_d;
+    int res1, res2;
+    res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
+    res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
+    std::cout << "Board " << ib << std::endl;
+    std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << std::hex << offset_c << std::dec << std::endl;
+    std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << std::hex << offset_d << std::dec << std::endl;
 
   }
 }
@@ -250,11 +250,28 @@ void icarus::PhysCrateData::ConfigureStart(){
   _tloop_start = std::chrono::high_resolution_clock::now();
   _tloop_end = std::chrono::high_resolution_clock::now();
 
+  SetDCOffset();
+
   //physCr->configureTrig(GetTrigConf());
   //physCr->configure(GetBoardConf());
   //VetoOff();
 
   //ForceClear();
+
+
+  for(int ib=0; ib<physCr->NBoards(); ++ib){
+    auto bdhandle = physCr->BoardHandle(ib);
+    
+    uint32_t offset_c, offset_d;
+    int res1, res2;
+    res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
+    res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
+    std::cout << "at start Board " << ib << std::endl;
+    std::cout << "at start Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << std::hex << offset_c << std::dec << std::endl;
+    std::cout << "at start Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << std::hex << offset_d << std::dec << std::endl;
+
+  }
+
   
   if(_issueStart)
     physCr->start();

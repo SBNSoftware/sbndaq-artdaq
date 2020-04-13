@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq    v0_05_01
+parent sbndaq_artdaq    v0_06_00
 defaultqual     e19:s87
 
 # These optional lines define the installed directories where
@@ -18,8 +18,8 @@ fcldir      -
 
 #
 product               version      optional
-artdaq_demo	          v3_07_02CH3e50c3
-sbndaq_artdaq_core    v0_05_00
+artdaq                v3_08_00
+sbndaq_artdaq_core    v0_06_00
 caencomm              v1_2a
 caenvme               v2_50
 caendigitizer         v2_12_0
@@ -37,7 +37,7 @@ end_product_list
 # -nq- here means there is no qualifier
 # a "-" here means the dependent product is not required by the parent and will not be setup
 
-qualifier                   artdaq_demo          sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx               epics jsoncpp    wibtools       windriver redis
+qualifier                   artdaq               sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx               epics jsoncpp    wibtools       windriver redis
 e17:prof:s83                e17:s83:prof         e17:prof:s83          -nq-    -nq-     -nq-          e17:p2715a:prof    e17   e17:prof   e17            prof      prof
 e17:debug:s83               e17:s83:debug        e17:debug:s83         -nq-    -nq-     -nq-          e17:p2715a:debug   e17   e17:debug  e17            debug     debug
 e17:prof:s83:icarus         e17:s83:prof         e17:prof:s83          -nq-    -nq-     -nq-          e17:p2715a:prof    e17   e17:prof   -              -         prof
@@ -63,6 +63,12 @@ e19:py2:prof:s94:icarus     e19:py2:s94:prof     e19:py2:prof:s94      -nq-    -
 e19:py2:debug:s94:icarus    e19:py2:s94:debug    e19:py2:debug:s94     -nq-    -nq-     -nq-          e19:p2715a:debug   e19   e19:debug  -              -         debug
 e19:py2:prof:s94:sbnd       e19:py2:s94:prof     e19:py2:prof:s94      -nq-    -nq-     -nq-          e19:p2715a:prof    e19   e19:prof   e19:prof:s94   prof      prof
 e19:py2:debug:s94:sbnd      e19:py2:s94:debug    e19:py2:debug:s94     -nq-    -nq-     -nq-          e19:p2715a:debug   e19   e19:debug  e19:debug:s94  debug     debug
+e19:py2:prof:s96            e19:py2:s96:prof     e19:py2:prof:s96      -nq-    -nq-     -nq-          e19:p2715a:prof    e19   e19:prof   e19:prof:s96   prof      prof
+e19:py2:debug:s96           e19:py2:s96:debug    e19:py2:debug:s96     -nq-    -nq-     -nq-          e19:p2715a:debug   e19   e19:debug  e19:debug:s96  debug     debug
+e19:py2:prof:s96:icarus     e19:py2:s96:prof     e19:py2:prof:s96      -nq-    -nq-     -nq-          e19:p2715a:prof    e19   e19:prof   -              -         prof
+e19:py2:debug:s96:icarus    e19:py2:s96:debug    e19:py2:debug:s96     -nq-    -nq-     -nq-          e19:p2715a:debug   e19   e19:debug  -              -         debug
+e19:py2:prof:s96:sbnd       e19:py2:s96:prof     e19:py2:prof:s96      -nq-    -nq-     -nq-          e19:p2715a:prof    e19   e19:prof   e19:prof:s96   prof      prof
+e19:py2:debug:s96:sbnd      e19:py2:s96:debug    e19:py2:debug:s96     -nq-    -nq-     -nq-          e19:p2715a:debug   e19   e19:debug  e19:debug:s96  debug     debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")

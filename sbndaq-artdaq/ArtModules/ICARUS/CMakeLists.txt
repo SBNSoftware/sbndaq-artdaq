@@ -18,26 +18,6 @@ simple_plugin(IcarusArtdaqBuildInfo "module"
   ${CETLIB_EXCEPT}
 )
 
-simple_plugin(IcarusInput "source"
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
-  sbndaq-artdaq-core_Overlays_ICARUS
-  artdaq-core_Core
-  artdaq_DAQdata
-  artdaq-utilities_Plugins
-  artdaq-core_Utilities
-  rt
-  artdaq_ArtModules
-  artdaq_ArtModules_ArtdaqSharedMemoryService_service
-  art_Framework_Core
-  art_Framework_IO_Sources
-  art_Framework_Principal
-  art_Framework_Services_Registry
-  art_Utilities
-  MF_MessageLogger
-  ${CETLIB_EXCEPT}
-)
-
 simple_plugin(PhysCrateDump "module"
          			${ARTDAQ-CORE_UTILITIES}
               sbndaq-artdaq-core_Overlays
@@ -65,6 +45,16 @@ simple_plugin(PhysCrateViewer "module"
 	      art_root_io_TFileService_service
 	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )
+
+simple_plugin(IcarusFragmentNamingService "service"
+  artdaq_ArtModules_ArtdaqFragmentNamingService_service
+  artdaq-core_Data
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq-core_Overlays_Common
+  sbndaq-artdaq-core_Overlays_ICARUS
+  art_Framework_Services_Registry
+  MF_MessageLogger
+  fhiclcpp)
 
 # Subdirectories.
 #add_subdirectory(DQM)
