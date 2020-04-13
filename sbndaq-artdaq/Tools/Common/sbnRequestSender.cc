@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
     fhicl::Atom<artdaq::Fragment::sequence_id_t> starting_sequence_id{fhicl::Name{"starting_sequence_id"}, fhicl::Comment{"Sequence ID of first request"}, 1};
     fhicl::Atom<artdaq::Fragment::sequence_id_t> sequence_id_scale{fhicl::Name{"sequence_id_step"}, fhicl::Comment{"Amount to increment Sequence ID for each request"}, 1};
     fhicl::Atom<artdaq::Fragment::timestamp_t> timestamp_scale{fhicl::Name{"time_step_ms"}, fhicl::Comment{"Number of milliseconds between requests"}, 211};
+    fhicl::Atom<int> run_number{fhicl::Name{"run_number"}, fhicl::Comment{"Run number"}, 0};
   };
 
   auto pset = LoadParameterSet<Config>(argc, argv, "sender", "This test application sends Data Request messages and optionally receives them to detect issues in the network transport");
@@ -38,6 +39,8 @@ int main(int argc, char* argv[]) {
   auto seq = pset.get<artdaq::Fragment::sequence_id_t>("starting_sequence_id", 1);
   auto seq_scale = pset.get<artdaq::Fragment::sequence_id_t>("sequence_id_step", 1);
   auto tmo = pset.get<size_t>("recevier_timeout_ms", 1000);
+  int  run_number = pset.get<int>("run_number", 0);
+  sender.SetRunNumber(run_number);
 
   std::chrono::time_point<std::chrono::system_clock> request_time = std::chrono::system_clock::now();
   std::chrono::duration<int, std::ratio<1, 1000>> time_step = std::chrono::milliseconds(
