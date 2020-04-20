@@ -653,6 +653,8 @@ namespace nevistpc {
 	    } else { // Static baseline values and thresholds
 	      unsigned int threshold = (chan_it%2 == 0)? 500 : 2039; // 500 ADC for even channels, 2039 ADC for odd channels
 	      unsigned int baseline = (chan_it%2 == 0)? 767 : 2040; // 767 ADC for even channels,  2040 ADC for odd channels
+	      //unsigned int threshold = 2046; // Aggressive threshold for all channels
+	      //unsigned int baseline = 2047; // Aggressive threshold for all channels
 	      setLoadThreshold( chan_it, threshold );
 	      setLoadBaseline( chan_it, baseline );
 	    }
@@ -669,8 +671,8 @@ namespace nevistpc {
 
 	  // Fake data configuration
 	  bool use_fake_data = crateConfig.get<bool>("fem_fake_data", false);
+	  enableFEMFakeData( use_fake_data );
 	  if( use_fake_data ){
-	    enableFEMFakeData( use_fake_data );
 	    loadFEMFakeData( crateConfig.get<std::string>( "fem_fake_data_pattern", "channel" ) );
 	  }
 	}
