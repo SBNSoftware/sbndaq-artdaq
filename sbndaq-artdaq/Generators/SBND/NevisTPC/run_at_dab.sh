@@ -4,9 +4,17 @@ setup mrb
 source /home/nfs/$USER/sbndaq/localProducts_sbndaq_v*/setup
 mrbslp
 
-echo "killing all running artdaq processes before starting"
+echo -e "\n\nkilling all running artdaq processes before starting"
 killall -9 artdaqDriver
 killall -9 art
+
+#Create run directory
+timestamp=`date +%Y%m%d%H%M%S`
+runname="/home/nfs/$USER/runs/Run"$timestamp # NFS disk
+mkdir -p $runname
+cd $runname
+logname="Run"$timestamp".log"
+echo -e "\n\nData will be saved at $runname \n\n"
 
 export TRACE_MSGMAX=0
 export TRACE_FILE=/run/user/${UID}/tbuffer
@@ -30,19 +38,13 @@ tonM 0-3 -n NevisPCIeCard # enable NevisPCIeCard (up to debug level)
 tmodeS 1
 tmodeM 1
 
-
-#Create run directory
-timestamp=`date +%Y%m%d%H%M%S`
-runname="/home/nfs/$USER/runs/Run"$timestamp
-mkdir -p $runname
-cd $runname
-logname="Run"$timestamp".log"
-
-
-echo -e "\n\nType 1 - 3 to choose the fcl driver to run:"
-echo -e "\t(1) External triggers"
-echo -e "\t(2) Internal triggers (1 Hz)"
-echo -e "\t(3) Controller triggers (1 Hz)"
+echo -e "\n\nType 1 - 6 to choose the fcl driver to run:"
+echo -e "\t(1) WIB data: 2-stream with External triggers"
+echo -e "\t(2) WIB data: 2-stream with Internal triggers (1 Hz)"
+echo -e "\t(3) WIB data: 2-stream with Controller triggers (1 Hz)"
+echo -e "\t(4) Nevis fake data: 2-stream with external triggers"
+echo -e "\t(5) Nevis fake data: 2-stream with internal triggers (1 Hz)"
+echo -e "\t(6) Nevis fake data: 2-stream with controller triggers (1 Hz)"
 echo -e "\n--> Press Ctrl + C anytime to stop the DAQ <--\n"
 read DRVR
 if [ "$DRVR" = "1" ]; then
@@ -51,6 +53,12 @@ elif [ "$DRVR" = "2" ]; then
     thefcl=/home/nfs/$USER/sbndaq/srcs/sbndaq/dab/artdaqDriver/NevisTPC2StreamCALIB_driver.fcl
 elif [ "$DRVR" = "3" ]; then
     thefcl=/home/nfs/$USER/sbndaq/srcs/sbndaq/dab/artdaqDriver/NevisTPC2StreamCTRL_driver.fcl
+elif [ "$DRVR" = "4" ]; then
+    thefcl=/home/nfs/$USER/sbndaq/srcs/sbndaq/dab/artdaqDriver/fake_NevisTPC2StreamEXT_driver.fcl
+elif [ "$DRVR" = "5" ]; then
+    thefcl=/home/nfs/$USER/sbndaq/srcs/sbndaq/dab/artdaqDriver/fake_NevisTPC2StreamCALIB_driver.fcl
+elif [ "$DRVR" = "6" ]; then
+    thefcl=/home/nfs/$USER/sbndaq/srcs/sbndaq/dab/artdaqDriver/fake_NevisTPC2StreamCTRL_driver.fcl
 else
     echo -e "\n\nOption not recognized. Run manually the fcl driver file\n\n"
     exit 1
