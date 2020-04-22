@@ -61,7 +61,12 @@ namespace sbndaq
       TFILLFRAG=17,
       TGETDATA=24
     };
-    
+
+    enum
+    {
+      FEM_BASE_SLOT = 3
+    };
+   
     uint32_t current_subrun_;
     size_t events_seen_;
     bool look_for_xmit_header_;
@@ -73,7 +78,8 @@ namespace sbndaq
     uint32_t fSamplesPerChannel;
     uint32_t fNChannels;
     bool     fUseCompression;
-    
+
+    std::vector<artdaq::Fragment::fragment_id_t> fragment_ids;    
     std::vector<uint64_t> FEMIDs_;
     uint32_t RunNumber_;
     int32_t EventsPerSubrun_;
