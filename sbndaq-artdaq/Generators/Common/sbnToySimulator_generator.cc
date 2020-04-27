@@ -1,7 +1,3 @@
-// For an explanation of this class, look at its header,
-// sbnToySimulator.hh, as well as
-// https://cdcvs.fnal.gov/redmine/projects/artdaq-demo/wiki/Fragments_and_FragmentGenerators_w_Toy_Fragments_as_Examples
-
 #include "sbnToySimulator.hh"
 
 #include "canvas/Utilities/Exception.h"
@@ -30,7 +26,6 @@
 sbndaq::sbnToySimulator::sbnToySimulator(fhicl::ParameterSet const& ps)
     : CommandableFragmentGenerator(ps)
     , metadata_({0})
-//    , header_({0})
 {
 
   fragment_id_ = ps.get<int>("fragment_id", 0);
@@ -45,14 +40,10 @@ bool sbndaq::sbnToySimulator::getNext_(artdaq::FragmentPtrs& frags) {
 //  TLOG(TLVL_INFO)<<__func__<<" called";
   if (should_stop())  return false; 
 
-  std::this_thread::sleep_until (timestamp_);
-  if(should_stop()) return false;
-
   //loop over all fragments
   //normally, if getNext_ is called often, the loop will be executed only once
   while(std::chrono::system_clock::now() > timestamp_)  {
     metadata_.fragment_fill_time_ = std::chrono::system_clock::now().time_since_epoch().count();
-    //    header_.seven_ = 7;
 
     TLOG(TLVL_INFO)<<__func__
       <<" Sending fragment "<<ev_counter()<<" ("
@@ -73,9 +64,6 @@ bool sbndaq::sbnToySimulator::getNext_(artdaq::FragmentPtrs& frags) {
         );
 
     //fragment contains no payload, thus no need to fill it
-    //   artdaq::Fragment::FragmentBytes(std::size_t payload_size_in_bytes, sequence_id_t sequence_id,
-    //   fragment_id_t fragment_id, type_t type, const T & metadata)
-    //    memcpy(frags.back()->dataBeginBytes(), &header_, sizeof(sbnToyFragment::Header));
     frags.emplace_back(std::move(fragptr));
 
     ev_counter_inc();
