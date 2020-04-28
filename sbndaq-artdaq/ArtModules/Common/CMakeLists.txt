@@ -36,6 +36,7 @@ simple_plugin( BernCRTZMQAna "module"
   ${ROOT_BASIC_LIB_LIST}
 	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common 
+  artdaq-core_Data
 )
 
 # Subdirectories.

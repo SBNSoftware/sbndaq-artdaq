@@ -14,6 +14,8 @@
 
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 #include "artdaq-core/Data/Fragment.hh"
+#include "artdaq-core/Data/ContainerFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 //#include "art/Framework/Services/Optional/TFileService.h"
 #include "art_root_io/TFileService.h"
@@ -42,34 +44,33 @@ public:
   
 
 private:
+  void analyze_fragment(artdaq::Fragment & frag);
   
   TTree * events;
 
 //data payload
-   uint8_t mac5; //last 8 bits of FEB mac5 address
-   uint16_t flags;
-   uint16_t lostcpu;
-   uint16_t lostfpga;
-   uint32_t ts0;
-   uint32_t ts1;
-   uint16_t adc[32];
-   uint32_t coinc;
+  uint8_t mac5; //last 8 bits of FEB mac5 address
+  uint16_t flags;
+  uint16_t lostcpu;
+  uint16_t lostfpga;
+  uint32_t ts0;
+  uint32_t ts1;
+  uint16_t adc[32];
+  uint32_t coinc;
 
 //metadata
-   uint64_t  run_start_time;
-   uint64_t  this_poll_start;
-   uint64_t  this_poll_end;
-   uint64_t  last_poll_start;
-   uint64_t  last_poll_end;
-   int32_t   system_clock_deviation;
-   uint32_t  feb_events_per_poll;
-   uint32_t  feb_event_number;
+  uint64_t  run_start_time;
+  uint64_t  this_poll_start;
+  uint64_t  this_poll_end;
+  uint64_t  last_poll_start;
+  uint64_t  last_poll_end;
+  int32_t   system_clock_deviation;
+  uint32_t  feb_events_per_poll;
+  uint32_t  feb_event_number;
 
-   //information from fragment header
-   uint32_t  sequence_id;
-   uint64_t  fragment_timestamp;
-
-  
+//information from fragment header
+  uint32_t  sequence_id;
+  uint64_t  fragment_timestamp;
 };
 
 //Define the constructor
@@ -112,64 +113,74 @@ sbndaq::BernCRTZMQAna::~BernCRTZMQAna()
 {
 }
 
+void sbndaq::BernCRTZMQAna::analyze_fragment(artdaq::Fragment & frag) {
+
+  BernCRTZMQFragment bern_fragment(frag);
+
+  fragment_timestamp        = frag.timestamp();
+  sequence_id               = frag.sequenceID();
+
+  //event data
+  BernCRTZMQEvent const* bevt = bern_fragment.eventdata();
+
+//  TLOG(TLVL_INFO)<<*bevt;
+
+  mac5     = bevt->MAC5();
+  flags    = bevt->flags;
+  lostcpu  = bevt->lostcpu;
+  lostfpga = bevt->lostfpga;
+  ts0      = bevt->Time_TS0();
+  ts1      = bevt->Time_TS1();
+  coinc    = bevt->coinc;
+
+  for(int ch=0; ch<32; ch++) adc[ch] = bevt->ADC(ch);
+
+  //metadata
+  const BernCRTZMQFragmentMetadata* md = bern_fragment.metadata();
+//  TLOG(TLVL_INFO)<<*md;
+
+  run_start_time            = md->run_start_time();
+  this_poll_start           = md->this_poll_start();
+  this_poll_end             = md->this_poll_end();
+  last_poll_start           = md->last_poll_start();
+  last_poll_end             = md->last_poll_end();
+  system_clock_deviation    = md->system_clock_deviation();
+  feb_events_per_poll       = md->feb_events_per_poll();
+  feb_event_number          = md->feb_event_number();
+
+  events->Fill();
+}
+
+
 void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 {
-
-
-  //can get the art event number
   art::EventNumber_t eventNumber = evt.event();
-  
-  //we get a 'handle' to the fragments in the event
-  //this will act like a pointer to a vector of artdaq fragments
-  art::Handle< std::vector<artdaq::Fragment> > rawFragHandle;
-  
-  //we fill the handle by getting the right data according to the label
-  //the module label will be 'daq', while the instance label (second argument) matches the type of fragment
-  evt.getByLabel("daq","BERNCRTZMQ", rawFragHandle);
+//  TLOG(TLVL_INFO)<<" Processing event "<<eventNumber;
 
-  //this checks to make sure it's ok
-  if (!rawFragHandle.isValid()) return;
-
-
-  for (size_t idx = 0; idx < rawFragHandle->size(); ++idx) { // loop over the fragments of an event
-
-    const auto& frag((*rawFragHandle)[idx]); // use this fragment as a reference to the same data
-
-    //this applies the 'overlay' to the fragment, to tell it to treat it like a BernCRTZMQ fragment
-    BernCRTZMQFragment bern_fragment(frag);
+  std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
+  evt.getManyByType(fragmentHandles);
+  for (auto handle : fragmentHandles) {
+    if (!handle.isValid() || handle->size() == 0)
+      continue;
     
-    fragment_timestamp        = frag.timestamp();
-    sequence_id               = frag.sequenceID();
-
-    //event data
-    BernCRTZMQEvent const* bevt = bern_fragment.eventdata();
-
-    mac5     = bevt->MAC5();
-    flags    = bevt->flags;
-    lostcpu  = bevt->lostcpu;
-    lostfpga = bevt->lostfpga;
-    ts0      = bevt->Time_TS0();
-    ts1      = bevt->Time_TS1();
-    coinc    = bevt->coinc;
-
-    for(int ch=0; ch<32; ch++) adc[ch] = bevt->ADC(ch);
-
-    //metadata
-    const BernCRTZMQFragmentMetadata* md = bern_fragment.metadata();
-
-    run_start_time            = md->run_start_time();
-    this_poll_start           = md->this_poll_start();
-    this_poll_end             = md->this_poll_end();
-    last_poll_start           = md->last_poll_start();
-    last_poll_end             = md->last_poll_end();
-    system_clock_deviation    = md->system_clock_deviation();
-    feb_events_per_poll       = md->feb_events_per_poll();
-    feb_event_number          = md->feb_event_number();
-
-    events->Fill();
-
-  }//end loop over fragments
-}
+    if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
+      //Container fragment
+      for (auto cont : *handle) {
+        artdaq::ContainerFragment contf(cont);
+        if (contf.fragment_type() != sbndaq::detail::FragmentType::BERNCRTZMQ)
+          continue;
+        for (size_t ii = 0; ii < contf.block_count(); ++ii)
+          analyze_fragment(*contf[ii].get());
+      }
+    }
+    else {
+      //normal fragment
+      if (handle->front().type() != sbndaq::detail::FragmentType::BERNCRTZMQ) continue;
+      for (auto frag : *handle) 
+        analyze_fragment(frag);
+    }
+  }
+} //analyze
 
 DEFINE_ART_MODULE(sbndaq::BernCRTZMQAna)
 //this is where the name is specified
