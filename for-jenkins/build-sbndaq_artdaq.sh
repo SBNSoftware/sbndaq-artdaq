@@ -2,7 +2,7 @@
 
 #parameters
 
-#PRODUCTS=${WORKSPACE}/../products
+PRODUCTS=/cvmfs/fermilab.opensciencegrid.org/products/artdaq:/cvmfs/fermilab.opensciencegrid.org/products/larsoft
 
 artdaq_version="v3_08_00"
 
