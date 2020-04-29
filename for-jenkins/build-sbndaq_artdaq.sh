@@ -63,8 +63,13 @@ for onequal in "${quals[@]}"; do
   esac
 done
 
-qual_set="${squal}:${basequal}"
+
+qual_set="${basequal}"
 [[ ! -z "${pyqual+x}" ]] && qual_set="${qual_set}:${pyqual}"
+qual_set="${qual_set}:${squal}"
+
+manifest_qual_set="${squal}:${basequal}"
+[[ ! -z "${pyqual+x}" ]] &&  manifest_qual_set="${manifest_qual_set}:${pyqual}"
 
 case ${build_type} in
   debug) build_type_flag="-d" ;;
@@ -146,7 +151,7 @@ cd ${products_dir} || exit 1
 curl --fail --silent --location --insecure -O http://scisoft.fnal.gov/scisoft/bundles/tools/pullProducts || exit 1
 curl --fail --silent --location --insecure -O http://scisoft.fnal.gov/scisoft/bundles/tools/pullPackage || exit 1
 chmod +x pullProducts pullPackage
-./pullProducts ${products_dir} ${flvr} artdaq-${artdaq_version} ${qual_set//:/-} ${build_type} 2>&1 |tee ${products_dir}/pullproducts.log
+./pullProducts ${products_dir} ${flvr} artdaq-${artdaq_version} ${manifest_qual_set//:/-} ${build_type} 2>&1 |tee ${products_dir}/pullproducts.log
 
 ./pullPackage ${products_dir} sl7 python-v3_7_2 2>&1 |tee -a ${products_dir}/pullProducts.log
 
@@ -163,7 +168,7 @@ source  ${working_dir}/python3_env/bin/activate
 pip install --upgrade pip
 pip install pandas
 
-local_manifest=${product_name}-current-Linux64bit+3.10-2.17-${qual_set//:/-}-${build_type}_MANIFEST.txt
+local_manifest=${product_name}-current-Linux64bit+3.10-2.17-${manifest_qual_set//:/-}-${build_type}_MANIFEST.txt
 
 python3 ${src_dir}/${product_name}/for-jenkins/generate-manifest.py \
 	-p ${src_dir}/${product_name}/ups/product_deps \
@@ -172,7 +177,7 @@ python3 ${src_dir}/${product_name}/for-jenkins/generate-manifest.py \
 
 cd ${products_dir} || exit 1
 
-./pullProducts -l  ${products_dir} ${flvr} ${product_name}-current ${qual_set//:/-} ${build_type} 2>&1 |tee -a ${products_dir}/pullproducts.log
+./pullProducts -l  ${products_dir} ${flvr} ${product_name}-current ${manifest_qual_set//:/-} ${build_type} 2>&1 |tee -a ${products_dir}/pullproducts.log
 
 unsetup_all
 
