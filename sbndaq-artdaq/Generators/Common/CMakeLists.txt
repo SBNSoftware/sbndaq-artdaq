@@ -160,8 +160,7 @@ simple_plugin(BernCRTZMQData "generator"
   ${CETLIB_EXCEPT}
   )
 
-simple_plugin(sbnToySimulator "generator"
-#  SOURCE sbnToySimulator_generator.cc
+simple_plugin(DummyGenerator "generator"
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities

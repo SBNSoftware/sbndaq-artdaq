@@ -1,7 +1,7 @@
-#ifndef sbndaq_artdaq_Generators_sbnToySimulator_hh
-#define sbndaq_artdaq_Generators_sbnToySimulator_hh
+#ifndef sbndaq_artdaq_Generators_DummyGenerator_hh
+#define sbndaq_artdaq_Generators_DummyGenerator_hh
 
-#include "sbndaq-artdaq-core/Overlays/Common/sbnToyFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/DummyFragment.hh"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
 #include "fhiclcpp/fwd.h"
@@ -9,7 +9,7 @@
 
 namespace sbndaq {
 /**
- * \brief sbnToySimulator based on artdaq-demo ToySimulator
+ * \brief DummyGenerator based on artdaq-demo ToySimulator
  * generates empty fragments in steady time intervals.
  * Its purpose is to provide fragments in push mode which
  * will trigger readout of other generators (e.g. CRT)
@@ -17,12 +17,12 @@ namespace sbndaq {
  * which normally run in push mode
  *
  */
-class sbnToySimulator : public artdaq::CommandableFragmentGenerator
+class DummyGenerator : public artdaq::CommandableFragmentGenerator
   {
     public:
-      explicit sbnToySimulator(fhicl::ParameterSet const& ps);
+      explicit DummyGenerator(fhicl::ParameterSet const& ps);
 
-      virtual ~sbnToySimulator();
+      virtual ~DummyGenerator();
 
     private:
       bool getNext_(artdaq::FragmentPtrs& output) override;
@@ -31,7 +31,7 @@ class sbnToySimulator : public artdaq::CommandableFragmentGenerator
       void stop() override;
       void stopNoMutex() override {}
 
-      sbnToyFragment::Metadata metadata_;
+      DummyFragment::Metadata metadata_;
 
       int fragment_id_;
 
@@ -41,4 +41,4 @@ class sbnToySimulator : public artdaq::CommandableFragmentGenerator
   };
 }  // namespace sbndaq
 
-#endif /* sbndaq_artdaq_Generators_sbnToySimulator_hh */
+#endif /* sbndaq_artdaq_Generators_DummyGenerator_hh */

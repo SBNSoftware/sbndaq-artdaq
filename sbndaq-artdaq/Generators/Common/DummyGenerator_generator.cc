@@ -1,4 +1,4 @@
-#include "sbnToySimulator.hh"
+#include "DummyGenerator.hh"
 
 #include "canvas/Utilities/Exception.h"
 
@@ -18,26 +18,23 @@
 #include <thread>
 
 #include <unistd.h>
-#define TRACE_NAME "sbnToySimulator"
+#define TRACE_NAME "DummyGenerator"
 #include "cetlib_except/exception.h"
 #include "tracemf.h"  // TRACE, TLOG*
 
-//Constructor
-sbndaq::sbnToySimulator::sbnToySimulator(fhicl::ParameterSet const& ps)
+sbndaq::DummyGenerator::DummyGenerator(fhicl::ParameterSet const& ps)
     : CommandableFragmentGenerator(ps)
     , metadata_({0})
 {
 
   fragment_id_ = ps.get<int>("fragment_id", 0);
-
-  time_step_ = std::chrono::milliseconds( ps.get<int>("time_step_ms", 199) );
-  timestamp_ = std::chrono::system_clock::now() + time_step_;
+  time_step_   = std::chrono::milliseconds( ps.get<int>("time_step_ms", 199) );
+  timestamp_   = std::chrono::system_clock::now() + time_step_;
 }
 
-sbndaq::sbnToySimulator::~sbnToySimulator() { }
+sbndaq::DummyGenerator::~DummyGenerator() { }
 
-bool sbndaq::sbnToySimulator::getNext_(artdaq::FragmentPtrs& frags) {
-//  TLOG(TLVL_INFO)<<__func__<<" called";
+bool sbndaq::DummyGenerator::getNext_(artdaq::FragmentPtrs& frags) {
   if (should_stop())  return false; 
 
   //loop over all fragments
@@ -54,10 +51,10 @@ bool sbndaq::sbnToySimulator::getNext_(artdaq::FragmentPtrs& frags) {
 
     std::unique_ptr<artdaq::Fragment> fragptr(
         artdaq::Fragment::FragmentBytes(
-          sizeof(sbnToyFragment),
+          sizeof(DummyFragment),
           ev_counter(),
           fragment_id_,
-          sbndaq::detail::FragmentType::sbnToySimulator,
+          sbndaq::detail::FragmentType::DummyGenerator,
           metadata_,
           timestamp_.time_since_epoch().count()
           )
@@ -81,9 +78,9 @@ bool sbndaq::sbnToySimulator::getNext_(artdaq::FragmentPtrs& frags) {
 
 
 
-void sbndaq::sbnToySimulator::start() { }
+void sbndaq::DummyGenerator::start() { }
 
-void sbndaq::sbnToySimulator::stop() { }
+void sbndaq::DummyGenerator::stop() { }
 
 // The following macro is defined in artdaq's GeneratorMacros.hh header
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::sbnToySimulator)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::DummyGenerator)
