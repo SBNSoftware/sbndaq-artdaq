@@ -175,6 +175,8 @@ python3 ${src_dir}/${product_name}/for-jenkins/generate-manifest.py \
   -m ${products_dir}/${local_manifest} \
 	-q ${qual_set}:${build_type}
 
+sed -i '/windriver/d' ${products_dir}/${local_manifest}
+
 cd ${products_dir} || exit 1
 
 ./pullProducts -l  ${products_dir} ${flvr} ${product_name}-current ${manifest_qual_set//:/-} ${build_type} 2>&1 |tee -a ${products_dir}/pullproducts.log
