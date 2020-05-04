@@ -29,7 +29,6 @@ namespace sbndaq
      void stopNoMutex() override {}
 
      void setupMBB(fhicl::ParameterSet const& MBB_config);
-     void setupPTC(size_t icrate);
 
      std::unique_ptr<MBB> mbb;
   };
