@@ -1,14 +1,20 @@
 add_subdirectory(TriggerBoard)
 add_subdirectory(NevisTPC)
 
+find_ups_product( wibtools v0_03_03 )
+
 include_directories($ENV{JSONCPP_INC})
 include_directories($ENV{TRACE_INC})
 include_directories($ENV{WIBTOOLS_INC})
 include_directories(./TriggerBoard)
 
-cet_find_library( WIBTOOLS_WIB    NAMES WIB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
-cet_find_library( WIBTOOLS_MBB    NAMES MBB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
-cet_find_library( WIBEXCEPTION    NAMES ToolException PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+#cet_find_library( WIBTOOLS_WIB    NAMES WIB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+#cet_find_library( WIBTOOLS_MBB    NAMES MBB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+#cet_find_library( WIBEXCEPTION    NAMES ToolException PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
+
+#MESSAGE (STATUS "************* WIBTOOLS_WIB=${WIBTOOLS_WIB}<")
+#MESSAGE (STATUS "************* WIBTOOLS_MBB=${WIBTOOLS_MBB}<")
+#MESSAGE (STATUS "************* WIBEXCEPTION=${WIBEXCEPTION}<")
 
 simple_plugin(TriggerBoardReader "generator"
   sbndaq-artdaq-core_Overlays
@@ -39,6 +45,8 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_WIBReader
 			artdaq_Generators
   			artdaq-core_Utilities
   			sbndaq-artdaq_Common_Utilities
+                        WIB
+                        ToolException
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
 			${FHICLCPP}
@@ -47,8 +55,8 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_WIBReader
 			${TRACE}
 			${CETLIB}
 			${CETLIB_EXCEPT}
-			${WIBTOOLS_WIB}
-			${WIBEXCEPTION}
+		#	${WIBTOOLS_WIB}
+		#	${WIBEXCEPTION}
 )
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_MBBReader
@@ -58,6 +66,9 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_MBBReader
 			artdaq_Generators
   			artdaq-core_Utilities
   			sbndaq-artdaq_Common_Utilities
+                        WIB
+                        MBB
+                        ToolException
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
 			${FHICLCPP}
@@ -66,9 +77,9 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_MBBReader
 			${TRACE}
 			${CETLIB}
 			${CETLIB_EXCEPT}
-			${WIBTOOLS_WIB}
-			${WIBTOOLS_MBB}
-			${WIBEXCEPTION}
+		#	${WIBTOOLS_WIB}
+		#	${WIBTOOLS_MBB}
+		#	${WIBEXCEPTION}
 )
 
 
@@ -84,6 +95,8 @@ simple_plugin(WIBReader "generator"
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-utilities_Plugins
+  WIB
+  ToolException
   ${ART_UTILITIES}
   ${CANVAS}
   ${TRACE}
@@ -91,8 +104,8 @@ simple_plugin(WIBReader "generator"
   ${MF_MESSAGELOGGER}
   ${CETLIB}
   ${CETLIB_EXCEPT}
-  ${WIBTOOLS}
-  ${WIBEXCEPTION}
+#  ${WIBTOOLS}
+#  ${WIBEXCEPTION}
   )
 
 simple_plugin(MBBReader "generator"
@@ -107,6 +120,8 @@ simple_plugin(MBBReader "generator"
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-utilities_Plugins
+  WIB
+  ToolException
   ${ART_UTILITIES}
   ${CANVAS}
   ${TRACE}
@@ -114,7 +129,7 @@ simple_plugin(MBBReader "generator"
   ${MF_MESSAGELOGGER}
   ${CETLIB}
   ${CETLIB_EXCEPT}
-  ${WIBTOOLS}
-  ${WIBEXCEPTION}
+#  ${WIBTOOLS}
+#  ${WIBEXCEPTION}
   )
 
