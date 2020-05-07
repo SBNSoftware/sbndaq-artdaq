@@ -11,6 +11,8 @@ project_url=https://cdcvs.fnal.gov/projects/${project_name}
 
 
 #main script
+export PRODUCTS
+
 usage() {
   cat 1>&2 <<EOF
 Usage: $(basename ${0}) [-h]
