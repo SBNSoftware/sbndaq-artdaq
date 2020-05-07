@@ -2,7 +2,7 @@
 
 #parameters
 
-PRODUCTS=/cvmfs/fermilab.opensciencegrid.org/products/artdaq:/cvmfs/fermilab.opensciencegrid.org/products/larsoft:$PRODUCTS
+PRODUCTS=/cvmfs/fermilab.opensciencegrid.org/products/artdaq:/cvmfs/fermilab.opensciencegrid.org/products/larsoft
 
 artdaq_version="v3_08_00"
 
@@ -175,7 +175,7 @@ python3 ${src_dir}/${product_name}/for-jenkins/generate-manifest.py \
   -m ${products_dir}/${local_manifest} \
 	-q ${qual_set}:${build_type}
 
-sed -i '/windriver/d' ${products_dir}/${local_manifest}
+#sed -i '/windriver/d' ${products_dir}/${local_manifest}
 
 cd ${products_dir} || exit 1
 
