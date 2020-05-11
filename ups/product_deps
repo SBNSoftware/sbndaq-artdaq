@@ -26,7 +26,7 @@ caendigitizer         v2_12_0
 pqxx                  v6_2_5c
 epics                 v3_16_2
 jsoncpp               v1_7_7d
-wibtools              v0_03_03     -
+wibtools              v0_03_04     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
 cetbuildtools         v7_14_00     -       only_for_build
