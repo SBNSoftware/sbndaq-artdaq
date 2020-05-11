@@ -517,8 +517,6 @@ namespace nevistpc {
     	TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << flag;
 	}
 
-
-
         void NevisTPCFEM::setFEMBipolar(data_payload_t const &size)
 	{
 	  controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::BIPOLAR, size));
@@ -535,6 +533,60 @@ namespace nevistpc {
 	  usleep(1);
 	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " for ch " << chan << " with " << size;
 	}
+
+	void NevisTPCFEM::enableFEMFakeData(bool const &flag){
+	  // Flag is inverted since FEM uses 0 to enable fake data and 1 to enable optical data (default)
+	  data_payload_bool_t const useOptical = !flag;
+	  controller()->send( ControlDataPacket( _slot_number, device::STRATIX_FPGA, stratix_fpga::INPUT_DATA_SELECTION, useOptical ) );
+	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << flag;
+	}
+
+        void NevisTPCFEM::loadFEMFakeData(std::string const &pattern){
+	  unsigned int fake_data_array[65536];
+
+	  // Create fake data pattern
+	  for( unsigned int channel = 0; channel < 64; channel++ ){
+	    for(unsigned int sample = 0; sample < 1024; sample++ ){
+	      // Fake data is the sum of channel number and sample index
+	      if( pattern == "channel+sample" ) fake_data_array[channel + sample*64]= (channel + sample) & 0xfff;
+	      // Fake data is the channel number
+	      else if( pattern == "channel" ) fake_data_array[channel + sample*64]= channel & 0xfff;
+	      // Fake data is the sample index number
+	      else if( pattern == "sample" ) fake_data_array[channel + sample*64]= sample & 0xfff;
+	      else{
+		mf::LogInfo("NevisTPCFEMs") << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
+		TLOG(TLVL_ERROR) << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
+		fake_data_array[channel+sample*64]= 0 & 0xfff;
+	      }
+	    }
+	  }
+	  // Possible options for future development: load from text file
+
+	  // Load fake data into FEM memory
+	  // ADC samples are 12 bit long but the FEM memory uses 16-bit words
+	  // Store 4 12-bit ADC samples as 3 16-bit words
+	  // 64 channels * 1024 samples/channel * 12 bit/sample * 1 word/16 bit = 49152 words into FEM memory
+	  unsigned int address = 0;
+	  for( unsigned int sample = 0; sample < 1024; sample ++ ){
+	    for( unsigned int channel=0; channel < 64; channel++ ){
+	      unsigned int packing_index = channel%4;
+	      unsigned int packed_word;
+	      if( packing_index == 0 ) packed_word = (fake_data_array[channel+sample*64] & 0xfff) +  ((fake_data_array[channel+sample*64+1] & 0xf) << 12);
+	      else if( packing_index == 1 ) 
+		packed_word = ((fake_data_array[channel+sample*64] & 0xff0) >> 4) +  ((fake_data_array[channel+sample*64+1] & 0xff) << 8);
+	      else if( packing_index == 2 ) 
+		packed_word = ((fake_data_array[channel+sample*64] & 0xf00) >> 8) +  ((fake_data_array[channel+sample*64+1] & 0xfff) << 4);
+	      if(packing_index != 3){
+		controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::LOAD_FAKE_DATA_ADDRESS, address));
+		controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::LOAD_FAKE_DATA_ADC, packed_word));
+		controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::WRITE_FAKE_DATA));
+		address++;
+	      }
+	    }
+	  }
+	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << pattern;
+	}
+
 
 	void NevisTPCFEM::fem_setup(fhicl::ParameterSet const& crateConfig){
 	  mf::LogInfo("NevisTPCFEMs") << "FEM setup for slot " << (int)_slot_number;
@@ -601,6 +653,8 @@ namespace nevistpc {
 	    } else { // Static baseline values and thresholds
 	      unsigned int threshold = (chan_it%2 == 0)? 500 : 2039; // 500 ADC for even channels, 2039 ADC for odd channels
 	      unsigned int baseline = (chan_it%2 == 0)? 767 : 2040; // 767 ADC for even channels,  2040 ADC for odd channels
+	      //unsigned int threshold = 2046; // Aggressive threshold for all channels
+	      //unsigned int baseline = 2047; // Aggressive threshold for all channels
 	      setLoadThreshold( chan_it, threshold );
 	      setLoadBaseline( chan_it, baseline );
 	    }
@@ -614,6 +668,12 @@ namespace nevistpc {
 	  setLoadPostsample( crateConfig.get<int>( "postsample", 0 )); // gives 1 postsample, can't take more with the WIB fake data
 	  setChannelThreshold( crateConfig.get<bool>( "channel_threshold", true ));
 	  if( static_baseline ) setFEMBipolar( 2 ); // all bipolar since channelwise polarity not supported
-	}
 
+	  // Fake data configuration
+	  bool use_fake_data = crateConfig.get<bool>("fem_fake_data", false);
+	  enableFEMFakeData( use_fake_data );
+	  if( use_fake_data ){
+	    loadFEMFakeData( crateConfig.get<std::string>( "fem_fake_data_pattern", "channel" ) );
+	  }
+	}
 }

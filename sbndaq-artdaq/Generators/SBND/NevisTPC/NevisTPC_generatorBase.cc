@@ -32,6 +32,8 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 
   // Read out stuff from fhicl
   FEMIDs_ = ps_.get< std::vector<uint64_t> >("FEMIDs",{0});
+  fragment_ids = ps_.get< std::vector<artdaq::Fragment::fragment_id_t> >("fragment_ids");
+
   CircularBufferSizeBytes_ = ps_.get<uint32_t>("CircularBufferSizeBytes_",1e9); 
   EventsPerSubrun_ = ps_.get<int32_t>("EventsPerSubrun",-1);
 
@@ -217,7 +219,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   }
 
   TRACE(TFILLFRAG,"TPC data with total expected size %lu,FEMID=%u,Slot=%u,ADCWordCount=%u,Event=%u,Frame=%u",
-	expected_size,header->getFEMID(),header->getSlot(),
+	expected_size,
+	header->getFEMID(),
+	header->getSlot(),
 	header->getADCWordCount(),
 	header->getEventNum(),
 	header->getFrameNum());
@@ -261,11 +265,24 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   artdaq::Fragment::timestamp_t unixtime_ns = static_cast<artdaq::Fragment::timestamp_t>(unixtime.tv_sec)*1000000000 + 
     static_cast<artdaq::Fragment::timestamp_t>(unixtime.tv_nsec);
 
+  artdaq::Fragment::fragment_id_t fragment_id;
+  uint32_t index = header->getSlot() - FEM_BASE_SLOT;
+
+  if (( header->getSlot() >= FEM_BASE_SLOT ) && ( index < fragment_ids.size()))
+  {
+    fragment_id = fragment_ids[index];
+  }
+  else
+  {
+    TRACE(TERROR,"NevisTPC::FillFragment() : illegal FEM slot number");
+    return(false);
+  }
+
   metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),fNChannels,fSamplesPerChannel,fUseCompression);
   frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
-                                                      metadata_.EventNumber(),
-                                                      (2&0xffff)+((1&0xffff)<16),
-                                                      detail::FragmentType::NevisTPC,
+                                                      metadata_.EventNumber(),          // Sequence ID
+						      fragment_id,                      // Fragment ID
+                                                      detail::FragmentType::NevisTPC,   // Fragment Type
 						      metadata_,
 						      unixtime_ns) );
   std::copy(CircularBuffer_.buffer.begin(),
