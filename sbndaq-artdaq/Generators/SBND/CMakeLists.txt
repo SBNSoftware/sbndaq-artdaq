@@ -3,6 +3,11 @@ add_subdirectory(NevisTPC)
 
 find_ups_product( wibtools v0_03_03 )
 
+# Temporary, until wibtools is refactored, check for local wibtools
+include_directories(../../../../wibtools/WIB/include)
+include_directories(../../../../wibtools/MBB/include)
+include_directories(../../../../wibtools/exception/include)
+
 include_directories($ENV{JSONCPP_INC})
 include_directories($ENV{TRACE_INC})
 include_directories($ENV{WIBTOOLS_INC})
