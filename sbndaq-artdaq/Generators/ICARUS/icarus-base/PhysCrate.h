@@ -46,6 +46,7 @@ public:
     int BoardStatus ( int i );
     int BoardHandle ( int i );
 
+    int BoardTemps( int i , uint8_t&, uint8_t&);
 };
 
 #endif

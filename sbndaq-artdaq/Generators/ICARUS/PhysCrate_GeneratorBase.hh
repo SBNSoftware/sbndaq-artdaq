@@ -41,6 +41,9 @@ namespace icarus {
     std::vector<PhysCrateFragmentMetadata::id_t> BoardIDs_;
     bool assignBoardID_;
 
+    std::vector<uint8_t> BoardTemps1_; //value of temp sensor 1 on each board
+    std::vector<uint8_t> BoardTemps2_; //value of temp sensor 2 on each board
+
     std::size_t throttle_usecs_;        // Sleep at start of each call to getNext_(), in us
     std::size_t throttle_usecs_check_;  // Period between checks for stop/pause during the sleep (must be less than, and an integer divisor of, throttle_usecs_)
 

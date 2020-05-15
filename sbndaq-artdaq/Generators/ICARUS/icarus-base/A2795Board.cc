@@ -172,6 +172,13 @@ int A2795Board::Status()
   return status;
 }
 
+uint32_t A2795Board::Temperatures()
+{
+  uint32_t status;
+  CAENComm_Read32(bdhandle, A_Temperature,&status);
+  return status;
+}
+
 int 
 A2795Board::ArmTrigger()
 {

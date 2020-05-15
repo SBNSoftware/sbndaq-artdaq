@@ -78,6 +78,9 @@ namespace icarus {
     //if not using trigger board, issue our own start
     bool _issueStart;
 
+    //if we want to read board temps
+    bool _readTemps;
+
  };
 }
 

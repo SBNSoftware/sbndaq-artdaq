@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "structures.h"
 
@@ -38,6 +39,7 @@ public:
     int BoardHandle() { return bdhandle; }
 
     int Status();
+    uint32_t Temperatures();
 };
 
 #endif

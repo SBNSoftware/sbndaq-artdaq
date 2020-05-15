@@ -284,6 +284,17 @@ int PhysCrate::BoardHandle(int i)
   return boards[i]->BoardHandle();
 }
 
+int PhysCrate::BoardTemps(int i,uint8_t& t1, uint8_t& t2)
+{
+  if(i>=nBoards)
+    return -2;
+  uint32_t temps = boards[i]->Temperatures();
+  t1 = (temps & 0x000000ff);
+  t2 = ((temps & 0x00ff0000) >> 16);
+
+  return 0;
+}
+
 #if FALSE
 // Returns a pointer to a dynamically allocated memory area with the data of the event.
 DataTile*

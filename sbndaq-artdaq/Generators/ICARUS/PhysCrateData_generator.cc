@@ -26,7 +26,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   _doRedis(ps.get<bool>("doRedis",false)),
   _redisHost(ps.get<std::string>("redisHost","localhost")),
   _redisPort(ps.get<int>("redisPort",6379)),
-  _issueStart(ps.get<bool>("issueStart",true))
+  _issueStart(ps.get<bool>("issueStart",true)),
+  _readTemps(ps.get<bool>("readTemps",true))
 {
   InitializeHardware();
   InitializeVeto();
@@ -305,48 +306,14 @@ void icarus::PhysCrateData::ConfigureStop(){
 }
 
 bool icarus::PhysCrateData::Monitor(){ 
-  //usleep(1e5);
-  /*  
-  if(veto_state)
-    usleep(1.5e6);
-  */
-  /*
-  if(!veto_state){
-    bool need_to_veto = false;
-    
-    for(int ib=0; ib<physCr->NBoards(); ++ib){
-      auto status = physCr->BoardStatus(ib);
-      
-      std::string varname = ".Board_"+std::to_string(ib)+"_Status.last";
-      //GAL: metricMan->sendMetric(varname,status,"Status",1,artdaq::MetricMode::LastPoint);
-      
-      if( (status & STATUS_BUSY)!=0){
-	TRACE(TR_ERROR,"PhysCrateData::Monitor : STATUS_BUSY on board %d!",ib);
-	need_to_veto = true;
-	break;
-      }
-    }
-    
-    if(need_to_veto && !veto_state)
-      VetoOn();
-    //else if(veto_state && !need_to_veto)
-    //VetoOff();
-  }
-  
-  if(veto_state)
-    //GAL: metricMan->sendMetric(".VetoState.last",1,"state",1,artdaq::MetricMode::LastPoint);
-  else
-    //GAL: metricMan->sendMetric(".VetoState.last",0,"state",1,artdaq::MetricMode::LastPoint);    
-  */
 
+  char* tmp_str = (char*)malloc(150);
   uint16_t busy_mask=0,gbusy_mask=0;
   int n_busy=0,n_gbusy=0,n_running=0,n_ready=0;
 
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto status = physCr->BoardStatus(ib);
     //std::cout << "Board " << ib << " status is " << status << std::endl;
-
-
     if( (status & 0x00000010) ) {
       //std::cout << "BUSY on " << ib << "!" << std::endl;
       ++n_running;
@@ -366,11 +333,20 @@ bool icarus::PhysCrateData::Monitor(){
       ++n_gbusy;
     }
 
+    if(_readTemps){
+      physCr->BoardTemps(ib,BoardTemps1_[ib],BoardTemps2_[ib]);
+
+      sprintf(tmp_str,".Temp.Board%d.Temp1",ib);
+      metricMan->sendMetric(tmp_str,BoardTemps1_[ib],"C",1,artdaq::MetricMode::Average);
+
+      sprintf(tmp_str,".Temp.Board%d.Temp2",ib);
+      metricMan->sendMetric(tmp_str,BoardTemps2_[ib],"C",1,artdaq::MetricMode::Average);
+    }
+
   }
 
   struct timeval ts;
   gettimeofday(&ts,NULL);
-  char* tmp_str = (char*)malloc(150);
 
   if(_doRedis){
     //redisReply reply;
@@ -397,6 +373,8 @@ bool icarus::PhysCrateData::Monitor(){
   if(!reply)
     std::cout << "WE HAD AN ERROR!" << std::endl;
   */
+
+  free(tmp_str);
 
   usleep(10000);
   return true; 
