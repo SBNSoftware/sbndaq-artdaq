@@ -3,8 +3,9 @@
 
 #include "sbndaq-artdaq/Generators/Common/BernCRTZMQ_GeneratorBase.hh"
 
+#include "febdrv.hh"
 
-#include "zmq.h"
+//#include "zmq.h"
 
 namespace sbndaq {    
 
@@ -25,11 +26,13 @@ namespace sbndaq {
     uint64_t GetTimeSinceLastRestart();
     std::chrono::time_point<std::chrono::system_clock> last_restart_time;
 
-    std::string zmq_listening_port_;
-    std::string zmq_data_pub_port_;
-    void*  zmq_context_;
-    void*  zmq_subscriber_;
-    void*  zmq_requester_;
+    FEBDRV febdrv;
+
+//    std::string zmq_listening_port_;
+//    std::string zmq_data_pub_port_;
+//    void*  zmq_context_;
+//    void*  zmq_subscriber_;
+//    void*  zmq_requester_;
 
     enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
     void febctl(feb_command command, uint8_t mac5 = 255);

@@ -10,7 +10,8 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <zmq.h>
+//#include <zmq.h>
+#include "febdrv.hh"
 
 #define id "BernCRT"
 #define TRACE_NAME "BernCRTZMQData"
@@ -20,17 +21,19 @@ sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   BernCRTZMQ_GeneratorBase(ps) {
   TLOG(TLVL_INFO) << "BernCRTZMQData constructor called"; 
  
-  zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
-  zmq_data_pub_port_           = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port")+1);
+//  zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
+//  zmq_data_pub_port_           = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port")+1);
   
-  zmq_context_    = zmq_ctx_new();
+//  zmq_context_    = zmq_ctx_new();
 
-  TLOG(TLVL_DEBUG) << __func__ << " : Calling zmq requester with port " << zmq_listening_port_;
-  zmq_requester_ = zmq_socket(zmq_context_, ZMQ_REQ);
-  const int linger = 0;
-  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
+//  TLOG(TLVL_DEBUG) << __func__ << " : Calling zmq requester with port " << zmq_listening_port_;
+//  zmq_requester_ = zmq_socket(zmq_context_, ZMQ_REQ);
+//  const int linger = 0;
+//  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
 
-  febctl(GETINFO);
+//  febctl(GETINFO);
+
+  febdrv.Init("eno1"); //TODO read port from FHICL file
   
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     TLOG(TLVL_DEBUG) << __func__ << " Reading bitstream configuration for MAC5 " << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
@@ -44,9 +47,9 @@ sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
   TLOG(TLVL_INFO) << __func__ <<  "() called";  
 
-  zmq_close (zmq_requester_);
+//  zmq_close (zmq_requester_);
 
-  zmq_ctx_destroy(zmq_context_);
+//  zmq_ctx_destroy(zmq_context_);
 
   Cleanup();
   TLOG(TLVL_INFO) << __func__ << "() completed";  
@@ -65,16 +68,16 @@ void sbndaq::BernCRTZMQData::ConfigureStart() {
   }
   StartFebdrv(); //start data taking mode for all boards 
 
-  zmq_subscriber_ = zmq_socket(zmq_context_,ZMQ_SUB);
+//  zmq_subscriber_ = zmq_socket(zmq_context_,ZMQ_SUB);
 
   int res=0;
 
-  TLOG(TLVL_INFO) << __func__ << " Calling zmq subscriber with port " << zmq_data_pub_port_;
-  res = zmq_connect(zmq_subscriber_,zmq_data_pub_port_.c_str());
+//  TLOG(TLVL_INFO) << __func__ << " Calling zmq subscriber with port " << zmq_data_pub_port_;
+//  res = zmq_connect(zmq_subscriber_,zmq_data_pub_port_.c_str());
   if(res!=0)
     TLOG(TLVL_ERROR) << __func__  << " failed to connect.";
 
-  res = zmq_setsockopt(zmq_subscriber_,ZMQ_SUBSCRIBE,NULL,0);
+//  res = zmq_setsockopt(zmq_subscriber_,ZMQ_SUBSCRIBE,NULL,0);
 
   if(res!=0)
     TLOG(TLVL_ERROR) << __func__ << " socket options failed.";
@@ -84,10 +87,10 @@ void sbndaq::BernCRTZMQData::ConfigureStart() {
 void sbndaq::BernCRTZMQData::ConfigureStop() {
   TLOG(TLVL_INFO) << __func__ << "() called";
 
-  febctl(DAQ_END);
-  febctl(BIAS_OF);
+//  febctl(DAQ_END);
+//  febctl(BIAS_OF);
 
-  zmq_close(zmq_subscriber_);
+//  zmq_close(zmq_subscriber_);
 
   TLOG(TLVL_INFO) << __func__ << "() completed";
 } //ConfigureStop
@@ -117,41 +120,41 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
   }
 
   TLOG(TLVL_DEBUG) <<  __func__ << " Connecting to febdrv...";
-  if(zmq_connect (zmq_requester_, zmq_listening_port_.c_str())) {
-    TLOG(TLVL_ERROR) << __func__ << " Connection to " << zmq_listening_port_ << " failed!";
-    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
-  }
+//  if(zmq_connect (zmq_requester_, zmq_listening_port_.c_str())) {
+//    TLOG(TLVL_ERROR) << __func__ << " Connection to " << zmq_listening_port_ << " failed!";
+//    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
+//  }
 
   if(mac5 != 255 && feb_configuration.find(mac5) == feb_configuration.end()) {
     TLOG(TLVL_ERROR) << __func__ << " Could not find FEB " << std::to_string(mac5) << " in the MAC5s!";
     throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(mac5) + " in the MAC5s!");
   }
 
-  zmq_msg_t request;
-  zmq_msg_init_size (&request, 9);
-  memcpy(zmq_msg_data (&request), command_string,7);
-  ((uint8_t*)zmq_msg_data (&request))[7]=0;
-  ((uint8_t*)zmq_msg_data (&request))[8]=mac5;
+//  zmq_msg_t request;
+//  zmq_msg_init_size (&request, 9);
+//  memcpy(zmq_msg_data (&request), command_string,7);
+//  ((uint8_t*)zmq_msg_data (&request))[7]=0;
+//  ((uint8_t*)zmq_msg_data (&request))[8]=mac5;
   TLOG(TLVL_DEBUG) <<  __func__ << " Sending command \"" << command_string << "\" to mac5 = " << std::to_string(mac5);
-  zmq_msg_send (&request, zmq_requester_, 0);
-  zmq_msg_close (&request);
-  zmq_msg_t reply;
-  zmq_msg_init (&reply);
+//  zmq_msg_send (&request, zmq_requester_, 0);
+//  zmq_msg_close (&request);
+//  zmq_msg_t reply;
+//  zmq_msg_init (&reply);
   const int timeout = 5; //total waiting time in seconds, hardcoded value, move to config file?
   const int attempts = 10;
-  int rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
-  for(int i = 0; i < attempts && rv < 0; i++) {
-    usleep(timeout*1000000/attempts);
-    rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
-  }
-  if(rv<0) {
-    TLOG(TLVL_ERROR) <<  __func__ << " Received no reply from febdrv after waiting for " << std::to_string(timeout) << " seconds";
-    zmq_msg_close (&reply);
-    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
-  }
+//  int rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
+//  for(int i = 0; i < attempts && rv < 0; i++) {
+//    usleep(timeout*1000000/attempts);
+//    rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
+//  }
+//  if(rv<0) {
+//    TLOG(TLVL_ERROR) <<  __func__ << " Received no reply from febdrv after waiting for " << std::to_string(timeout) << " seconds";
+//    zmq_msg_close (&reply);
+//    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
+//  }
 
-  std::string reply_string = (char*)zmq_msg_data(&reply);
-  zmq_msg_close (&reply);
+  std::string reply_string/* = (char*)zmq_msg_data(&reply)*/;
+//  zmq_msg_close (&reply);
 
   //Process reply message
   if(command != GETINFO) {
@@ -257,10 +260,10 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
   }
 
   TLOG(TLVL_DEBUG)<< __func__ << " Connecting to febdrv...";
-  if(zmq_connect(zmq_requester_, zmq_listening_port_.c_str())) {
-    TLOG(TLVL_ERROR) <<  __func__ << " Connection to " << zmq_listening_port_ << " failed!";
-    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
-  }
+//  if(zmq_connect(zmq_requester_, zmq_listening_port_.c_str())) {
+//    TLOG(TLVL_ERROR) <<  __func__ << " Connection to " << zmq_listening_port_ << " failed!";
+//    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Connection to " + zmq_listening_port_ + " failed!");
+//  }
 
   char cmd[32];
 
@@ -272,7 +275,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
   const int MAXPACKLEN = 1500;
   uint8_t buffer[MAXPACKLEN];
 
-  memcpy(buffer,cmd,9);
+/*  memcpy(buffer,cmd,9);
   memcpy(
       buffer+9,
       feb_configuration[mac5].GetSlowControlBitStream(),
@@ -284,27 +287,27 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
   zmq_send(
       zmq_requester_,
       buffer,
-      feb_configuration[mac5].GetSlowControlBitStreamNBytes()+feb_configuration[mac5].GetProbeBitStreamNBytes()+9, 0);
+      feb_configuration[mac5].GetSlowControlBitStreamNBytes()+feb_configuration[mac5].GetProbeBitStreamNBytes()+9, 0); */
 
   TLOG(TLVL_DEBUG)<< __func__ << " Waiting for reply...";
 
-  zmq_msg_t reply;
-  zmq_msg_init (&reply);
+//  zmq_msg_t reply;
+//  zmq_msg_init (&reply);
 
   const int timeout = 5; //s hardcoded value, move to config file?
   const int attempts = 10;
-  int rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
-  for(int i = 0; i < attempts && rv < 0; i++) {
-    usleep(timeout*1000000/attempts);
-    rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
-  }
-  if(rv<0) {
-    TLOG(TLVL_ERROR) <<  __func__ << " Received no reply from febdrv after waiting for " << std::to_string(timeout) << " seconds";
-    zmq_msg_close (&reply);
-    throw cet::exception(std::string(TRACE_NAME) + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
-  }
+//  int rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
+//  for(int i = 0; i < attempts && rv < 0; i++) {
+//    usleep(timeout*1000000/attempts);
+//    rv = zmq_msg_recv (&reply, zmq_requester_, ZMQ_DONTWAIT);
+//  }
+//  if(rv<0) {
+//    TLOG(TLVL_ERROR) <<  __func__ << " Received no reply from febdrv after waiting for " << std::to_string(timeout) << " seconds";
+//    zmq_msg_close (&reply);
+//    throw cet::exception(std::string(TRACE_NAME) + __func__ + " Received no reply from febdrv after waiting for " + std::to_string(timeout) + " seconds");
+//  }
 
-  std::string reply_string = (char*)zmq_msg_data(&reply);
+  std::string reply_string/* = (char*)zmq_msg_data(&reply)*/;
   if(reply_string.compare("OK")) {
     TLOG(TLVL_ERROR) <<  __func__ << " Received unexpected reply from febdrv: " << reply_string;
     throw cet::exception(std::string(TRACE_NAME) + __func__ + " Received unexpected reply from febdrv: " + reply_string);
@@ -312,12 +315,12 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
   else {
     TLOG(TLVL_DEBUG)<< __func__ << " Received reply: " << reply_string;
   }
-  zmq_msg_close (&reply);
+//  zmq_msg_close (&reply);
 } //feb_send_bitstreams
 
 void sbndaq::BernCRTZMQData::StartFebdrv() {
   TLOG(TLVL_DEBUG)<< __func__<<": Starting febdrv";
-  febctl(DAQ_BEG);
+//  febctl(DAQ_BEG);
   last_restart_time = std::chrono::system_clock::now();
 }
 
@@ -337,11 +340,11 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
   size_t wait_count=0;
   size_t events = 0;
   
-  zmq_msg_t feb_data_msg;
-  zmq_msg_init(&feb_data_msg);
+//  zmq_msg_t feb_data_msg;
+//  zmq_msg_init(&feb_data_msg);
 
   //attempt to read data from febdrv
-  while(zmq_msg_recv(&feb_data_msg, zmq_subscriber_, ZMQ_DONTWAIT) < 0) {
+/*  while(zmq_msg_recv(&feb_data_msg, zmq_subscriber_, ZMQ_DONTWAIT) < 0) {
     if ( errno != EAGAIN ) { // No data awailable now
       TLOG(TLVL_ERROR) << __func__ << ": Instead of EAGAIN got the following errno: " <<  std::to_string(errno) << " " << zmq_strerror(errno);
       return 0;
@@ -353,11 +356,11 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
     if( (wait_count%500) == 0 ) {
       TLOG(TLVL_DEBUG) << __func__ << ": waiting for data : " << wait_count;
     }
-  }
+  }*/
   
   TLOG(TLVL_DEBUG) << __func__ << ": Completed wait loop after " << wait_count << " iterations";
   
-  if(zmq_msg_size(&feb_data_msg)>0) {
+/*  if(zmq_msg_size(&feb_data_msg)>0) {
     TLOG(TLVL_DEBUG) << __func__ << ": about to copy " <<zmq_msg_size(&feb_data_msg)<< " bytes";
 
     events = zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
@@ -372,9 +375,9 @@ size_t sbndaq::BernCRTZMQData::GetZMQData() {
     std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
 	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
 	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[0]));
-  }
+  }*/
 
-  zmq_msg_close(&feb_data_msg);
+//  zmq_msg_close(&feb_data_msg);
 
   TLOG(TLVL_DEBUG) << __func__ << " copied " << std::to_string(events) << " events of size of " << std::to_string(data_size);
 

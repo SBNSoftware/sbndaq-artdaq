@@ -137,7 +137,15 @@ art_make_library( LIBRARY_NAME BernCRTFEBConfiguration
   LIBRARIES
     ${FHICLCPP}
     ${CETLIB_EXCEPT}
-)                  
+)
+
+art_make_library( LIBRARY_NAME febdrv 
+  SOURCE febdrv.cc
+  LIBRARIES
+    sbndaq-artdaq-core_Overlays_Common
+    ${FHICLCPP}
+    ${CETLIB_EXCEPT}
+)
 
 simple_plugin(BernCRTZMQData "generator"
   sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
@@ -151,6 +159,7 @@ simple_plugin(BernCRTZMQData "generator"
   artdaq-core_Data
   artdaq-utilities_Plugins
   BernCRTFEBConfiguration
+  febdrv
  # ${ARTDAQ_UTILITIES}
   ${ART_UTILITIES}
   ${FHICLCPP}
