@@ -31,12 +31,12 @@ namespace sbndaq
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
  {
-   auto wib_address                = WIB_config.get<std::string>("wib000_standard.fragment_receiver.config.WIB.address");
-   auto wib_table                  = WIB_config.get<std::string>("wib000_standard.fragment_receiver.config.wib_table");
-   auto femb_table                 = WIB_config.get<std::string>("wib000_standard.fragment_receiver.config.femb_table");
-   auto DTS_source                 = WIB_config.get<uint8_t>("wib000_standard.fragment_receiver.config.WIB.DTS_source");
-   auto enable_FEMBs               = WIB_config.get<std::vector<bool> >("wib000_standard.fragment_receiver.config.enable_FEMBs");
-   auto FEMB_configs               = WIB_config.get<std::vector<fhicl::ParameterSet> >("wib000_standard.fragment_receiver.config.WIB.FEMBs");
+   auto wib_address                = WIB_config.get<std::string>("WIB.address");
+   auto wib_table                  = WIB_config.get<std::string>("WIB.wib_table");
+   auto femb_table                 = WIB_config.get<std::string>("WIB.femb_table");
+   auto DTS_source                 = WIB_config.get<uint8_t>("WIB.DTS_source");
+   auto enable_FEMBs               = WIB_config.get<std::vector<bool> >("WIB.enable_FEMBs");
+   auto FEMB_configs               = WIB_config.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
       
    const std::string identification = "SBNDWIBReader::setupWIB";
    TLOG_INFO(identification) << "Starting setupWIB " << TLOG_ENDL;
