@@ -42,14 +42,22 @@ namespace sbndaq
    TLOG_INFO(identification) << "Starting setupWIB " << TLOG_ENDL;
       
    wib=std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
+   
+   TLOG_INFO(identification) << "configuring wib object " << TLOG_ENDL;
+   
    wib->configWIB(DTS_source);
+   
+   TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
       
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
        if(enable_FEMBs.at(iFEMB-1)){
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  setupFEMB(iFEMB,FEMB_config);
+	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
    }
+   
+   TLOG_INFO(identification) << "WIB setup completed " << TLOG_ENDL;
  }
 
 void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config, bool continueOnFEMBRegReadError) 
