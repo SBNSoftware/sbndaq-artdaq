@@ -26,8 +26,39 @@ namespace sbndaq
  {
    const std::string identification = "WIBReader";
    TLOG_INFO(identification) << "WIBReader constructor" << TLOG_ENDL;
-   setupWIB(ps);
- }
+   
+   //setupWIB(ps);
+   
+   bool success = false;
+   unsigned configuration_tries=5;
+   for(unsigned iTry=1; iTry <= configuration_tries; iTry++){
+       try{
+          setupWIB(ps);
+          success=true;
+          break;
+       }
+       catch(const WIBException::BAD_REPLY & exc){
+             TLOG_WARNING(identification) << "WIB communication error: " << exc.what() << TLOG_ENDL;
+       }
+       catch(const WIBException::WIB_DTS_ERROR & exc){
+             TLOG_WARNING(identification) << "WIB timing config error: " << exc.what() << TLOG_ENDL;
+       }
+       catch(const WIBException::exBase & exc){
+             cet::exception excpt(identification);
+             excpt << "Unhandled WIBException: "
+	           << exc.what() << ": "
+	            << exc.Description();
+             throw excpt;
+       }
+       TLOG_INFO(identification) << "Configuraton try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
+    } // for iRetry
+
+    if(!success){
+       cet::exception excpt(identification);
+       excpt << "Failed to configure WIB after " << configuration_tries << " tries";
+       throw excpt;
+    }
+  }
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
  {
@@ -40,10 +71,20 @@ namespace sbndaq
       
    const std::string identification = "SBNDWIBReader::setupWIB";
    TLOG_INFO(identification) << "Starting setupWIB " << TLOG_ENDL;
-      
-   wib=std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
    
-   TLOG_INFO(identification) << "configuring wib object " << TLOG_ENDL;
+      
+   TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
+   
+   TLOG_INFO(identification) << "wib table " <<  wib_table << TLOG_ENDL;
+   
+   TLOG_INFO(identification) << "femb table " << femb_table << TLOG_ENDL;
+   
+   wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
+   TLOG_INFO(identification) << "Connected to WIB at " <<  wib_address << TLOG_ENDL;
+   
+   //wib=std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
+   
+   //TLOG_INFO(identification) << "configuring wib object " << TLOG_ENDL;
    
    wib->configWIB(DTS_source);
    
