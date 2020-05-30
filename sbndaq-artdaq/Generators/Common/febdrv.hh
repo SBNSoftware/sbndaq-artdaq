@@ -2,14 +2,9 @@
 #define sbndaq_artdaq_Generators_Common_febdrv_hh
 
 #include "fhiclcpp/ParameterSet.h"
-
-
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 
 #include <string.h>
-#include <time.h>
-// #include <sys/timeb.h>
-// #include "febevt.h"
 #include <net/if.h>
 
 // Ethernet switch register r/w
@@ -58,13 +53,13 @@
 #define FEB_DATA_FW 0x0504
 
 
+//TODO remove? needed only by driver_state
 #define DRV_OK         0
 #define DRV_SENDERROR  1
 #define DRV_RECVERROR  2
 #define DRV_BUFOVERRUN 3
 #define DRV_INITERR    4
 
-#define MAXPACKLEN 1500
 #define MAXPAYLOAD (1500-14-4)
 
 
@@ -83,28 +78,16 @@ namespace sbndaq {
 class FEBDRV {
 public:
   void Init(std::string ethernet_port);
-public:
   FEBDRV();
 
-  //void Init(std::string iface) { Init(iface.c_str()); }
-
-  void Init(const char *iface);
-
   int startDAQ(uint8_t mac5);
-  int stopDAQ(uint8_t);
 
   void SetDriverState(int state) { driver_state=state; }
-  int NClients() { return nclients; }
 
   void ConfigSetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index, bool value);
   bool ConfigGetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index);
 
-  bool initif();
-
-  int sendcommand(const uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf);
-
-  int pingclients();
-  uint64_t MACAddress(int client) const;
+  void pingclients();
 
   int sendconfig(uint8_t mac5);
 
@@ -112,44 +95,31 @@ public:
   int biasOFF(uint8_t mac5);
 
   int configu(uint8_t mac5, const uint8_t *buf1, int len);
-  int getSCR(uint8_t mac5, uint8_t *buf1);
-
-  int sendstats();
-  int sendstats2();
 
   int polldata();
   int recvL2pack();
-  void processL2pack(int,const uint8_t*);
-  int recvandprocessL2pack(const uint8_t*);
+  void processL2pack(int,const uint8_t);
+  int recvandprocessL2pack(const uint8_t);
   int polldata_setup();
 
   void pollfeb(const uint8_t* mac);
   void updateoverwritten();
   void polldata_complete();
 
-  static void free_subbufer (void*, void *hint); //call back from ZMQ sent function, hint points to subbufer index
-
-  void* GetResponder() { return responder; }
-  void* GetContext() { return context; }
-
   int IncrementTotalLost(int i) { total_lost += i; return total_lost; }
   int IncrementTotalAcquired(int i) { total_acquired += i; return total_acquired; }
 
   FEBDTP_PKT_t const& ReceivedPkt() { return rpkt; }
-
+  
+  std::vector<uint8_t> GetMACs();
+  
 private:
 
-  void *context = NULL;
+  bool initif();
+
+  int sendcommand(const uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf);
   
-  //  Socket to respond to clients
-  void *responder = NULL;
-  //  Socket to send data to clients
-  void *publisher = NULL;
-  //  Socket to send statistics to clients
-  void *pubstats = NULL;
-  void *pubstats2 = NULL;
-  
-  FEBDTP_PKT_t spkt, rpkt; //send and receive packets
+  FEBDTP_PKT_t spkt, rpkt; //send and receive packets //TODO does it have to be global?!
   std::map <uint8_t, std::vector<sbndaq::BernCRTZMQEvent>> feb_buffer;
   std::map <uint8_t, uint16_t> feb_buffer_counter;
   
@@ -158,21 +128,19 @@ private:
   std::map <uint8_t, uint32_t> lostperpoll_cpu;
   std::map <uint8_t, uint32_t> lostperpoll_fpga;
   
-  uint8_t GLOB_daqon;
-  int nclients;
-  int macs[256][6]; //list of detected clients
-  char verstr[256][32]; //list of version strings of clients
+  std::vector<std::array<uint8_t, 6> > macs;
   uint8_t hostmac[6];
   char ifName[IFNAMSIZ];
-  //int sockfd;
-  int sockfd_w; 
+
+  //ethernet communication sockets
+  int sockfd_w;
   int sockfd_r;
-  struct timeval tv;
-  struct ifreq if_idx;
+  
+  struct ifreq if_idx; //TODO why these two need to be global?
   struct ifreq if_mac;
-  int driver_state;
+  
+  int driver_state; //TODO do we need it? it's set but never checked
   uint8_t dstmac[6];
-  uint8_t brcmac[6];
 
   std::map<uint8_t, uint32_t> ts0_ref_MEM;
   std::map<uint8_t, uint32_t> ts1_ref_MEM;
@@ -184,31 +152,19 @@ private:
 
   uint32_t GrayToBin(uint32_t n);
   
-
   int sendtofeb(int len, FEBDTP_PKT_t const& spkt);  //sending spkt
   int recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt); //result is in rpkt
 
   int flushlink();
 
   int numbytes;
-  bool NOts0,NOts1;
-  bool REFEVTts0,REFEVTts1;
-  uint32_t tt0,tt1;
-  uint32_t ts0,ts1;
-  uint8_t ls2b0,ls2b1; //least sig 2 bits
-  sbndaq::BernCRTZMQEvent *evt;
-
-  static uint8_t bufPMR[256][1500];
-  static uint8_t bufSCR[256][1500];
-  std::map<uint8_t, uint8_t > FEB_present;
-  std::map<uint8_t, time_t  > FEB_lastheard; //number of seconds since the board is heard, -1= never
-  std::map<uint8_t, uint8_t > FEB_configured;
-  std::map<uint8_t, uint8_t > FEB_daqon;
-  std::map<uint8_t, uint8_t > FEB_evrate;
-  std::map<uint8_t, uint8_t > FEB_biason;
-  std::map<uint8_t, uint16_t>  FEB_VCXO;
   
-  static uint8_t buf[MAXPACKLEN];
+  sbndaq::BernCRTZMQEvent *evt; //TODO not needed?
+
+  uint8_t bufPMR[256][1500];
+  uint8_t bufSCR[256][1500];
+  
+  uint8_t buf[1500]; //TODO replace with something more clever
 
 }; //class FEBDRV
 } //namespace sbndaq

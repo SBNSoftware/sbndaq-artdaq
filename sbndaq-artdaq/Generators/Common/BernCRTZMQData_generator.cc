@@ -19,47 +19,51 @@
 sbndaq::BernCRTZMQData::BernCRTZMQData(fhicl::ParameterSet const & ps)
   :
   BernCRTZMQ_GeneratorBase(ps) {
-  TLOG(TLVL_INFO) << "BernCRTZMQData constructor called"; 
- 
-//  zmq_listening_port_          = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port"));
-//  zmq_data_pub_port_           = std::string("tcp://localhost:") + std::to_string(ps_.get<int>("zmq_listening_port")+1);
+  TLOG(TLVL_INFO) << __func__ <<"() constructor called";
+
+  febdrv.Init(ps_.get<std::string>("ethernet_port"));
   
-//  zmq_context_    = zmq_ctx_new();
-
-//  TLOG(TLVL_DEBUG) << __func__ << " : Calling zmq requester with port " << zmq_listening_port_;
-//  zmq_requester_ = zmq_socket(zmq_context_, ZMQ_REQ);
-//  const int linger = 0;
-//  zmq_setsockopt(zmq_requester_, ZMQ_LINGER, &linger, sizeof(linger));
-
-//  febctl(GETINFO);
-
-  febdrv.Init("eno1"); //TODO read port from FHICL file
+  //compare detected list of FEBs with that declared in FHiCL file
+  
+  auto hardware_macs = febdrv.GetMACs();
+  if(hardware_macs.size() != nFEBs()) {
+    TLOG(TLVL_ERROR) <<  __func__ << "() Number of FEBs seen by febdrv (" << std::to_string(hardware_macs.size()) << ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!";
+    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Number of FEBs seen by febdrv (" + std::to_string(hardware_macs.size()) + ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!");
+  }
+  else {
+    //here we assume both hardware_macs and MAC5s_ are sorted
+    for(unsigned int i = 0; i < nFEBs(); i++) {
+      if(hardware_macs[i] > MAC5s_[i]) {
+        TLOG(TLVL_ERROR) <<  __func__ <<"() MAC address " << std::to_string(MAC5s_[i]) << " declared in FHiCL configuration not found! Check hardware MAC configuration!";
+        throw cet::exception( std::string(TRACE_NAME) + __func__ + "() MAC address " +std::to_string(MAC5s_[i]) + " declared in FHiCL configuration not found. Check hardware MAC configuration!");
+      }
+      if(hardware_macs[i] < MAC5s_[i]) {
+        TLOG(TLVL_ERROR) <<  __func__ <<"() found FEB with MAC address " << std::to_string(hardware_macs[i]) << " not declared in FHiCL configuration";
+        throw cet::exception( std::string(TRACE_NAME) + __func__ + "() found FEB with MAC address " +std::to_string(hardware_macs[i]) + " not declared in FHiCL configuration!");
+      }
+    }
+  }
   
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     TLOG(TLVL_DEBUG) << __func__ << " Reading bitstream configuration for MAC5 " << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
     feb_configuration[MAC5s_[iFEB]] = sbndaq::BernCRTFEBConfiguration(ps_, iFEB); //create configuration object
   }
 
-  TLOG(TLVL_INFO) << __func__ << " constructor completed";  
+  TLOG(TLVL_INFO) << __func__ << " constructor completed";
 } //constructor
 
 sbndaq::BernCRTZMQData::~BernCRTZMQData()
 {
-  TLOG(TLVL_INFO) << __func__ <<  "() called";  
-
-//  zmq_close (zmq_requester_);
-
-//  zmq_ctx_destroy(zmq_context_);
+  TLOG(TLVL_INFO) << __func__ <<  "() called";
 
   Cleanup();
-  TLOG(TLVL_INFO) << __func__ << "() completed";  
+  TLOG(TLVL_INFO) << __func__ << "() completed";
 } //destructor
 
 void sbndaq::BernCRTZMQData::ConfigureStart() {
-  TLOG(TLVL_INFO) << __func__ << "() called";  
+  TLOG(TLVL_INFO) << __func__ << "() called";
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
-  febctl(DAQ_END);
   febctl(BIAS_OF);
 
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
@@ -87,7 +91,6 @@ void sbndaq::BernCRTZMQData::ConfigureStart() {
 void sbndaq::BernCRTZMQData::ConfigureStop() {
   TLOG(TLVL_INFO) << __func__ << "() called";
 
-//  febctl(DAQ_END);
 //  febctl(BIAS_OF);
 
 //  zmq_close(zmq_subscriber_);
@@ -100,20 +103,16 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
  * Copied functionality of febctl tool from febdriver
  * Sends a command to febdrv.
  * Arguments:
- * - command: BIAS_OF BIAS_ON DAQ_BEG DAQ_END GETINFO
+ * - command: BIAS_OF BIAS_ON DAQ_BEG 
  * - mac5: last 8 bits of FEB MAC5 address. If set to 255 and command is sent to all boards.
  * 
- * If the command is GETINFO this function will verify if the
- * list of MAC5s reported by febdrv matches the list in FHiCL
  */
 
   char command_string[8];
   switch (command) {
     case DAQ_BEG : strcpy ( command_string, "DAQ_BEG");   break;
-    case DAQ_END : strcpy ( command_string, "DAQ_END");   break;
     case BIAS_ON : strcpy ( command_string, "BIAS_ON");   break;
     case BIAS_OF : strcpy ( command_string, "BIAS_OF");   break;
-    case GETINFO : strcpy ( command_string, "GETINFO");   break;
     default:
       TLOG(TLVL_ERROR) <<   __func__ << " Unrecognized command! [software error, this should never happen]";
       throw cet::exception( std::string(TRACE_NAME) +  __func__ + " Unrecognized command! [software error, this should never happen]");
@@ -157,85 +156,13 @@ void sbndaq::BernCRTZMQData::febctl(feb_command command, uint8_t mac5) {
 //  zmq_msg_close (&reply);
 
   //Process reply message
-  if(command != GETINFO) {
-    if(reply_string.compare("OK")) {
-      TLOG(TLVL_ERROR) <<  __func__ << " Received unexpected reply from febdrv: " << reply_string;
-    }
-    else {
-      TLOG(TLVL_DEBUG) <<  __func__ << " Received reply: " << reply_string;
-    }
+  if(reply_string.compare("OK")) {
+    TLOG(TLVL_ERROR) <<  __func__ << " Received unexpected reply from febdrv: " << reply_string;
   }
   else {
-    //GETINFO returns the number of FEBs connected, their macs and firmware versions.
-    //Check if the boards we see correspond to the FHICL file configuration
     TLOG(TLVL_DEBUG) <<  __func__ << " Received reply: " << reply_string;
-    std::istringstream ireply_string(reply_string);
-    std::string line;
-    if(!std::getline(ireply_string, line)) {
-      TLOG(TLVL_ERROR) <<  __func__ << " Received empty reply febdrv!";
-    }
-    else { //parse febdrv reply
-      //parse number of reported FEBs
-      const unsigned int read_nFEBs = stoi(line);
-      if(read_nFEBs != nFEBs()) {
-        TLOG(TLVL_ERROR) <<  __func__ << " Number of FEBs seen by febdrv (" << std::to_string(read_nFEBs) << ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!";
-        throw cet::exception( std::string(TRACE_NAME) + __func__ + " Number of FEBs seen by febdrv (" + std::to_string(read_nFEBs) + ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!");
-      }
-      else {
-        //read firmwares and mac addresses MAC addresses
-        std::vector <std::string> firmwares;
-        std::vector <uint8_t> mac5s;
-        while (std::getline(ireply_string, line)) {
-          firmwares.push_back(line.substr(18, 100));
-          unsigned int mac[6];
-          if (sscanf(line.substr(0,17).c_str(), "%x:%x:%x:%x:%x:%x", &mac[5], &mac[4], &mac[3], &mac[2], &mac[1], &mac[0]) != 6) {
-            TLOG(TLVL_ERROR) <<  __func__ << " Error during parsing MAC address returned by febdrv (" << line <<  ")!";
-          }
-          else {
-            mac5s.push_back(mac[0]); //we care only about last 8 bits of the address
-          }
-        }
-        //check if all MAC addresses are unique, present in the FHiCL configuration, and all MACs expected by FHiCL are found
-        std::vector<bool> fcl_mac_found; for(unsigned int i=0;i<nFEBs();i++) fcl_mac_found.push_back(false);
-        bool any_mac_missing = false;
-        for(unsigned int iFEB = 0; iFEB < mac5s.size(); iFEB++) {
-          bool mac_found = false;
-          for(unsigned int jFEB = 0; jFEB < nFEBs(); jFEB++) {
-            if(mac5s[iFEB] == MAC5s_[jFEB]) {
-              if(fcl_mac_found[jFEB]) {
-                TLOG(TLVL_ERROR) <<  __func__ << " MAC address ending with " << std::to_string(mac5) << " (dec) found twice by febdrv. Check hardware MAC configuration!";
-                throw cet::exception( std::string(TRACE_NAME) + __func__ + " MAC address ending with " +std::to_string(mac5) + " (dec) found twice by febdrv. Check hardware MAC configuration!");
-                
-              }
-              else {
-                fcl_mac_found[jFEB] = true;
-                mac_found = true;
-              }
-            }
-          }
-          if(!mac_found) {
-            any_mac_missing = true;
-            TLOG(TLVL_ERROR) <<  __func__ << " MAC address seen by febdrv " << std::to_string(mac5s[iFEB]) <<  " (dec) missing in the FCL file!";
-            throw cet::exception( std::string(TRACE_NAME) + __func__ + " MAC address seen by febdrv " + std::to_string(mac5s[iFEB]) +  " (dec) missing in the FCL file!");
-          }
-        }
-        bool some_fcl_mac_missing = 0;
-        for(unsigned int jFEB = 0; jFEB < nFEBs(); jFEB++) {
-          if(!fcl_mac_found[jFEB]) {
-            some_fcl_mac_missing = true;
-            break;
-          }
-        }
-        if(some_fcl_mac_missing) {
-            TLOG(TLVL_ERROR) <<  __func__ << " Some of the MAC addresses defined in the FCL file do not match any FEBs seen by febdrv.";
-            throw cet::exception( std::string(TRACE_NAME) + __func__ + " Some of the MAC addresses defined in the FCL file do not match any FEBs seen by febdrv.");
-        }
-        else if(!any_mac_missing) {
-            TLOG(TLVL_INFO)<< __func__ << " All " << std::to_string(nFEBs()) << " FEBs found in the FCL.";
-        }
-      }
-    }
   }
+
 } //febctl
 
 void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {

@@ -45,6 +45,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   //read parameters from FHiCL file
   uint16_t fragment_id_base = ps_.get<uint16_t>("fragment_id_base");
   MAC5s_ = ps_.get< std::vector<uint8_t> >("MAC5s");
+  std::sort(MAC5s_.begin(), MAC5s_.end());
 
   omit_out_of_order_events_ = ps_.get<bool>("omit_out_of_order_events");
   omit_out_of_sync_events_  = ps_.get<bool>("omit_out_of_sync_events");
