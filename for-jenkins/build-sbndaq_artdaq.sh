@@ -162,6 +162,7 @@ echo
 #unset PRODUCTS
 source ${products_dir}/setup || exit 1
 
+
 setup python v3_7_2
 [[ -d ${python3env_dir} ]] && rm -rf ${python3env_dir}
 python3 -m venv ${python3env_dir}
