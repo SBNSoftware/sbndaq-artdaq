@@ -152,7 +152,7 @@ cd ${products_dir} || exit 1
 curl --fail --silent --location --insecure -O http://scisoft.fnal.gov/scisoft/bundles/tools/pullProducts || exit 1
 curl --fail --silent --location --insecure -O http://scisoft.fnal.gov/scisoft/bundles/tools/pullPackage || exit 1
 chmod +x pullProducts pullPackage
-./pullProducts ${products_dir} ${flvr} artdaq-${artdaq_version} ${manifest_qual_set//:/-} ${build_type} 2>&1 |tee ${products_dir}/pullproducts.log
+./pullProducts ${products_dir} ${flvr} artdaq-${ARTDAQ_VERSION} ${manifest_qual_set//:/-} ${build_type} 2>&1 |tee ${products_dir}/pullproducts.log
 
 ./pullPackage ${products_dir} sl7 python-v3_7_2 2>&1 |tee -a ${products_dir}/pullProducts.log
 
