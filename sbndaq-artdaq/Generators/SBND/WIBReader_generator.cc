@@ -12,6 +12,13 @@
 #include "WIBException.hh"
 #include "BNL_UDP_Exception.hh"
 
+#include "BNL_UDP.hh"
+#include "ItemConversion.hh"
+#include "AddressTable.hh"
+#include "WIBBase.hh"
+#include "WIB.hh"
+//#include "WIBStatus.hh"
+
 #include <sstream>
 #include <vector>
 #include <memory>
@@ -79,7 +86,8 @@ namespace sbndaq
    
    TLOG_INFO(identification) << "femb table " << femb_table << TLOG_ENDL;
    
-   wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
+   wib = std::make_unique<WIB>("192.168.230.50","WIB_SBND_REGS.adt","SBND_FEMB.adt",true);
+   //wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
    TLOG_INFO(identification) << "Connected to WIB at " <<  wib_address << TLOG_ENDL;
    
    //wib=std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
