@@ -26,16 +26,16 @@ sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet c
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
-  TLOG(TLVL_INFO)<<"constructor called";  
+  TLOG(TLVL_INFO)<<__func__<<"() constructor called";
   Initialize();
-  TLOG(TLVL_INFO)<<"constructor completed";
+  TLOG(TLVL_INFO)<<__func__<<"() constructor completed";
 }
 
 /*---------------------------------------------------------------------*/
 
 void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
-  TLOG(TLVL_INFO)<<__func__<<" called";
+  TLOG(TLVL_INFO)<<__func__<<"() called";
 
   //reset last poll times
   last_poll_start = 0;
@@ -73,7 +73,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   TLOG(TLVL_DEBUG)<< __func__ << " Created ZMQBuffer of size of "<<ZMQBufferCapacity_;
 
-  TLOG(TLVL_INFO)<<__func__<<" completed ... starting GetData worker thread.";
+  TLOG(TLVL_INFO)<<__func__<<"() completed ... starting GetData worker thread.";
   share::ThreadFunctor functor = std::bind(&BernCRTZMQ_GeneratorBase::GetData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
   auto getData_worker = share::WorkerThread::createWorkerThread(worker_functor);
@@ -84,43 +84,43 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
 
 void sbndaq::BernCRTZMQ_GeneratorBase::start() {
-  TLOG(TLVL_INFO)<<__func__<<" called";
+  TLOG(TLVL_INFO)<<__func__<<"() called";
 
   run_start_time = std::chrono::system_clock::now().time_since_epoch().count();
-  TLOG(TLVL_DEBUG)<<__func__<<" Run start time: " << sbndaq::BernCRTZMQFragment::print_timestamp(run_start_time);
+  TLOG(TLVL_DEBUG)<<__func__<<"() Run start time: " << sbndaq::BernCRTZMQFragment::print_timestamp(run_start_time);
 
   ConfigureStart();
   GetData_thread_->start();
 
-  TLOG(TLVL_INFO)<<__func__<<" completed";
+  TLOG(TLVL_INFO)<<__func__<<"() completed";
 } //start
 
 /*-----------------------------------------------------------------------*/
 
 
 void sbndaq::BernCRTZMQ_GeneratorBase::stop() {
-  TLOG(TLVL_INFO)<<__func__<<" called";
+  TLOG(TLVL_INFO)<<__func__<<"() called";
   GetData_thread_->stop();
   ConfigureStop();
-  TLOG(TLVL_INFO)<<__func__<<" completed";
+  TLOG(TLVL_INFO)<<__func__<<"() completed";
 } //stop
 
 /*-----------------------------------------------------------------------*/
 
 
 void sbndaq::BernCRTZMQ_GeneratorBase::stopNoMutex() {
-TLOG(TLVL_INFO)<<__func__<<" called";
+TLOG(TLVL_INFO)<<__func__<<"() called";
   GetData_thread_->stop();
   ConfigureStop();
-  TLOG(TLVL_INFO)<<__func__<<" completed";
+  TLOG(TLVL_INFO)<<__func__<<"() completed";
 } //stopNoMutex
 
 /*-----------------------------------------------------------------------*/
 
 
 void sbndaq::BernCRTZMQ_GeneratorBase::Cleanup(){
-  TLOG(TLVL_INFO)<<__func__<<" called";
-  TLOG(TLVL_INFO)<<__func__<<" completed";
+  TLOG(TLVL_INFO)<<__func__<<"() called";
+  TLOG(TLVL_INFO)<<__func__<<"() completed";
 } //Cleanup
 
 /*-----------------------------------------------------------------------*/
@@ -147,7 +147,7 @@ std::string sbndaq::BernCRTZMQ_GeneratorBase::GetFEBIDString(uint64_t const& id)
 void sbndaq::BernCRTZMQ_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const& /*id*/,
 								    size_t const& ) const { //buffer_size) const {
 
-  TLOG(TLVL_DEBUG)<<__func__<<" called";
+  TLOG(TLVL_DEBUG)<<__func__<<"() called";
 
   //std::string id_str = GetFEBIDString(id);
   //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTZMQGenerator");    
@@ -232,15 +232,15 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     }
   }
 
-  const size_t data_size = GetZMQData(); //read zmq data from febdrv and fill ZMQ buffer
+  const size_t data_size = GetZMQData(); //read zmq data from FEB and fill ZMQ buffer
 
   //simple check of data size validity
   if(data_size % sizeof(BernCRTZMQEvent)) {
-    TLOG(TLVL_ERROR)<<__func__<<" received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
+    TLOG(TLVL_ERROR)<<__func__<<"() received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
     throw cet::exception(std::string(TRACE_NAME) + "::"+ __func__ + ": received data of " + std::to_string(data_size) + " bytes cannot be divided into " + std::to_string(sizeof(BernCRTZMQEvent)) + " chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
   }
   else if(data_size == 0) {
-    TLOG(TLVL_ERROR)<<__func__<<" Obtained data size of 0. Stopping.";
+    TLOG(TLVL_ERROR)<<__func__<<"() Obtained data size of 0. Stopping.";
     throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+" Obtained data size of 0. Stopping");
     //TODO: note that we quit without turning off HV, but we can't turn off HV if zmq context is stopped, which is the reason of the failure here
   }
@@ -301,11 +301,11 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   TLOG(TLVL_DEBUG)<<"last_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_end);
 
   if(n_events != total_events -1) {
-    TLOG(TLVL_DEBUG)<<"BernCRTZMQ::"<<__func__<<" Data corruption! Number of events reported in the last zmq event: "<<n_events<<" differs from what you expect from the packet size: "<<(total_events-1);
+    TLOG(TLVL_DEBUG)<<"BernCRTZMQ::"<<__func__<<"() Data corruption! Number of events reported in the last zmq event: "<<n_events<<" differs from what you expect from the packet size: "<<(total_events-1);
     throw cet::exception("BernCRTZMQ::GetData() Data corruption! Number of events reported in the last zmq event differs from what you expect from the packet size ");
   }
 
-  TLOG(TLVL_DEBUG)<<__func__<<" start sorting with mac="<<prev_mac;
+  TLOG(TLVL_DEBUG)<<__func__<<"() start sorting with mac="<<prev_mac;
 
   for(size_t i_e = 0; i_e < total_events; i_e++) { //loop over events in ZMQBufferUPtr
 
@@ -331,7 +331,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
       //Verify if a buffer is created for given mac address (in case we receive incorrect mac address in the data)
       if (FEBBuffers_.find(prev_mac) == FEBBuffers_.end()) {
-        TLOG(TLVL_ERROR)<<TRACE_NAME<<"::"<<__func__<<" Data corruption! Unexpected MAC address received in the data: "<<prev_mac;
+        TLOG(TLVL_ERROR)<<TRACE_NAME<<"::"<<__func__<<"() Data corruption! Unexpected MAC address received in the data: "<<prev_mac;
 //        throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+" Data corruption! Unexpected MAC address received in the data: "+std::to_string(prev_mac));
       }
       else {
@@ -370,7 +370,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 						    artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) << __func__<<" (feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
+  TLOG(TLVL_DEBUG) << __func__<<"() (feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
   FEBBuffer_t & buffer = FEBBuffers_[feb_id];
 
@@ -489,7 +489,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
 void sbndaq::BernCRTZMQ_GeneratorBase::SendMetadataMetrics(BernCRTZMQFragmentMetadata const& /*m*/) {
 
-  TLOG(TLVL_DEBUG)<<__func__<<" called";
+  TLOG(TLVL_DEBUG)<<__func__<<"() called";
 
 //  std::string id_str = GetFEBIDString(m.feb_id());
 

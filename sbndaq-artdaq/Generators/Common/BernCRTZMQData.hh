@@ -5,9 +5,7 @@
 
 #include "febdrv.hh"
 
-//#include "zmq.h"
-
-namespace sbndaq {    
+namespace sbndaq {
 
   class BernCRTZMQData : public sbndaq::BernCRTZMQ_GeneratorBase {
   public:
@@ -27,9 +25,6 @@ namespace sbndaq {
     std::chrono::time_point<std::chrono::system_clock> last_restart_time;
 
     FEBDRV febdrv;
-
-    enum feb_command { DAQ_BEG, BIAS_ON, BIAS_OF };
-    void febctl(feb_command command, uint8_t mac5 = 255);
 
     void feb_send_bitstreams(uint8_t mac5);
   };

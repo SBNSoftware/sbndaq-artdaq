@@ -17,7 +17,7 @@
 
 #include "workerThread.hh"
 
-namespace sbndaq {    
+namespace sbndaq {
 
   class BernCRTZMQ_GeneratorBase : public artdaq::CommandableFragmentGenerator {
   public:

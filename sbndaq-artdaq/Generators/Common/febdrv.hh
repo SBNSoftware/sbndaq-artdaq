@@ -7,6 +7,8 @@
 #include <string.h>
 #include <net/if.h>
 
+#include <chrono>
+
 // Ethernet switch register r/w
 #define FEB_RD_SR 0x0001
 #define FEB_WR_SR 0x0002
@@ -80,7 +82,7 @@ public:
   void Init(std::string ethernet_port);
   FEBDRV();
 
-  int startDAQ(uint8_t mac5);
+  bool startDAQ(uint8_t mac5 = 255);
 
   void SetDriverState(int state) { driver_state=state; }
 
@@ -89,14 +91,15 @@ public:
 
   void pingclients();
 
-  int sendconfig(uint8_t mac5);
+  
 
-  int biasON(uint8_t mac5);
-  int biasOFF(uint8_t mac5);
+  void biasON(uint8_t mac5);
+  void biasOFF(uint8_t mac5 = 255);
 
-  int configu(uint8_t mac5, const uint8_t *buf1, int len);
 
-  int polldata();
+  bool sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR, uint8_t * bufPMR, uint16_t lenPMR);
+
+  bool polldata();
   int recvL2pack();
   void processL2pack(int,const uint8_t);
   int recvandprocessL2pack(const uint8_t);
@@ -116,10 +119,12 @@ public:
 private:
 
   bool initif();
+  
+  
 
   int sendcommand(const uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf);
   
-  FEBDTP_PKT_t spkt, rpkt; //send and receive packets //TODO does it have to be global?!
+  FEBDTP_PKT_t rpkt; //receive packets //TODO does it have to be global?!
   std::map <uint8_t, std::vector<sbndaq::BernCRTZMQEvent>> feb_buffer;
   std::map <uint8_t, uint16_t> feb_buffer_counter;
   
@@ -129,7 +134,7 @@ private:
   std::map <uint8_t, uint32_t> lostperpoll_fpga;
   
   std::vector<std::array<uint8_t, 6> > macs;
-  uint8_t hostmac[6];
+  uint8_t hostmac[6]; //TODO do we need it? Same data is stored in spkt
   char ifName[IFNAMSIZ];
 
   //ethernet communication sockets
@@ -152,19 +157,16 @@ private:
 
   uint32_t GrayToBin(uint32_t n);
   
-  int sendtofeb(int len, FEBDTP_PKT_t const& spkt);  //sending spkt
+  bool sendtofeb(int len, FEBDTP_PKT_t const& spkt);  //sending spkt
   int recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt); //result is in rpkt
 
   int flushlink();
 
-  int numbytes;
-  
   sbndaq::BernCRTZMQEvent *evt; //TODO not needed?
-
-  uint8_t bufPMR[256][1500];
-  uint8_t bufSCR[256][1500];
   
-  uint8_t buf[1500]; //TODO replace with something more clever
+  uint8_t buf[1500]; //TODO does the buffer need to be global?
+  
+  int64_t steady_clock_offset; //difference between system and steady clock
 
 }; //class FEBDRV
 } //namespace sbndaq
