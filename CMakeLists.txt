@@ -104,6 +104,8 @@ find_ups_product( sbndaq_artdaq_core v0_03_00 )
 
 find_ups_product (jsoncpp v1_7_7c) 
 
+find_ups_product (TRACE v3_15_07)
+
 find_ups_product( zmq v4_3_1 ) 
 find_ups_product( redis v5_0_5 )
 
