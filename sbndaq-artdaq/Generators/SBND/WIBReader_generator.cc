@@ -25,6 +25,8 @@
 #include <iomanip>
 #include <chrono>
 #include <thread>
+#include <ctime>
+#include <time.h>
 
 namespace sbndaq 
 {
@@ -38,10 +40,12 @@ namespace sbndaq
    
    bool success = false;
    unsigned configuration_tries=5;
+   unsigned int success_index=0;
    for(unsigned iTry=1; iTry <= configuration_tries; iTry++){
        try{
           setupWIB(ps);
           success=true;
+	  success_index=iTry;
           break;
        }
        catch(const WIBException::BAD_REPLY & exc){
@@ -58,6 +62,7 @@ namespace sbndaq
              throw excpt;
        }
        TLOG_INFO(identification) << "Configuraton try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
+       sleep(25);
     } // for iRetry
 
     if(!success){
@@ -65,7 +70,11 @@ namespace sbndaq
        excpt << "Failed to configure WIB after " << configuration_tries << " tries";
        throw excpt;
     }
-  }
+    
+    if(success){
+       TLOG_INFO(identification) << "******** Configuration is successful in the " << success_index << " th try ***************" << TLOG_ENDL;
+    }
+ }
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
  {
@@ -80,27 +89,33 @@ namespace sbndaq
    TLOG_INFO(identification) << "Starting setupWIB " << TLOG_ENDL;
    
       
-   TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
+   //TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
    
-   TLOG_INFO(identification) << "wib table " <<  wib_table << TLOG_ENDL;
+   //TLOG_INFO(identification) << "wib table " <<  wib_table << TLOG_ENDL;
    
-   TLOG_INFO(identification) << "femb table " << femb_table << TLOG_ENDL;
+   //TLOG_INFO(identification) << "femb table " << femb_table << TLOG_ENDL;
    
    wib = std::make_unique<WIB>("192.168.230.50","WIB_SBND_REGS.adt","SBND_FEMB.adt",true);
    //wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
-   TLOG_INFO(identification) << "Connected to WIB at " <<  wib_address << TLOG_ENDL;
+   
+   //TLOG_INFO(identification) << "Connected to WIB at " <<  wib_address << TLOG_ENDL;
    
    //wib=std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
    
-   //TLOG_INFO(identification) << "configuring wib object " << TLOG_ENDL;
+   TLOG_INFO(identification) << "Trying to execute configWIB function " << TLOG_ENDL;
    
    wib->configWIB(DTS_source);
    
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
+   
+   TLOG_INFO(identification) << "Trying to talk to FEMBs " << TLOG_ENDL;
       
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
+       TLOG_INFO(identification) << "FEMB No. " << iFEMB << TLOG_ENDL; 
        if(enable_FEMBs.at(iFEMB-1)){
+          TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
+	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
 	  setupFEMB(iFEMB,FEMB_config);
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
@@ -201,7 +216,8 @@ void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_
 
 void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure)
 {
-  const std::string identification = "wibdaq::SBNDWIBReader::setupFEMB";
+  const std::string identification = "WIBReader::setupFEMB";
+  TLOG_INFO(identification) << "inside setupFEMB " << TLOG_ENDL;
   const auto gain         = FEMB_configure.get<uint32_t>("gain");
   const auto shape        = FEMB_configure.get<uint32_t>("shape");
   const auto baselineHigh = FEMB_configure.get<uint32_t>("baselineHigh");
@@ -293,12 +309,19 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      excpt << "FEMB start frame mode swapping is not acceptable";
      throw excpt;
   }
+  
+  TLOG_INFO(identification) << " Just before FEMBPower function" << TLOG_ENDL;
       
   wib->FEMBPower(iFEMB,1); 
+  
+  TLOG_INFO(identification) << " After powering up the FEMBs" << TLOG_ENDL;
+  
   sleep(5);
       
   std::vector<uint32_t> fe_config = {gain,shape,baselineHigh,leakHigh,leak10X,acCouple,buffer,extClk};
   wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+  
+  TLOG_INFO(identification) << " After configureing FEMBs" << TLOG_ENDL;
 }
 
 // "shutdown" transition
