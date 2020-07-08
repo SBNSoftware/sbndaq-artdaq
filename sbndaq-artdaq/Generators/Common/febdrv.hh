@@ -9,6 +9,9 @@
 
 #include <chrono>
 
+// #include <mutex>
+// #include <boost/circular_buffer.hpp>
+
 // Ethernet switch register r/w
 #define FEB_RD_SR 0x0001
 #define FEB_WR_SR 0x0002
@@ -77,97 +80,81 @@ typedef struct {
 } FEBDTP_PKT_t; // packet total length 64 bytes, 42 useful data
 
 namespace sbndaq {
-class FEBDRV {
-public:
-  void Init(std::string ethernet_port);
-  FEBDRV();
+  class FEBDRV {
+  public:
+    void Init(std::string ethernet_port);
+    FEBDRV();
 
-  bool startDAQ(uint8_t mac5 = 255);
+    bool startDAQ(uint8_t mac5 = 255);
 
-  void SetDriverState(int state) { driver_state=state; }
+    void SetDriverState(int state) { driver_state=state; }
 
-  void ConfigSetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index, bool value);
-  bool ConfigGetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index);
+    void ConfigSetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index, bool value);
+    bool ConfigGetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index);
 
-  void pingclients();
+    void pingclients();
 
-  
+    
 
-  void biasON(uint8_t mac5);
-  void biasOFF(uint8_t mac5 = 255);
+    void biasON(uint8_t mac5);
+    void biasOFF(uint8_t mac5 = 255);
 
 
-  bool sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR, uint8_t * bufPMR, uint16_t lenPMR);
+    bool sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR, uint8_t * bufPMR, uint16_t lenPMR);
 
-  bool polldata();
-  int recvL2pack();
-  void processL2pack(int,const uint8_t);
-  int recvandprocessL2pack(const uint8_t);
-  int polldata_setup();
+//     void processL2pack(int datalen, sbndaq::BernCRTZMQEvent & event);
+    void processSingleEvent(int & jj, sbndaq::BernCRTZMQEvent & event);
+    int GetData();
 
-  void pollfeb(const uint8_t* mac);
-  void updateoverwritten();
-  void polldata_complete();
+    void pollfeb(uint8_t mac);
+    void updateoverwritten();
 
-  int IncrementTotalLost(int i) { total_lost += i; return total_lost; }
-  int IncrementTotalAcquired(int i) { total_acquired += i; return total_acquired; }
+    int IncrementTotalLost(int i) { total_lost += i; return total_lost; }
+    
+    std::vector<uint8_t> GetMACs();
+    
+  private:
+    
 
-  FEBDTP_PKT_t const& ReceivedPkt() { return rpkt; }
-  
-  std::vector<uint8_t> GetMACs();
-  
-private:
 
-  bool initif();
-  
-  
+    bool initif();
+    
+    
 
-  int sendcommand(const uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf);
-  
-  FEBDTP_PKT_t rpkt; //receive packets //TODO does it have to be global?!
-  std::map <uint8_t, std::vector<sbndaq::BernCRTZMQEvent>> feb_buffer;
-  std::map <uint8_t, uint16_t> feb_buffer_counter;
-  
-  std::map <uint8_t, uint16_t> evtsperpoll;
-  int msperpoll=0;
-  std::map <uint8_t, uint32_t> lostperpoll_cpu;
-  std::map <uint8_t, uint32_t> lostperpoll_fpga;
-  
-  std::vector<std::array<uint8_t, 6> > macs;
-  uint8_t hostmac[6]; //TODO do we need it? Same data is stored in spkt
-  char ifName[IFNAMSIZ];
+    int sendcommand(const uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf);
+    
+    FEBDTP_PKT_t rpkt; //receive packets //TODO does it have to be global?!
+    
+    std::map <uint8_t, uint32_t> lostperpoll_cpu;
+    std::map <uint8_t, uint32_t> lostperpoll_fpga;
+    
+    std::vector<std::array<uint8_t, 6> > macs;
+    uint8_t hostmac[6]; //TODO do we need it? Same data is stored in spkt
+    char ifName[IFNAMSIZ];
 
-  //ethernet communication sockets
-  int sockfd_w;
-  int sockfd_r;
-  
-  struct ifreq if_idx; //TODO why these two need to be global?
-  struct ifreq if_mac;
-  
-  int driver_state; //TODO do we need it? it's set but never checked
-  uint8_t dstmac[6];
+    //ethernet communication sockets
+    int sockfd_w;
+    int sockfd_r;
+    
+    struct ifreq if_idx; //TODO why these two need to be global?
+    struct ifreq if_mac;
+    
+    int driver_state; //TODO do we need it? it's set but never checked
+    uint8_t dstmac[6];
 
-  std::map<uint8_t, uint32_t> ts0_ref_MEM;
-  std::map<uint8_t, uint32_t> ts1_ref_MEM;
-  
-  uint32_t overwritten;
-  uint32_t lostinfpga;
-  uint32_t total_lost;
-  uint32_t total_acquired;
+    uint32_t total_lost;
 
-  uint32_t GrayToBin(uint32_t n);
-  
-  bool sendtofeb(int len, FEBDTP_PKT_t const& spkt);  //sending spkt
-  int recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt); //result is in rpkt
+    uint32_t GrayToBin(uint32_t n);
+    
+    bool sendtofeb(int len, FEBDTP_PKT_t const& spkt);  //sending spkt
+    int recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt); //result is in rpkt
 
-  int flushlink();
+    int flushlink();
 
-  sbndaq::BernCRTZMQEvent *evt; //TODO not needed?
-  
-  uint8_t buf[1500]; //TODO does the buffer need to be global?
-  
-  int64_t steady_clock_offset; //difference between system and steady clock
-
-}; //class FEBDRV
+    sbndaq::BernCRTZMQEvent *evt; //TODO not needed?
+    
+    uint8_t buf[1500]; //TODO does the buffer need to be global?
+    
+  }; //class FEBDRV
 } //namespace sbndaq
 #endif

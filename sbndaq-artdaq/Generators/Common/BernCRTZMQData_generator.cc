@@ -115,8 +115,7 @@ void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
 } //feb_send_bitstreams
 
 void sbndaq::BernCRTZMQData::StartFebdrv() {
-  //TODO remove this function and move restarting functionality to FEBDRV
-  TLOG(TLVL_DEBUG)<< __func__<<": Starting febdrv";
+  TLOG(TLVL_DEBUG)<< __func__<<": (re)starting febdrv";
   febdrv.startDAQ();
   last_restart_time = std::chrono::system_clock::now();
 }
@@ -125,62 +124,91 @@ uint64_t sbndaq::BernCRTZMQData::GetTimeSinceLastRestart() {
   return (std::chrono::system_clock::now() -  last_restart_time).count();
 }
 
-/*---------------BERN CRT ZMQ DATA-------------------------------------*/
-size_t sbndaq::BernCRTZMQData::GetZMQData() {
+/*---------------BERN CRT FEB DATA-------------------------------------*/
+size_t sbndaq::BernCRTZMQData::GetFEBData() {
   /**
    * Reads data from FEB
    */
   
   TLOG(TLVL_DEBUG) << __func__ << "() called";
+  
+  // Sleep until the next poll comes
+  int now = (std::chrono::system_clock::now().time_since_epoch().count() / 1000) % feb_poll_period_;
+  usleep(feb_poll_period_ - now);
 
   size_t data_size=0;
   
-  febdrv.polldata();
-  
   size_t events = 0;
   
-//  zmq_msg_t feb_data_msg;
-//  zmq_msg_init(&feb_data_msg);
-
-  //attempt to read data from febdrv
-/*  while(zmq_msg_recv(&feb_data_msg, zmq_subscriber_, ZMQ_DONTWAIT) < 0) {
-    if ( errno != EAGAIN ) { // No data awailable now
-      TLOG(TLVL_ERROR) << __func__ << ": Instead of EAGAIN got the following errno: " <<  std::to_string(errno) << " " << zmq_strerror(errno);
-      return 0;
-    }
-    usleep(1000);
-
-    ++wait_count;
+  for(auto mac : MAC5s_) {
+    FEB_t & feb = FEBs_[mac];
     
-    if( (wait_count%500) == 0 ) {
-      TLOG(TLVL_DEBUG) << __func__ << ": waiting for data : " << wait_count;
-    }
-  }*/
-  
-//   TLOG(TLVL_DEBUG) << __func__ << ": Completed wait loop after " << wait_count << " iterations";
-  
-/*  if(zmq_msg_size(&feb_data_msg)>0) {
-    TLOG(TLVL_DEBUG) << __func__ << ": about to copy " <<zmq_msg_size(&feb_data_msg)<< " bytes";
-
-    events = zmq_msg_size(&feb_data_msg)/sizeof(BernCRTZMQEvent);
-    data_size = zmq_msg_size(&feb_data_msg);
-
-    //can data fit in the buffer?
-    if( events > ZMQBufferCapacity_ ) {
-      TLOG(TLVL_ERROR) << __func__ << " Too many events for ZMQ buffer! " << std::to_string(events);
-      throw cet::exception(std::string(TRACE_NAME) + " " + __func__ + " Too many events for ZMQ buffer!");
+    uint64_t poll_start = std::chrono::system_clock::now().time_since_epoch().count();
+    int32_t system_clock_deviation = poll_start - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
+    
+    febdrv.pollfeb(mac);
+    
+    uint64_t poll_end = std::chrono::system_clock::now().time_since_epoch().count();
+    
+    //TODO can we do it without accessing metadata fields directly?
+    feb.metadata._last_poll_start = feb.metadata._this_poll_start;
+    feb.metadata._last_poll_end   = feb.metadata._this_poll_end;
+    feb.metadata._this_poll_start = poll_start;
+    feb.metadata._this_poll_end   = poll_end;
+    if(feb.metadata._last_poll_start == 0) {
+      //very first poll
+      feb.metadata._last_poll_start = poll_start - 200000000;
+      feb.metadata._last_poll_end   = poll_end   - 200000000;
     }
     
-    std::copy((uint8_t*)zmq_msg_data(&feb_data_msg),
-	      (uint8_t*)zmq_msg_data(&feb_data_msg)+zmq_msg_size(&feb_data_msg), //last event contains time info
-	      reinterpret_cast<uint8_t*>(&ZMQBufferUPtr[0]));
-  }*/
+    feb.metadata._system_clock_deviation = system_clock_deviation;
+    
+    std::unique_lock<std::mutex> lock(*(feb.mutexptr));
+    
+    unsigned int feb_events = 0;
+    
+    while(true) {
+      //loop over events received via ethernet and push into circular buffer
+      int numbytes = febdrv.GetData();
+      if(numbytes<=0) break;
+      
+      int datalen = numbytes-18;
+      
+      
+      TLOG(TLVL_DEBUG)<<__func__<<"()  datalen = "<<datalen;
+        
+      data_size += datalen;
+      
+      for(int jj=0; jj<datalen; ) { // jj is incremented in processSingleEvent
+        feb_events++;
+        febdrv.processSingleEvent(jj, feb.event);
+        feb.buffer.push_back(std::make_pair(feb.event, feb.metadata));
+        feb.metadata.increment_feb_events();
+      }
+    }
+    
+    events += feb_events;
+    
+    //only at the end of the poll we know how many events we have in the poll
+    //loop over the poll again and update metadata
+    for(unsigned int i = feb.buffer.size() - feb_events; i < feb.buffer.size(); i++) {
+      feb.buffer[i].second._feb_events_per_poll = feb_events;
+    }
+    
+    febdrv.updateoverwritten(); //TODO 1. is it needed 2. should it be here, or calculated per feb?
+    
+  } //loop over FEBs
+  
+  //workaround for spike issue: periodically restart febdrv
+  if(feb_restart_period_) {
+    if(GetTimeSinceLastRestart() > feb_restart_period_) {
+      StartFebdrv();
+    }
+  }
+  
+  TLOG(TLVL_DEBUG) << __func__ << "() read " << std::to_string(events) << " events of size of " << std::to_string(data_size);
 
-//  zmq_msg_close(&feb_data_msg);
-
-  TLOG(TLVL_DEBUG) << __func__ << "() copied " << std::to_string(events) << " events of size of " << std::to_string(data_size);
-
-  return data_size;
+  return events;
 } //GetZMQData
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::BernCRTZMQData) 

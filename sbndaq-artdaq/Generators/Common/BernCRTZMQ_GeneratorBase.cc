@@ -38,8 +38,6 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   TLOG(TLVL_INFO)<<__func__<<"() called";
 
   //reset last poll times
-  last_poll_start = 0;
-  last_poll_end = 0;
   sequence_id_ = 0;
 
   //read parameters from FHiCL file
@@ -52,12 +50,13 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   out_of_sync_tolerance_ns_ = 1000000 * ps_.get<uint32_t>("out_of_sync_tolerance_ms");
 
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
-  ZMQBufferCapacity_ = nFEBs()*1024 + 1;
 
   throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
   throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
 
-  febdrv_restart_period = 1e9 * ps_.get<uint32_t>("febdrv_restart_period_s");
+  feb_restart_period_ = 1e9 * ps_.get<uint32_t>("feb_restart_period_s");
+  
+  feb_poll_period_ = 1000 * ps_.get<uint32_t>("feb_poll_ms"); //µs
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
         throttle_usecs_ % throttle_usecs_check_ != 0) ) { //check FHiCL file validity
@@ -67,11 +66,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   //Initialize buffers
   for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
     const uint8_t& MAC5 = MAC5s_[iMAC5];
-    FEBBuffers_[MAC5] = FEBBuffer_t(FEBBufferCapacity_, MAC5, fragment_id_base | (MAC5 & 0xff));
+    FEBs_[MAC5] = FEB_t(FEBBufferCapacity_, MAC5, fragment_id_base | (MAC5 & 0xff));
   }
-  ZMQBufferUPtr.reset(new BernCRTZMQEvent[ZMQBufferCapacity_]);
-
-  TLOG(TLVL_DEBUG)<< __func__ << " Created ZMQBuffer of size of "<<ZMQBufferCapacity_;
 
   TLOG(TLVL_INFO)<<__func__<<"() completed ... starting GetData worker thread.";
   share::ThreadFunctor functor = std::bind(&BernCRTZMQ_GeneratorBase::GetData,this);
@@ -88,6 +84,14 @@ void sbndaq::BernCRTZMQ_GeneratorBase::start() {
 
   run_start_time = std::chrono::system_clock::now().time_since_epoch().count();
   TLOG(TLVL_DEBUG)<<__func__<<"() Run start time: " << sbndaq::BernCRTZMQFragment::print_timestamp(run_start_time);
+  
+  for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
+    const uint8_t& MAC5 = MAC5s_[iMAC5];
+    FEBs_[MAC5].metadata._run_start_time = run_start_time;
+  }
+  
+  //calibrate offset between system and steady clock
+  steady_clock_offset = std::chrono::system_clock::now().time_since_epoch().count() - std::chrono::steady_clock::now().time_since_epoch().count();
 
   ConfigureStart();
   GetData_thread_->start();
@@ -145,79 +149,17 @@ std::string sbndaq::BernCRTZMQ_GeneratorBase::GetFEBIDString(uint64_t const& id)
 
 
 void sbndaq::BernCRTZMQ_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const& /*id*/,
-								    size_t const& ) const { //buffer_size) const {
+                                                                    size_t const& ) const { //buffer_size) const {
 
   TLOG(TLVL_DEBUG)<<__func__<<"() called";
 
   //std::string id_str = GetFEBIDString(id);
-  //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTZMQGenerator");    
+  //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTZMQGenerator");
   //metricMan->sendMetric("BufferOccupancyPercent_"+id_str,
-  //			 ((float)(buffer_size) / (float)(FEBBufferCapacity_))*100.,
-  //			 "%",5,true,"BernCRTZMQGenerator");    
+  //                         ((float)(buffer_size) / (float)(FEBBufferCapacity_))*100.,
+  //                         "%",5,true,"BernCRTZMQGenerator");    
 } //UpdateBufferOccupancyMetrics
 
-/*-----------------------------------------------------------------------*/
-
-
-size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & buffer,
-							      size_t begin_index,
-							      size_t nevents){
-
-  TLOG(TLVL_DEBUG) << __func__ << ": MAC5 " << buffer.MAC5
-    << ". Current buffer size " << buffer.buffer.size() << " / " << buffer.buffer.capacity()
-    << ". Want to add " << nevents << " events.";
-
-  //wait for available capacity...
-  for(int i=0; (buffer.buffer.capacity()-buffer.buffer.size()) < nevents; i++) {
-    if(i%100000 == 0) TLOG(TLVL_WARNING)<<"No available capacity to save the events in FEBBuffers!";
-    usleep(10);
-  }
-
-  //obtain the lock
-  std::unique_lock<std::mutex> lock(*(buffer.mutexptr));
-
-  TLOG(TLVL_DEBUG) << "FEB ID " << buffer.MAC5
-    << ". Current FEB buffer size " << buffer.buffer.size()
-    << " with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(buffer.buffer.front().first.Time_TS0())
-    << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(buffer.buffer.back().first.Time_TS0()) << "].";
-  TLOG(TLVL_DEBUG) << "Want to add " << nevents
-    << " events with T0 in range [" << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index].Time_TS0())
-    << ", " << sbndaq::BernCRTZMQFragment::print_timestamp(ZMQBufferUPtr[begin_index+nevents-1].Time_TS0()) << "].";
-
-  //prepare metadata object (it is the same for all all events in the poll)
-  BernCRTZMQFragmentMetadata metadata(
-      run_start_time,
-      this_poll_start,
-      this_poll_end,
-      last_poll_start,
-      last_poll_end,
-      system_clock_deviation,
-      nevents, //_feb_events_per_poll
-      buffer.event_number);
-
-  //Insert events into FEBBuffer
-  for(size_t i_e=0; i_e<nevents; ++i_e) {
-    buffer.buffer.push_back(std::make_pair(ZMQBufferUPtr[begin_index + i_e], metadata));
-    metadata.increment_feb_events();
-  }
-
-  buffer.event_number += nevents;
-
-  return buffer.buffer.size();
-} //InsertIntoFEBBuffer
-
-/*-----------------------------------------------------------------------*/
-
-
-size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & buffer, size_t const& nevents){
-
-  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size before erasing the events: " << std::setw(3) << buffer.buffer.size() << " events";
-
-  std::unique_lock<std::mutex> lock(*(buffer.mutexptr));
-  buffer.buffer.erase_begin(nevents);
-  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size after erasing the events: " << std::setw(4) << buffer.buffer.size() << " events";
-  return buffer.buffer.size();
-} //EraseFromFEBBuffer
 
 /*-----------------------------------------------------------------------*/
 
@@ -225,141 +167,9 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   TLOG(TLVL_DEBUG) <<__func__<< "() called";
 
-  //workaround for spike issue: periodically restart febdrv
-  if(febdrv_restart_period) {
-    if(GetTimeSinceLastRestart() > febdrv_restart_period) {
-      StartFebdrv(); //StartFebdrv is all we need to do to restart it
-    }
-  }
+  unsigned long total_events = GetFEBData(); //read data FEB and fill circular buffer
 
-  const size_t data_size = GetZMQData(); //read zmq data from FEB and fill ZMQ buffer
-
-  //simple check of data size validity
-  if(data_size % sizeof(BernCRTZMQEvent)) {
-    TLOG(TLVL_ERROR)<<__func__<<"() received data of "<<data_size<<" bytes cannot be divided into "<<sizeof(BernCRTZMQEvent)<<" chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.";
-    throw cet::exception(std::string(TRACE_NAME) + "::"+ __func__ + ": received data of " + std::to_string(data_size) + " bytes cannot be divided into " + std::to_string(sizeof(BernCRTZMQEvent)) + " chunks of BernCRTZMQEvent. Possible mismatch of febdrv version and FEB firmware.");
-  }
-  else if(data_size == 0) {
-    TLOG(TLVL_ERROR)<<__func__<<"() Obtained data size of 0. Stopping.";
-    throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+" Obtained data size of 0. Stopping");
-    //TODO: note that we quit without turning off HV, but we can't turn off HV if zmq context is stopped, which is the reason of the failure here
-  }
-
-  size_t total_events = data_size/sizeof(BernCRTZMQEvent); //number of events in all FEBs, including the last event containing the timing information
-  TLOG(TLVL_DEBUG)<<__func__<<": "<<(total_events-1)<<"+1 events ";
-
-  size_t this_n_events=0; //number of events in given FEB
-
-  //NOTE: value in ZMQBuffer is 16 bit. We just assume it will always be less than 0xff
-  //      In particular the special last event in ZMQ buffer has "mac5" field set to 0x0xffff
-  uint16_t prev_mac = ZMQBufferUPtr[0].MAC5();
-
-  //Get the special last event and read the time information from it
-  //TODO: Test it at short poll times, and allow for several polls in a zmq packet
-  TLOG(TLVL_DEBUG)<<"Reading information from the last zeromq event";
-  sbndaq::BernCRTZMQEventUnion last_event;
-  last_event.event = ZMQBufferUPtr[total_events-1];
-  
-  //data validity checks
-  if(last_event.last_event.mac5 != 0xffff
-      || last_event.last_event.flags != 0xffff
-      || last_event.last_event.magic_number != 0xaa55aa55) {
-    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Check of control fields: "<<last_event.last_event.mac5<<", "<<last_event.last_event.flags<<", "<<last_event.last_event.magic_number<<" in the last event failed!";
-    throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+"Data corruption! Check of control fields failed");
-    //TODO throwing exception should crash the whole fragment generator, but it seems to crash only the data reading part
-  }
-  if(last_event.last_event.febdrv_version != FEBDRV_VERSION) {
-    TLOG(TLVL_ERROR) << __func__ <<" Data corruption! Febdrv version in the data received "<<last_event.last_event.febdrv_version<<" doesn't match FragmentGenerator febdrv version "<<FEBDRV_VERSION<<"!!!";
-    throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+"Data corruption! Febdrv version mismatch");
-  }
-
-  uint32_t n_events = last_event.last_event.n_events;
-  
-  this_poll_start = last_event.last_event.poll_time_start;
-  this_poll_end   = last_event.last_event.poll_time_end;
-  int32_t poll_start_deviation = last_event.last_event.poll_start_deviation;
-  int32_t poll_end_deviation   = last_event.last_event.poll_end_deviation;
-
-  //calculate maximum deviation, to be stored in metadata
-  if(abs(poll_start_deviation) > abs(poll_end_deviation))
-    system_clock_deviation = poll_start_deviation;
-  else
-    system_clock_deviation = poll_end_deviation;
-
-  
-  if(last_poll_start == 0) {
-    //we don't know the previous poll time for the very first poll, so we assign a dummy value of -300ms
-    //It should be OK even if the actual polling time is shorter
-    last_poll_start = this_poll_start - 300*1000*1000;
-    last_poll_end   = this_poll_end   - 300*1000*1000;
-  }
-
-  TLOG(TLVL_DEBUG)<<"Number of events is "<<n_events;
-  TLOG(TLVL_DEBUG)<<"this_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_start) <<" (deviation from steady clock "<<poll_start_deviation<<" ns)";
-  TLOG(TLVL_DEBUG)<<"this_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_end) <<" (deviation from steady clock "<<poll_end_deviation<<" ns)";
-  TLOG(TLVL_DEBUG)<<"last_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_start);
-  TLOG(TLVL_DEBUG)<<"last_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_end);
-
-  if(n_events != total_events -1) {
-    TLOG(TLVL_DEBUG)<<"BernCRTZMQ::"<<__func__<<"() Data corruption! Number of events reported in the last zmq event: "<<n_events<<" differs from what you expect from the packet size: "<<(total_events-1);
-    throw cet::exception("BernCRTZMQ::GetData() Data corruption! Number of events reported in the last zmq event differs from what you expect from the packet size ");
-  }
-
-  TLOG(TLVL_DEBUG)<<__func__<<"() start sorting with mac="<<prev_mac;
-
-  for(size_t i_e = 0; i_e < total_events; i_e++) { //loop over events in ZMQBufferUPtr
-
-    auto const& this_event = ZMQBufferUPtr[i_e];
-
-    if(prev_mac != this_event.MAC5()){
-      /*
-       * febdrv zeromq packet looks as follows:
-       * - events for first MAC5
-       * - events for second MAC5
-       * ...
-       * - events for the last MAC5
-       * - additional event with timing information (which has MAC5=0xffff)
-       *
-       * Whenever we see a new MAC5 and we know the previous one is complete and we can insert it into the buffer.
-       * The timing information event isn't inserted into buffer, but it is saved in metadata for each event
-       */
-
-      TLOG(TLVL_DEBUG)<<__func__<<": found new MAC ("<<this_event.MAC5()
-                      <<")! prev_mac="<<prev_mac
-                      <<", iterator="<<i_e
-                      <<" this_events="<<this_n_events;
-
-      //Verify if a buffer is created for given mac address (in case we receive incorrect mac address in the data)
-      if (FEBBuffers_.find(prev_mac) == FEBBuffers_.end()) {
-        TLOG(TLVL_ERROR)<<TRACE_NAME<<"::"<<__func__<<"() Data corruption! Unexpected MAC address received in the data: "<<prev_mac;
-//        throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+" Data corruption! Unexpected MAC address received in the data: "+std::to_string(prev_mac));
-      }
-      else {
-        //temporary fix, don't fill data for unexpected MAC addresses
-        //TODO: crash if data is corrupted
-        
-        //insert group of events from a single FEB (distinct mac) to a dedicated FEBBuffer
-        size_t new_buffer_size = InsertIntoFEBBuffer(FEBBuffers_[prev_mac], i_e-this_n_events, this_n_events);
-
-        TLOG(TLVL_DEBUG)<<__func__<<": ... id="<<FEBBuffers_[prev_mac].MAC5
-          <<", n_events="<<this_n_events
-          <<", buffer_size="<<FEBBuffers_[prev_mac].buffer.size();
-
-        //auto id_str = GetFEBIDString(prev_mac);
-        //metricMan->sendMetric("EventsAdded_"+id_str,this_n_events,"events",5,true,"BernCRTZMQGenerator");
-        UpdateBufferOccupancyMetrics(prev_mac, new_buffer_size); //TODO: this function does nothing as of now!
-      }
-      this_n_events=0;
-    }
-
-    prev_mac = this_event.MAC5();
-    ++this_n_events;
-  }
-
-  last_poll_start = this_poll_start;
-  last_poll_end = this_poll_end;
-
-  //metricMan->sendMetric("TotalEventsAdded",total_events-1,"events",5,true,"BernCRTZMQGenerator");
+//   metricMan->sendMetric("TotalEventsAdded",total_events,"events",5,true,"BernCRTZMQGenerator");
 
   return true;
 } //GetData
@@ -368,21 +178,21 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
 
 bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
-						    artdaq::FragmentPtrs & frags) {
+                                                    artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) << __func__<<"() (feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
+  TLOG(TLVL_DEBUG) << __func__<<"(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
-  FEBBuffer_t & buffer = FEBBuffers_[feb_id];
+  FEB_t & feb = FEBs_[feb_id];
 
-  size_t buffer_end = buffer.buffer.size(); 
+  size_t buffer_end = feb.buffer.size();
 
-  TLOG(TLVL_DEBUG) <<__func__ << " Current size of the FEB buffer: " << buffer_end << " events";
+  TLOG(TLVL_DEBUG) <<__func__ << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " events";
   if(metricMan != nullptr) metricMan->sendMetric("feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Average);
 
   //loop over all the CRTHit events in our buffer (for this FEB)
   for(size_t i_e=0; i_e<buffer_end; ++i_e) {
-    BernCRTZMQEvent const& data = buffer.buffer[i_e].first;
-    BernCRTZMQFragmentMetadata & metadata = buffer.buffer[i_e].second;
+    BernCRTZMQEvent const& data = feb.buffer[i_e].first;
+    BernCRTZMQFragmentMetadata & metadata = feb.buffer[i_e].second;
 
     //calculate timestamp based on nanosecond from FEB and poll times measured by server
     //see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
@@ -417,12 +227,12 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
       if(
           timestamp < metadata.last_poll_start() - out_of_sync_tolerance_ns_
        || timestamp > metadata.this_poll_end()   + out_of_sync_tolerance_ns_) {
-        if(!buffer.omitted_events) { //avoid spamming messages
-          TLOG(TLVL_WARNING)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
-          TLOG(TLVL_WARNING)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
-          TLOG(TLVL_WARNING) <<__func__<<"() Omitted FEB timestamp out of sync with server clock";
+        if(!feb.omitted_events) { //avoid spamming messages
+          TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
+          TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
+          TLOG(TLVL_WARNING) <<__func__<<"(feb_id=" << feb_id << ") Omitted FEB timestamp out of sync with server clock";
         }
-        buffer.omitted_events++;
+        feb.omitted_events++;
         continue;
       }
     }
@@ -434,37 +244,37 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
        * Out of order events may appear due to corruption of FEB data
        * or due to large desynchronisation of the server clock w.r.t. FEB PPS
        */
-       if(timestamp <= buffer.last_accepted_timestamp) {
-         if(!buffer.omitted_events) {//avoid spamming messages
-           TLOG(TLVL_WARNING)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
-           TLOG(TLVL_WARNING)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
-           TLOG(TLVL_WARNING) <<__func__<<"() Omitted out of order timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" ≤ "<<sbndaq::BernCRTZMQFragment::print_timestamp(buffer.last_accepted_timestamp);
+       if(timestamp <= feb.last_accepted_timestamp) {
+         if(!feb.omitted_events) {//avoid spamming messages
+           TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
+           TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
+           TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Omitted out of order timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" ≤ "<<sbndaq::BernCRTZMQFragment::print_timestamp(feb.last_accepted_timestamp);
          }
-         buffer.omitted_events++;
+         feb.omitted_events++;
          continue;
        }
     }
 
-    TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
-    TLOG(TLVL_SPECIAL)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
+    TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
+    TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
 
-    if(buffer.omitted_events) {
-      TLOG(TLVL_WARNING) <<__func__<<"() Accepted timestamp after omitting "<< buffer.omitted_events<<" of them. Timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" Timestamp of previously accepted event "<<sbndaq::BernCRTZMQFragment::print_timestamp(buffer.last_accepted_timestamp);
-      metadata.set_omitted_events(buffer.omitted_events);
-      buffer.omitted_events = 0;
-      metadata.set_last_accepted_timestamp(buffer.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
+    if(feb.omitted_events) {
+      TLOG(TLVL_WARNING) <<__func__<<"(feb_id=" << feb_id << ") Accepted timestamp after omitting "<< feb.omitted_events<<" of them. Timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" Timestamp of previously accepted event "<<sbndaq::BernCRTZMQFragment::print_timestamp(feb.last_accepted_timestamp);
+      metadata.set_omitted_events(feb.omitted_events);
+      feb.omitted_events = 0;
+      metadata.set_last_accepted_timestamp(feb.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
     }
-    buffer.last_accepted_timestamp = timestamp;
+    feb.last_accepted_timestamp = timestamp;
     
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
           sizeof(BernCRTZMQEvent), //payload_size 
           sequence_id_++,
-          buffer.fragment_id,
+          feb.fragment_id,
           sbndaq::detail::FragmentType::BERNCRTZMQ,
           metadata,
           timestamp
-          ) ); 
+          ) );
 
     //copy the BernCRTZMQEvent into the fragment we just created
     memcpy(frags.back()->dataBeginBytes(), &data, sizeof(BernCRTZMQEvent));
@@ -472,17 +282,28 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   } //loop over events in feb buffer
 
   //delete from the buffer all the events we've just put into frags
-  size_t new_buffer_size = EraseFromFEBBuffer(buffer, buffer_end);
+  size_t new_buffer_size = EraseFromFEBBuffer(feb, buffer_end);
 
   //update 
   std::string id_str = GetFEBIDString(feb_id);
   metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
-  TLOG(TLVL_DEBUG) <<__func__<< " ENDING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size();
+  TLOG(TLVL_DEBUG) <<__func__<< "(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
 
   return false;
 } //FillFragment
+
+/*-----------------------------------------------------------------------*/
+
+size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEB_t & feb, size_t const& nevents) {
+  TLOG(TLVL_DEBUG) <<__func__<< "() called";
+  std::unique_lock<std::mutex> lock(*(feb.mutexptr));
+  TLOG(TLVL_DEBUG) <<__func__<< "() Buffer size before erasing the events: " << std::setw(3) << feb.buffer.size() << " events";
+  feb.buffer.erase_begin(nevents);
+  TLOG(TLVL_DEBUG) <<__func__<< "() Buffer size after erasing the events: " << std::setw(4) << feb.buffer.size() << " events";
+  return feb.buffer.size();
+} //EraseFromFEBBuffer
 
 /*-----------------------------------------------------------------------*/
 
@@ -512,6 +333,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   TLOG(TLVL_DEBUG) <<__func__<< " called with frags.size = " << frags.size();
   
   //throttling...
+  //TODO why do we need it? Isn't it against the philosophy of artdaq?
   if (throttle_usecs_ > 0) {
     size_t nchecks = throttle_usecs_ / throttle_usecs_check_;
     
@@ -519,7 +341,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
       usleep( throttle_usecs_check_ );
       
       if (should_stop()) {
-	return false;
+        return false;
       }
     }
   } else {

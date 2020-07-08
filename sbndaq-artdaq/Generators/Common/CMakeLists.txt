@@ -111,35 +111,36 @@ simple_plugin(SpectraTimeReadout "generator"
 )
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
-		  SOURCE BernCRTZMQ_GeneratorBase.cc
-		  LIBRARIES
-  		        sbndaq-artdaq-core_Overlays
-  			sbndaq-artdaq-core_Overlays_Common
-  			sbndaq-artdaq_Common_Utilities	
-			artdaq_Generators
-			artdaq_Application
-			artdaq_DAQdata
-			artdaq-core_Utilities
-			artdaq-core_Data
-			artdaq-utilities_Plugins
+                  SOURCE BernCRTZMQ_GeneratorBase.cc
+                  LIBRARIES
+                        sbndaq-artdaq-core_Overlays
+                        sbndaq-artdaq-core_Overlays_Common
+                        sbndaq-artdaq_Common_Utilities
+                        artdaq_Generators
+                        artdaq_Application
+                        artdaq_DAQdata
+                        artdaq-core_Utilities
+                        artdaq-core_Data
+                        artdaq-utilities_Plugins
                         BernCRTFEBConfiguration
-			#${ARTDAQ_UTILITIES}
-			${ART_UTILITIES}
-			${FHICLCPP}
-			${MF_MESSAGELOGGER}
-			${MF_UTILITIES}
-			${CETLIB}
- 	    ${CETLIB_EXCEPT}	
+#                         febdrv
+                        #${ARTDAQ_UTILITIES}
+                        ${ART_UTILITIES}
+                        ${FHICLCPP}
+                        ${MF_MESSAGELOGGER}
+                        ${MF_UTILITIES}
+                        ${CETLIB}
+                        ${CETLIB_EXCEPT}
 )
 
-art_make_library( LIBRARY_NAME BernCRTFEBConfiguration 
+art_make_library( LIBRARY_NAME BernCRTFEBConfiguration
   SOURCE BernCRTFEBConfiguration.cc
   LIBRARIES
     ${FHICLCPP}
     ${CETLIB_EXCEPT}
 )
 
-art_make_library( LIBRARY_NAME febdrv 
+art_make_library( LIBRARY_NAME febdrv
   SOURCE febdrv.cc
   LIBRARIES
     sbndaq-artdaq-core_Overlays_Common
