@@ -18,6 +18,7 @@ namespace sbndaq {
     void ConfigureStart(); //called in start()
     void ConfigureStop();  //called in stop()
 
+
     size_t GetFEBData();
 
     void StartFebdrv();

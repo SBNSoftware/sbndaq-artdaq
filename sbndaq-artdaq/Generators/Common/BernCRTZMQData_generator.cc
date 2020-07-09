@@ -80,7 +80,6 @@ void sbndaq::BernCRTZMQData::ConfigureStop() {
   TLOG(TLVL_INFO) << __func__ << "() completed";
 } //ConfigureStop
 
-
 void sbndaq::BernCRTZMQData::feb_send_bitstreams(uint8_t mac5) {
   /**
    * Sends configuration bitstream
@@ -209,6 +208,6 @@ size_t sbndaq::BernCRTZMQData::GetFEBData() {
   TLOG(TLVL_DEBUG) << __func__ << "() read " << std::to_string(events) << " events of size of " << std::to_string(data_size);
 
   return events;
-} //GetZMQData
+} //GetFEBData
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::BernCRTZMQData) 
