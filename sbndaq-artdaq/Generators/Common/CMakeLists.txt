@@ -169,3 +169,20 @@ simple_plugin(BernCRTZMQData "generator"
   ${CETLIB}
   ${CETLIB_EXCEPT}
   )
+
+simple_plugin(DummyGenerator "generator"
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq-core_Overlays_Common
+  sbndaq-artdaq_Common_Utilities
+  artdaq_Generators
+  artdaq_DAQdata
+  artdaq_DAQrate
+  artdaq-core_Utilities
+  artdaq-core_Data
+  artdaq-utilities_Plugins
+  ${FHICLCPP}
+  ${MESSAGEFACILITY_LIBS}
+  ${CETLIB}
+  ${CETLIB_EXCEPT}
+  )
+
