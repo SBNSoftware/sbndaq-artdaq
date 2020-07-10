@@ -56,7 +56,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
 
   feb_restart_period_ = 1e9 * ps_.get<uint32_t>("feb_restart_period_s");
   
-  feb_poll_period_ = 1000 * ps_.get<uint32_t>("feb_poll_ms"); //µs
+  feb_poll_period_ = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
 
   if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
         throttle_usecs_ % throttle_usecs_check_ != 0) ) { //check FHiCL file validity

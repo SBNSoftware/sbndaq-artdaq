@@ -82,7 +82,7 @@ namespace sbndaq {
     virtual void ConfigureStop() = 0;  //called in stop()
 
 
-    //gets the data. Output is size of data filled. Input is FEM ID.
+    //gets the data.
     virtual size_t GetFEBData() = 0;
 
     virtual void StartFebdrv() = 0;

@@ -132,8 +132,8 @@ size_t sbndaq::BernCRTZMQData::GetFEBData() {
   TLOG(TLVL_DEBUG) << __func__ << "() called";
   
   // Sleep until the next poll comes
-  int now = (std::chrono::system_clock::now().time_since_epoch().count() / 1000) % feb_poll_period_;
-  usleep(feb_poll_period_ - now);
+  int now = std::chrono::system_clock::now().time_since_epoch().count() % feb_poll_period_;
+  usleep((feb_poll_period_ - now)/1000);
 
   size_t data_size=0;
   
@@ -155,9 +155,9 @@ size_t sbndaq::BernCRTZMQData::GetFEBData() {
     feb.metadata._this_poll_start = poll_start;
     feb.metadata._this_poll_end   = poll_end;
     if(feb.metadata._last_poll_start == 0) {
-      //very first poll
-      feb.metadata._last_poll_start = poll_start - 200000000;
-      feb.metadata._last_poll_end   = poll_end   - 200000000;
+      //for the very first poll there is no previous poll, yet we need to fill these fields
+      feb.metadata._last_poll_start = poll_start - feb_poll_period_;
+      feb.metadata._last_poll_end   = poll_end   - feb_poll_period_;
     }
     
     feb.metadata._system_clock_deviation = system_clock_deviation;
