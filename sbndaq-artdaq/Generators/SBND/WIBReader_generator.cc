@@ -62,7 +62,7 @@ namespace sbndaq
              throw excpt;
        }
        TLOG_INFO(identification) << "Configuraton try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
-       sleep(25);
+       sleep(10);
     } // for iRetry
 
     if(!success){
