@@ -181,8 +181,8 @@ size_t sbndaq::BernCRTZMQData::GetFEBData() {
       for(int jj=0; jj<datalen; ) { // jj is incremented in processSingleEvent
         feb_events++;
         febdrv.processSingleEvent(jj, feb.event);
+        feb.metadata.increment_feb_events(1 + feb.event.lostcpu + feb.event.lostfpga);
         feb.buffer.push_back(std::make_pair(feb.event, feb.metadata));
-        feb.metadata.increment_feb_events();
       }
     }
     
