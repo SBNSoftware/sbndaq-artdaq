@@ -194,8 +194,6 @@ size_t sbndaq::BernCRTZMQData::GetFEBData() {
       feb.buffer[i].second._feb_events_per_poll = feb_events;
     }
     
-    febdrv.updateoverwritten(); //TODO 1. is it needed 2. should it be here, or calculated per feb?
-    
   } //loop over FEBs
   
   //workaround for spike issue: periodically restart febdrv

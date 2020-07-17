@@ -24,8 +24,7 @@ sbndaq::FEBDRV::FEBDRV() :
   sockfd_w(-1),
   sockfd_r(-1),
   driver_state(DRV_OK),
-  dstmac{0x00,0x60,0x37,0x12,0x34,0x00}, //base mac for FEBs, last byte 0->255
-  total_lost(0)
+  dstmac{0x00,0x60,0x37,0x12,0x34,0x00} //base mac for FEBs, last byte 0->255
   { }
 
 
@@ -232,10 +231,10 @@ int sbndaq::FEBDRV::recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt) {//resul
 int sbndaq::FEBDRV::flushlink() {
   //NOTE OK
   // set short timeout and Flush input buffer
-  TLOG(TLVL_DEBUG)<<__func__<<"() called";
+//  TLOG(TLVL_DEBUG)<<__func__<<"() called";
   while(recvfromfeb(1000,rpkt)>0) {}
   driver_state=DRV_OK;
-  TLOG(TLVL_DEBUG)<<__func__<<"() completed";
+//  TLOG(TLVL_DEBUG)<<__func__<<"() completed";
   return 1;
 }
 
@@ -493,15 +492,12 @@ uint32_t sbndaq::FEBDRV::GrayToBin(uint32_t n) {
 
 void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTZMQEvent & event) {
   auto ovrwr_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-//   overwritten=*ovrwr_ptr;
+  event.lostcpu = *ovrwr_ptr;
   jj=jj+2;
   
   auto lif_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-  uint32_t lostinfpga = *lif_ptr;
+  event.lostfpga = *lif_ptr;
   jj=jj+2;
-  
-  total_lost+=lostinfpga; //TODO review this!!!
-  lostperpoll_fpga[rpkt.src_mac[5]] += lostinfpga; //TODO this as well!!
   
   auto ts0_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
   uint32_t ts0=*ts0_ptr; jj += 4;
@@ -530,8 +526,6 @@ void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTZMQEvent & even
   
   event.ts0 = ts0;
   event.ts1 = ts1;
-  event.lostcpu = *ovrwr_ptr;
-  event.lostfpga = lostinfpga;
   event.flags = 0;
   event.mac5=rpkt.src_mac[5];
   
@@ -549,6 +543,8 @@ void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTZMQEvent & even
   auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
   event.coinc = *coinc_ptr;
   jj += 4;
+  
+  std::cout<<"Lost cpu: "<<event.lostcpu<<" Lost fpga: "<<event.lostfpga<<std::endl;
 }
 
 int sbndaq::FEBDRV::GetData() {
@@ -596,13 +592,6 @@ void sbndaq::FEBDRV::pollfeb(uint8_t mac) {
   rpkt.CMD=0; //AA: this is required for the logic of the loop. Perhaps it could be written more nicely, but I don't want to touch it at this point
   TLOG(TLVL_DEBUG)<<__func__<<"("<<mac<<") completed";
 }
-
-void sbndaq::FEBDRV::updateoverwritten() {
-  //TODO understand this and fix
-//   total_lost+=overwritten;
-//   lostperpoll_cpu[rpkt.src_mac[5]]+=overwritten;
-}
-
 
 std::vector<uint8_t> sbndaq::FEBDRV::GetMACs() {
   /**

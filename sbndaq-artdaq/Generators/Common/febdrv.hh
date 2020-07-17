@@ -107,9 +107,6 @@ namespace sbndaq {
     int GetData();
 
     void pollfeb(uint8_t mac);
-    void updateoverwritten();
-
-    int IncrementTotalLost(int i) { total_lost += i; return total_lost; }
     
     std::vector<uint8_t> GetMACs();
     
@@ -126,7 +123,6 @@ namespace sbndaq {
     FEBDTP_PKT_t rpkt; //receive packets //TODO does it have to be global?!
     
     std::map <uint8_t, uint32_t> lostperpoll_cpu;
-    std::map <uint8_t, uint32_t> lostperpoll_fpga;
     
     std::vector<std::array<uint8_t, 6> > macs;
     uint8_t hostmac[6]; //TODO do we need it? Same data is stored in spkt
@@ -141,8 +137,6 @@ namespace sbndaq {
     
     int driver_state; //TODO do we need it? it's set but never checked
     uint8_t dstmac[6];
-
-    uint32_t total_lost;
 
     uint32_t GrayToBin(uint32_t n);
     
