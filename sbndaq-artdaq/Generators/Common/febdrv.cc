@@ -543,8 +543,6 @@ void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTZMQEvent & even
   auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
   event.coinc = *coinc_ptr;
   jj += 4;
-  
-  std::cout<<"Lost cpu: "<<event.lostcpu<<" Lost fpga: "<<event.lostfpga<<std::endl;
 }
 
 int sbndaq::FEBDRV::GetData() {
