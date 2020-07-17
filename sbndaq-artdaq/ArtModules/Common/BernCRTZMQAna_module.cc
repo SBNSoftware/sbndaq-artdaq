@@ -89,7 +89,7 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   events->Branch("mac5",        &mac5,          "mac5/b");
   events->Branch("flags",       &flags,         "flags/s");
   events->Branch("lostcpu",     &lostcpu,       "lostcpu/s");
-  events->Branch("lostfpga",    &lostcpu,       "lostfpga/s");
+  events->Branch("lostfpga",    &lostfpga,      "lostfpga/s");
   events->Branch("ts0",         &ts0,           "ts0/i");
   events->Branch("ts1",         &ts1,           "ts1/i");
   events->Branch("adc",         &adc,           "adc[32]/s");
