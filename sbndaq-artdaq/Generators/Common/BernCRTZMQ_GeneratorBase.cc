@@ -268,7 +268,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
-          sizeof(BernCRTZMQEvent), //payload_size 
+          sizeof(BernCRTZMQEvent), //payload_size
           sequence_id_++,
           feb.fragment_id,
           sbndaq::detail::FragmentType::BERNCRTZMQ,

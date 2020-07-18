@@ -227,12 +227,14 @@ void sbndaq::BernCRTFEBConfiguration::InitializeParameters() {
 }
 
 bool sbndaq::BernCRTFEBConfiguration::read_human_readable_parameters(fhicl::ParameterSet const & ps_, int MAC5) {
+  auto const psn = ps_.get<fhicl::ParameterSet>("FEBConfigurationMAC"+std::to_string(MAC5));
+  
   //read global parameters
   for(auto parameter : boolean_parameters) {
-    boolean_parameters[parameter.first].value = ps_.get<bool>(parameter.first);
+    boolean_parameters[parameter.first].value = psn.get<bool>(parameter.first);
   }
   for(auto parameter : numerical_parameters) {
-    numerical_parameters[parameter.first].value = ps_.get<uint16_t>(parameter.first);
+    numerical_parameters[parameter.first].value = psn.get<uint16_t>(parameter.first);
     if(numerical_parameters[parameter.first].value > numerical_parameters[parameter.first].max_value) {
       TLOG(TLVL_ERROR)<<__func__ << " Failed to load "<<parameter.first<<" for MAC "<<MAC5<<": "<<numerical_parameters[parameter.first].value<<" > "<<numerical_parameters[parameter.first].max_value;
       return false;
@@ -241,7 +243,7 @@ bool sbndaq::BernCRTFEBConfiguration::read_human_readable_parameters(fhicl::Para
   
   //read individual channel parameters
   //they are stored in an array, which we will split into individual parameters
-  std::vector< std::vector<uint16_t> > fhicl_channel_array  = ps_.get< std::vector< std::vector<uint16_t> > >("channel_configuration");
+  std::vector< std::vector<uint16_t> > fhicl_channel_array  = psn.get< std::vector< std::vector<uint16_t> > >("channel_configuration");
   
   if(fhicl_channel_array.size() != 32) {
     TLOG(TLVL_ERROR)<<__func__ << " Invalid size of channel configuration for MAC "<<MAC5<<": "<<fhicl_channel_array.size()<<" ≠ 32";

@@ -77,7 +77,7 @@ int main(int argc, char * argv[]) {
   
   fhicl::ParameterSet fragment_receiver = pset.get<fhicl::ParameterSet>("fragment_receiver");
   
-  std::vector<int> mac5s = pset.get<std::vector<int> >("MAC5s");
+  std::vector<int> mac5s = pset.get<std::vector<int> >("fragment_receiver.MAC5s");
   
   std::ofstream outfile;
   if(outfile_name.compare("")) {
