@@ -149,22 +149,13 @@ size_t sbndaq::BernCRTZMQData::GetFEBData() {
     
     uint64_t poll_end = std::chrono::system_clock::now().time_since_epoch().count();
     
-    //TODO can we do it without accessing metadata fields directly?
-    feb.metadata._last_poll_start = feb.metadata._this_poll_start;
-    feb.metadata._last_poll_end   = feb.metadata._this_poll_end;
-    feb.metadata._this_poll_start = poll_start;
-    feb.metadata._this_poll_end   = poll_end;
-    if(feb.metadata._last_poll_start == 0) {
-      //for the very first poll there is no previous poll, yet we need to fill these fields
-      feb.metadata._last_poll_start = poll_start - feb_poll_period_;
-      feb.metadata._last_poll_end   = poll_end   - feb_poll_period_;
-    }
-    
-    feb.metadata._system_clock_deviation = system_clock_deviation;
+    feb.metadata.update_poll_time(poll_start, poll_end);
+    feb.metadata.set_clock_deviation(system_clock_deviation);
     
     std::unique_lock<std::mutex> lock(*(feb.mutexptr));
     
-    unsigned int feb_events = 0;
+    unsigned int feb_read_events = 0;
+    uint64_t last_poll_event_number = feb.metadata.feb_event_number();
     
     while(true) {
       //loop over events received via ethernet and push into circular buffer
@@ -179,19 +170,20 @@ size_t sbndaq::BernCRTZMQData::GetFEBData() {
       data_size += datalen;
       
       for(int jj=0; jj<datalen; ) { // jj is incremented in processSingleEvent
-        feb_events++;
+        feb_read_events++;
         febdrv.processSingleEvent(jj, feb.event);
         feb.metadata.increment_feb_events(1 + feb.event.lostcpu + feb.event.lostfpga);
         feb.buffer.push_back(std::make_pair(feb.event, feb.metadata));
       }
     }
     
-    events += feb_events;
+    events += feb_read_events;
     
     //only at the end of the poll we know how many events we have in the poll
     //loop over the poll again and update metadata
-    for(unsigned int i = feb.buffer.size() - feb_events; i < feb.buffer.size(); i++) {
-      feb.buffer[i].second._feb_events_per_poll = feb_events;
+    for(unsigned int i = feb.buffer.size() - feb_read_events; i < feb.buffer.size(); i++) {
+      feb.buffer[i].second.set_feb_events_per_poll(feb.metadata.feb_event_number() - last_poll_event_number);
+      //TODO perhaps we would like to save number of lost events as well?
     }
     
   } //loop over FEBs

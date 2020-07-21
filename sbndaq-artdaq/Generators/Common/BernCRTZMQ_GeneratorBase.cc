@@ -87,7 +87,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::start() {
   
   for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
     const uint8_t& MAC5 = MAC5s_[iMAC5];
-    FEBs_[MAC5].metadata._run_start_time = run_start_time;
+    FEBs_[MAC5].metadata.set_run_start_time(run_start_time);
   }
   
   //calibrate offset between system and steady clock
