@@ -36,26 +36,23 @@ namespace sbndaq {
       EventBuffer_t                buffer;
 
       std::unique_ptr<std::mutex>  mutexptr;
-      uint8_t                      MAC5;
       uint16_t                     fragment_id;
       uint32_t                     event_number; //for given FEB
       uint64_t                     last_accepted_timestamp;
       uint32_t                     omitted_events;
       
-      
       sbndaq::BernCRTZMQEvent event;
       BernCRTZMQFragmentMetadata metadata;
 
-      FEB(uint32_t capacity, uint8_t mac5, uint16_t id)
+      FEB(uint32_t capacity, /*uint8_t mac5,*/ uint16_t id)
         : buffer(EventBuffer_t(capacity)),
           mutexptr(new std::mutex),
-          MAC5(mac5),
           fragment_id(id),
           event_number(0),
           last_accepted_timestamp(1), //use 1 as a flag in case events are omitted at the very beginning of the run
           omitted_events(0)
       { Init(); }
-      FEB() { FEB(0, 0, 0); }
+      FEB() { FEB(0, 0); }
       void Init() {
         buffer.clear();
         mutexptr->unlock();

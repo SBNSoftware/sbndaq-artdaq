@@ -41,9 +41,8 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
   sequence_id_ = 0;
 
   //read parameters from FHiCL file
-  uint16_t fragment_id_base = ps_.get<uint16_t>("fragment_id_base");
-  MAC5s_ = ps_.get< std::vector<uint8_t> >("MAC5s");
-  std::sort(MAC5s_.begin(), MAC5s_.end());
+  std::vector<uint16_t> fragment_ids = ps_.get< std::vector<uint16_t> >("fragment_ids");
+  std::sort(fragment_ids.begin(), fragment_ids.end());
 
   omit_out_of_order_events_ = ps_.get<bool>("omit_out_of_order_events");
   omit_out_of_sync_events_  = ps_.get<bool>("omit_out_of_sync_events");
@@ -62,12 +61,14 @@ void sbndaq::BernCRTZMQ_GeneratorBase::Initialize() {
         throttle_usecs_ % throttle_usecs_check_ != 0) ) { //check FHiCL file validity
     throw cet::exception("Error in BernCRTZMQ: disallowed combination of throttle_usecs and throttle_usecs_check (see BernCRTZMQ.hh for rules)");
   }
-
-  //Initialize buffers
-  for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
-    const uint8_t& MAC5 = MAC5s_[iMAC5];
-    FEBs_[MAC5] = FEB_t(FEBBufferCapacity_, MAC5, fragment_id_base | (MAC5 & 0xff));
+  
+  //Initialize buffers and calculate MAC5 addresses (last 8 bits)
+  for( auto id : fragment_ids ) {
+    uint8_t MAC5 = id & 0xff; //last 8 bits of fragment ID are last 8 bits of FEB MAC5
+    MAC5s_.push_back(MAC5);
+    FEBs_[MAC5] = FEB_t(FEBBufferCapacity_, id);
   }
+  
 
   TLOG(TLVL_INFO)<<__func__<<"() completed ... starting GetData worker thread.";
   share::ThreadFunctor functor = std::bind(&BernCRTZMQ_GeneratorBase::GetData,this);

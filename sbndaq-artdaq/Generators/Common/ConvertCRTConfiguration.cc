@@ -77,8 +77,14 @@ int main(int argc, char * argv[]) {
   
   fhicl::ParameterSet fragment_receiver = pset.get<fhicl::ParameterSet>("fragment_receiver");
   
-  std::vector<int> mac5s = pset.get<std::vector<int> >("fragment_receiver.MAC5s");
-  
+  std::vector<uint16_t> fragment_ids = fragment_receiver.get< std::vector<uint16_t> >("fragment_ids");
+  std::sort(fragment_ids.begin(), fragment_ids.end());
+  std::vector<uint8_t> mac5s;
+  for( auto id : fragment_ids ) {
+    uint8_t MAC5 = id & 0xff; //last 8 bits of fragment ID are last 8 bits of FEB MAC5
+    mac5s.push_back(MAC5);
+  }
+
   std::ofstream outfile;
   if(outfile_name.compare("")) {
     outfile.open (outfile_name);

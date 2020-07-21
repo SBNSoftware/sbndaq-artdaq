@@ -11,7 +11,14 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
 
 sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
   InitializeParameters();
-  std::vector<uint64_t> mac5s = ps_.get< std::vector<uint64_t> >("MAC5s");
+  
+  std::vector<uint16_t> fragment_ids = ps_.get< std::vector<uint16_t> >("fragment_ids");
+  std::sort(fragment_ids.begin(), fragment_ids.end());
+  std::vector<uint8_t> mac5s;
+  for( auto id : fragment_ids ) {
+    uint8_t MAC5 = id & 0xff; //last 8 bits of fragment ID are last 8 bits of FEB MAC5
+    mac5s.push_back(MAC5);
+  }
   
 //SlowControl configuration in the FHiCL file can have two formats, and the format is detected automatically
 //if bitstream exists in FHiCL file, it is loaded, otherwise human readable format is used
