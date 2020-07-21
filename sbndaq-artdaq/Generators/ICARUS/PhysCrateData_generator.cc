@@ -23,6 +23,7 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   veto_host(ps.get<std::string>("VetoHost")),
   veto_host_port(ps.get<int>("VetoPort")),
   veto_udp(veto_host.c_str(),veto_host_port),
+  _testPulse(static_cast<TestPulseType>(ps.get<int>("TestPulseType",(int)TestPulseType::kDisable))),
   _doRedis(ps.get<bool>("doRedis",false)),
   _redisHost(ps.get<std::string>("redisHost","localhost")),
   _redisPort(ps.get<int>("redisPort",6379)),
@@ -32,7 +33,6 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   InitializeHardware();
   InitializeVeto();
 
-  this->nBoards_ = (uint16_t)(physCr->NBoards());
   assignBoardID_ = ps.get<bool>("AssignBoardID", false);
   if ( !assignBoardID_ ) BoardIDs_.assign( physCr->getBoardIDs().begin(), physCr->getBoardIDs().end() );
 
@@ -41,10 +41,6 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
   auto GetData_worker = share::WorkerThread::createWorkerThread(worker_functor);
   GetData_thread_.swap(GetData_worker);
-
-  //some config things ...
-  // SetDCOffset();
-  // SetTestPulse();
 
   if(_doRedis){
     _redisCtxt = redisConnect(_redisHost.c_str(),_redisPort);
@@ -102,32 +98,20 @@ void icarus::PhysCrateData::ForceClear()
 
 void icarus::PhysCrateData::SetDCOffset()
 {
-  size_t nBoards = (size_t)physCr->NBoards();
+  std::vector< uint16_t > dc_offset_c = ps_.get< std::vector< uint16_t > >("DACOffset1", std::vector< uint16_t >( nBoards_, 0x8000 ) );
+  std::vector< uint16_t > dc_offset_d = ps_.get< std::vector< uint16_t > >("DACOffset2", std::vector< uint16_t >( nBoards_, 0x8000 ) );
 
-  std::vector< uint16_t > dc_offset_a = ps_.get< std::vector< uint16_t > >("TestPulseAmpODD", std::vector< uint16_t >( nBoards, 0x8000 ) );
-  std::vector< uint16_t > dc_offset_b = ps_.get< std::vector< uint16_t > >("TestPulseAmpEVEN", std::vector< uint16_t >( nBoards, 0x8000 ) );
-  std::vector< uint16_t > dc_offset_c = ps_.get< std::vector< uint16_t > >("DACOffset1", std::vector< uint16_t >( nBoards, 0x8000 ) );
-  std::vector< uint16_t > dc_offset_d = ps_.get< std::vector< uint16_t > >("DACOffset2", std::vector< uint16_t >( nBoards, 0x8000 ) );
-
-  if ( dc_offset_a.size() < nBoards )
-    throw cet::exception("PhysCrateData") << "Ask to set Internal Test Pulse Amplitude ODD for " << dc_offset_a.size() 
-            << " boards while " << nBoards << " boards registered.";
-  if ( dc_offset_b.size() < nBoards )
-    throw cet::exception("PhysCrateData") << "Ask to set Internal Test Pulse Amplitude EVEN for " << dc_offset_b.size() 
-            << " boards while " << nBoards << " boards registered.";
-  if ( dc_offset_c.size() < nBoards )
+  if ( dc_offset_c.size() < nBoards_ )
     throw cet::exception("PhysCrateData") << "Ask to set DAC offset CH[31..0] for " << dc_offset_c.size() << " boards while "
-            << nBoards << " boards registered.";
-  if ( dc_offset_d.size() < nBoards )
+            << nBoards_ << " boards registered.";
+  if ( dc_offset_d.size() < nBoards_ )
     throw cet::exception("PhysCrateData") << "Ask to set DAC offset CH[63..32] for " << dc_offset_d.size() << " boards while "
-            << nBoards << " boards registered.";
+            << nBoards_ << " boards registered.";
 
 
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto bdhandle = physCr->BoardHandle(ib);
     
-    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00000000 | (dc_offset_a[ib] & 0xFFFF));
-    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00010000 | (dc_offset_b[ib] & 0xFFFF));
     CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00020000 | (dc_offset_c[ib] & 0xFFFF));
     CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00030000 | (dc_offset_d[ib] & 0xFFFF));
     
@@ -135,46 +119,57 @@ void icarus::PhysCrateData::SetDCOffset()
     int res1, res2;
     res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
     res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
-    std::cout << "Board " << ib << std::endl;
-    std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << std::hex << offset_c << std::dec << std::endl;
-    std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << std::hex << offset_d << std::dec << std::endl;
+    TRACEN("PhysCrateData",TLVL_DEBUG,"Board %d, Offset 1 (Err,Val)=(%d,%ul), Offset 2 (Err,Val)=(%d,%ul)",ib,res1,offset_c,res2,offset_d);
 
   }
 }
 
 void icarus::PhysCrateData::SetTestPulse()
 {
-  size_t nBoards = (size_t)physCr->NBoards();
 
-  //TestPulseType tp_config = ps_.get<TestPulseType>("TestPulseType",TestPulseType::kDisable);
-  int tp_config = ps_.get<int>("TestPulseType",0);
-  std::vector< uint16_t > dc_offset = ps_.get< std::vector< uint16_t > >("DACSetting", std::vector< uint16_t >( nBoards, 0x8000 ) );
+  std::vector< uint16_t > dc_offset_a = ps_.get< std::vector< uint16_t > >("TestPulseAmpODD", std::vector< uint16_t >( nBoards_, 0x8000 ) );
+  std::vector< uint16_t > dc_offset_b = ps_.get< std::vector< uint16_t > >("TestPulseAmpEVEN", std::vector< uint16_t >( nBoards_, 0x8000 ) );
 
-  if ( dc_offset.size() < nBoards )
-    throw cet::exception("PhysCrateData") << "Ask to set DAC for " << dc_offset.size() 
-            << " boards while " << nBoards << " boards registered.";
+  //if not disabling, check to make sure we have the right nBoards
+  if(_testPulse!=TestPulseType::kDisable){
+    if ( dc_offset_a.size() < nBoards_ )
+      throw cet::exception("PhysCrateData") << "Ask to set Internal Test Pulse Amplitude ODD for " << dc_offset_a.size() 
+					    << " boards while " << nBoards_ << " boards registered.";
+    if ( dc_offset_b.size() < nBoards_ )
+      throw cet::exception("PhysCrateData") << "Ask to set Internal Test Pulse Amplitude EVEN for " << dc_offset_b.size() 
+					    << " boards while " << nBoards_ << " boards registered.";
+  }
 
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto bdhandle = physCr->BoardHandle(ib);
 
-    if(tp_config==0)
+    //if disable, set disable
+    if(_testPulse==TestPulseType::kDisable)
       CAENComm_Write32(bdhandle, A_RELE, RELE_TP_DIS);
-    else if (tp_config==1)
+
+    //if external, set that
+    else if (_testPulse==TestPulseType::kExternal)
       CAENComm_Write32(bdhandle, A_RELE, RELE_TP_EXT);
-    else if (tp_config==2){
+
+    //internal pulses...
+    else if (_testPulse==TestPulseType::kInternal_Even){
       CAENComm_Write32(bdhandle, A_RELE, RELE_TP_INT);
-      sleep(1);
+      usleep(1000000);
       CAENComm_Write32(bdhandle, A_RELE, RELE_TP_EVEN);
+
+      //dc offset for even channel test pulse
+      CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00010000 | (dc_offset_b[ib] & 0xFFFF));
     }
-    else if (tp_config==3){
+
+    else if (_testPulse==TestPulseType::kInternal_Odd){
       CAENComm_Write32(bdhandle, A_RELE, RELE_TP_INT);
-      sleep(1);
+      usleep(1000000);
       CAENComm_Write32(bdhandle, A_RELE, RELE_TP_ODD);
-    }
     
-    //set the test pulse dc offset
-    CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00070000 | dc_offset[ib]);
-  
+      //dc offset for odd channel test pulse
+      CAENComm_Write32(bdhandle, A_DAC_CTRL, 0x00000000 | (dc_offset_a[ib] & 0xFFFF));
+    }
+
   }
 
 }
@@ -204,75 +199,18 @@ void icarus::PhysCrateData::VetoOff(){
 void icarus::PhysCrateData::InitializeHardware(){
   physCr = std::make_unique<PhysCrate>();
   physCr->initialize(pcieLinks_);
+  this->nBoards_ = (uint16_t)(physCr->NBoards());
   ForceReset();
 
   SetDCOffset();
   SetTestPulse();
 }
 
-BoardConf icarus::PhysCrateData::GetBoardConf(){
-
-  auto const& ps_board = ps_.get<fhicl::ParameterSet>("BoardConfig");
-
-  BoardConf config;
-  config.sampInterval = 1e-9;
-  config.delayTime = 0.0;
-  config.nbrSegments = 1;
-  config.coupling = 3;
-  config.bandwidth = 0;
-  config.fullScale = ps_board.get<double>("fullScale")*0.001;
-  config.thresh = ps_board.get<int>("thresh");
-  config.offset = ps_board.get<int>("offset") * config.fullScale/256;
-  config.offsetadc = ps_board.get<int>("offset");
-
-  return config;
-}
-
-TrigConf icarus::PhysCrateData::GetTrigConf(){
-
-  auto const& ps_trig = ps_.get<fhicl::ParameterSet>("TriggerConfig");
-
-  TrigConf config;
-  config.trigClass = 0; // 0: Edge trigger
-  config.sourcePattern = 0x00000002; // 0x00000001: channel 1, 0x00000002: channel 2
-  config.trigCoupling = 0;            
-  config.channel = 2;
-  config.trigSlope = 0; // 0: positive, 1: negative
-  config.trigLevel1 = -20.0; // In % of vertical full scale or mV if using an external trigger source.
-  config.trigLevel2 = 0.0;
-  config.nsamples = ps_trig.get<int>("mode")*1000 ;
-  config.presamples = ps_trig.get<int>("trigmode")*1000 ;
-
-  return config;
-}
 
 void icarus::PhysCrateData::ConfigureStart(){
 
   _tloop_start = std::chrono::high_resolution_clock::now();
   _tloop_end = std::chrono::high_resolution_clock::now();
-
-  SetDCOffset();
-
-  //physCr->configureTrig(GetTrigConf());
-  //physCr->configure(GetBoardConf());
-  //VetoOff();
-
-  //ForceClear();
-
-
-  for(int ib=0; ib<physCr->NBoards(); ++ib){
-    auto bdhandle = physCr->BoardHandle(ib);
-    
-    uint32_t offset_c, offset_d;
-    int res1, res2;
-    res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
-    res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
-    std::cout << "at start Board " << ib << std::endl;
-    std::cout << "at start Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << std::hex << offset_c << std::dec << std::endl;
-    std::cout << "at start Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << std::hex << offset_d << std::dec << std::endl;
-
-  }
-
   
   if(_issueStart)
     physCr->start();
@@ -282,20 +220,6 @@ void icarus::PhysCrateData::ConfigureStart(){
 
   GetData_thread_->start();
 
-  //SetDCOffset();
-  /* 
-  for(int ib=0; ib<physCr->NBoards(); ++ib){
-    auto bdhandle = physCr->BoardHandle(ib);
-    uint32_t offset_c, offset_d;
-    int res1, res2;
-    res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
-    res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
-    std::cout << "ConfigureStart(): Board " << ib << std::endl;
-    std::cout << "Errorcode of CAENComm_Read32 offset 1: " << res1 << ", value: " << offset_c << std::endl;
-    std::cout << "Errorcode of CAENComm_Read32 offset 2: " << res2 << ", value: " << offset_d << std::endl;
-  }
-  */
-  //SetTestPulse();
 }
 
 void icarus::PhysCrateData::ConfigureStop(){
@@ -418,7 +342,7 @@ int icarus::PhysCrateData::GetData(){
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
   // Yun-Tse: ugly and tentative workaround at this moment...  need to change!!
-  // int iBoard = 0, nBoards = 2;
+  // int iBoard = 0, nBoards_ = 2;
       
   while(physCr->dataAvail()){
     TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : DataAvail!");
@@ -446,7 +370,7 @@ int icarus::PhysCrateData::GetData(){
     TLOG(TLVL_DEBUG) << "PhysCrateData: event_number: " << board_block->header.event_number 
               << ", time_stamp: " << board_block->header.time_stamp;
 
-    // if ( iBoard == nBoards ) {
+    // if ( iBoard == nBoards_ ) {
     //   fCircularBuffer.Insert( data_size, reinterpret_cast<uint16_t const*>(data_ptr) );
     //   iBoard = 0;
     //   data_size = 0;
