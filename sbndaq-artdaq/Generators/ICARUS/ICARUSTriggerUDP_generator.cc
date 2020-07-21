@@ -21,11 +21,38 @@
 
 sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   : CommandableFragmentGenerator(ps)
-  , dataport_(ps.get<int>("port", 6343))
-  , ip_(ps.get<std::string>("ip", "127.0.0.1"))
+  , configport_(ps.get<int>("config_port", 6342))
+  , ip_config_(ps.get<std::string>("config_ip", "127.0.0.1"))
+  , dataport_(ps.get<int>("data_port", 6343))
+  , ip_data_(ps.get<std::string>("data_ip", "127.0.0.1"))
   , n_init_retries_(ps.get<int>("n_init_retries",10))
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
 {
+  configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  if (configsocket_ < 0)
+    {
+      throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
+      exit(1);
+    }
+  struct sockaddr_in si_me_config;
+  si_me_config.sin_family = AF_INET;
+  si_me_config.sin_port = htons(configport_);
+  si_me_config.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (bind(configsocket_, (struct sockaddr *)&si_me_config, sizeof(si_me_config)) == -1)
+    {
+      throw art::Exception(art::errors::Configuration) <<
+	"ICARUSTriggerUDP: Cannot bind config socket to port " << configport_ << std::endl;
+      exit(1);
+    }
+  si_config_.sin_family = AF_INET;
+  si_config_.sin_port = htons(configport_);
+  if (inet_aton(ip_config_.c_str(), &si_config_.sin_addr) == 0)
+    {
+      throw art::Exception(art::errors::Configuration) <<
+	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_config_ << "\n";
+      exit(1);
+    }
+
   datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (datasocket_ < 0)
     {
@@ -44,10 +71,10 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
     }
   si_data_.sin_family = AF_INET;
   si_data_.sin_port = htons(dataport_);
-  if (inet_aton(ip_.c_str(), &si_data_.sin_addr) == 0)
+  if (inet_aton(ip_data_.c_str(), &si_data_.sin_addr) == 0)
     {
       throw art::Exception(art::errors::Configuration) <<
-	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_ << "\n";
+	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
 }
@@ -61,7 +88,13 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
     //do something in here to get data...
    */
 
-  poll_with_timeout(100);
+  int size_bytes = poll_with_timeout(datasocket_,ip_data_,1000);
+  if(size_bytes>0){
+    char buffer[size_bytes];
+    read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
+    TRACE(TR_LOG,"data received:: %s",buffer);
+  }
+
   /*
   int size_bytes = poll_with_timeout(sleep_time_ms);
   if(size_bytes>0){
@@ -97,21 +130,21 @@ void sbndaq::ICARUSTriggerUDP::resume()
 //send a command
 void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
 {
-  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
+  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
 
-  sendto(datasocket_,&cmd,sizeof(Command_t), 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
+  sendto(configsocket_,&cmd,sizeof(Command_t), 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
 
-  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
+  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
 }
 
 //return size of available data
-int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int timeout_ms)
+int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, int timeout_ms)
 {
 
-  TRACE(TR_LOG,"poll:: DATA from %s with %d ms timeout",ip_.c_str(),timeout_ms);
+  TRACE(TR_LOG,"poll:: DATA from %s with %d ms timeout",ip.c_str(),timeout_ms);
 
   struct pollfd ufds[1];
-  ufds[0].fd = datasocket_;
+  ufds[0].fd = socket;
   ufds[0].events = POLLIN | POLLPRI;
   int rv = poll(ufds, 1, timeout_ms);
 
@@ -148,14 +181,14 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int timeout_ms)
 }
 
 //read data size from socket
-int sbndaq::ICARUSTriggerUDP::read(int size, char* buffer){
-  TRACE(TR_LOG,"read:: get %d bytes from %s\n",size,ip_.c_str());
-  int size_rcv = recvfrom(datasocket_, buffer, size, 0, (struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
+int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
+  TRACE(TR_LOG,"read:: get %d bytes from %s\n",size,ip.c_str());
+  int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
   
   if(size_rcv<0) 
-    TRACE(TR_ERROR,"read:: error receiving data (%d bytes from %s)\n",size_rcv,ip_.c_str());
+    TRACE(TR_ERROR,"read:: error receiving data (%d bytes from %s)\n",size_rcv,ip.c_str());
   else
-    TRACE(TR_LOG,"read:: received %d bytes from %s\n",size_rcv,ip_.c_str());
+    TRACE(TR_LOG,"read:: received %d bytes from %s\n",size_rcv,ip.c_str());
 
   return size_rcv;
 }
@@ -168,27 +201,27 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
   char cmd[16];
   sprintf(cmd,"%s","TTLK_CMD_INIT");
 
-  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
-  sendto(datasocket_,&cmd,16, 0, (struct sockaddr *) &si_data_, sizeof(si_data_));
+  TRACE(TR_LOG,"to send:: COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
+  sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
 
-  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_.c_str(),dataport_);  
+  TRACE(TR_LOG,"sent! COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
 
   //send(TTLK_INIT);
-    int size_bytes = poll_with_timeout(sleep_time_ms);
-    if(size_bytes>0){
-      //uint16_t buffer[size_bytes/2+1];
-      char buffer[size_bytes];
-      read(size_bytes,buffer);
-      TRACE(TR_LOG,"received:: %s",buffer);
-      
-      return retries;
-    }
-
-    retries--;
+  int size_bytes = poll_with_timeout(configsocket_,ip_config_,sleep_time_ms);
+  if(size_bytes>0){
+    //uint16_t buffer[size_bytes/2+1];
+    char buffer[size_bytes];
+    read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
+    TRACE(TR_LOG,"received:: %s",buffer);
+    
+    return retries;
   }
-
+  
+  retries--;
+  }
+  
   return retries;
-
+  
 }
 
 //no need for confirmation on these...

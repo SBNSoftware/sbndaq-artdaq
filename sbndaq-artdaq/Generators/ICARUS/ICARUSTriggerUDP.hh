@@ -51,9 +51,9 @@ namespace sbndaq
     void resume() override;
     
     void send(const Command_t);
-    int poll_with_timeout(int);
+    int poll_with_timeout(int,std::string,int);
     //int read(int,uint16_t*);
-    int read(int,char*);
+    int read(int, std::string, struct sockaddr_in&,int,char*);
     
     int send_TTLK_INIT(int,int);
     void send_TRIG_VETO();
@@ -62,10 +62,16 @@ namespace sbndaq
     // FHiCL-configurable variables. Note that the C++ variable names
     // are the FHiCL variable names with a "_" appended
     
+    int configport_;
+    std::string ip_config_;
+
     int dataport_;
-    std::string ip_;
+    std::string ip_data_;
 
     //Socket parameters
+    struct sockaddr_in si_config_;
+    int configsocket_;
+
     struct sockaddr_in si_data_;
     int datasocket_;
 
