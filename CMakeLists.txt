@@ -76,9 +76,9 @@ endif()
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v3_06_02 )
+find_ups_product( artdaq v3_08_00 )
 find_ups_product( artdaq_utilities v1_05_02)
-find_ups_product( artdaq_core v3_05_07 )
+find_ups_product( artdaq_core v3_05_17 )
 
 find_ups_product( art v3_02_04 )
 find_ups_product( art_root_io v1_00_00 )
