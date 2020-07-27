@@ -2,7 +2,7 @@
 #define sbndaq_artdaq_Generators_Common_febdrv_hh
 
 #include "fhiclcpp/ParameterSet.h"
-#include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragment.hh"
 
 #include <string.h>
 #include <net/if.h>
@@ -102,8 +102,8 @@ namespace sbndaq {
 
     bool sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR, uint8_t * bufPMR, uint16_t lenPMR);
 
-//     void processL2pack(int datalen, sbndaq::BernCRTZMQEvent & event);
-    void processSingleEvent(int & jj, sbndaq::BernCRTZMQEvent & event);
+//     void processL2pack(int datalen, sbndaq::BernCRTEvent & event);
+    void processSingleEvent(int & jj, sbndaq::BernCRTEvent & event);
     int GetData();
 
     void pollfeb(uint8_t mac);
@@ -145,7 +145,7 @@ namespace sbndaq {
 
     int flushlink();
 
-    sbndaq::BernCRTZMQEvent *evt; //TODO not needed?
+    sbndaq::BernCRTEvent *evt; //TODO not needed?
     
     uint8_t buf[1500]; //TODO does the buffer need to be global?
     

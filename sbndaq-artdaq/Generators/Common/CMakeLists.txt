@@ -110,8 +110,29 @@ simple_plugin(SpectraTimeReadout "generator"
   ${CETLIB_EXCEPT}
 )
 
-art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
-                  SOURCE BernCRTZMQ_GeneratorBase.cc
+#art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
+#                  SOURCE BernCRTZMQ_GeneratorBase.cc
+#                  LIBRARIES
+#                        sbndaq-artdaq-core_Overlays
+#                        sbndaq-artdaq-core_Overlays_Common
+#                        sbndaq-artdaq_Common_Utilities
+#                        artdaq_Generators
+#                        artdaq_Application
+#                        artdaq_DAQdata
+#                        artdaq-core_Utilities
+#                        artdaq-core_Data
+#                        artdaq-utilities_Plugins
+#                        BernCRTFEBConfiguration
+#                        ${ART_UTILITIES}
+#                        ${FHICLCPP}
+#                        ${MF_MESSAGELOGGER}
+#                        ${MF_UTILITIES}
+#                        ${CETLIB}
+#                        ${CETLIB_EXCEPT}
+#)
+
+art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRT_GeneratorBase
+                  SOURCE BernCRT_GeneratorBase.cc
                   LIBRARIES
                         sbndaq-artdaq-core_Overlays
                         sbndaq-artdaq-core_Overlays_Common
@@ -156,8 +177,29 @@ cet_make_exec( ConvertCRTConfiguration
     ${Boost_PROGRAM_OPTIONS_LIBRARY_RELEASE}
 )
 
-simple_plugin(BernCRTZMQData "generator"
-  sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
+#simple_plugin(BernCRTZMQData "generator"
+#  sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
+#  sbndaq-artdaq-core_Overlays
+#  sbndaq-artdaq-core_Overlays_Common
+#  zmq
+#  artdaq_Generators
+#  artdaq_Application
+#  artdaq_DAQdata
+#  artdaq-core_Utilities
+#  artdaq-core_Data
+#  artdaq-utilities_Plugins
+#  BernCRTFEBConfiguration
+#  febdrv
+#  ${ART_UTILITIES}
+#  ${FHICLCPP}
+#  ${MF_MESSAGELOGGER}
+#  ${MF_UTILITIES}
+#  ${CETLIB}
+#  ${CETLIB_EXCEPT}
+#  )
+
+simple_plugin(BernCRTData "generator"
+  sbndaq-artdaq_Common_BernCRT_GeneratorBase
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   zmq

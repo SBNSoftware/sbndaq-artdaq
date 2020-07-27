@@ -490,7 +490,7 @@ uint32_t sbndaq::FEBDRV::GrayToBin(uint32_t n) {
   return res;
 }
 
-void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTZMQEvent & event) {
+void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTEvent & event) {
   auto ovrwr_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
   event.lostcpu = *ovrwr_ptr;
   jj=jj+2;
