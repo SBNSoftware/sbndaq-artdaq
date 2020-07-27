@@ -183,9 +183,12 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     return false;
   }  
  // Theoretically, we should have a header, but there may be a problem with the data. Sometimes we get a big discrepancy between the number of ADC words described in the header and the actual number of words and it causes the next header to be out of line. So let's check that the header is  lined up right. Otherwise, we'll just throw a fit and crash the run.
-  if(CircularBuffer_.buffer[0] != 0xFFFF){
-    TRACE(TFILLFRAG,"Header out of sync, tanking the run.");
-    throw "Header out of sync, tanking the run. Goodnight everybody!";
+  if(CircularBuffer_.buffer[0] != 0xFFFF)
+  {
+    char line [132];
+    sprintf(line,"Header out of sync: %X", CircularBuffer_.buffer[0]);
+    TRACE(TERROR,line);
+    throw std::runtime_error(line);
     return false;
   }
 
@@ -198,9 +201,12 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     if(current_event < 0){
       current_event = header->getEventNum();
     }
-    else if((uint)current_event != header->getEventNum()){
-      TRACE(TFILLFRAG,"FEM event num out of sync, tanking the run.");
-      throw "FEM event num out of sync, tanking the run. Goodnight everybody!";
+    else if((uint)current_event != header->getEventNum())
+    {
+      char line[132];
+      sprintf(line,"FEM event num out of sync, tanking the run. Current: %d, header: %d",current_event,header->getEventNum());
+      TRACE(TERROR,line);
+      throw std::runtime_error(line);
       return false;
     }
 
@@ -208,8 +214,10 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
       current_framenum = header->getFrameNum();
     }
     else if((uint)current_framenum != header->getFrameNum()){
-      TRACE(TFILLFRAG,"FEM framenum out of sync, tanking the run.");
-      throw "FEM framenum out of sync, tanking the run. Goodnight everybody!";
+      char line[132];
+      sprintf(line,"FEM framenum out of sync, tanking the run. Current: %d, Header :%d", current_framenum,header->getFrameNum());
+      TRACE(TERROR,line);
+      throw std::runtime_error(line);
       return false;
     }
   }

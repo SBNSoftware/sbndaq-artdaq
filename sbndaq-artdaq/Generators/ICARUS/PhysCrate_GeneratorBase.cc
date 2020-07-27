@@ -60,6 +60,8 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
 
 void icarus::PhysCrate_GeneratorBase::start() {
 
+  BoardTemps1_.resize(nBoards_);
+  BoardTemps2_.resize(nBoards_);
 
   current_subrun_ = 0;
 
