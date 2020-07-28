@@ -28,7 +28,7 @@ sbndaq::FEBDRV::FEBDRV() :
   { }
 
 
-void sbndaq::FEBDRV::Init(std::string iface) {
+bool sbndaq::FEBDRV::Init(std::string iface) {
   //NOTE OK
   TLOG(TLVL_DEBUG) << __func__ << "("<<iface<<") called";
   
@@ -36,9 +36,9 @@ void sbndaq::FEBDRV::Init(std::string iface) {
   
   // network interface to febs
   if(!initif()) {
-    TLOG(TLVL_ERROR)<<__func__<<"() Can't initialize network interface "<<ifName<<"! Exiting.";
+    TLOG(TLVL_ERROR)<<__func__<<"() Can't initialize network interface "<<ifName<<"!";
     driver_state=DRV_INITERR;
-    return;
+    return false;
     //TODO crash
   }
   
@@ -46,6 +46,7 @@ void sbndaq::FEBDRV::Init(std::string iface) {
   
   driver_state=DRV_OK;
   TLOG(TLVL_DEBUG) << __func__ << "("<<iface<<") completed";
+  return true;
 }
 
 bool sbndaq::FEBDRV::initif() {
@@ -123,7 +124,7 @@ bool sbndaq::FEBDRV::initif() {
 
 void sbndaq::FEBDRV::pingclients() {
   /**
-   * Check the list of FEBs connected to the ethernet port and save in macs
+   * Check the list of FEBs connected to the ethernet port and save in macs vector
    */
   
   //NOTE OK

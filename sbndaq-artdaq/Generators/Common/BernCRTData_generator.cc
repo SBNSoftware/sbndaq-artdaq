@@ -20,13 +20,18 @@ sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
   BernCRT_GeneratorBase(ps) {
   TLOG(TLVL_INFO) << __func__ <<"() constructor called";
 
-  febdrv.Init(ps_.get<std::string>("ethernet_port"));
+  std::string ethernet_port = ps_.get<std::string>("ethernet_port");
+
+  if( ! febdrv.Init(ethernet_port) ) {
+    TLOG(TLVL_ERROR) <<  __func__ << "() Failed to initialise febdrv on interface \"" << ethernet_port << "\"!";
+    throw cet::exception( std::string(TRACE_NAME) +"::" + __func__ + "() Failed to initialise febdrv on interface \"" + ethernet_port + "\"!");
+  }
   
   //compare detected list of FEBs with that declared in FHiCL file
   auto hardware_macs = febdrv.GetMACs();
   if(hardware_macs.size() != nFEBs()) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Number of FEBs seen by febdrv (" << std::to_string(hardware_macs.size()) << ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!";
-    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Number of FEBs seen by febdrv (" + std::to_string(hardware_macs.size()) + ") differs from the ones defined in FCL file (" + std::to_string(nFEBs()) + ")!");
+    TLOG(TLVL_ERROR) <<  __func__ << "() Number of FEBs seen by febdrv (" << std::to_string(hardware_macs.size()) << ") differs from the one defined in FCL file (" + std::to_string(nFEBs()) + ")!";
+    throw cet::exception( std::string(TRACE_NAME) + "::" + __func__ + "() Number of FEBs seen by febdrv (" + std::to_string(hardware_macs.size()) + ") differs from the one defined in FCL file (" + std::to_string(nFEBs()) + ")!");
   }
   else {
     //here we assume both hardware_macs and MAC5s_ are sorted

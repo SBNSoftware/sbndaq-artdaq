@@ -82,7 +82,7 @@ typedef struct {
 namespace sbndaq {
   class FEBDRV {
   public:
-    void Init(std::string ethernet_port);
+    bool Init(std::string ethernet_port);
     FEBDRV();
 
     bool startDAQ(uint8_t mac5 = 255);
