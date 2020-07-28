@@ -137,6 +137,7 @@ namespace sbndaq
     uint32_t fTrigInLevel;
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
+    bool     fLockTempCalibration;
     uint32_t fFragmentID;
 
     bool fUseTimeTagForTimeStamp;
@@ -166,6 +167,10 @@ namespace sbndaq
     void ConfigureLVDS();
     void ConfigureSelfTriggerMode();
     void RunADCCalibration();
+    void SetLockTempCalibration(bool onOff, uint32_t ch);
+    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
+    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+
 
     bool WaitForTrigger();
     bool GetData();
