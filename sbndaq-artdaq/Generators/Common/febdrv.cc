@@ -39,7 +39,6 @@ bool sbndaq::FEBDRV::Init(std::string iface) {
     TLOG(TLVL_ERROR)<<__func__<<"() Can't initialize network interface "<<ifName<<"!";
     driver_state=DRV_INITERR;
     return false;
-    //TODO crash
   }
   
   pingclients();
@@ -284,7 +283,6 @@ int sbndaq::FEBDRV::sendcommand(const uint8_t *mac, uint16_t cmd, uint16_t reg, 
 
 bool sbndaq::FEBDRV::startDAQ(uint8_t mac5) {
   //NOTE OK
-  //TODO process errors
 
   TLOG(TLVL_INFO)<<__func__<<"("<<mac5<<") called";
 
@@ -414,7 +412,6 @@ bool sbndaq::FEBDRV::sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR,
     /**
    * Send PROBE and SLOW CONTROL configuration to FEB
    * //NOTE: OK
-   * TODO add crash?
    */
   TLOG(TLVL_DEBUG)<<__func__<<"("<<mac5<<", bufSCR, "<<lenSCR<<", bufPMR, "<< lenPMR<<") called";
   

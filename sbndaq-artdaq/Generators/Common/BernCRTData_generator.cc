@@ -97,7 +97,7 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
 
   if(feb_configuration.find(mac5) == feb_configuration.end()) {
     TLOG(TLVL_ERROR) <<  __func__ << "() Could not find FEB " << mac5 << " in MAC5s!";
-    throw cet::exception( std::string(TRACE_NAME) + __func__ + " Could not find FEB " + std::to_string(mac5) + " in MAC5s!");
+    throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Could not find FEB " + std::to_string(mac5) + " in MAC5s!");
   }
 
   if(mac5==255) {
@@ -119,8 +119,12 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
 } //feb_send_bitstreams
 
 void sbndaq::BernCRTData::StartFebdrv() {
-  TLOG(TLVL_DEBUG)<< __func__<<": (re)starting febdrv";
-  febdrv.startDAQ();
+  TLOG(TLVL_DEBUG)<< __func__<<"() (re)starting febdrv";
+  if(! febdrv.startDAQ() ) {
+    TLOG(TLVL_ERROR) <<  __func__ << "() Failed to (re)start DAQ";
+    throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Failed to (re)start DAQ!");
+  }
+
   last_restart_time = std::chrono::system_clock::now();
 }
 
