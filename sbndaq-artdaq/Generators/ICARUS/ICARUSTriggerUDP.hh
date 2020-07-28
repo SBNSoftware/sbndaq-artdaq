@@ -15,6 +15,7 @@
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
+#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerUDPFragment.hh"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -61,6 +62,9 @@ namespace sbndaq
     
     // FHiCL-configurable variables. Note that the C++ variable names
     // are the FHiCL variable names with a "_" appended
+
+    uint32_t fragment_id_;
+    size_t max_fragment_size_bytes_;
     
     int configport_;
     std::string ip_config_;
@@ -78,6 +82,7 @@ namespace sbndaq
     //retry for init msg
     int n_init_retries_;
     int n_init_timeout_ms_;
+    int fEventCounter;
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */

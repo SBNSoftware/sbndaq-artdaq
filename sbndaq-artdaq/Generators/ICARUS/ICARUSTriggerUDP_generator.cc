@@ -4,7 +4,6 @@
 #include "artdaq/DAQdata/Globals.hh"
 
 #include "sbndaq-artdaq/Generators/ICARUS/ICARUSTriggerUDP.hh"
-
 #include "canvas/Utilities/Exception.h"
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "cetlib_except/exception.h"
@@ -12,18 +11,23 @@
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
+
 #include <fstream>
 #include <iomanip>
 #include <iterator>
 #include <iostream>
+#include <string>
 #include <sys/poll.h>
-
+#include <time.h>
 
 sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   : CommandableFragmentGenerator(ps)
-  , configport_(ps.get<int>("config_port", 6342))
+  , fragment_id_(ps.get<uint32_t>("fragment_id", 0x4001))
+  , max_fragment_size_bytes_(ps.get<size_t>("max_fragment_size_bytes", 100))
+  , configport_(ps.get<int>("config_port", 63001))
   , ip_config_(ps.get<std::string>("config_ip", "127.0.0.1"))
-  , dataport_(ps.get<int>("data_port", 6343))
+  , dataport_(ps.get<int>("data_port", 63000))
   , ip_data_(ps.get<std::string>("data_ip", "127.0.0.1"))
   , n_init_retries_(ps.get<int>("n_init_retries",10))
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
@@ -34,6 +38,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
       throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
       exit(1);
     }
+  /*
   struct sockaddr_in si_me_config;
   si_me_config.sin_family = AF_INET;
   si_me_config.sin_port = htons(configport_);
@@ -52,7 +57,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_config_ << "\n";
       exit(1);
     }
-
+  */
   datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (datasocket_ < 0)
     {
@@ -77,9 +82,12 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
+  fEventCounter = 0;
 }
-bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
+bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 {
+  static auto start= std::chrono::steady_clock::now();
+
   if (should_stop()){
     return false;
   }
@@ -89,10 +97,57 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
    */
 
   int size_bytes = poll_with_timeout(datasocket_,ip_data_,1000);
+  //int buffersize = 0;
+  std::string data_input = "";
   if(size_bytes>0){
     char buffer[size_bytes];
     read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
     TRACE(TR_LOG,"data received:: %s",buffer);
+    //buffersize = sizeof(buffer)/sizeof(char);
+    data_input = buffer;
+  }
+
+  size_t pos = 0;
+  //size_t delim_pos = 0;
+  TRACE(TR_LOG, "string received:: %s", data_input.c_str());
+  std::string delimiter = ",";
+  std::vector<std::string> sections;
+  std::string token = "";
+  while ((pos = data_input.find(delimiter)) != std::string::npos) {
+    token = data_input.substr(0, pos);
+    sections.push_back(token);
+    data_input.erase(0, pos + delimiter.length());
+    //delim_pos = pos;
+  }
+  sections.push_back(data_input);
+  
+  if(sections.size() >= 4)
+  {
+    const char* trig_name = sections[0].c_str();
+    int event_no = std::stoi(sections[1]);
+    int secs = std::stoi(sections[2]);
+    long nanosecs = std::stol(sections[3]);
+    std::cout << "trig_name:: " << trig_name << " event_number:: " << event_no << " seconds since start:: " << secs << " nanoseconds since start:: " << nanosecs << std::endl;
+    
+    TRACE(TR_LOG, "trig_name:: %s", trig_name);
+    TRACE(TR_LOG, "event_number:: %i", event_no);
+    TRACE(TR_LOG, "seconds since start:: %i", secs);
+    //TRACE(TR_LOG, "nanoseconds since start:: %h", nanosecs);
+
+    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly    
+    const auto metadata = ICARUSTriggerUDPFragmentMetadata(trig_name, event_no, secs, nanosecs);
+    //const auto fragment_size = metadata.ExpectedDataSize();                                               
+    size_t fragment_size = max_fragment_size_bytes_;
+    TRACE(TR_LOG, "Created ICARUSTriggerUDP Fragment with size of 100 bytes");
+    auto frag = artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter,fragment_id_,sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata);
+    std::string name = metadata.getName();
+    int number = metadata.getEventNo();
+    int sec_frag = metadata.getSeconds();
+    long nanosec_frag = metadata.getNanoSeconds();
+    std::cout << "Name: " << name << " Event Number: " << number << " Seconds: " << sec_frag << " Nanoseconds: " << nanosec_frag << std::endl; 
+    frags.emplace_back(nullptr);
+    std::swap(frags.back(), frag);
+    ++fEventCounter;
   }
 
   /*
@@ -105,13 +160,16 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& )//frags)
   } 
   */   
 //send_TRIG_ALLW();
-  
+  std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
+  std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
   return true;
 
 }
+
+
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_);
+  //send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_); //comment out for fake trigger tests
   //send_TRIG_ALLW();
 }
 void sbndaq::ICARUSTriggerUDP::stop()
@@ -156,13 +214,15 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, int 
     if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
       //do something to get data size here?
       
-      /*
-	uint8_t peekBuffer[2];
-	recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
-	(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
-	return (int)(peekBuffer[1]);
-      */
-      return 8;
+     
+      uint8_t peekBuffer[2];
+      recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
+	       (struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
+      //std::cout << msg_size << std::endl;
+      return (int)(peekBuffer[1]);
+      //return sizeof(peekBuffer);
+      //return sizeof(peekBuffer[1]);
+      //return 1400;
     }
   }
   //timeout
