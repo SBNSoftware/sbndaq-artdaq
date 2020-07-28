@@ -1,3 +1,7 @@
+/**
+ * BernCRT febdrv integrated with fragment generator
+ */
+
 #include "febdrv.hh"
 
 #include <unistd.h>
