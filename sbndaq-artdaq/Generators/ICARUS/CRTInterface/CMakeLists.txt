@@ -5,7 +5,8 @@ art_make(
         ${CETLIB}
         ${CETLIB_EXCEPT}
         ${MF_MESSAGELOGGER}
-        dune-raw-data_Overlays
+        sbndaq-artdaq-core_Overlays
+	sbndaq-artdaq-core_Overlays_ICARUS
         ${Boost_SYSTEM_LIBRARY}
         )
 
