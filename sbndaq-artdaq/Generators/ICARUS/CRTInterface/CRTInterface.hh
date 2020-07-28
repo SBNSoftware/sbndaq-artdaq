@@ -3,7 +3,7 @@
 #ifndef artdaq_Generators_CRTInterface_CRTInterface_hh
 #define artdaq_Generators_CRTInterface_CRTInterface_hh
 
-#include "dune-raw-data/Overlays/FragmentType.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include "fhiclcpp/fwd.h"
 

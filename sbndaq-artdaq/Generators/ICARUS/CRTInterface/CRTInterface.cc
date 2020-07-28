@@ -1,10 +1,10 @@
 /* Author: Matthew Strait <mstrait@fnal.gov> */
 
-#include "sbn-artdaq/Generators/CRTInterface/CRTInterface.hh"
-#include "sbn-artdaq/Generators/CRTInterface/CRTdecode.hh"
+#include "sbndaq-artdaq/Generators/ICARUS/CRTInterface/CRTInterface.hh"
+#include "sbndaq-artdaq/Generators/ICARUS/CRTInterface/CRTdecode.hh"
 #define TRACE_NAME "CRTInterface"
 #include "artdaq/DAQdata/Globals.hh"
-#include "dune-raw-data/Overlays/FragmentType.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include "fhiclcpp/ParameterSet.h"
 #include "cetlib_except/exception.h"

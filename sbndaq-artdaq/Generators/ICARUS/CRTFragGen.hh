@@ -14,7 +14,7 @@
 #include <atomic>
 #include <memory> //For std::unique_ptr
 
-#include "uhal/uhal.hpp"
+//#include "uhal/uhal.hpp"
 
 namespace CRT
 {
@@ -109,10 +109,10 @@ namespace CRT
 
     std::string timingXMLfilename;
     std::string timinghardwarename;
-
+/*
     uhal::ConnectionManager timeConnMan;
     uhal::HwInterface timinghw;
-
+*/
     //Have we set runstarttime yet?
     bool gotRunStartTime;
 

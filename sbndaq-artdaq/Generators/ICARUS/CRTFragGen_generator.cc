@@ -3,11 +3,11 @@
  *         Ryan Howell    <rhowell3@ur.rochester.edu>
  */
 
-#include "dune-artdaq/Generators/CRTFragGen.hh"
+#include "sbndaq-artdaq/Generators/ICARUS/CRTFragGen.hh"
 
 #include "canvas/Utilities/Exception.h"
 
-#include "dune-raw-data/Overlays/FragmentType.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include "cetlib_except/exception.h"
 
-#include "uhal/uhal.hpp"
+//#include "uhal/uhal.hpp"
 
 #include "artdaq/DAQdata/Globals.hh"
 
@@ -41,16 +41,16 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   , timingXMLfilename(ps.get<std::string>("connections_file",
     "/nfs/sw/control_files/timing/connections_v4b4.xml"))
   , timinghardwarename(ps.get<std::string>("hardware_select", "CRT_EPT"))
-  , timeConnMan("file://"+timingXMLfilename)
-  , timinghw(timeConnMan.getDevice(timinghardwarename))
+  //, timeConnMan("file://"+timingXMLfilename)
+  //, timinghw(timeConnMan.getDevice(timinghardwarename))
   , gotRunStartTime(false)
 {
-  uhal::setLogLevelTo(uhal::Error());
+  //uhal::setLogLevelTo(uhal::Error());
 
   // Tell the timing board what partition we are running in.
   // It's ok to do this in all four CRT processes.
-  timinghw.getNode("endpoint0.csr.ctrl.tgrp").write(partition_number);
-  timinghw.dispatch();
+  //timinghw.getNode("endpoint0.csr.ctrl.tgrp").write(partition_number);
+  //timinghw.dispatch();
 
   hardware_interface_->AllocateReadoutBuffer(&readout_buffer_);
 
@@ -88,7 +88,7 @@ bool CRT::FragGen::getNext_(
 {
   if(!gotRunStartTime) 
   {
-    getRunStartTime();
+    //getRunStartTime();
 
     //Make sure runstarttime isn't too different from current UNIX timestamp.  If it 
     //is, then we probably won't write any useful data. When maintaining this code,  
@@ -313,14 +313,14 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   // ev_counter() from base CommandableFragmentGenerator
   fragptr->setSequenceID( ev_counter() );
   fragptr->setFragmentID( fragment_id() ); // Ditto
-  fragptr->setUserType( dune::detail::CRT );
+  fragptr->setUserType( sbndaq::detail::CRT );
   fragptr->setTimestamp( timestamp_ );
   memcpy(fragptr->dataBeginBytes(), readout_buffer_, bytes_read);
 
   return fragptr;
 }
 
-void CRT::FragGen::getRunStartTime()
+/*void CRT::FragGen::getRunStartTime()
 {
   uhal::ValWord<uint32_t> status
     = timinghw.getNode("endpoint0.csr.stat.ep_stat").read();
@@ -336,7 +336,7 @@ void CRT::FragGen::getRunStartTime()
   timinghw.dispatch();
   runstarttime = ((uint64_t)rst_h << 32) + rst_l;
 }
-
+*/
 void CRT::FragGen::start()
 {
   hardware_interface_->StartDatataking();
