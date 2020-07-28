@@ -54,10 +54,10 @@ simple_plugin(PhysCrateData "generator"
 
 add_subdirectory(CRTInterface)
 simple_plugin(CRTFragGen "generator"
-  dune-artdaq_Generators_CRTInterface
-  dune-raw-data_Overlays
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq_Generators_ICARUS_CRTInterface
   artdaq_Application
-  artdaq_Generators
+  artdaq_Generators 
   artdaq_DAQdata
   artdaq-core_Utilities
   artdaq-core_Data
@@ -68,8 +68,6 @@ simple_plugin(CRTFragGen "generator"
   ${MF_UTILITIES}
   ${CETLIB}
   ${CETLIB_EXCEPT}
-  ${UHAL_UHAL}
-  ${UHAL_LOG}
   )
 
 
