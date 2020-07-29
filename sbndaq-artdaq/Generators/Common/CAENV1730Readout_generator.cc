@@ -245,6 +245,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig");
   TLOG(TINFO) <<__func__ <<": CalibrateOnConfig=" << fCalibrateOnConfig;
 
+  fLockTempCalibration = ps.get<bool>("LockTempCalibration");
+  TLOG(TINFO) <<__func__ <<": LockTempCalibration=" << fLockTempCalibration;
+
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
@@ -293,8 +296,15 @@ void sbndaq::CAENV1730Readout::Configure()
   ConfigureAcquisition();
   configureInterrupts();
 
-  if(fCalibrateOnConfig){
-    RunADCCalibration();}
+  if (fCalibrateOnConfig)     { RunADCCalibration();  }
+  // Does lock bit clear on V1730 reset?   If not, always call this routine
+  if (fLockTempCalibration )  
+  { 
+    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+    {
+      SetLockTempCalibration(true,ch);
+    }
+  }
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure() done." << TLOG_ENDL;
 }
@@ -304,6 +314,109 @@ void sbndaq::CAENV1730Readout::RunADCCalibration()
   TLOG_ARB(TINFO,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
   auto retcode = CAEN_DGTZ_Calibrate(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
+}
+
+// Following SPI code is from CAEN
+CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value)
+{
+  uint32_t SPIBusy = 1;
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+  uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
+  uint32_t addressingRegAddr  = 0x80B4;
+  uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
+  uint32_t val;
+
+  while(SPIBusy) 
+  {
+    if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
+    {
+      return CAEN_DGTZ_CommError;
+    }
+
+    SPIBusy = (SPIBusy>>2)&0x1;
+    if (!SPIBusy) 
+    {
+      if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
+      { return CAEN_DGTZ_CommError;}
+
+      if((retcod = CAEN_DGTZ_ReadRegister(handle, valueRegAddr, &val)) != CAEN_DGTZ_Success)
+      { return CAEN_DGTZ_CommError;}
+    }
+    *value = (uint8_t)val;
+    sleep(1);
+  }
+  return CAEN_DGTZ_Success;
+}
+
+CAEN_DGTZ_ErrorCode CAENV1730Readout::WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value)
+{
+  uint32_t SPIBusy = 1;
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+    
+  uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
+  uint32_t addressingRegAddr  = 0x80B4;
+  uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
+
+  while (SPIBusy) 
+  {
+    if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
+    {
+      return CAEN_DGTZ_CommError;
+    }
+
+    SPIBusy = (SPIBusy>>2)&0x1;
+    if (!SPIBusy) 
+    {
+      if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
+      {  return CAEN_DGTZ_CommError;}
+      if((retcod = CAEN_DGTZ_WriteRegister(handle, valueRegAddr, (uint32_t)value)) != CAEN_DGTZ_Success)
+      { return CAEN_DGTZ_CommError;}
+    }
+    sleep(1);
+  }
+  return CAEN_DGTZ_Success;
+}
+
+
+void sbndaq::CAENV1730Readout::SetLockTempCalibration(bool onOff, uint32_t ch)
+{
+  CAEN_DGTZ_ErrorCode retcod;
+  uint8_t lock, ctrl;
+  TLOG_ARB(TINFO,TRACE_NAME) << "Locking Temperature Calibration Adjustments, channel " << ch << TLOG_ENDL;
+
+  // Following code comes from CAEN
+  // enter engineering functions
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0x59);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0x1A);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0x11);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0xAC);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+  
+  // read lock value
+  retcod = ReadSPIRegister (fHandle, ch, (uint32_t)0xA7, &lock);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  // write lock value
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0xA5, lock);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  // enable lock
+  retcod = ReadSPIRegister (fHandle, ch, (uint32_t)0xA4, &ctrl);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  if (onOff) { ctrl |= 0x4;}  // set bit 2
+  else       { ctrl &= ~0x4;}
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0xA4, ctrl);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = ReadSPIRegister (fHandle, ch, (uint32_t)0xA4, &ctrl);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
 }
 
 void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
