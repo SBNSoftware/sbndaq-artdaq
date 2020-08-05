@@ -48,7 +48,7 @@ sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
   }
   
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TLOG(TLVL_DEBUG) << __func__ << " Reading configuration for MAC5 #" << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
+    TLOG(TLVL_DEBUG+23) << __func__ << " Reading configuration for MAC5 #" << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
     feb_configuration[MAC5s_[iFEB]] = sbndaq::BernCRTFEBConfiguration(ps_, iFEB); //create configuration object
   }
 
@@ -119,7 +119,7 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
 } //feb_send_bitstreams
 
 void sbndaq::BernCRTData::StartFebdrv() {
-  TLOG(TLVL_DEBUG)<< __func__<<"() (re)starting febdrv";
+  TLOG(TLVL_DEBUG+24)<< __func__<<"() (re)starting febdrv";
   if(! febdrv.startDAQ() ) {
     TLOG(TLVL_ERROR) <<  __func__ << "() Failed to (re)start DAQ";
     throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Failed to (re)start DAQ!");
@@ -138,7 +138,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
    * Reads data from FEB
    */
   
-  TLOG(TLVL_DEBUG) << __func__ << "() called";
+  TLOG(TLVL_DEBUG+20) << __func__ << "() called";
   
   // Sleep until the next poll comes
   int now = std::chrono::system_clock::now().time_since_epoch().count() % feb_poll_period_;
@@ -174,7 +174,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       int datalen = numbytes-18;
       
       
-      TLOG(TLVL_DEBUG)<<__func__<<"()  datalen = "<<datalen;
+      TLOG(TLVL_DEBUG+21)<<__func__<<"()  datalen = "<<datalen;
         
       data_size += datalen;
       
@@ -204,7 +204,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
     }
   }
   
-  TLOG(TLVL_DEBUG) << __func__ << "() read " << std::to_string(events) << " events of size of " << std::to_string(data_size);
+  TLOG(TLVL_DEBUG+22) << __func__ << "() read " << std::to_string(events) << " events of size of " << std::to_string(data_size);
 
   return events;
 } //GetFEBData

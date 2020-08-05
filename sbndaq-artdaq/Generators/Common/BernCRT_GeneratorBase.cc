@@ -84,7 +84,7 @@ void sbndaq::BernCRT_GeneratorBase::start() {
   TLOG(TLVL_INFO)<<__func__<<"() called";
 
   run_start_time = std::chrono::system_clock::now().time_since_epoch().count();
-  TLOG(TLVL_DEBUG)<<__func__<<"() Run start time: " << sbndaq::BernCRTFragment::print_timestamp(run_start_time);
+  TLOG(TLVL_DEBUG+1)<<__func__<<"() Run start time: " << sbndaq::BernCRTFragment::print_timestamp(run_start_time);
   
   for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
     const uint8_t& MAC5 = MAC5s_[iMAC5];
@@ -152,7 +152,7 @@ std::string sbndaq::BernCRT_GeneratorBase::GetFEBIDString(uint64_t const& id) co
 void sbndaq::BernCRT_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const& /*id*/,
                                                                     size_t const& ) const { //buffer_size) const {
 
-  TLOG(TLVL_DEBUG)<<__func__<<"() called";
+  TLOG(TLVL_DEBUG+2)<<__func__<<"() called";
 
   //std::string id_str = GetFEBIDString(id);
   //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTGenerator");
@@ -166,7 +166,7 @@ void sbndaq::BernCRT_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const&
 
 bool sbndaq::BernCRT_GeneratorBase::GetData() {
 
-  TLOG(TLVL_DEBUG) <<__func__<< "() called";
+  TLOG(TLVL_DEBUG+3) <<__func__<< "() called";
 
   unsigned long total_events = GetFEBData(); //read data FEB and fill circular buffer
 
@@ -181,19 +181,25 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 bool sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
                                                     artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) << __func__<<"(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
+  TLOG(TLVL_DEBUG+3) << __func__<<"(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
   FEB_t & feb = FEBs_[feb_id];
 
   size_t buffer_end = feb.buffer.size();
 
-  TLOG(TLVL_DEBUG) <<__func__ << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " events";
-  if(metricMan != nullptr) metricMan->sendMetric("feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Average);
+  TLOG(TLVL_DEBUG+4) <<__func__ << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " events";
+  if(metricMan != nullptr) metricMan->sendMetric("max_feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Maximum);
 
   //loop over all the CRTHit events in our buffer (for this FEB)
   for(size_t i_e=0; i_e<buffer_end; ++i_e) {
     BernCRTEvent const& data = feb.buffer[i_e].first;
     BernCRTFragmentMetadata & metadata = feb.buffer[i_e].second;
+    
+    if(i_e == 0)
+      if(metricMan != nullptr) metricMan->sendMetric(
+        std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
+        metadata.feb_events_per_poll() * 1e9 / (metadata.this_poll_end() - metadata.last_poll_end()),
+        "CRT rate", 5, artdaq::MetricMode::Average);
 
     //calculate timestamp based on nanosecond from FEB and poll times measured by server
     //see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
@@ -266,7 +272,7 @@ bool sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
       metadata.set_last_accepted_timestamp(feb.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
     }
     feb.last_accepted_timestamp = timestamp;
-    
+
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
           sizeof(BernCRTEvent), //payload_size
@@ -290,7 +296,7 @@ bool sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
-  TLOG(TLVL_DEBUG) <<__func__<< "(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
+  TLOG(TLVL_DEBUG+5) <<__func__<< "(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
 
   return false;
 } //FillFragment
@@ -298,11 +304,11 @@ bool sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
 /*-----------------------------------------------------------------------*/
 
 size_t sbndaq::BernCRT_GeneratorBase::EraseFromFEBBuffer(FEB_t & feb, size_t const& nevents) {
-  TLOG(TLVL_DEBUG) <<__func__<< "() called";
+  TLOG(TLVL_DEBUG+6) <<__func__<< "() called";
   std::unique_lock<std::mutex> lock(*(feb.mutexptr));
-  TLOG(TLVL_DEBUG) <<__func__<< "() Buffer size before erasing the events: " << std::setw(3) << feb.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+7) <<__func__<< "() Buffer size before erasing the events: " << std::setw(3) << feb.buffer.size() << " events";
   feb.buffer.erase_begin(nevents);
-  TLOG(TLVL_DEBUG) <<__func__<< "() Buffer size after erasing the events: " << std::setw(4) << feb.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+8) <<__func__<< "() Buffer size after erasing the events: " << std::setw(4) << feb.buffer.size() << " events";
   return feb.buffer.size();
 } //EraseFromFEBBuffer
 
@@ -311,7 +317,7 @@ size_t sbndaq::BernCRT_GeneratorBase::EraseFromFEBBuffer(FEB_t & feb, size_t con
 
 void sbndaq::BernCRT_GeneratorBase::SendMetadataMetrics(BernCRTFragmentMetadata const& /*m*/) {
 
-  TLOG(TLVL_DEBUG)<<__func__<<"() called";
+  TLOG(TLVL_DEBUG+9)<<__func__<<"() called";
 
 //  std::string id_str = GetFEBIDString(m.feb_id());
 
@@ -331,7 +337,9 @@ void sbndaq::BernCRT_GeneratorBase::SendMetadataMetrics(BernCRTFragmentMetadata 
 
 bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) <<__func__<< " called with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+10) <<__func__<< " called with frags.size = " << frags.size();
+
+  auto t_start = std::chrono::steady_clock::now();
   
   //throttling...
   //TODO why do we need it? Isn't it against the philosophy of artdaq?
@@ -357,7 +365,12 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     }
   }
 
-  TLOG(TLVL_DEBUG) <<__func__<< ": completed with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+11) <<__func__<< ": completed with frags.size = " << frags.size();
+  auto t_end = std::chrono::steady_clock::now();
+
+  if(metricMan != nullptr) metricMan->sendMetric("getNext_execution_time_ms",
+     artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),
+     "CRT performance", 5, artdaq::MetricMode::Maximum);
 
   return true;
 } //getNext_
