@@ -194,7 +194,7 @@ bool sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   for(size_t i_e=0; i_e<buffer_end; ++i_e) {
     BernCRTEvent const& data = feb.buffer[i_e].first;
     BernCRTFragmentMetadata & metadata = feb.buffer[i_e].second;
-    
+
     if(i_e == 0)
       if(metricMan != nullptr) metricMan->sendMetric(
         std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
@@ -339,7 +339,14 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   TLOG(TLVL_DEBUG+10) <<__func__<< " called with frags.size = " << frags.size();
 
-  auto t_start = std::chrono::steady_clock::now();
+  //initialise variables
+  static auto t_start = std::chrono::steady_clock::now();
+  static auto t_end = std::chrono::steady_clock::now();
+  
+  t_start = std::chrono::steady_clock::now();
+  if(metricMan != nullptr) metricMan->sendMetric("time_outside_getNext_ms",
+     artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_end, t_start),
+     "CRT performance", 5, artdaq::MetricMode::Maximum);
   
   //throttling...
   //TODO why do we need it? Isn't it against the philosophy of artdaq?
@@ -366,7 +373,7 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   }
 
   TLOG(TLVL_DEBUG+11) <<__func__<< ": completed with frags.size = " << frags.size();
-  auto t_end = std::chrono::steady_clock::now();
+  t_end = std::chrono::steady_clock::now();
 
   if(metricMan != nullptr) metricMan->sendMetric("getNext_execution_time_ms",
      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),

@@ -194,6 +194,16 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       feb.buffer[i].second.set_feb_events_per_poll(feb.metadata.feb_event_number() - last_poll_event_number);
       //TODO perhaps we would like to save number of lost events as well?
     }
+
+//the commented code below doesn't work: to be investigated
+/*    if(metricMan != nullptr) metricMan->sendMetric(
+      std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
+      feb.metadata.feb_events_per_poll() * 1e9 / (feb.metadata.this_poll_end() - feb.metadata.last_poll_end()),
+      "CRT rate", 5, artdaq::MetricMode::Average);
+    if(metricMan != nullptr) metricMan->sendMetric(
+      std::string("feb_read_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
+      feb_read_events * 1e9 / (feb.metadata.this_poll_end() - feb.metadata.last_poll_end()),
+      "CRT rate", 5, artdaq::MetricMode::Average); */
     
   } //loop over FEBs
   
