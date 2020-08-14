@@ -111,33 +111,71 @@ simple_plugin(SpectraTimeReadout "generator"
 )
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
-		  SOURCE BernCRTZMQ_GeneratorBase.cc
-		  LIBRARIES
-  		        sbndaq-artdaq-core_Overlays
-  			sbndaq-artdaq-core_Overlays_Common
-  			sbndaq-artdaq_Common_Utilities	
-			artdaq_Generators
-			artdaq_Application
-			artdaq_DAQdata
-			artdaq-core_Utilities
-			artdaq-core_Data
-			artdaq-utilities_Plugins
+                  SOURCE BernCRTZMQ_GeneratorBase.cc
+                  LIBRARIES
+                        sbndaq-artdaq-core_Overlays
+                        sbndaq-artdaq-core_Overlays_Common
+                        sbndaq-artdaq_Common_Utilities
+                        artdaq_Generators
+                        artdaq_Application
+                        artdaq_DAQdata
+                        artdaq-core_Utilities
+                        artdaq-core_Data
+                        artdaq-utilities_Plugins
                         BernCRTFEBConfiguration
-			#${ARTDAQ_UTILITIES}
-			${ART_UTILITIES}
-			${FHICLCPP}
-			${MF_MESSAGELOGGER}
-			${MF_UTILITIES}
-			${CETLIB}
- 	    ${CETLIB_EXCEPT}	
+                        ${ART_UTILITIES}
+                        ${FHICLCPP}
+                        ${MF_MESSAGELOGGER}
+                        ${MF_UTILITIES}
+                        ${CETLIB}
+                        ${CETLIB_EXCEPT}
 )
 
-art_make_library( LIBRARY_NAME BernCRTFEBConfiguration 
+art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRT_GeneratorBase
+                  SOURCE BernCRT_GeneratorBase.cc
+                  LIBRARIES
+                        sbndaq-artdaq-core_Overlays
+                        sbndaq-artdaq-core_Overlays_Common
+                        sbndaq-artdaq_Common_Utilities
+                        artdaq_Generators
+                        artdaq_Application
+                        artdaq_DAQdata
+                        artdaq-core_Utilities
+                        artdaq-core_Data
+                        artdaq-utilities_Plugins
+                        BernCRTFEBConfiguration
+                        ${ART_UTILITIES}
+                        ${FHICLCPP}
+                        ${MF_MESSAGELOGGER}
+                        ${MF_UTILITIES}
+                        ${CETLIB}
+                        ${CETLIB_EXCEPT}
+)
+
+art_make_library( LIBRARY_NAME BernCRTFEBConfiguration
   SOURCE BernCRTFEBConfiguration.cc
   LIBRARIES
     ${FHICLCPP}
     ${CETLIB_EXCEPT}
-)                  
+)
+
+art_make_library( LIBRARY_NAME febdrv
+  SOURCE febdrv.cc
+  LIBRARIES
+    sbndaq-artdaq-core_Overlays_Common
+    ${FHICLCPP}
+    ${CETLIB_EXCEPT}
+)
+
+cet_make_exec( ConvertCRTConfiguration
+  SOURCE ConvertCRTConfiguration.cc
+  LIBRARIES
+    BernCRTFEBConfiguration
+    ${FHICLCPP}
+    ${CETLIB}
+    ${CETLIB_EXCEPT}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY_RELEASE}
+)
 
 simple_plugin(BernCRTZMQData "generator"
   sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
@@ -151,6 +189,28 @@ simple_plugin(BernCRTZMQData "generator"
   artdaq-core_Data
   artdaq-utilities_Plugins
   BernCRTFEBConfiguration
+  febdrv
+  ${ART_UTILITIES}
+  ${FHICLCPP}
+  ${MF_MESSAGELOGGER}
+  ${MF_UTILITIES}
+  ${CETLIB}
+  ${CETLIB_EXCEPT}
+  )
+
+simple_plugin(BernCRTData "generator"
+  sbndaq-artdaq_Common_BernCRT_GeneratorBase
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq-core_Overlays_Common
+  zmq
+  artdaq_Generators
+  artdaq_Application
+  artdaq_DAQdata
+  artdaq-core_Utilities
+  artdaq-core_Data
+  artdaq-utilities_Plugins
+  BernCRTFEBConfiguration
+  febdrv
  # ${ARTDAQ_UTILITIES}
   ${ART_UTILITIES}
   ${FHICLCPP}
@@ -159,3 +219,20 @@ simple_plugin(BernCRTZMQData "generator"
   ${CETLIB}
   ${CETLIB_EXCEPT}
   )
+
+simple_plugin(DummyGenerator "generator"
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq-core_Overlays_Common
+  sbndaq-artdaq_Common_Utilities
+  artdaq_Generators
+  artdaq_DAQdata
+  artdaq_DAQrate
+  artdaq-core_Utilities
+  artdaq-core_Data
+  artdaq-utilities_Plugins
+  ${FHICLCPP}
+  ${MESSAGEFACILITY_LIBS}
+  ${CETLIB}
+  ${CETLIB_EXCEPT}
+  )
+
