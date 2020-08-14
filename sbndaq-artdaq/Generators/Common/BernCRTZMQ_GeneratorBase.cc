@@ -1,3 +1,9 @@
+/**
+ * Obsolete fragment generator using zeromq to communicate with febdrv
+ * Use BernCRT generator which has integrated febdrv instead
+ */
+
+
 #include "sbndaq-artdaq/Generators/Common/BernCRTZMQ_GeneratorBase.hh"
 
 #include "cetlib_except/exception.h"
@@ -416,12 +422,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
       if(
           timestamp < metadata.last_poll_start() - out_of_sync_tolerance_ns_
        || timestamp > metadata.this_poll_end()   + out_of_sync_tolerance_ns_) {
-        if(!buffer.omitted_events) { //avoid spamming messages
-          TLOG(TLVL_WARNING)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
-          TLOG(TLVL_WARNING)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
-          TLOG(TLVL_WARNING) <<__func__<<"() Omitted FEB timestamp out of sync with server clock";
-        }
-        buffer.omitted_events++;
         continue;
       }
     }
@@ -434,12 +434,6 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
        * or due to large desynchronisation of the server clock w.r.t. FEB PPS
        */
        if(timestamp <= buffer.last_accepted_timestamp) {
-         if(!buffer.omitted_events) {//avoid spamming messages
-           TLOG(TLVL_WARNING)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
-           TLOG(TLVL_WARNING)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
-           TLOG(TLVL_WARNING) <<__func__<<"() Omitted out of order timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" ≤ "<<sbndaq::BernCRTZMQFragment::print_timestamp(buffer.last_accepted_timestamp);
-         }
-         buffer.omitted_events++;
          continue;
        }
     }
@@ -447,12 +441,10 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
     TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
     TLOG(TLVL_SPECIAL)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
 
-    if(buffer.omitted_events) {
-      TLOG(TLVL_WARNING) <<__func__<<"() Accepted timestamp after omitting "<< buffer.omitted_events<<" of them. Timestamp: "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp) <<" Timestamp of previously accepted event "<<sbndaq::BernCRTZMQFragment::print_timestamp(buffer.last_accepted_timestamp);
-      metadata.set_omitted_events(buffer.omitted_events);
-      buffer.omitted_events = 0;
-      metadata.set_last_accepted_timestamp(buffer.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
-    }
+    metadata.set_omitted_events(metadata.feb_event_number() - buffer.last_accepted_feb_event_number - 1);
+    metadata.set_last_accepted_timestamp(buffer.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
+    
+    buffer.last_accepted_feb_event_number = metadata.feb_event_number();
     buffer.last_accepted_timestamp = timestamp;
     
     //create our new fragment on the end of the frags vector

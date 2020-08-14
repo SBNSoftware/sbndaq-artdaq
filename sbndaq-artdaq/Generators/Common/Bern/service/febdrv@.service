@@ -12,7 +12,7 @@ SyslogIdentifier=febdrv %I
 ExecStop=/usr/bin/systemctl stop febdrv-main
 
 #update path to the executable
-ExecStart=/path_to_febdrv/febdrv %I 300 $ZMQ_PORT
+ExecStart=/path_to_febdrv/febdrv_standalone %I 300 $ZMQ_PORT
 
 
 [Install]

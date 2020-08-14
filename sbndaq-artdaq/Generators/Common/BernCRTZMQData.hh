@@ -1,3 +1,9 @@
+/**
+ * Obsolete fragment generator using zeromq to communicate with febdrv
+ * Use BernCRT generator which has integrated febdrv instead
+ */
+
+
 #ifndef sbndaq_artdaq_Generators_Common_BernCRTZMQData_hh
 #define sbndaq_artdaq_Generators_Common_BernCRTZMQData_hh
 

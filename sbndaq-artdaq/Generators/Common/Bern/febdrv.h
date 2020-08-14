@@ -81,3 +81,4 @@ uint8_t buf[MAXPACKLEN];
 
 uint8_t GLOB_daqon=0;
 
+bool restart_FEBs = false; //if this variable is set to true, restart FEBs after the next poll
