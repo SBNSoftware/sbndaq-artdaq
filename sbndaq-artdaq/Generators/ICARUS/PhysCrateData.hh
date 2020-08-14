@@ -35,8 +35,6 @@ namespace icarus {
     bool Monitor();
 
     void InitializeHardware();
-    BoardConf GetBoardConf();
-    TrigConf GetTrigConf();
 
     void SetTestPulse();
     void SetDCOffset();
@@ -59,6 +57,10 @@ namespace icarus {
     int         veto_host_port;
     VetoUDP     veto_udp;
     bool        veto_state;
+
+    //test pulse configuration
+    TestPulseType _testPulse;
+
     void VetoOn();
     void VetoOff();
     void InitializeVeto();
@@ -67,6 +69,7 @@ namespace icarus {
     bool         _doVetoTest;
     unsigned int _vetoTestPeriod;
     share::WorkerThreadUPtr _vetoTestThread;
+
     share::WorkerThreadUPtr GetData_thread_;
 
     //for redis connection...
