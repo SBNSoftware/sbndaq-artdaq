@@ -82,7 +82,8 @@ namespace sbndaq
 
     typedef enum {
       DYNAMIC_RANGE      = 0x8028,
-      TRG_OUT_DELAY      = 0x8070,
+      TRG_OUT_WIDTH      = 0x8070,
+      TRG_OUT_WIDTH_CH   = 0x1070,
       ACQ_CONTROL        = 0x8100,
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,

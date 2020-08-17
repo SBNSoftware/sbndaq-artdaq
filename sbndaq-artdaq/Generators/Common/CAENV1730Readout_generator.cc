@@ -224,9 +224,6 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fTrigInLevel  = ps.get<uint32_t>("TrigInLevel",0); // TRG_IN on level (1) or edge (0)
   TLOG(TINFO)<<__func__ << ": TrigInLevel=" << fTrigInLevel;
 
-  fTrigOutDelay = ps.get<uint32_t>("TrigOutDelay",0); // TRG_OUT delay, 16 nsec ticks
-  TLOG(TINFO)<<__func__ << ": TrigOutDelay=" << fTrigOutDelay;
-
   fSelfTriggerMode = ps.get<uint32_t>("SelfTriggerMode"); 
   TLOG(TINFO)<<__func__ << ": SelfTriggerMode=" << fSelfTriggerMode;
 
@@ -663,20 +660,19 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
     }
   }
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width (maybe?) to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
-  retcode = CAEN_DGTZ_WriteRegister(fHandle,0x8070,fCAEN.triggerPulseWidth);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH,fCAEN.triggerPulseWidth);
   sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,0x8070,&readback);
-  CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
+  // Readback must be channel by channel (see reg doc)
+  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+  {
+    uint32_t address = TRG_OUT_WIDTH_CH | ( ch << 8 );  
+    retcode = CAEN_DGTZ_ReadRegister(fHandle,address,&readback);
+    CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
+  }
 
   ConfigureLVDS();
   ConfigureSelfTriggerMode();
-
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTrigOutDelay" << fTrigOutDelay << TLOG_ENDL;
-  retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_DELAY,fTrigOutDelay);
-  sbndaq::CAENDecoder::checkError(retcode,"SetTrigOutputDelay",fBoardID);
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,TRG_OUT_DELAY,&readback);
-  CheckReadback("SetTrigOutDelay", fBoardID,fTrigOutDelay,readback);  
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;
   retcode = CAEN_DGTZ_SetExtTriggerInputMode(fHandle,(CAEN_DGTZ_TriggerMode_t)(fCAEN.extTrgMode));
@@ -685,10 +681,12 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   CheckReadback("SetExtTriggerInputMode", fBoardID,fCAEN.extTrgMode,readback);  
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerOverlap" << fCAEN.allowTriggerOverlap << TLOG_ENDL;
-  if ( fCAEN.allowTriggerOverlap ){
+  if ( fCAEN.allowTriggerOverlap )
+  {
     addr = CONFIG_SET_ADDR;
   }
-  else{
+  else
+  {
     addr = CONFIG_CLEAR_ADDR;
   }
   retcode = CAEN_DGTZ_WriteRegister(fHandle, addr, TRIGGER_OVERLAP_MASK);
