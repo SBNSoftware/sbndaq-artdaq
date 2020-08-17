@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <time.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include "CAENDecoder.hh"
@@ -343,7 +344,7 @@ CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, u
       { return CAEN_DGTZ_CommError;}
     }
     *value = (uint8_t)val;
-    sleep(1);
+    usleep(1000);
   }
   return CAEN_DGTZ_Success;
 }
@@ -372,7 +373,7 @@ CAEN_DGTZ_ErrorCode CAENV1730Readout::WriteSPIRegister(int handle, uint32_t ch, 
       if((retcod = CAEN_DGTZ_WriteRegister(handle, valueRegAddr, (uint32_t)value)) != CAEN_DGTZ_Success)
       { return CAEN_DGTZ_CommError;}
     }
-    sleep(1);
+    usleep(1000);
   }
   return CAEN_DGTZ_Success;
 }
