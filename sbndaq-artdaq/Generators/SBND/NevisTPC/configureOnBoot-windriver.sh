@@ -1,3 +1,4 @@
+#!/bin/bash
 # set up drivers for sbnd
 #GAL: instructions https://cdcvs.fnal.gov/redmine/projects/sbndaq/wiki/Rebuild_the_windriver
 
