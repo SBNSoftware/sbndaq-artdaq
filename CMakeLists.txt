@@ -63,6 +63,16 @@ IF ( SANITIZE_ADDRESS )
     cet_add_compiler_flags(-fsanitize=address  -Wno-unused-command-line-argument -fno-omit-frame-pointer)
 ENDIF()
 
+#exception stack trace
+if(DEFINED ENV{USE_EXCEPTIONSTACKTRACE})
+        if($ENV{USE_EXCEPTIONSTACKTRACE} GREATER 0)
+                message("!!! Exception StackTrace Activated!!!")
+                add_definitions(-D EXCEPTIONSTACKTRACE)
+                set( EXCEPTIONSTACKTRACE_LIB  artdaq-core_Utilities_ExceptionStackTrace )
+                cet_add_compiler_flags( -rdynamic )
+        endif()
+endif()
+
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
@@ -73,7 +83,7 @@ find_ups_product( artdaq_core v3_05_07 )
 find_ups_product( art v3_02_04 )
 find_ups_product( art_root_io v1_00_00 )
 find_ups_product( fhiclcpp v4_09_03 )
-find_ups_product( messagefacility v2_04_03)
+find_ups_product( messagefacility v2_06_00)
 find_ups_product( cetlib v3_07_02 )
 find_ups_product( cetlib_except  v1_03_03)
 find_ups_root( v6_16_00 )
@@ -93,6 +103,8 @@ find_ups_product( caendigitizer v2_7_2 )
 find_ups_product( sbndaq_artdaq_core v0_03_00 )
 
 find_ups_product (jsoncpp v1_7_7c) 
+
+find_ups_product (TRACE v3_15_07)
 
 find_ups_product( zmq v4_3_1 ) 
 find_ups_product( redis v5_0_5 )
