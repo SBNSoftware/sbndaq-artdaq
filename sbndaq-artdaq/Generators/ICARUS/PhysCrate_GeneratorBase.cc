@@ -201,6 +201,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   frags.emplace_back( artdaq::Fragment::FragmentBytes( data_size_bytes,
 						      0, fragment_id(),
 						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_, ts) );
+
   TLOG(TLVL_DEBUG +8 ) << __func__ << " : Initialized data of size " << frags.back()->dataSizeBytes();
   
   TLOG(TLVL_DEBUG +9 ) << __func__<<  " : Read data size was " << data_size_bytes;
@@ -269,6 +270,12 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   _tloop_getnext_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_getnext_start-_tloop_getnext_end);
   metricMan->sendMetric(".getNext.FinishTime",_tloop_getnext_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
+
+  TLOG(TLVL_DEBUG) << __func__ 
+		   << " : Send fragment with type " << frags.back()->type() 
+		   << " (" << frags.back()->typeString() << "):  "
+		   << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
+
 
   return true;
 

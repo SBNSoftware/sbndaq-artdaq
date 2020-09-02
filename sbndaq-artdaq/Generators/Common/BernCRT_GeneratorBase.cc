@@ -379,6 +379,14 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),
      "CRT performance", 5, artdaq::MetricMode::Maximum);
 
+
+  if(frags.size()>0)
+    TLOG(TLVL_DEBUG) << __func__ 
+		     << " : Send fragment with type " << frags.back()->type() 
+		     << " (" << frags.back()->typeString() << "):  "
+		     << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
+  
+
   return true;
 } //getNext_
 
