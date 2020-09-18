@@ -37,20 +37,17 @@ namespace sbndaq {
 
       std::unique_ptr<std::mutex>  mutexptr;
       uint16_t                     fragment_id;
-      uint32_t                     event_number; //for given FEB
-      uint64_t                     last_accepted_timestamp;
-      uint32_t                     omitted_events;
+      uint32_t                     event_number = 0; //for given FEB
+      uint64_t                     last_accepted_timestamp = 1; // 1 is as a flag in case hits are omitted at the very beginning of the run
+      uint64_t                     last_accepted_event_number = 0;
       
       sbndaq::BernCRTEvent event;
       BernCRTFragmentMetadata metadata;
 
-      FEB(uint32_t capacity, /*uint8_t mac5,*/ uint16_t id)
+      FEB(uint32_t capacity, uint16_t id)
         : buffer(EventBuffer_t(capacity)),
           mutexptr(new std::mutex),
-          fragment_id(id),
-          event_number(0),
-          last_accepted_timestamp(1), //use 1 as a flag in case events are omitted at the very beginning of the run
-          omitted_events(0)
+          fragment_id(id)
       { Init(); }
       FEB() { FEB(0, 0); }
       void Init() {
@@ -100,6 +97,9 @@ namespace sbndaq {
     void FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
     size_t EraseFromFEBBuffer(FEB_t &, size_t const&);
+
+    uint64_t CalculateTimestamp(BernCRTEvent const& , BernCRTFragmentMetadata& );
+    bool OmitHit(uint64_t const & timestamp, BernCRTFragmentMetadata & metadata, FEB_t & feb, uint64_t const& feb_id);
 
     std::string GetFEBIDString(uint64_t const& id) const;
     void SendMetadataMetrics(BernCRTFragmentMetadata const& m);

@@ -169,6 +169,68 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 
 /*-----------------------------------------------------------------------*/
 
+bool sbndaq::BernCRT_GeneratorBase::OmitHit(uint64_t const & timestamp, BernCRTFragmentMetadata & metadata, FEB_t & feb, uint64_t const& feb_id) {
+  /**
+   * Check if given CRT hit should be omitted, i.e. not sent to DAQ
+   * Perhaps we don't need this code at all - to be determined during testing
+   * This function returns true if a hit should be omitted
+   */
+  if(omit_out_of_sync_events_) {
+    /**
+     * Omit events in which T0 value from FEB seems out of sync with server clock.
+     * This is a method to alleviate problem of "spikes".  Otherwise it should not
+     * be needed.  Under normal conditions server clock can be off by up to 500ms
+     * before the data starts to be corrupted.
+     */
+    if(    timestamp < metadata.last_poll_start() - out_of_sync_tolerance_ns_
+        || timestamp > metadata.this_poll_end()   + out_of_sync_tolerance_ns_) {
+      TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Event: \n"<< metadata;
+      TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
+      TLOG(TLVL_WARNING) <<__func__<<"(feb_id=" << feb_id << ") Omitted FEB timestamp out of sync with server clock";
+      return true;
+    }
+  }
+
+  if(omit_out_of_order_events_) {
+    /**
+     * Omit events with nonmonotonically growing timestamp
+     * This is a method to alleviate problem of "spikes"
+     * Out of order events may appear due to corruption of FEB data
+     * or due to large desynchronisation of the server clock w.r.t. FEB PPS
+     */
+    if(timestamp <= feb.last_accepted_timestamp) {
+      TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Event: \n"<< metadata;
+      TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
+      TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Omitted out of order timestamp: "<<sbndaq::BernCRTFragment::print_timestamp(timestamp) <<" ≤ "<<sbndaq::BernCRTFragment::print_timestamp(feb.last_accepted_timestamp);
+      return true;
+    }
+  }
+  return false;
+}
+
+
+uint64_t sbndaq::BernCRT_GeneratorBase::CalculateTimestamp(BernCRTEvent const& data, BernCRTFragmentMetadata & metadata) {
+  /**
+   * Calculate timestamp based on nanosecond from FEB and poll times measured by server
+   * see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
+   */
+  int ts0  = data.ts0;
+
+  //add PPS cable length offset modulo 1s
+  ts0 = (ts0 + feb_configuration[data.mac5].GetPPSOffset()) % (1000*1000*1000);
+  if(ts0 < 0) ts0 += 1000*1000*1000; //just in case the cable offset is negative (should be positive normally)
+
+  uint64_t mean_poll_time = metadata.last_poll_start()/2 + metadata.this_poll_end()/2;
+  int mean_poll_time_ns = mean_poll_time % (1000*1000*1000); 
+
+  if(ts0 - mean_poll_time_ns < -500*1000*1000)
+    return mean_poll_time - mean_poll_time_ns + ts0 + 1000*1000*1000;
+  else if(ts0 - mean_poll_time_ns > 500*1000*1000)
+    return mean_poll_time - mean_poll_time_ns + ts0 - 1000*1000*1000;
+  else
+    return mean_poll_time - mean_poll_time_ns + ts0;
+}
+
 
 void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
                                                     artdaq::FragmentPtrs & frags) {
@@ -193,77 +255,18 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
         metadata.feb_events_per_poll() * 1e9 / (metadata.this_poll_end() - metadata.last_poll_end()),
         "CRT rate", 5, artdaq::MetricMode::Average);
 
-    //calculate timestamp based on nanosecond from FEB and poll times measured by server
-    //see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
-    int ts0  = data.ts0;
+    const uint64_t timestamp = CalculateTimestamp(data, metadata);
 
-    //add PPS cable length offset modulo 1s
-    ts0 = (ts0 + feb_configuration[data.mac5].GetPPSOffset()) % (1000*1000*1000);
-    if(ts0 < 0) ts0 += 1000*1000*1000; //just in case the cable offset is negative (should be positive normally)
+    if(OmitHit(timestamp, metadata, feb, feb_id)) continue;
 
-    uint64_t mean_poll_time = metadata.last_poll_start()/2 + metadata.this_poll_end()/2;
-    int mean_poll_time_ns = mean_poll_time % (1000*1000*1000); 
+    metadata.set_omitted_events(metadata.feb_event_number() - feb.last_accepted_event_number - 1);
+    metadata.set_last_accepted_timestamp(feb.last_accepted_timestamp);
     
-    uint64_t timestamp = 0;
-
-    if(ts0 - mean_poll_time_ns < -500*1000*1000) {
-      timestamp = mean_poll_time - mean_poll_time_ns + ts0 + 1000*1000*1000;
-    }
-    else if(ts0 - mean_poll_time_ns > 500*1000*1000) {
-      timestamp = mean_poll_time - mean_poll_time_ns + ts0 - 1000*1000*1000;
-    }
-    else {
-      timestamp = mean_poll_time - mean_poll_time_ns + ts0;
-    }
-
-    if(omit_out_of_sync_events_) {
-      /**
-       * Omit events in which T0 value from FEB seems out of sync with server clock.
-       * This is a method to alleviate problem of "spikes".  Otherwise it should not
-       * be needed.  Under normal conditions server clock can be off by up to 500ms
-       * before the data starts to be corrupted.
-       */
-      if(
-          timestamp < metadata.last_poll_start() - out_of_sync_tolerance_ns_
-       || timestamp > metadata.this_poll_end()   + out_of_sync_tolerance_ns_) {
-        if(!feb.omitted_events) { //avoid spamming messages
-          TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
-          TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
-          TLOG(TLVL_WARNING) <<__func__<<"(feb_id=" << feb_id << ") Omitted FEB timestamp out of sync with server clock";
-        }
-        feb.omitted_events++;
-        continue;
-      }
-    }
-
-    if(omit_out_of_order_events_) {
-      /**
-       * Omit events with nonmonotonically growing timestamp
-       * This is a method to alleviate problem of "spikes"
-       * Out of order events may appear due to corruption of FEB data
-       * or due to large desynchronisation of the server clock w.r.t. FEB PPS
-       */
-       if(timestamp <= feb.last_accepted_timestamp) {
-         if(!feb.omitted_events) {//avoid spamming messages
-           TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
-           TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
-           TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Omitted out of order timestamp: "<<sbndaq::BernCRTFragment::print_timestamp(timestamp) <<" ≤ "<<sbndaq::BernCRTFragment::print_timestamp(feb.last_accepted_timestamp);
-         }
-         feb.omitted_events++;
-         continue;
-       }
-    }
+    feb.last_accepted_timestamp = timestamp;
+    feb.last_accepted_event_number = metadata.feb_event_number();
 
     TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
     TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
-
-    if(feb.omitted_events) {
-      TLOG(TLVL_WARNING) <<__func__<<"(feb_id=" << feb_id << ") Accepted timestamp after omitting "<< feb.omitted_events<<" of them. Timestamp: "<<sbndaq::BernCRTFragment::print_timestamp(timestamp) <<" Timestamp of previously accepted event "<<sbndaq::BernCRTFragment::print_timestamp(feb.last_accepted_timestamp);
-      metadata.set_omitted_events(feb.omitted_events);
-      feb.omitted_events = 0;
-      metadata.set_last_accepted_timestamp(feb.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
-    }
-    feb.last_accepted_timestamp = timestamp;
 
     //create our new fragment on the end of the frags vector
     frags.emplace_back( artdaq::Fragment::FragmentBytes(
@@ -277,7 +280,6 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
     //copy the BernCRTEvent into the fragment we just created
     memcpy(frags.back()->dataBeginBytes(), &data, sizeof(BernCRTEvent));
-
   } //loop over events in feb buffer
 
   //delete from the buffer all the events we've just put into frags
