@@ -581,12 +581,12 @@ void sbndaq::FEBDRV::pollfeb(uint8_t mac) {
    * NOTE: OK
    */
   
-  TLOG(TLVL_DEBUG+60)<<__func__<<"("<<mac<<") called";
+  TLOG(TLVL_DEBUG)<<__func__<<"("<<mac<<") called";
   dstmac[5] = mac;
   
   sendcommand(dstmac,FEB_RD_CDR,0,buf);
   rpkt.CMD=0; //AA: this is required for the logic of the loop. Perhaps it could be written more nicely, but I don't want to touch it at this point
-  TLOG(TLVL_DEBUG+61)<<__func__<<"("<<mac<<") completed";
+  TLOG(TLVL_DEBUG)<<__func__<<"("<<mac<<") completed";
 }
 
 std::vector<uint8_t> sbndaq::FEBDRV::GetMACs() {
