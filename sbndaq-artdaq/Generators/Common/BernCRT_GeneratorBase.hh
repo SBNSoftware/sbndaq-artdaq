@@ -112,11 +112,11 @@ namespace sbndaq {
 
     uint64_t run_start_time;
     
-    //workarounds for issues with FEBs, PPS
+    //workarounds
     bool omit_out_of_order_events_;
     bool omit_out_of_sync_events_;
     int32_t out_of_sync_tolerance_ns_;
-
+    uint64_t initial_delay_ns_;
   };
 
 }

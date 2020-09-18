@@ -44,15 +44,16 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
   std::vector<uint16_t> fragment_ids = ps_.get< std::vector<uint16_t> >("fragment_ids");
   std::sort(fragment_ids.begin(), fragment_ids.end());
 
-  omit_out_of_order_events_ = ps_.get<bool>("omit_out_of_order_events");
-  omit_out_of_sync_events_  = ps_.get<bool>("omit_out_of_sync_events");
-  out_of_sync_tolerance_ns_ = 1000000 * ps_.get<uint32_t>("out_of_sync_tolerance_ms");
+  omit_out_of_order_events_   = ps_.get<bool>("omit_out_of_order_events");
+  omit_out_of_sync_events_    = ps_.get<bool>("omit_out_of_sync_events");
+  out_of_sync_tolerance_ns_   = 1000000 * ps_.get<uint32_t>("out_of_sync_tolerance_ms");
+  feb_restart_period_         = 1e9 * ps_.get<uint32_t>("feb_restart_period_s");
+  initial_delay_ns_           = 1e9 * ps_.get<uint32_t>("initial_delay_s");
 
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
+  feb_poll_period_            = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
 
-  feb_restart_period_ = 1e9 * ps_.get<uint32_t>("feb_restart_period_s");
-  
-  feb_poll_period_ = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
+
 
   //Initialize buffers and calculate MAC5 addresses (last 8 bits)
   for( auto id : fragment_ids ) {
@@ -244,43 +245,47 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   TLOG(TLVL_DEBUG) <<__func__ << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " events";
   if(metricMan != nullptr) metricMan->sendMetric("max_feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Maximum);
 
-  //loop over all the CRTHit events in our buffer (for this FEB)
-  for(size_t i_e=0; i_e<buffer_end; ++i_e) {
-    BernCRTEvent const& data = feb.buffer[i_e].first;
-    BernCRTFragmentMetadata & metadata = feb.buffer[i_e].second;
+  //workaround: avoid processing hits at the beginning of the run, to prevent CRT from accumulating lot's of data before TPCs are ready
+  if(std::chrono::system_clock::now().time_since_epoch().count() - run_start_time > initial_delay_ns_) {
 
-    if(i_e == 0)
-      if(metricMan != nullptr) metricMan->sendMetric(
-        std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
-        metadata.feb_events_per_poll() * 1e9 / (metadata.this_poll_end() - metadata.last_poll_end()),
-        "CRT rate", 5, artdaq::MetricMode::Average);
+    //loop over all the CRTHit events in our buffer (for this FEB)
+    for(size_t i_e=0; i_e<buffer_end; ++i_e) {
+      BernCRTEvent const& data = feb.buffer[i_e].first;
+      BernCRTFragmentMetadata & metadata = feb.buffer[i_e].second;
 
-    const uint64_t timestamp = CalculateTimestamp(data, metadata);
+      if(i_e == 0)
+        if(metricMan != nullptr) metricMan->sendMetric(
+            std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
+            metadata.feb_events_per_poll() * 1e9 / (metadata.this_poll_end() - metadata.last_poll_end()),
+            "CRT rate", 5, artdaq::MetricMode::Average);
 
-    if(OmitHit(timestamp, metadata, feb, feb_id)) continue;
+      const uint64_t timestamp = CalculateTimestamp(data, metadata);
 
-    metadata.set_omitted_events(metadata.feb_event_number() - feb.last_accepted_event_number - 1);
-    metadata.set_last_accepted_timestamp(feb.last_accepted_timestamp);
-    
-    feb.last_accepted_timestamp = timestamp;
-    feb.last_accepted_event_number = metadata.feb_event_number();
+      if(OmitHit(timestamp, metadata, feb, feb_id)) continue;
 
-    TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
-    TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
+      metadata.set_omitted_events(metadata.feb_event_number() - feb.last_accepted_event_number - 1);
+      metadata.set_last_accepted_timestamp(feb.last_accepted_timestamp);
 
-    //create our new fragment on the end of the frags vector
-    frags.emplace_back( artdaq::Fragment::FragmentBytes(
-          sizeof(BernCRTEvent), //payload_size
-          sequence_id_++,
-          feb.fragment_id,
-          sbndaq::detail::FragmentType::BERNCRT,
-          metadata,
-          timestamp
-          ) );
+      feb.last_accepted_timestamp = timestamp;
+      feb.last_accepted_event_number = metadata.feb_event_number();
 
-    //copy the BernCRTEvent into the fragment we just created
-    memcpy(frags.back()->dataBeginBytes(), &data, sizeof(BernCRTEvent));
-  } //loop over events in feb buffer
+      TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
+      TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
+
+      //create our new fragment on the end of the frags vector
+      frags.emplace_back( artdaq::Fragment::FragmentBytes(
+            sizeof(BernCRTEvent), //payload_size
+            sequence_id_++,
+            feb.fragment_id,
+            sbndaq::detail::FragmentType::BERNCRT,
+            metadata,
+            timestamp
+            ) );
+
+      //copy the BernCRTEvent into the fragment we just created
+      memcpy(frags.back()->dataBeginBytes(), &data, sizeof(BernCRTEvent));
+    } //loop over events in feb buffer
+  }
 
   //delete from the buffer all the events we've just put into frags
   size_t new_buffer_size = EraseFromFEBBuffer(feb, buffer_end);
