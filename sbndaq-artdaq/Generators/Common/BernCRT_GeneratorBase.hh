@@ -71,9 +71,6 @@ namespace sbndaq {
     size_t nFEBs() { return MAC5s_.size(); }
     std::unordered_map< uint8_t, BernCRTFEBConfiguration > feb_configuration; //first number is the mac address.
 
-    std::size_t throttle_usecs_;        // Sleep at start of each call to getNext_(), in us
-    std::size_t throttle_usecs_check_;  // Period between checks for stop/pause during the sleep (must be less than, and an integer divisor of, throttle_usecs_)
-
     //These functions MUST be defined by the derived classes
     virtual void ConfigureStart() = 0; //called in start()
     virtual void ConfigureStop() = 0;  //called in stop()
@@ -100,7 +97,7 @@ namespace sbndaq {
 
 
     bool GetData();
-    bool FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
+    void FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
     size_t EraseFromFEBBuffer(FEB_t &, size_t const&);
 

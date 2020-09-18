@@ -50,18 +50,10 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
 
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
 
-  throttle_usecs_ = ps_.get<size_t>("throttle_usecs");
-  throttle_usecs_check_ = ps_.get<size_t>("throttle_usecs_check");
-
   feb_restart_period_ = 1e9 * ps_.get<uint32_t>("feb_restart_period_s");
   
   feb_poll_period_ = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
 
-  if (throttle_usecs_ > 0 && (throttle_usecs_check_ >= throttle_usecs_ ||
-        throttle_usecs_ % throttle_usecs_check_ != 0) ) { //check FHiCL file validity
-    throw cet::exception(TRACE_NAME "Disallowed combination of throttle_usecs and throttle_usecs_check (see BernCRT.hh for rules)");
-  }
-  
   //Initialize buffers and calculate MAC5 addresses (last 8 bits)
   for( auto id : fragment_ids ) {
     uint8_t MAC5 = id & 0xff; //last 8 bits of fragment ID are last 8 bits of FEB MAC5
@@ -178,7 +170,7 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 /*-----------------------------------------------------------------------*/
 
 
-bool sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
+void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
                                                     artdaq::FragmentPtrs & frags) {
 
   TLOG(TLVL_DEBUG+3) << __func__<<"(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
@@ -297,8 +289,6 @@ bool sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
   TLOG(TLVL_DEBUG+5) <<__func__<< "(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
-
-  return false;
 } //FillFragment
 
 /*-----------------------------------------------------------------------*/
@@ -347,29 +337,13 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   if(metricMan != nullptr) metricMan->sendMetric("time_outside_getNext_ms",
      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_end, t_start),
      "CRT performance", 5, artdaq::MetricMode::Maximum);
-  
-  //throttling...
-  //TODO why do we need it? Isn't it against the philosophy of artdaq?
-  if (throttle_usecs_ > 0) {
-    size_t nchecks = throttle_usecs_ / throttle_usecs_check_;
-    
-    for (size_t i_c = 0; i_c < nchecks; ++i_c) {
-      usleep( throttle_usecs_check_ );
-      
-      if (should_stop()) {
-        return false;
-      }
-    }
-  } else {
-    if (should_stop()) {
-      return false;
-    }
+
+  if (should_stop()) {
+    return false;
   }
-  
-  for(auto const& MAC5 : MAC5s_){
-    while(true){
-      if(!FillFragment(MAC5, frags)) break;
-    }
+
+  for(auto const& MAC5 : MAC5s_) {
+    FillFragment(MAC5, frags);
   }
 
   TLOG(TLVL_DEBUG+11) <<__func__<< ": completed with frags.size = " << frags.size();
