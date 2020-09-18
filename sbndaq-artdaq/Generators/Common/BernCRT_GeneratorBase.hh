@@ -92,6 +92,9 @@ namespace sbndaq {
     virtual void Cleanup();        //called in destructor
     
     int64_t steady_clock_offset; //difference between system and steady clock
+
+    uint64_t feb_restart_period_;
+    uint32_t feb_poll_period_;
     
   private:
 
@@ -111,16 +114,14 @@ namespace sbndaq {
     uint32_t sequence_id_;
 
     uint64_t run_start_time;
+    
+    //workarounds for issues with FEBs, PPS
+    bool omit_out_of_order_events_;
+    bool omit_out_of_sync_events_;
+    int32_t out_of_sync_tolerance_ns_;
+
   };
 
-  //workarounds for issues with FEBs, PPS
-  bool omit_out_of_order_events_;
-  bool omit_out_of_sync_events_;
-  int32_t out_of_sync_tolerance_ns_;
-
-  uint64_t feb_restart_period_;
-  
-  uint32_t feb_poll_period_;
 }
 
 #endif //sbndaq_artdaq_Generators_BernCRT_GeneratorBase_hh
