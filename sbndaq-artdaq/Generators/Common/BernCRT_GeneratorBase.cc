@@ -246,8 +246,17 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   if(metricMan != nullptr) metricMan->sendMetric("max_feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Maximum);
 
   //workaround: avoid processing hits at the beginning of the run, to prevent CRT from accumulating lot's of data before TPCs are ready
-  if(std::chrono::system_clock::now().time_since_epoch().count() - run_start_time > initial_delay_ns_) {
+  static bool discard_data = true;
+  if(discard_data) {
+    if(std::chrono::system_clock::now().time_since_epoch().count() - run_start_time > initial_delay_ns_) {
+      discard_data = false;
+      if(initial_delay_ns_) {
+        TLOG(TLVL_INFO) <<__func__ << "() CRT begins to send data after initial delay of "<< (initial_delay_ns_/1000000000) <<" seconds";
+      }
+    }
+  }
 
+  if(!discard_data) {
     //loop over all the CRTHit events in our buffer (for this FEB)
     for(size_t i_e=0; i_e<buffer_end; ++i_e) {
       BernCRTEvent const& data = feb.buffer[i_e].first;
