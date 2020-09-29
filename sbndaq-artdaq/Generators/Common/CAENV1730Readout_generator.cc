@@ -78,9 +78,6 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
     data << std::dec;
 
-  
-  //<--  configureInterrupts();
-
   if(!fOK)
   {
     CAEN_DGTZ_CloseDigitizer(fHandle);
@@ -100,7 +97,8 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   TLOG(TCONFIG) << "Configuration complete with OK=" << fOK << TLOG_ENDL;
 }
 
-void sbndaq::CAENV1730Readout::configureInterrupts() {
+void sbndaq::CAENV1730Readout::configureInterrupts() 
+{
   CAEN_DGTZ_EnaDis_t  state,stateOut;
   uint8_t             interruptLevel,interruptLevelOut;
   uint32_t            statusId __attribute__((unused)),statusIdOut __attribute__((unused));
@@ -292,7 +290,7 @@ void sbndaq::CAENV1730Readout::Configure()
   }
 
   ConfigureAcquisition();
-  configureInterrupts();
+  //configureInterrupts();
 
   if (fCalibrateOnConfig)     { RunADCCalibration();  }
   // Does lock bit clear on V1730 reset?   If not, always call this routine
@@ -807,7 +805,7 @@ void sbndaq::CAENV1730Readout::start()
 
   ConfigureDataBuffer();
   total_data_size = 0;
-  last_sent_rwcounter = -1;
+  last_sent_rwcounter = 0;
 
   if((CAEN_DGTZ_AcqMode_t)(fCAEN.acqMode)==CAEN_DGTZ_AcqMode_t::CAEN_DGTZ_SW_CONTROLLED)
     {
@@ -1073,9 +1071,12 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
 
     if( readoutwindow_event_counter_gap > 1u ){
-      TLOG (TLVL_ERROR) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
+      if ( last_sent_rwcounter > 0 )
+      {
+	TLOG (TLVL_ERROR) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
                         << readoutwindow_event_counter_gap;
-      metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+      }
     }
 
     fragments.emplace_back(nullptr);
