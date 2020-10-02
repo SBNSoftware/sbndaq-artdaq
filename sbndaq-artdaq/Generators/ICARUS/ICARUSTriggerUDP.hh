@@ -16,6 +16,8 @@
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerUDPFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSPMTGateFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -64,8 +66,10 @@ namespace sbndaq
     // are the FHiCL variable names with a "_" appended
 
     uint32_t fragment_id_;
+    uint32_t fragment_id_pmt_;
     size_t max_fragment_size_bytes_;
-    
+    size_t max_fragment_size_bytes_pmt_;
+
     int configport_;
     std::string ip_config_;
 
@@ -78,6 +82,12 @@ namespace sbndaq
 
     struct sockaddr_in si_data_;
     int datasocket_;
+
+    int pmtdataport_;
+    std::string ip_data_pmt_;
+
+    struct sockaddr_in si_pmtdata_;
+    int pmtsocket_;
 
     //retry for init msg
     int n_init_retries_;
