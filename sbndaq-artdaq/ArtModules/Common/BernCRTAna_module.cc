@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////
-// Class:       BernCRTZMQAna
+// Class:       BernCRTAna
 // Module Type: analyzer
-// File:        BernCRTZMQAna_module.cc
+// File:        BernCRTAna_module.cc
 // Description: Makes a tree with waveform information.
 ////////////////////////////////////////////////////////////////////////
 
@@ -12,7 +12,7 @@
 
 #include "canvas/Utilities/Exception.h"
 
-#include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragment.hh"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/ContainerFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
@@ -31,14 +31,14 @@
 #include <iostream>
 
 namespace sbndaq {
-  class BernCRTZMQAna;
+  class BernCRTAna;
 }
 
-class sbndaq::BernCRTZMQAna : public art::EDAnalyzer {
+class sbndaq::BernCRTAna : public art::EDAnalyzer {
 
 public:
-  explicit BernCRTZMQAna(fhicl::ParameterSet const & pset); // explicit doesn't allow for copy initialization
-  virtual ~BernCRTZMQAna();
+  explicit BernCRTAna(fhicl::ParameterSet const & pset); // explicit doesn't allow for copy initialization
+  virtual ~BernCRTAna();
   
   virtual void analyze(art::Event const & evt);
   
@@ -74,7 +74,7 @@ private:
 };
 
 //Define the constructor
-sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
+sbndaq::BernCRTAna::BernCRTAna(fhicl::ParameterSet const & pset)
   : EDAnalyzer(pset)
 {
 
@@ -109,19 +109,19 @@ sbndaq::BernCRTZMQAna::BernCRTZMQAna(fhicl::ParameterSet const & pset)
   events->Branch("fragment_timestamp",        &fragment_timestamp,          "fragment_timestamp/l");
 }
 
-sbndaq::BernCRTZMQAna::~BernCRTZMQAna()
+sbndaq::BernCRTAna::~BernCRTAna()
 {
 }
 
-void sbndaq::BernCRTZMQAna::analyze_fragment(artdaq::Fragment & frag) {
+void sbndaq::BernCRTAna::analyze_fragment(artdaq::Fragment & frag) {
 
-  BernCRTZMQFragment bern_fragment(frag);
+  BernCRTFragment bern_fragment(frag);
 
   fragment_timestamp        = frag.timestamp();
   sequence_id               = frag.sequenceID();
 
   //event data
-  BernCRTZMQEvent const* bevt = bern_fragment.eventdata();
+  BernCRTEvent const* bevt = bern_fragment.eventdata();
 
 //  TLOG(TLVL_INFO)<<*bevt;
 
@@ -136,7 +136,7 @@ void sbndaq::BernCRTZMQAna::analyze_fragment(artdaq::Fragment & frag) {
   for(int ch=0; ch<32; ch++) adc[ch] = bevt->ADC(ch);
 
   //metadata
-  const BernCRTZMQFragmentMetadata* md = bern_fragment.metadata();
+  const BernCRTFragmentMetadata* md = bern_fragment.metadata();
 //  TLOG(TLVL_INFO)<<*md;
 
   run_start_time            = md->run_start_time();
@@ -152,7 +152,7 @@ void sbndaq::BernCRTZMQAna::analyze_fragment(artdaq::Fragment & frag) {
 }
 
 
-void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
+void sbndaq::BernCRTAna::analyze(art::Event const & evt)
 {
   art::EventNumber_t eventNumber = evt.event();
 //  TLOG(TLVL_INFO)<<" Processing event "<<eventNumber;
@@ -167,7 +167,7 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
       //Container fragment
       for (auto cont : *handle) {
         artdaq::ContainerFragment contf(cont);
-        if (contf.fragment_type() != sbndaq::detail::FragmentType::BERNCRTZMQ)
+        if (contf.fragment_type() != sbndaq::detail::FragmentType::BERNCRT)
           continue;
         for (size_t ii = 0; ii < contf.block_count(); ++ii)
           analyze_fragment(*contf[ii].get());
@@ -175,12 +175,12 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
     }
     else {
       //normal fragment
-      if (handle->front().type() != sbndaq::detail::FragmentType::BERNCRTZMQ) continue;
+      if (handle->front().type() != sbndaq::detail::FragmentType::BERNCRT) continue;
       for (auto frag : *handle) 
         analyze_fragment(frag);
     }
   }
 } //analyze
 
-DEFINE_ART_MODULE(sbndaq::BernCRTZMQAna)
+DEFINE_ART_MODULE(sbndaq::BernCRTAna)
 //this is where the name is specified

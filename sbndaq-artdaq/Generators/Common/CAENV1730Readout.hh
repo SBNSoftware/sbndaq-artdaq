@@ -82,7 +82,8 @@ namespace sbndaq
 
     typedef enum {
       DYNAMIC_RANGE      = 0x8028,
-      TRG_OUT_DELAY      = 0x8070,
+      TRG_OUT_WIDTH      = 0x8070,
+      TRG_OUT_WIDTH_CH   = 0x1070,
       ACQ_CONTROL        = 0x8100,
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,
@@ -137,6 +138,7 @@ namespace sbndaq
     uint32_t fTrigInLevel;
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
+    bool     fLockTempCalibration;
     uint32_t fFragmentID;
 
     bool fUseTimeTagForTimeStamp;
@@ -166,6 +168,10 @@ namespace sbndaq
     void ConfigureLVDS();
     void ConfigureSelfTriggerMode();
     void RunADCCalibration();
+    void SetLockTempCalibration(bool onOff, uint32_t ch);
+    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
+    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+
 
     bool WaitForTrigger();
     bool GetData();

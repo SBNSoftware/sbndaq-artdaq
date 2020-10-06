@@ -4,6 +4,8 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
  LIB_LIBRARIES sbndaq-artdaq-core_Overlays
  	       sbndaq-artdaq-core_Overlays_Common
  	       sbndaq-artdaq-core_Overlays_ICARUS #icarus-artdaq_Products
+ EXCLUDE
+ Icarus_fragmentNameHelper.cc
 )
 
 simple_plugin(IcarusArtdaqBuildInfo "module"
@@ -42,7 +44,7 @@ simple_plugin(PhysCrateViewer "module"
 	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )
 
-			simple_plugin(PhysCrateSimpleAna "module"
+simple_plugin(PhysCrateSimpleAna "module"
 	sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS
 	      art_root_io_tfile_support ${ROOT_CORE}
@@ -60,15 +62,14 @@ simple_plugin(ICARUSTriggerUDPSimpleAna "module"
 	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )	
 
-simple_plugin(IcarusFragmentNamingService "service"
-  artdaq_ArtModules_ArtdaqFragmentNamingService_service
+simple_plugin(Icarus "fragmentNameHelper"
+  artdaq-core_Data_Artdaq_fragmentNameHelper
   artdaq-core_Data
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq-core_Overlays_ICARUS
-  art_Framework_Services_Registry
-  MF_MessageLogger
-  fhiclcpp)
+  ${ARTDAQ-CORE_UTILITIES}
+  ${MF_MESSAGELOGGER}
+  ${FHICLCPP}
+  )
 
-# Subdirectories.
-#add_subdirectory(DQM)

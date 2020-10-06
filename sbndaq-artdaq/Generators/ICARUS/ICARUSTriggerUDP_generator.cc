@@ -111,7 +111,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
       exit(1);
     }
   
-  fEventCounter = 0;
+  fEventCounter = 1;
 }
 bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 {

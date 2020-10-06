@@ -6,7 +6,7 @@ PROJECT_NAME=sbndaq-artdaq
 PROJECT_SOURCE_GIT_PREFIX=${PROJECT_SOURCE_GIT_PREFIX:-'https://github.com/sbnsoftware'}
 PRODUCTS=${PRODUCTS:-'/cvmfs/fermilab.opensciencegrid.org/products/artdaq:/cvmfs/fermilab.opensciencegrid.org/products/larsoft'}
 
-ARTDAQ_VERSION=${ARTDAQ_VERSION:-"v3_08_00"}
+ARTDAQ_VERSION=${ARTDAQ_VERSION:-"v3_09_01"}
 
 #main script
 PRODUCTS=$(for d in $(echo $PRODUCTS | tr ":" " "); do [[ -d $d ]] && echo -n "$d:"; done)
@@ -161,6 +161,7 @@ echo "generate manifest using product_deps and pull products from scisoft"
 echo
 #unset PRODUCTS
 source ${products_dir}/setup || exit 1
+
 
 setup python v3_7_2
 [[ -d ${python3env_dir} ]] && rm -rf ${python3env_dir}
