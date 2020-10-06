@@ -25,6 +25,11 @@ simple_plugin(PhysCrateDump "module"
               sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS)
 
+simple_plugin(ICARUSTriggerUDPDump "module" 
+				   ${ARTDAQ-CORE_UTILITIES}
+              sbndaq-artdaq-core_Overlays
+	      sbndaq-artdaq-core_Overlays_ICARUS)
+
 simple_plugin(PhysCrateWriteICARUSDataFile "module"
          			${ARTDAQ-CORE_UTILITIES}
               sbndaq-artdaq-core_Overlays
@@ -48,6 +53,14 @@ simple_plugin(PhysCrateSimpleAna "module"
 	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )
 
+simple_plugin(ICARUSTriggerUDPSimpleAna "module"
+	      sbndaq-artdaq-core_Overlays
+	      sbndaq-artdaq-core_Overlays_ICARUS
+	      art_root_io_tfile_support ${ROOT_CORE}
+	      art_Framework_Services_Registry
+	      art_root_io_TFileService_service
+	      ${ARTDAQ-CORE_UTILITIES}
+	      ${ROOT_BASIC_LIB_LIST} )	
 
 simple_plugin(Icarus "fragmentNameHelper"
   artdaq-core_Data_Artdaq_fragmentNameHelper

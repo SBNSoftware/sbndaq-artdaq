@@ -64,7 +64,7 @@ icarus::PhysCrateDump::~PhysCrateDump()
 
 void icarus::PhysCrateDump::analyze(art::Event const & evt)
 {
-  
+    
   art::EventNumber_t eventNumber = evt.event();
   
   // ***********************

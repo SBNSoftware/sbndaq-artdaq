@@ -70,6 +70,9 @@ simple_plugin(PhysCrateData "generator"
 
 simple_plugin(ICARUSTriggerUDP "generator"
 #    artdaq-core-demo_Overlays
+    sbndaq-artdaq-core_Overlays
+    sbndaq-artdaq-core_Overlays_ICARUS
+    sbndaq-artdaq_Common_Utilities
     artdaq_Generators
     artdaq_DAQdata
     artdaq-core_Utilities
@@ -81,3 +84,21 @@ simple_plugin(ICARUSTriggerUDP "generator"
     ${CETLIB}
  ${CETLIB_EXCEPT}
     )
+
+#JCZ - obsolete interpretation
+#simple_plugin(ICARUSPMTGate "generator"
+#    artdaq-core-demo_Overlays
+#    sbndaq-artdaq-core_Overlays
+#    sbndaq-artdaq-core_Overlays_ICARUS
+#    sbndaq-artdaq_Common_Utilities
+#    artdaq_Generators
+#    artdaq_DAQdata
+#    artdaq-core_Utilities
+#    artdaq-core_Data
+#  ${Boost_SYSTEM_LIBRARY}
+#  canvas
+#    ${FHICLCPP}
+#  ${MESSAGEFACILITY_LIBS}
+#    ${CETLIB}
+# ${CETLIB_EXCEPT}
+#    )

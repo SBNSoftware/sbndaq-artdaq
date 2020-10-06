@@ -15,6 +15,9 @@
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
+#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerUDPFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSPMTGateFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -51,9 +54,9 @@ namespace sbndaq
     void resume() override;
     
     void send(const Command_t);
-    int poll_with_timeout(int);
+    int poll_with_timeout(int,std::string,int);
     //int read(int,uint16_t*);
-    int read(int,char*);
+    int read(int, std::string, struct sockaddr_in&,int,char*);
     
     int send_TTLK_INIT(int,int);
     void send_TRIG_VETO();
@@ -61,17 +64,35 @@ namespace sbndaq
     
     // FHiCL-configurable variables. Note that the C++ variable names
     // are the FHiCL variable names with a "_" appended
-    
+
+    uint32_t fragment_id_;
+    uint32_t fragment_id_pmt_;
+    size_t max_fragment_size_bytes_;
+    size_t max_fragment_size_bytes_pmt_;
+
+    int configport_;
+    std::string ip_config_;
+
     int dataport_;
-    std::string ip_;
+    std::string ip_data_;
 
     //Socket parameters
+    struct sockaddr_in si_config_;
+    int configsocket_;
+
     struct sockaddr_in si_data_;
     int datasocket_;
+
+    int pmtdataport_;
+    std::string ip_data_pmt_;
+
+    struct sockaddr_in si_pmtdata_;
+    int pmtsocket_;
 
     //retry for init msg
     int n_init_retries_;
     int n_init_timeout_ms_;
+    int fEventCounter;
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */

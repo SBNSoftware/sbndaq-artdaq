@@ -1,8 +1,8 @@
 add_subdirectory(Common)
 
-IF(ICARUS_BUILD)
+#IF(ICARUS_BUILD)
 add_subdirectory(ICARUS)
-ENDIF()
+#ENDIF()
 
 IF(SBND_BUILD)
 add_subdirectory(SBND)
