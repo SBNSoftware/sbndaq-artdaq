@@ -1,6 +1,6 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq    v0_07_00
+parent sbndaq_artdaq    v0_07_01
 defaultqual     e19:s94
 
 # These optional lines define the installed directories where
@@ -18,8 +18,8 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_09_01
-sbndaq_artdaq_core    v0_07_00
+artdaq                v3_09_02
+sbndaq_artdaq_core    v0_07_01
 caencomm              v1_2a
 caenvme               v2_50
 caendigitizer         v2_12_0
