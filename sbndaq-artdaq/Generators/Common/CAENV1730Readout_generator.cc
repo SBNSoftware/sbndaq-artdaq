@@ -453,8 +453,9 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     sbndaq::CAENDecoder::checkError(retcod,"ReadTRGOutputConfig",fBoardID);
 
     //    data |= ( ENABLE_LVDS_TRIGGER | ENABLE_TRG_OUT );
-    data |= ( ENABLE_TRG_OUT );
-    data &= ~ TRIGGER_LOGIC ; // Choose OR Logic
+    // wes and bill commenting out 10/14/2020 to get DaisyChain to work
+    //data |= ( ENABLE_TRG_OUT );
+    //data &= ~ TRIGGER_LOGIC ; // Choose OR Logic
 
     retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_TRG_OUT_CONTROL, data);
     sbndaq::CAENDecoder::checkError(retcod,"WriteTRGOutputConfig",fBoardID);
