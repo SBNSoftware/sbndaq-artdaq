@@ -18,6 +18,7 @@ namespace sbndaq {
     void ConfigureStart(); //called in start()
     void ConfigureStop();  //called in stop()
 
+    void VerifyMACConfiguration(const std::vector<uint8_t> &  hardware_macs);
 
     size_t GetFEBData();
 
