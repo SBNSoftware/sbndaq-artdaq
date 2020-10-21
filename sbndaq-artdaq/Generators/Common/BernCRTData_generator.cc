@@ -15,6 +15,7 @@
 #define id "BernCRT"
 #define TRACE_NAME "BernCRTData"
 
+
 sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
   :
   BernCRT_GeneratorBase(ps) {
@@ -29,26 +30,11 @@ sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
   
   //compare detected list of FEBs with that declared in FHiCL file
   auto hardware_macs = febdrv.GetMACs();
-  if(hardware_macs.size() != nFEBs()) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Number of FEBs seen by febdrv (" << std::to_string(hardware_macs.size()) << ") differs from the one defined in FCL file (" + std::to_string(nFEBs()) + ")!";
-    throw cet::exception( std::string(TRACE_NAME) + "::" + __func__ + "() Number of FEBs seen by febdrv (" + std::to_string(hardware_macs.size()) + ") differs from the one defined in FCL file (" + std::to_string(nFEBs()) + ")!");
-  }
-  else {
-    //here we assume both hardware_macs and MAC5s_ are sorted
-    for(unsigned int i = 0; i < nFEBs(); i++) {
-      if(hardware_macs[i] > MAC5s_[i]) {
-        TLOG(TLVL_ERROR) <<  __func__ <<"() MAC address " << std::to_string(MAC5s_[i]) << " declared in FHiCL configuration not found! Check hardware MAC configuration!";
-        throw cet::exception( std::string(TRACE_NAME) + __func__ + "() MAC address " +std::to_string(MAC5s_[i]) + " declared in FHiCL configuration not found. Check hardware MAC configuration!");
-      }
-      if(hardware_macs[i] < MAC5s_[i]) {
-        TLOG(TLVL_ERROR) <<  __func__ <<"() found FEB with MAC address " << std::to_string(hardware_macs[i]) << " not declared in FHiCL configuration";
-        throw cet::exception( std::string(TRACE_NAME) + __func__ + "() found FEB with MAC address " +std::to_string(hardware_macs[i]) + " not declared in FHiCL configuration!");
-      }
-    }
-  }
-  
+  VerifyMACConfiguration(hardware_macs);
+
+
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TLOG(TLVL_DEBUG+23) << __func__ << " Reading configuration for MAC5 #" << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
+    TLOG(TLVL_DEBUG) << __func__ << " Reading configuration for MAC5 #" << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
     feb_configuration[MAC5s_[iFEB]] = sbndaq::BernCRTFEBConfiguration(ps_, iFEB); //create configuration object
   }
 
@@ -127,6 +113,32 @@ void sbndaq::BernCRTData::StartFebdrv() {
 
   last_restart_time = std::chrono::system_clock::now();
 }
+
+void sbndaq::BernCRTData::VerifyMACConfiguration(const std::vector<uint8_t> &  hardware_macs) {
+  /**
+   * Check if the FEB list defined in FHiCL file agrees with FEBs detected by febdrv
+   */
+
+  //check number of FEBs
+  bool configuration_ok = (hardware_macs.size() == nFEBs());
+
+  //check FEB MAC addresses
+  //here we rely on both hardware_macs and MAC5s_ being sorted already
+  for(unsigned int i = 0; i < nFEBs() && configuration_ok; i++) {
+    configuration_ok = (hardware_macs[i] == MAC5s_[i]);
+  }
+
+  //print error message and crash
+  if(!configuration_ok) {
+    std::string error_message = __func__;
+    error_message += "() List of "+std::to_string(MAC5s_.size())+ " FEBs declared in the FHiCL file (dec):";
+    for(auto m : MAC5s_) error_message += " " + std::to_string(m);
+    error_message += " doesn't match list of " + std::to_string(hardware_macs.size()) + " detected FEBs:";
+    for(auto h : hardware_macs) error_message += " " + std::to_string(h);
+    TLOG(TLVL_ERROR) << error_message;
+    throw cet::exception( std::string(TRACE_NAME) + " " + error_message );
+  }
+} //VerifyMACConfiguration
 
 uint64_t sbndaq::BernCRTData::GetTimeSinceLastRestart() {
   return (std::chrono::system_clock::now() -  last_restart_time).count();

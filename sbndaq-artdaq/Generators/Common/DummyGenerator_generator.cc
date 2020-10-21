@@ -42,8 +42,8 @@ bool sbndaq::DummyGenerator::getNext_(artdaq::FragmentPtrs& frags) {
   while(std::chrono::system_clock::now() > timestamp_)  {
     metadata_.fragment_fill_time_ = std::chrono::system_clock::now().time_since_epoch().count();
 
-    TLOG(TLVL_INFO)<<__func__
-      <<" Sending fragment "<<ev_counter()<<" ("
+    TLOG(TLVL_DEBUG)<<__func__
+      <<"() Sending fragment "<<ev_counter()<<" ("
       <<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp_.time_since_epoch().count())
       <<") after "<<
       (metadata_.fragment_fill_time_ - timestamp_.time_since_epoch().count())/1e6
