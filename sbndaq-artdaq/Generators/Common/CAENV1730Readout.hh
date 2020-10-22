@@ -108,17 +108,17 @@ namespace sbndaq
     } IO_MASK_t;
 
     enum {
-      TERROR    = 0,
-      TWARNING  = 1,
-      TINFO     = 2,
-      TDEBUG    = 3,
-      TCONFIG   = 4,
-      TSTART    = 5,
-      TSTOP     = 6,
-      TSTATUS   = 7,
-      TGETNEXT  = 8,
-      TGETDATA  = 9,
-      TMAKEFRAG = 10,
+      TERROR    = TLVL_ERROR,
+      TWARNING  = TLVL_WARNING,
+      TINFO     = TLVL_INFO,
+      TDEBUG    = TLVL_DEBUG,
+      TCONFIG   = 9,
+      TSTART    = 10,
+      TSTOP     = 11,
+      TSTATUS   = 12,
+      TGETNEXT  = 13,
+      TGETDATA  = 14,
+      TMAKEFRAG = 15,
       TTEMP     = 30
     };
 
