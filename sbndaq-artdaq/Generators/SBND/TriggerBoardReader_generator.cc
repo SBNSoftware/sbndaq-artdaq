@@ -194,7 +194,6 @@ bool sbndaq::TriggerBoardReader::getNext_(artdaq::FragmentPtrs & frags) {
     if ( ! temp_frag ) continue ;
 
     sent_bytes += temp_frag -> dataSizeBytes() ;
-    temp_frag -> setSequenceID( ev_counter() ) ;
 
     frags.emplace_back( temp_frag ) ;
 
@@ -423,9 +422,10 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
   }
 
+
   fragptr -> resizeBytes( word_counter * word_bytes ) ;
   fragptr -> setUserType( detail::FragmentType::PTB ) ;
-  fragptr -> setSequenceID( ev_counter() ) ;
+  fragptr -> setSequenceID( ev_counter_inc() ) ;
   fragptr -> setFragmentID( fragment_id() ) ;
 
   fragptr -> setTimestamp( timestamp ) ;

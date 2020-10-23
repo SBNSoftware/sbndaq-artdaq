@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <time.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include "CAENDecoder.hh"
@@ -77,9 +78,6 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
     data << std::dec;
 
-  
-  //<--  configureInterrupts();
-
   if(!fOK)
   {
     CAEN_DGTZ_CloseDigitizer(fHandle);
@@ -99,7 +97,8 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   TLOG(TCONFIG) << "Configuration complete with OK=" << fOK << TLOG_ENDL;
 }
 
-void sbndaq::CAENV1730Readout::configureInterrupts() {
+void sbndaq::CAENV1730Readout::configureInterrupts() 
+{
   CAEN_DGTZ_EnaDis_t  state,stateOut;
   uint8_t             interruptLevel,interruptLevelOut;
   uint32_t            statusId __attribute__((unused)),statusIdOut __attribute__((unused));
@@ -223,9 +222,6 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fTrigInLevel  = ps.get<uint32_t>("TrigInLevel",0); // TRG_IN on level (1) or edge (0)
   TLOG(TINFO)<<__func__ << ": TrigInLevel=" << fTrigInLevel;
 
-  fTrigOutDelay = ps.get<uint32_t>("TrigOutDelay",0); // TRG_OUT delay, 16 nsec ticks
-  TLOG(TINFO)<<__func__ << ": TrigOutDelay=" << fTrigOutDelay;
-
   fSelfTriggerMode = ps.get<uint32_t>("SelfTriggerMode"); 
   TLOG(TINFO)<<__func__ << ": SelfTriggerMode=" << fSelfTriggerMode;
 
@@ -244,6 +240,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 
   fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig");
   TLOG(TINFO) <<__func__ <<": CalibrateOnConfig=" << fCalibrateOnConfig;
+
+  fLockTempCalibration = ps.get<bool>("LockTempCalibration");
+  TLOG(TINFO) <<__func__ <<": LockTempCalibration=" << fLockTempCalibration;
 
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
@@ -293,8 +292,15 @@ void sbndaq::CAENV1730Readout::Configure()
   ConfigureAcquisition();
   configureInterrupts();
 
-  if(fCalibrateOnConfig){
-    RunADCCalibration();}
+  if (fCalibrateOnConfig)     { RunADCCalibration();  }
+  // Does lock bit clear on V1730 reset?   If not, always call this routine
+  if (fLockTempCalibration )  
+  { 
+    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+    {
+      SetLockTempCalibration(true,ch);
+    }
+  }
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure() done." << TLOG_ENDL;
 }
@@ -304,6 +310,109 @@ void sbndaq::CAENV1730Readout::RunADCCalibration()
   TLOG_ARB(TINFO,TRACE_NAME) << "Running calibration..." << TLOG_ENDL;
   auto retcode = CAEN_DGTZ_Calibrate(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
+}
+
+// Following SPI code is from CAEN
+CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value)
+{
+  uint32_t SPIBusy = 1;
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+  uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
+  uint32_t addressingRegAddr  = 0x80B4;
+  uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
+  uint32_t val;
+
+  while(SPIBusy) 
+  {
+    if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
+    {
+      return CAEN_DGTZ_CommError;
+    }
+
+    SPIBusy = (SPIBusy>>2)&0x1;
+    if (!SPIBusy) 
+    {
+      if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
+      { return CAEN_DGTZ_CommError;}
+
+      if((retcod = CAEN_DGTZ_ReadRegister(handle, valueRegAddr, &val)) != CAEN_DGTZ_Success)
+      { return CAEN_DGTZ_CommError;}
+    }
+    *value = (uint8_t)val;
+    usleep(1000);
+  }
+  return CAEN_DGTZ_Success;
+}
+
+CAEN_DGTZ_ErrorCode CAENV1730Readout::WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value)
+{
+  uint32_t SPIBusy = 1;
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+    
+  uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
+  uint32_t addressingRegAddr  = 0x80B4;
+  uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
+
+  while (SPIBusy) 
+  {
+    if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
+    {
+      return CAEN_DGTZ_CommError;
+    }
+
+    SPIBusy = (SPIBusy>>2)&0x1;
+    if (!SPIBusy) 
+    {
+      if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
+      {  return CAEN_DGTZ_CommError;}
+      if((retcod = CAEN_DGTZ_WriteRegister(handle, valueRegAddr, (uint32_t)value)) != CAEN_DGTZ_Success)
+      { return CAEN_DGTZ_CommError;}
+    }
+    usleep(1000);
+  }
+  return CAEN_DGTZ_Success;
+}
+
+
+void sbndaq::CAENV1730Readout::SetLockTempCalibration(bool onOff, uint32_t ch)
+{
+  CAEN_DGTZ_ErrorCode retcod;
+  uint8_t lock, ctrl;
+  TLOG_ARB(TINFO,TRACE_NAME) << "Locking Temperature Calibration Adjustments, channel " << ch << TLOG_ENDL;
+
+  // Following code comes from CAEN
+  // enter engineering functions
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0x59);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0x1A);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0x11);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0x7A, (uint8_t)0xAC);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+  
+  // read lock value
+  retcod = ReadSPIRegister (fHandle, ch, (uint32_t)0xA7, &lock);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  // write lock value
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0xA5, lock);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  // enable lock
+  retcod = ReadSPIRegister (fHandle, ch, (uint32_t)0xA4, &ctrl);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  if (onOff) { ctrl |= 0x4;}  // set bit 2
+  else       { ctrl &= ~0x4;}
+  retcod = WriteSPIRegister(fHandle, ch, (uint32_t)0xA4, ctrl);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
+
+  retcod = ReadSPIRegister (fHandle, ch, (uint32_t)0xA4, &ctrl);
+  sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
 }
 
 void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
@@ -344,8 +453,9 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     sbndaq::CAENDecoder::checkError(retcod,"ReadTRGOutputConfig",fBoardID);
 
     //    data |= ( ENABLE_LVDS_TRIGGER | ENABLE_TRG_OUT );
-    data |= ( ENABLE_TRG_OUT );
-    data &= ~ TRIGGER_LOGIC ; // Choose OR Logic
+    // wes and bill commenting out 10/14/2020 to get DaisyChain to work
+    //data |= ( ENABLE_TRG_OUT );
+    //data &= ~ TRIGGER_LOGIC ; // Choose OR Logic
 
     retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_TRG_OUT_CONTROL, data);
     sbndaq::CAENDecoder::checkError(retcod,"WriteTRGOutputConfig",fBoardID);
@@ -549,20 +659,19 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
     }
   }
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width (maybe?) to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
-  retcode = CAEN_DGTZ_WriteRegister(fHandle,0x8070,fCAEN.triggerPulseWidth);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+  retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH,fCAEN.triggerPulseWidth);
   sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,0x8070,&readback);
-  CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
+  // Readback must be channel by channel (see reg doc)
+  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+  {
+    uint32_t address = TRG_OUT_WIDTH_CH | ( ch << 8 );  
+    retcode = CAEN_DGTZ_ReadRegister(fHandle,address,&readback);
+    CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
+  }
 
   ConfigureLVDS();
   ConfigureSelfTriggerMode();
-
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTrigOutDelay" << fTrigOutDelay << TLOG_ENDL;
-  retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_DELAY,fTrigOutDelay);
-  sbndaq::CAENDecoder::checkError(retcode,"SetTrigOutputDelay",fBoardID);
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,TRG_OUT_DELAY,&readback);
-  CheckReadback("SetTrigOutDelay", fBoardID,fTrigOutDelay,readback);  
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;
   retcode = CAEN_DGTZ_SetExtTriggerInputMode(fHandle,(CAEN_DGTZ_TriggerMode_t)(fCAEN.extTrgMode));
@@ -571,10 +680,12 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   CheckReadback("SetExtTriggerInputMode", fBoardID,fCAEN.extTrgMode,readback);  
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerOverlap" << fCAEN.allowTriggerOverlap << TLOG_ENDL;
-  if ( fCAEN.allowTriggerOverlap ){
+  if ( fCAEN.allowTriggerOverlap )
+  {
     addr = CONFIG_SET_ADDR;
   }
-  else{
+  else
+  {
     addr = CONFIG_CLEAR_ADDR;
   }
   retcode = CAEN_DGTZ_WriteRegister(fHandle, addr, TRIGGER_OVERLAP_MASK);
@@ -695,7 +806,7 @@ void sbndaq::CAENV1730Readout::start()
 
   ConfigureDataBuffer();
   total_data_size = 0;
-  last_sent_rwcounter = -1;
+  last_sent_rwcounter = 0;
 
   if((CAEN_DGTZ_AcqMode_t)(fCAEN.acqMode)==CAEN_DGTZ_AcqMode_t::CAEN_DGTZ_SW_CONTROLLED)
     {
@@ -961,9 +1072,12 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
 
     if( readoutwindow_event_counter_gap > 1u ){
-      TLOG (TLVL_ERROR) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
+      if ( last_sent_rwcounter > 0 )
+      {
+	TLOG (TLVL_ERROR) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
                         << readoutwindow_event_counter_gap;
-      metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+      }
     }
 
     fragments.emplace_back(nullptr);

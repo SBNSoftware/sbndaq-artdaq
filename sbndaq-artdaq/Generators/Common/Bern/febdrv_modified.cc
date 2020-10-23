@@ -1,6 +1,8 @@
 /**
- * febdrv version compatible with BernCRTZMQ classes
- * executable name is febdrv_standalone
+ * standalone febdrv versions with modifications made before we
+ * decide to integrate it with fragment generator.
+ * Most importantly, the polling time is not set from the command
+ * line but via zmq commands.
  */
 
 #include <zmq.h>
@@ -26,7 +28,7 @@
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTZMQFragment.hh"
 
 #define EVSPERFEB 1024   // max events per feb per poll to buffer
-#define NBUFS     30     // number of buffers. AA: I don't understand why we need more than 1 
+#define NBUFS     5      // number of buffers. The buffers are used if the data is not read out fast enough via zmq
 
 void *context = NULL;
 int infoLength = 0;
@@ -50,7 +52,6 @@ uint8_t ts0ok[256],ts1ok[256];
 uint64_t poll_start, poll_end;
 int64_t steady_clock_offset; //difference between system and steady clock
 int32_t poll_start_deviation, poll_end_deviation;
-
 
 int nclients=0;
 uint8_t macs[256][6]; //list of detected clients
@@ -116,16 +117,14 @@ bool ConfigGetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index) {
   return byte;
 }
 
-int initif(char *iface)
-{
+int initif(char *iface) {
   spkt.iptype=0x0108; // IP type 0x0801
   tv.tv_sec = 0;  /* 0 Secs Timeout */
   tv.tv_usec = 500000;  // 500ms
   sprintf(ifName,"%s",iface); 
   
   /* Open RAW socket to send on */
-  if ((sockfd_w = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) 
-    {
+  if ((sockfd_w = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) {
       perror("sender: socket");
       return 0;
     }
@@ -147,23 +146,20 @@ int initif(char *iface)
     return 0;
   }
   /* Open PF_PACKET socket, listening for EtherType ETHER_TYPE */
-  if ((sockfd_r = socket(PF_PACKET, SOCK_RAW, spkt.iptype)) == -1) 
-    {
-      perror("listener: socket");	
-      return 0;
-    }
+  if ((sockfd_r = socket(PF_PACKET, SOCK_RAW, spkt.iptype)) == -1) {
+    perror("listener: socket");
+    return 0;
+  }
   
-  if (setsockopt(sockfd_r, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval))== -1)
-    {
-      perror("SO_SETTIMEOUT");
-      return 0;
-    }
+  if (setsockopt(sockfd_r, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval))== -1) {
+    perror("SO_SETTIMEOUT");
+    return 0;
+  }
   /* Bind listener to device */
-  if (setsockopt(sockfd_r, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1)
-    {
-      perror("SO_BINDTODEVICE");
-      return 0;
-    }
+  if (setsockopt(sockfd_r, SOL_SOCKET, SO_BINDTODEVICE, ifName, IFNAMSIZ-1) == -1) {
+    perror("SO_BINDTODEVICE");
+    return 0;
+  }
   if (bind(sockfd_r, (struct sockaddr *)&sockaddr_ll_s, sizeof(struct sockaddr_ll)) == -1){
     perror("bind sockfd_r");
     return 0;
@@ -226,8 +222,7 @@ int sendtofeb(int len)  //sending spkt
   /* Destination MAC */
   memcpy(socket_address.sll_addr,spkt.dst_mac,6);
   /* Send packet */
-  if (sendto(sockfd_w, (char*)&spkt, len, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
-  {
+  if (sendto(sockfd_w, (char*)&spkt, len, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)  {
     driver_state=DRV_SENDERROR; 
     return 0;
   }
@@ -265,8 +260,7 @@ void sendcommand(uint8_t *mac, uint16_t cmd, uint16_t reg, uint8_t * buf) {
   memcpy(&spkt.dst_mac,mac,6);        
   memcpy(&spkt.CMD,&cmd,2);
   memcpy(&spkt.REG,&reg,2);
-  switch (cmd) 
-    {
+  switch (cmd) {
     case FEB_GET_RATE :
     case FEB_GEN_INIT : 
     case FEB_GEN_HVON : 
@@ -322,39 +316,34 @@ int pingclients() {
   sendcommand(dstmac,FEB_SET_RECV,FEB_VCXO[nclients],hostmac);
   
   while(recvfromfeb(10000)) { 
-    if(rpkt.CMD==FEB_OK) 
-      {
-	memcpy(&ipkt[nclients],&rpkt,sizeof(rpkt));
-	memcpy(macs[nclients],rpkt.src_mac,6);
-	febs[macs[nclients][5]]=1;
-	if(FEB_present[macs[nclients][5]]==0)
-	  {
-	    printdate(); printf("Newly connected FEB: ");
-	    for(int i=0;i<5;i++) printf("%02x:",macs[nclients][i]);
-	    printf("%02x ",macs[nclients][5]);
-	    printf("%s\n",rpkt.Data); // new client reply received
-	    sprintf(verstr[nclients],"%s",rpkt.Data); 
-	    changed=1;
-	  }
-	nclients++;
+    if(rpkt.CMD==FEB_OK) {
+      memcpy(&ipkt[nclients],&rpkt,sizeof(rpkt));
+      memcpy(macs[nclients],rpkt.src_mac,6);
+      febs[macs[nclients][5]]=1;
+      if(FEB_present[macs[nclients][5]]==0) {
+        printdate(); printf("Newly connected FEB: ");
+        for(int i=0;i<5;i++) printf("%02x:",macs[nclients][i]);
+        printf("%02x ",macs[nclients][5]);
+        printf("%s\n",rpkt.Data); // new client reply received
+        sprintf(verstr[nclients],"%s",rpkt.Data); 
+        changed=1;
       }
+      nclients++;
+    }
   }
-  for(int f=0;f<256;f++)
-    {
-      if(FEB_present[f]==1 && febs[f]==0) 
-	{
-	  printdate(); printf("Disconnected FEB: ");
-	  for(int i=0;i<5;i++) printf("%02x:",macs[0][i]);
-	  printf("%02x \n",f);
-	  changed=1;
-	}
-      FEB_present[f]=febs[f];
+  for(int f=0;f<256;f++) {
+    if(FEB_present[f]==1 && febs[f]==0) {
+      printdate(); printf("Disconnected FEB: ");
+      for(int i=0;i<5;i++) printf("%02x:",macs[0][i]);
+      printf("%02x \n",f);
+      changed=1;
     }
-  if(changed) 
-    {
-      printdate();  
-      printf("In total %d FEBs connected.\n",nclients);
-    }
+    FEB_present[f]=febs[f];
+  }
+  if(changed) {
+    printdate();  
+    printf("In total %d FEBs connected.\n",nclients);
+  }
   return nclients;
 }
 
@@ -362,8 +351,7 @@ int getInfo() {
   pingclients();
   char ethernet[80];
   std::string text = std::to_string(nclients) + "\n";
-  for ( int i=0; i<nclients; i++)
-  {
+  for ( int i=0; i<nclients; i++)  {
     sprintf(ethernet,
         "%2.2X:%2.2X:%2.2X:%2.2X:%2.2X:%2.2X ",
         ipkt[i].src_mac[0], ipkt[i].src_mac[1],
@@ -387,21 +375,19 @@ int sendconfig(uint8_t mac5) {
   dstmac[5]=mac5;
   FEB_configured[mac5]=0;
   sendcommand(dstmac,FEB_WR_SCR,0x0000,bufSCR[mac5]);
-  while(recvfromfeb(50000)) 
-    { 
-      if(rpkt.CMD!=FEB_OK_SCR) return 0;
-      nreplies++;
-    }
+  while(recvfromfeb(50000)) { 
+    if(rpkt.CMD!=FEB_OK_SCR) return 0;
+    nreplies++;
+  }
   if(nreplies==0) return 0;
   if(nreplies!=nclients && mac5==255) return 0;
   
   sendcommand(dstmac,FEB_WR_PMR,0x0000,bufPMR[mac5]);
   if(!recvfromfeb(50000))  return 0;
-  while(recvfromfeb(50000)) 
-    { 
-      if(rpkt.CMD!=FEB_OK_PMR) return 0;
-      nreplies++;
-    }
+  while(recvfromfeb(50000)) { 
+    if(rpkt.CMD!=FEB_OK_PMR) return 0;
+    nreplies++;
+  }
   if(nreplies==0) return 0;
   if(nreplies!=nclients && mac5==255) return 0;
   
@@ -415,13 +401,15 @@ int stopDAQ() {
   return 1;
 }
 
-int startDAQ(uint8_t mac5) {
+int startDAQ(uint8_t mac5, bool clean_buffers = true) {
   int nreplies=0;
   dstmac[5]=mac5; 
   
-  memset(evbuf,0, sizeof(evbuf)); //clean zmq buffer
-  memset(evnum,0, sizeof(evnum));
-  memset(evbufstat, EMPTY, sizeof(evbufstat));
+  if(clean_buffers) {
+    memset(evbuf,0, sizeof(evbuf)); //clean zmq buffer
+    memset(evnum,0, sizeof(evnum));
+    memset(evbufstat, EMPTY, sizeof(evbufstat));
+  }
   
   nreplies=0;
   sendcommand(dstmac,FEB_GEN_INIT,0,buf); //stop DAQ on the FEB
@@ -429,90 +417,81 @@ int startDAQ(uint8_t mac5) {
   //calibrate offset between system and steady clock
   steady_clock_offset = std::chrono::system_clock::now().time_since_epoch().count() - std::chrono::steady_clock::now().time_since_epoch().count();
   
-  while(recvfromfeb(10000)) 
-    { 
-      if(rpkt.CMD!=FEB_OK) return 0;
-      nreplies++;
-    }
+  while(recvfromfeb(10000)) { 
+    if(rpkt.CMD!=FEB_OK) return 0;
+    nreplies++;
+  }
   if(nreplies==0) return 0;
   if(nreplies!=nclients && mac5==255) return 0;
   
   nreplies=0;
   sendcommand(dstmac,FEB_GEN_INIT,1,buf); //reset buffer
   
-  while(recvfromfeb(10000)) 
-    { 
-      if(rpkt.CMD!=FEB_OK) return 0;
-      nreplies++;
-    }
+  while(recvfromfeb(10000)) { 
+    if(rpkt.CMD!=FEB_OK) return 0;
+    nreplies++;
+  }
   if(nreplies==0) return 0;
   if(nreplies!=nclients && mac5==255) return 0;
   
   nreplies=0;
   sendcommand(dstmac,FEB_GEN_INIT,2,buf); //set DAQ_Enable flag on FEB
-  while(recvfromfeb(10000)) 
-    { 
-      if(rpkt.CMD!=FEB_OK) return 0;
-      FEB_daqon[rpkt.src_mac[5]]=1;
-      nreplies++;
-    }
+  while(recvfromfeb(10000)) {
+    if(rpkt.CMD!=FEB_OK) return 0;
+    FEB_daqon[rpkt.src_mac[5]]=1;
+    nreplies++;
+  }
   if(nreplies==0) return 0;
   if(nreplies!=nclients && mac5==255) return 0;
   GLOB_daqon=1;
   return 1;
 }
 
-int biasON(uint8_t mac5)
-{
+int biasON(uint8_t mac5) {
   int nreplies=0;
   dstmac[5]=mac5; 
   sendcommand(dstmac,FEB_GEN_HVON,0,buf); //reset buffer
   
-  while(recvfromfeb(10000)) 
-    { 
-      if(rpkt.CMD!=FEB_OK) return 0;
-      nreplies++;
-      FEB_biason[rpkt.src_mac[5]]=1;
-    }
+  while(recvfromfeb(10000)) { 
+    if(rpkt.CMD!=FEB_OK) return 0;
+    nreplies++;
+    FEB_biason[rpkt.src_mac[5]]=1;
+  }
   if(nreplies==0) return 0;
   if(nreplies!=nclients && mac5==255) return 0;
   
   return 1;
 }
-int biasOFF(uint8_t mac5)
-{
+
+int biasOFF(uint8_t mac5) {
   int nreplies=0;
   dstmac[5]=mac5; 
   sendcommand(dstmac,FEB_GEN_HVOF,0,buf); //reset buffer
   
-  while(recvfromfeb(10000)) 
-    { 
-      if(rpkt.CMD!=FEB_OK) return 0;
-      nreplies++;
-      FEB_biason[rpkt.src_mac[5]]=0;
-    }
+  while(recvfromfeb(10000)) { 
+    if(rpkt.CMD!=FEB_OK) return 0;
+    nreplies++;
+    FEB_biason[rpkt.src_mac[5]]=0;
+  }
   if(nreplies==0) return 0;
   if(nreplies!=nclients && mac5==255) return 0;
   return 1;
 }
 
-int configu(uint8_t mac5, uint8_t *buf1, int len)
-{
+int configu(uint8_t mac5, uint8_t *buf1, int len) {
   int rv=1;
-  if(len != (1144+224)/8) 
-    { 
-      rv=0; 
-      return 0;
-    }
+  if(len != (1144+224)/8) { 
+    rv=0; 
+    return 0;
+  }
   memcpy(bufSCR[mac5],buf1,1144/8);
   memcpy(bufPMR[mac5],buf1+1144/8,224/8);
-  
+
   rv=sendconfig(mac5);
   return rv;
 }
 
-int getSCR(uint8_t mac5, uint8_t *buf1)
-{
+int getSCR(uint8_t mac5, uint8_t *buf1) {
   int rv=1;
   memcpy(buf1,bufSCR[mac5],1144/8);
   return rv;
@@ -610,7 +589,7 @@ int sendstats2() { //send statistics in binary packet format
   void* ptr;
   DRIVER_STATUS_t ds;
   FEB_STATUS_t fs;
-  
+
   ds.datime=time(NULL);
   ds.daqon=GLOB_daqon;  
   ds.status=driver_state;
@@ -621,31 +600,29 @@ int sendstats2() { //send statistics in binary packet format
   ptr=zmq_msg_data (&msg);
   memcpy(ptr,&ds,sizeof(ds)); ptr+=sizeof(ds);
   // Get event rates
-  for(int f=0; f<nclients;f++) //loop on all connected febs : macs[f][6]
-    {
-      sendcommand(macs[f],FEB_GET_RATE,0,buf);
-      memset(&fs,0,sizeof(fs));
-      fs.connected=1;
-      if(recvfromfeb(10000)==0) fs.connected=0;  
-      if(rpkt.CMD!=FEB_OK)   fs.error=1;  
-      
-      fs.evtrate=*((float*)(rpkt.Data));
-      fs.configured=FEB_configured[macs[f][5]];
-      fs.biason=FEB_biason[macs[f][5]];
-      sprintf(fs.fwcpu,"%s",verstr[f]);
-      sprintf(fs.fwfpga,"rev3.1");
-      memcpy(fs.mac,macs[f],6);
-      
-      if(GLOB_daqon)
-	{
-	  fs.evtperpoll=evtsperpoll[macs[f][5]];
-	  fs.lostcpu=lostperpoll_cpu[macs[f][5]];
-	  fs.lostfpga=lostperpoll_fpga[macs[f][5]];
-	  fs.ts0ok=ts0ok[macs[f][5]];
-	  fs.ts1ok=ts1ok[macs[f][5]];
-	}
-      memcpy(ptr,&fs,sizeof(fs)); ptr+=sizeof(fs);
+  for(int f=0; f<nclients;f++) { //loop on all connected febs : macs[f][6]
+    sendcommand(macs[f],FEB_GET_RATE,0,buf);
+    memset(&fs,0,sizeof(fs));
+    fs.connected=1;
+    if(recvfromfeb(10000)==0) fs.connected=0;  
+    if(rpkt.CMD!=FEB_OK)   fs.error=1;  
+
+    fs.evtrate=*((float*)(rpkt.Data));
+    fs.configured=FEB_configured[macs[f][5]];
+    fs.biason=FEB_biason[macs[f][5]];
+    sprintf(fs.fwcpu,"%s",verstr[f]);
+    sprintf(fs.fwfpga,"rev3.1");
+    memcpy(fs.mac,macs[f],6);
+
+    if(GLOB_daqon) {
+      fs.evtperpoll=evtsperpoll[macs[f][5]];
+      fs.lostcpu=lostperpoll_cpu[macs[f][5]];
+      fs.lostfpga=lostperpoll_fpga[macs[f][5]];
+      fs.ts0ok=ts0ok[macs[f][5]];
+      fs.ts1ok=ts1ok[macs[f][5]];
     }
+    memcpy(ptr,&fs,sizeof(fs)); ptr+=sizeof(fs);
+  }
   zmq_msg_send (&msg, pubstats2, ZMQ_DONTWAIT);
   zmq_msg_close (&msg);
   return 1; 
@@ -656,34 +633,32 @@ int sendstats() {
   char str[8192]; //stats string
   float Rate;
   memset(str,0,sizeof(str));
-  
+
   time_t result=time(NULL);
   if(GLOB_daqon) sprintf(str+strlen(str), "\nDAQ ON; System time: %s", asctime(gmtime(&result))); 
   else sprintf(str+strlen(str), "\nDAQ OFF; System time: %s", asctime(gmtime(&result))); 
-  
+
   // Get event rates
-  for(int f=0; f<nclients;f++) //loop on all connected febs : macs[f][6]
-    {
-      sendcommand(macs[f],FEB_GET_RATE,0,buf); 
-      if(recvfromfeb(10000)==0) 
-	sprintf(str+strlen(str), "Timeout for FEB %02x:%02x:%02x:%02x:%02x:%02x !\n",macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
-      if(rpkt.CMD!=FEB_OK)    
-	sprintf(str+strlen(str), "no FEB_OK for FEB %02x:%02x:%02x:%02x:%02x:%02x !\n",macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
-      
-      Rate=*((float*)(rpkt.Data));
-      sprintf(str+strlen(str), "FEB %d %02x:%02x:%02x:%02x:%02x:%02x ",macs[f][5], macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
-      sprintf(str+strlen(str), "%s Conf: %d Bias: %d ",verstr[f],FEB_configured[macs[f][5]],FEB_biason[macs[f][5]]);
-      if(GLOB_daqon)
-	{
-	  sprintf(str+strlen(str), "Per poll: %d ",evtsperpoll[macs[f][5]]);
-	  sprintf(str+strlen(str), "Lost CPU: %d ",lostperpoll_cpu[macs[f][5]]);
-	  sprintf(str+strlen(str), "FPGA: %d ",lostperpoll_fpga[macs[f][5]]);
-	  sprintf(str+strlen(str), "GPS_OK: %d Beam_OK:%d ",ts0ok[macs[f][5]],ts1ok[macs[f][5]]);
-	}
-      sprintf(str+strlen(str), "rate %5.1f Hz\n",Rate);
+  for(int f=0; f<nclients;f++) { //loop on all connected febs : macs[f][6]
+    sendcommand(macs[f],FEB_GET_RATE,0,buf); 
+    if(recvfromfeb(10000)==0) 
+      sprintf(str+strlen(str), "Timeout for FEB %02x:%02x:%02x:%02x:%02x:%02x !\n",macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
+    if(rpkt.CMD!=FEB_OK)    
+      sprintf(str+strlen(str), "no FEB_OK for FEB %02x:%02x:%02x:%02x:%02x:%02x !\n",macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
+
+    Rate=*((float*)(rpkt.Data));
+    sprintf(str+strlen(str), "FEB %d %02x:%02x:%02x:%02x:%02x:%02x ",macs[f][5], macs[f][0],macs[f][1],macs[f][2],macs[f][3],macs[f][4],macs[f][5]);
+    sprintf(str+strlen(str), "%s Conf: %d Bias: %d ",verstr[f],FEB_configured[macs[f][5]],FEB_biason[macs[f][5]]);
+    if(GLOB_daqon) {
+      sprintf(str+strlen(str), "Per poll: %d ",evtsperpoll[macs[f][5]]);
+      sprintf(str+strlen(str), "Lost CPU: %d ",lostperpoll_cpu[macs[f][5]]);
+      sprintf(str+strlen(str), "FPGA: %d ",lostperpoll_fpga[macs[f][5]]);
+      sprintf(str+strlen(str), "GPS_OK: %d Beam_OK:%d ",ts0ok[macs[f][5]],ts1ok[macs[f][5]]);
     }
+    sprintf(str+strlen(str), "rate %5.1f Hz\n",Rate);
+  }
   if(GLOB_daqon) sprintf(str+strlen(str), "Poll %d ns.\n",nsperpoll);
-  
+
   zmq_msg_t msg;
   zmq_msg_init_size (&msg, strlen(str)+1);
   memcpy(zmq_msg_data (&msg), str, strlen(str)+1);
@@ -783,6 +758,13 @@ void polldata() {
   poll_end = std::chrono::system_clock::now().time_since_epoch().count();
   poll_end_deviation = poll_end - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
   nsperpoll = poll_start - poll_end;
+
+  if(restart_FEBs) {
+    startDAQ(0xff, false); //startDAQ is sufficient to do restart
+    printdate(); printf("Restarted DAQ\n"); 
+    restart_FEBs = false;
+  }
+
   return;
 } //polldata
 
@@ -868,8 +850,7 @@ int main (int argc, char **argv) {
     driver_state=DRV_OK;
     //Check next request from client
     zmq_msg_init (&request);
-    if(zmq_msg_recv (&request, responder, ZMQ_DONTWAIT)==-1) 
-    {
+    if(zmq_msg_recv (&request, responder, ZMQ_DONTWAIT)==-1) {
       zmq_msg_close (&request);  
       polldata(); 
       senddata(); 
@@ -882,8 +863,7 @@ int main (int argc, char **argv) {
     sprintf(cmd,"%s",(char*)zmq_msg_data(&request));
     printdate(); printf ("Received Command %s %02x  ",cmd, *(uint8_t*)(zmq_msg_data(&request)+8)); 
     rv=0;
-    if(nclients>0)
-    {
+    if(nclients>0) {
       if(strcmp(cmd, "BIAS_ON")==0) rv=biasON(*(uint8_t*)(zmq_msg_data(&request)+8)); //get 8-th byte of message - mac of target board
       else if (strcmp(cmd, "BIAS_OF")==0) rv=biasOFF(*(uint8_t*)(zmq_msg_data(&request)+8));
       else if (strcmp(cmd, "DAQ_BEG")==0) rv=startDAQ(*(uint8_t*)(zmq_msg_data(&request)+8));
@@ -891,16 +871,15 @@ int main (int argc, char **argv) {
       else if (strcmp(cmd, "SETCONF")==0) rv=configu(*(uint8_t*)(zmq_msg_data(&request)+8), (uint8_t*)(zmq_msg_data(&request)+9), zmq_msg_size (&request)-9); 
       else if (strcmp(cmd, "GET_SCR")==0) rv=getSCR(*(uint8_t*)(zmq_msg_data(&request)+8),buf); 
       else if (strcmp(cmd, "GETINFO")==0) rv=getInfo();
+      else if (strcmp(cmd, "RESTART")==0) rv = restart_FEBs = true;
     }
     //  Send reply back to client
     zmq_msg_t reply;
-    if (strcmp(cmd, "GET_SCR")==0) 
-    {
+    if (strcmp(cmd, "GET_SCR")==0) {
       zmq_msg_init_size (&reply, 1144/8);
       memcpy(zmq_msg_data (&reply),buf,1144/8);
     }
-    else if (strcmp(cmd, "GETINFO")==0) 
-    {
+    else if (strcmp(cmd, "GETINFO")==0) {
       if(nclients == 0) { //send GETINFO reply even if no FEBs are connected
         infoLength = 2;
         memcpy(&buf[0],"0\n",infoLength + 1);
@@ -908,8 +887,7 @@ int main (int argc, char **argv) {
       zmq_msg_init_size (&reply, infoLength+1);
       memcpy(zmq_msg_data (&reply),buf,infoLength+1);
     }
-    else
-    { 
+    else { 
       zmq_msg_init_size (&reply, 5);
       /* The following is really weird, right? */
       if(rv>0) sprintf((char *)zmq_msg_data (&reply), "OK");

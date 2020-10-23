@@ -4,6 +4,9 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
  LIB_LIBRARIES sbndaq-artdaq-core_Overlays
  	       sbndaq-artdaq-core_Overlays_Common
  	       sbndaq-artdaq-core_Overlays_SBND
+ EXCLUDE
+ SBND_fragmentNameHelper.cc
+
 )
 
 simple_plugin(SBNDArtdaqBuildInfo "module"
@@ -18,15 +21,14 @@ simple_plugin(SBNDArtdaqBuildInfo "module"
   ${CETLIB_EXCEPT}
 )
 
-simple_plugin(SBNDFragmentNamingService "service"
-  artdaq_ArtModules_ArtdaqFragmentNamingService_service
+simple_plugin(SBND "fragmentNameHelper"
+  artdaq-core_Data_Artdaq_fragmentNameHelper
   artdaq-core_Data
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
-  sbndaq-artdaq-core_Overlays_SBND
-  art_Framework_Services_Registry
-  MF_MessageLogger
-  fhiclcpp)
+  sbndaq-artdaq-core_Overlays_ICARUS
+  ${ARTDAQ-CORE_UTILITIES}
+  ${MF_MESSAGELOGGER}
+  ${FHICLCPP} 
+  )
 
-# Subdirectories.
-#add_subdirectory(DQM)

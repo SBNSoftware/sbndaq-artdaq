@@ -150,10 +150,10 @@ namespace nevistpc {
 
   protected:
     enum {
-      TERROR=0,
-      TWARNING=1,
-      TINFO=2,
-      TDEBUG=3
+      TERROR    = TLVL_ERROR,
+      TWARNING  = TLVL_WARNING,
+      TINFO     = TLVL_INFO,
+      TDEBUG    = TLVL_DEBUG
     };
     
   private:

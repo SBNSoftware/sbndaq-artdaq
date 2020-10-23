@@ -2,9 +2,9 @@ add_subdirectory(Common)
 
 add_subdirectory(DQM)
 
-IF(ICARUS_BUILD)
+#IF(ICARUS_BUILD)
 add_subdirectory(ICARUS)
-ENDIF()
+#ENDIF()
 
 IF(SBND_BUILD)
 add_subdirectory(SBND)

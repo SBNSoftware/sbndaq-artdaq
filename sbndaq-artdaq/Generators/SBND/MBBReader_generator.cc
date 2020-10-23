@@ -75,13 +75,14 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   const auto PULSE_PERIOD       = ps.get<uint64_t>("MBB.PULSE_PERIOD");
 
   //for D0 PTC
-  const auto wib_pwr1500         = ps.get<uint32_t>("MBB.wib_pwr1500");              
-  const auto wib_pwr1501         = ps.get<uint32_t>("MBB.wib_pwr1501");              
-  const auto wib_pwr1502         = ps.get<uint32_t>("MBB.wib_pwr1502");
-  const auto wib_pwr1503         = ps.get<uint32_t>("MBB.wib_pwr1503");
-  const auto wib_pwr1504         = ps.get<uint32_t>("MBB.wib_pwr1504");
-  const auto wib_pwr1505         = ps.get<uint32_t>("MBB.wib_pwr1505");
+  const auto wib_pwr1400         = ps.get<uint32_t>("MBB.wib_pwr1400");              
+  const auto wib_pwr1401         = ps.get<uint32_t>("MBB.wib_pwr1401");              
+  const auto wib_pwr1402         = ps.get<uint32_t>("MBB.wib_pwr1402");
+  const auto wib_pwr1403         = ps.get<uint32_t>("MBB.wib_pwr1403");
+  const auto wib_pwr1404         = ps.get<uint32_t>("MBB.wib_pwr1404");
+  const auto wib_pwr1405         = ps.get<uint32_t>("MBB.wib_pwr1405");
   
+  //for WOW PTC
   const auto wib_pwr000         = ps.get<uint32_t>("MBB.wib_pwr000");//ptc 0 wib 00:000
   const auto wib_pwr001         = ps.get<uint32_t>("MBB.wib_pwr001");//ptc 0 wib 01:001
   const auto wib_pwr002         = ps.get<uint32_t>("MBB.wib_pwr002");
@@ -89,8 +90,8 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   const auto wib_pwr004         = ps.get<uint32_t>("MBB.wib_pwr004");
   const auto wib_pwr005         = ps.get<uint32_t>("MBB.wib_pwr005");
  
-  const auto wib_pwr100         = ps.get<uint32_t>("MBB.wib_pwr100");//ptc 1 wib 00:100                                                                                                                   
-  const auto wib_pwr101         = ps.get<uint32_t>("MBB.wib_pwr101");                                                                                                                   
+  const auto wib_pwr100         = ps.get<uint32_t>("MBB.wib_pwr100");//ptc 1 wib 00:100                                                                     
+  const auto wib_pwr101         = ps.get<uint32_t>("MBB.wib_pwr101");                                                                                       
   const auto wib_pwr102         = ps.get<uint32_t>("MBB.wib_pwr102");
   const auto wib_pwr103         = ps.get<uint32_t>("MBB.wib_pwr103");
   const auto wib_pwr104         = ps.get<uint32_t>("MBB.wib_pwr104");
@@ -118,12 +119,12 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   const auto wib_pwr405         = ps.get<uint32_t>("MBB.wib_pwr405");
   
   //Controlling which PTC to talk to. ptc_01=1 means talking to ptc_01 and so on.
-  const auto ptc_15             = ps.get<uint32_t>("MBB.ptc_15");//the D0 PTC
-  const auto ptc_00             = ps.get<uint32_t>("MBB.ptc_00");
+  const auto ptc_14             = ps.get<uint32_t>("MBB.ptc_14");//the D0 PTC
+  const auto ptc_00             = ps.get<uint32_t>("MBB.ptc_00");//the WOW PTC
   const auto ptc_01             = ps.get<uint32_t>("MBB.ptc_01");
   const auto ptc_02             = ps.get<uint32_t>("MBB.ptc_02");
   const auto ptc_03             = ps.get<uint32_t>("MBB.ptc_03");
-  const auto ptc_04             = ps.get<uint32_t>("MBB.ptc_04");//the WOW PTC
+  const auto ptc_04             = ps.get<uint32_t>("MBB.ptc_04");
 
 
   TLOG_INFO(identification) << "Connecting to MBB at " << mbb_address << TLOG_ENDL;
@@ -182,52 +183,53 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
     throw excpt;
   }
 
-  //for PTC 15: the D0 PTC                                                                                                                                  
-    if (wib_pwr1500 > 1){
+  //for PTC 14: the D0 PTC                                                                                                                                  
+    if (wib_pwr1400 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
-          << " wib_pwr1500 should be 0 or 1, but is: "
-          << wib_pwr1500;
+          << " wib_pwr1400 should be 0 or 1, but is: "
+          << wib_pwr1400;
     throw excpt;
   }
-  if (wib_pwr1501 > 1){
+  if (wib_pwr1401 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
-	  << " wib_pwr1501 should be 0 or 1, but is: "
-	  << wib_pwr1501;
+	  << " wib_pwr1401 should be 0 or 1, but is: "
+	  << wib_pwr1401;
     throw excpt;
   }
-  if (wib_pwr1502 > 1){
+  if (wib_pwr1402 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
-	  << " wib_pwr1502 should be 0 or 1, but is: "
-	  << wib_pwr1502;
+	  << " wib_pwr1402 should be 0 or 1, but is: "
+	  << wib_pwr1402;
     throw excpt;
   }
-  if (wib_pwr1503 > 1){
+  if (wib_pwr1403 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
-	  << " wib_pwr1503 should be 0 or 1, but is: "
-	  << wib_pwr1503;
+	  << " wib_pwr1403 should be 0 or 1, but is: "
+	  << wib_pwr1403;
     throw excpt;
   }
-  if (wib_pwr1504 > 1){
+  if (wib_pwr1404 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
-	  << " wib_pwr1504 should be 0 or 1, but is: "
-	  << wib_pwr1504;
-    throw excpt;
-  }
-
-  if (wib_pwr1505 > 1){
-    cet::exception excpt(identification);
-    excpt << "setupMBB:"
-	  << " wib_pwr1505 should be 0 or 1, but is: "
-	  << wib_pwr1505;
+	  << " wib_pwr1404 should be 0 or 1, but is: "
+	  << wib_pwr1404;
     throw excpt;
   }
 
-  //for PTC 00                                                                                                                                                                                                                    
+  if (wib_pwr1405 > 1){
+    cet::exception excpt(identification);
+    excpt << "setupMBB:"
+	  << " wib_pwr1405 should be 0 or 1, but is: "
+	  << wib_pwr1405;
+    throw excpt;
+  }
+
+  
+  //for PTC 00: the WOW PTC                                                                                                                                 
   if (wib_pwr000 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
@@ -407,7 +409,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
     throw excpt;
   }
 
-  //for PTC 04: the WOW PTC
+  //for PTC 04
   if (wib_pwr400 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
@@ -453,11 +455,11 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   }
 
   sleep(5);
-  if (ptc_15 > 1){
+  if (ptc_14 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
-          << " ptc_15 should be 0 or 1, but is: "
-          << ptc_15;
+          << " ptc_14 should be 0 or 1, but is: "
+          << ptc_14;
     throw excpt;
   }
 
@@ -504,8 +506,8 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   mbb->ConfigMBB(PULSE_SOURCE, PULSE_PERIOD);
 
   //configuring PTCs.
-  if(ptc_15==1) {
-     mbb->ConfigPTC(15, wib_pwr1500, wib_pwr1501, wib_pwr1502, wib_pwr1503, wib_pwr1504, wib_pwr1505);
+  if(ptc_14==1) {
+     mbb->ConfigPTC(14, wib_pwr1400, wib_pwr1401, wib_pwr1402, wib_pwr1403, wib_pwr1404, wib_pwr1405);
      }
  
   if(ptc_00==1) {

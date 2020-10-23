@@ -1,3 +1,9 @@
+/**
+ * Obsolete fragment generator using zeromq to communicate with febdrv
+ * Use BernCRT generator which has integrated febdrv instead
+ */
+
+
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh" 
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
@@ -70,7 +76,7 @@ namespace sbndaq {
       uint16_t                     fragment_id;
       uint32_t                     event_number; //for given FEB
       uint64_t                     last_accepted_timestamp;
-      uint32_t                     omitted_events;
+      uint32_t                     last_accepted_feb_event_number;
 
       FEBBuffer(uint32_t capacity, uint8_t mac5, uint16_t id)
 	: buffer(EventBuffer_t(capacity)),
@@ -79,7 +85,7 @@ namespace sbndaq {
           fragment_id(id),
           event_number(0),
           last_accepted_timestamp(1), //use 1 as a flag in case events are omitted at the very beginning of the run
-          omitted_events(0)
+          last_accepted_feb_event_number(0)
       { Init(); }
       FEBBuffer() { FEBBuffer(0, 0, 0); }
       void Init() {

@@ -1,0 +1,15 @@
+[Unit]
+Description=SBND TPC Readout WinDriver Device Loader
+Requires=daq-software.mount
+RequiresMountsFor=/daq/software /daq/log
+ConditionPathIsMountPoint=/daq/software
+ 
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/daq/software/products/windriver/configureOnBoot-windriver.sh
+ExecStop=/bin/true
+ 
+[Install]
+WantedBy=multi-user.target
+ 
