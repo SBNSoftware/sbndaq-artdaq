@@ -49,16 +49,16 @@ namespace sbndaq
     virtual int    GetDataComplete() { return 1; }
     
     enum {
-      TERROR=0,
-      TWARNING=1,
-      TINFO=2,
-      TDEBUG=3,
-      TCONFIG=4,
-      TSTART=5,
-      TSTOP=6,
-      TSTATUS=7,
-      TGETNEXT=16,
-      TFILLFRAG=17,
+      TERROR    = TLVL_ERROR,
+      TWARNING  = TLVL_WARNING,
+      TINFO     = TLVL_INFO,
+      TDEBUG    = TLVL_DEBUG,
+      TCONFIG=9,
+      TSTART=10,
+      TSTOP=11,
+      TSTATUS=12,
+      TGETNEXT=13,
+      TFILLFRAG=14,
       TGETDATA=24
     };
 

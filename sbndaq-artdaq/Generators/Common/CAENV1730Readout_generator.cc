@@ -290,7 +290,7 @@ void sbndaq::CAENV1730Readout::Configure()
   }
 
   ConfigureAcquisition();
-  //configureInterrupts();
+  configureInterrupts();
 
   if (fCalibrateOnConfig)     { RunADCCalibration();  }
   // Does lock bit clear on V1730 reset?   If not, always call this routine
