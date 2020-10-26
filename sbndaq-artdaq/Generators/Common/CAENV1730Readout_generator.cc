@@ -99,12 +99,12 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 
 void sbndaq::CAENV1730Readout::configureInterrupts() 
 {
-  CAEN_DGTZ_EnaDis_t  state,stateOut;
-  uint8_t             interruptLevel,interruptLevelOut;
+  CAEN_DGTZ_EnaDis_t  state __attribute((unused)),stateOut __attribute((unused));
+  uint8_t             interruptLevel __attribute((unused)),interruptLevelOut __attribute((unused));
   uint32_t            statusId __attribute__((unused)),statusIdOut __attribute__((unused));
  //uint32_t            statusIdOut;
-  uint16_t            eventNumber,eventNumberOut;
-  CAEN_DGTZ_IRQMode_t mode,modeOut;
+  uint16_t            eventNumber  __attribute__((unused)) ,eventNumberOut __attribute__((unused));
+  CAEN_DGTZ_IRQMode_t mode __attribute__((unused)),modeOut __attribute__((unused));
 
   fInterruptLevel =1; //FIXME:GAL remove this line
 
@@ -128,6 +128,7 @@ void sbndaq::CAENV1730Readout::configureInterrupts()
   CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
   TLOG(TLVL_INFO) << "CAEN_DGTZ_ReadRegister reg=0xef00 value=" <<  std::bitset<32>(readback) ;
 
+  // Why is GetInterruptConfig called here?
   retcode = CAEN_DGTZ_GetInterruptConfig(fHandle, &stateOut, &interruptLevelOut, &statusIdOut, &eventNumberOut, &modeOut);
   CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
 
@@ -158,7 +159,7 @@ void sbndaq::CAENV1730Readout::configureInterrupts()
                                         eventNumber,
                                         mode);
   CAENDecoder::checkError(retcode,"SetInterruptConfig",fBoardID);
-	*/
+
   retcode = CAEN_DGTZ_ReadRegister(fHandle,READOUT_CONTROL,&readback);
   CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
   TLOG(TLVL_INFO) << "CAEN_DGTZ_ReadRegiste reg=READOUT_CONTROL value=" <<  std::bitset<32>(readback) ;
@@ -184,7 +185,7 @@ void sbndaq::CAENV1730Readout::configureInterrupts()
       << "Interrupt State was not setup properly, mode write/read="
       << int32_t { mode }<< "/"<<int32_t { modeOut };
   }
-
+	*/
 }
 
 void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
