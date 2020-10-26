@@ -99,93 +99,95 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 
 void sbndaq::CAENV1730Readout::configureInterrupts() 
 {
-  CAEN_DGTZ_EnaDis_t  state __attribute((unused)),stateOut __attribute((unused));
-  uint8_t             interruptLevel __attribute((unused)),interruptLevelOut __attribute((unused));
-  uint32_t            statusId __attribute__((unused)),statusIdOut __attribute__((unused));
- //uint32_t            statusIdOut;
-  uint16_t            eventNumber  __attribute__((unused)) ,eventNumberOut __attribute__((unused));
-  CAEN_DGTZ_IRQMode_t mode __attribute__((unused)),modeOut __attribute__((unused));
+  CAEN_DGTZ_EnaDis_t  state ,stateOut ;
+  uint8_t             interruptLevel ,interruptLevelOut ;
+  uint32_t            statusId ,statusIdOut ;
+  uint16_t            eventNumber   ,eventNumberOut ;
+  CAEN_DGTZ_IRQMode_t mode ,modeOut ;
+  CAEN_DGTZ_ErrorCode retcode;
 
-  fInterruptLevel =1; //FIXME:GAL remove this line
+  interruptLevel  = 1; // Fixed for CONET
+  statusId        = 1;
+  eventNumber     = 1;
+  mode            = CAEN_DGTZ_IRQ_MODE_RORA;
 
-  if(fInterruptLevel>0){
+  if(fInterruptEnable>0) // Enable interrupts
+  {
     state           = CAEN_DGTZ_ENABLE;
-    interruptLevel  = 1;
-    statusId        = 1;
-    eventNumber     = 1;
-    mode            = CAEN_DGTZ_IRQ_MODE_RORA; 
   }
-  else{
+  else // Disable interrupts
+  {
     state           = CAEN_DGTZ_DISABLE;
-    interruptLevel  = 0;
-    statusId        = 0;
-    eventNumber     = 0;
-    mode            = CAEN_DGTZ_IRQ_MODE_ROAK; // Default mode
   }
 
-  uint32_t readback=0;
-  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_ReadRegister(fHandle,READOUT_CONTROL,&readback);
-  CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
-  TLOG(TLVL_INFO) << "CAEN_DGTZ_ReadRegister reg=0xef00 value=" <<  std::bitset<32>(readback) ;
+  TLOG(TLVL_INFO)  << "Configuring Interrupts state=" << uint32_t{ stateOut} << 
+    ", interruptLevel=" << uint32_t{interruptLevelOut} 
+    << ", statusId=" << uint32_t{statusIdOut} << ", eventNumber=" <<
+    uint32_t{eventNumberOut}<<", mode="<< int32_t{modeOut};
 
-  // Why is GetInterruptConfig called here?
-  retcode = CAEN_DGTZ_GetInterruptConfig(fHandle, &stateOut, &interruptLevelOut, &statusIdOut, &eventNumberOut, &modeOut);
+  retcode = CAEN_DGTZ_SetInterruptConfig(fHandle,
+					 state,
+					 interruptLevel,
+					 statusId,
+					 eventNumber,
+					 mode);
+  CAENDecoder::checkError(retcode,"SetInterruptConfig",fBoardID);
+
+  retcode = CAEN_DGTZ_GetInterruptConfig (fHandle, 
+					  &stateOut, 
+					  &interruptLevelOut, 
+					  &statusIdOut, 
+					  &eventNumberOut, 
+					  &modeOut);
   CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
+
+  if (state != stateOut)
+  {
+    TLOG_WARNING("CAENV1730Readout") << "Interrupt State was not setup properly, state write/read="
+                                     << int32_t{ state} <<"/"<< int32_t{ stateOut};
+  }
+  if (eventNumber != eventNumberOut)
+  {
+    TLOG_WARNING("CAENV1730Readout")
+      << "Interrupt State was not setup properly, eventNumber write/read="
+      << uint32_t {eventNumber} <<"/"<< uint32_t {eventNumberOut};
+  }
+  if (statusId != statusIdOut)
+  {
+    TLOG_WARNING("CAENV1730Readout")
+      << "Interrupt StatusID was not setup properly, eventNumber write/read="
+      << uint32_t {statusId} <<"/"<< uint32_t {statusIdOut};
+  }
+  // Mode and InterruptLevel are only defined on VME, not CONET
+  // if (interruptLevel != interruptLevelOut)
+  // {
+  //   TLOG_WARNING("CAENV1730Readout") << "Interrupt State was not setup properly, interruptLevel write/read="
+  //                                    << uint32_t{interruptLevel}<< "/" << uint32_t{interruptLevelOut};
+  // }
+  // if (mode != modeOut)
+  // {
+  //   TLOG_WARNING("CAENV1730Readout")
+  //     << "Interrupt State was not setup properly, mode write/read="
+  //     << int32_t { mode }<< "/"<<int32_t { modeOut };
+  // }
+
 
   uint32_t bitmask = (uint32_t)(0x1FF);
-
   uint32_t data = (uint32_t)(0x9); //RORA,irq link enabled,vme baseaddress relocation disabled,VME Bus error enabled,level 1
   uint32_t addr = READOUT_CONTROL;
   uint32_t value = 0;
   retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
   TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister prior to overwrite of addr=" << std::hex << addr << ", returned value=" << std::bitset<32>(value) ; 
+
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Setting I/O control register 0x811C " << TLOG_ENDL;
   retcode = sbndaq::CAENV1730Readout::WriteRegisterBitmask(fHandle,addr,data,bitmask);
   sbndaq::CAENDecoder::checkError(retcode,"SetIOControl",fBoardID);
   retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
+
   TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister addr=" << std::hex << addr << 
     " and bitmask=" << std::bitset<32>(bitmask)
                 << ", returned value=" << std::bitset<32>(value); 
 
-  TLOG(TLVL_INFO)  << "state=" << uint32_t{ stateOut} << 
-    ", interruptLevel=" << uint32_t{interruptLevelOut} 
-    << ", statusId=" << uint32_t{statusIdOut} << ", eventNumber=" <<
-    uint32_t{eventNumberOut}<<", mode="<< int32_t{modeOut};	
-/*
-  retcode = CAEN_DGTZ_SetInterruptConfig(fHandle,
-                                        state,
-                                        interruptLevel,
-                                        statusId,
-                                        eventNumber,
-                                        mode);
-  CAENDecoder::checkError(retcode,"SetInterruptConfig",fBoardID);
-
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,READOUT_CONTROL,&readback);
-  CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
-  TLOG(TLVL_INFO) << "CAEN_DGTZ_ReadRegiste reg=READOUT_CONTROL value=" <<  std::bitset<32>(readback) ;
-
-  retcode = CAEN_DGTZ_GetInterruptConfig (fHandle, &stateOut, &interruptLevelOut, &statusIdOut, &eventNumberOut, &modeOut);
-  CAENDecoder::checkError(retcode,"GetInterruptConfig",fBoardID);
-
-  if (state != stateOut){
-    TLOG_WARNING("CAENV1730Readout") << "Interrupt State was not setup properly, state write/read="
-                                     << int32_t{ state} <<"/"<< int32_t{ stateOut};
-  }
-  if (interruptLevel != interruptLevelOut){
-    TLOG_WARNING("CAENV1730Readout") << "Interrupt State was not setup properly, interruptLevel write/read="
-                                     << uint32_t{interruptLevel}<< "/" << uint32_t{interruptLevelOut};
-  }
-  if (eventNumber != eventNumberOut){
-    TLOG_WARNING("CAENV1730Readout")
-      << "Interrupt State was not setup properly, eventNumber write/read="
-      << uint32_t {eventNumber} <<"/"<< uint32_t {eventNumberOut};
-  }
-  if (mode != modeOut){
-    TLOG_WARNING("CAENV1730Readout")
-      << "Interrupt State was not setup properly, mode write/read="
-      << int32_t { mode }<< "/"<<int32_t { modeOut };
-  }
-	*/
 }
 
 void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
@@ -205,14 +207,8 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fBoardChainNumber = ps.get<int>("BoardChainNumber"); //0
   TLOG(TINFO)<<__func__ << ": BoardChainNumber=" << fBoardChainNumber;
 
-  fInterruptLevel = ps.get<uint8_t>("InterruptLevel"); //1
-  TLOG(TINFO) << __func__ << ": InterruptLevel=" << fInterruptLevel;
-
-  fInterruptStatusID = ps.get<uint32_t>("InterruptStatusID"); //0
-  TLOG(TINFO) << __func__ << ": InterruptStatusID=" << fInterruptStatusID;
-
-  fInterruptEventNumber = ps.get<uint16_t>("InterruptEventNumber"); //1
-  TLOG(TINFO) << __func__<< ": InterruptEventNumber=" << fInterruptEventNumber;
+  fInterruptEnable = ps.get<uint8_t>("InterruptEnable",0); 
+  TLOG(TINFO) << __func__ << ": InterruptEnable=" << fInterruptEnable;
 
   fSWTrigger = ps.get<bool>("SWTrigger"); //false
   TLOG(TINFO)<<__func__ << ": SWTrigger=" << fSWTrigger ;
@@ -527,13 +523,6 @@ void sbndaq::CAENV1730Readout::ConfigureRecordFormat()
   retcode = CAEN_DGTZ_GetPostTriggerSize(fHandle,&readback);
   sbndaq::CAENDecoder::checkError(retcode,"GetPostTriggerSize",fBoardID);
   CheckReadback("POST_TRIGGER_SIZE", fBoardID, fCAEN.postPercent, readback);
-
-  //number of events
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetMaxNumEventsBLT " << fCAEN.maxEventsPerTransfer << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SetMaxNumEventsBLT(fHandle,fCAEN.maxEventsPerTransfer);
-  sbndaq::CAENDecoder::checkError(retcode,"SetMaxNumEventsBLT",fBoardID);
-  retcode = CAEN_DGTZ_GetMaxNumEventsBLT(fHandle,&readback);
-  CheckReadback("SetMaxNumEventsBLT", fBoardID,fCAEN.maxEventsPerTransfer ,readback);
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureRecordFormat() done." << TLOG_ENDL;
 }
@@ -875,7 +864,7 @@ bool sbndaq::CAENV1730Readout::GetData() {
 
   // read the data from the buffer of the card
   // this_data_size is the size of the acq window
-  if(fCAEN.interruptLevel > 0){
+  if(fInterruptEnable > 0){
   }
   else {
    return readSingleWindowDataBlock();
