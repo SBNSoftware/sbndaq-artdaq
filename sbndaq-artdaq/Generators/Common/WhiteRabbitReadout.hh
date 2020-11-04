@@ -21,6 +21,14 @@
 #include <unistd.h>
 #include <vector>
 
+// Network includes
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/if_ether.h>
+#include <net/if.h>
+#include <netpacket/packet.h>
+
 
 namespace sbndaq
 {
@@ -30,7 +38,22 @@ namespace sbndaq
     explicit WhiteRabbitReadout(fhicl::ParameterSet const & ps);
     virtual ~WhiteRabbitReadout();
 
+    enum
+    {
+      RULER_PROTO       = 0x5752,
+      PRIV_MEZZANINE_ID = SIOCDEVPRIVATE + 14
+    };
+
   protected:
+
+    struct RabbitFrame
+    {
+      struct ether_header header;
+      unsigned char padding[2];
+      struct sbndaq::WhiteRabbitEvent rabbitCommand;
+    } rabbitFrame;
+
+    std::vector<struct sbndaq::WhiteRabbitEvent> buffer;
 
     bool getNext_(artdaq::FragmentPtrs & output) override;
     void start() override;
@@ -38,6 +61,7 @@ namespace sbndaq
     void stopNoMutex() override;
     void stopAll();
     void configure();
+    void openWhiteRabbitSocket(const char *deviceName);
 
     // General
     uint32_t runNumber_;
@@ -55,6 +79,10 @@ namespace sbndaq
     bool FillFragment(artdaq::FragmentPtrs &, bool clear_buffer=false);
 
     share::WorkerThreadUPtr GetData_thread_;
+
+    struct sockaddr_ll address;
+    int	               agentSocket;
+    struct ifreq       agentDevice;
   };
 }
 
