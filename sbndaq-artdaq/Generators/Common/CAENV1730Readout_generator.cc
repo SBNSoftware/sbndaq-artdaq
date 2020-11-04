@@ -864,13 +864,7 @@ bool sbndaq::CAENV1730Readout::GetData() {
 
   // read the data from the buffer of the card
   // this_data_size is the size of the acq window
-  if(fInterruptEnable > 0){
-  }
-  else {
-   return readSingleWindowDataBlock();
-  }
-
-  return true;
+  return readSingleWindowDataBlock();
 }// CAENV1730Readout::GetData()
 
 bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
