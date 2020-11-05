@@ -162,7 +162,7 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
 									      boardId,
 									      FragmentType::WhiteRabbit,
 									      WhiteRabbitFragmentMetadata()));
-    memcpy(fragPtr->dataBeginBytes(), (void *)(*i), bytesWritten);
+    memcpy(fragPtr->dataBeginBytes(), (void *)(&*i), bytesWritten);
     frags.emplace_back(std::move(fragPtr));
     newData = true;
   }
