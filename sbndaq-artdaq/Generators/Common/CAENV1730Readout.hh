@@ -125,9 +125,7 @@ namespace sbndaq
     //fhicl parameters
     int fVerbosity;
     int fBoardChainNumber;
-    uint8_t  fInterruptLevel;
-    uint16_t fInterruptEventNumber;
-    uint32_t fInterruptStatusID;
+    uint8_t  fInterruptEnable;
     uint32_t fGetNextSleep;
     uint32_t fGetNextFragmentBunchSize;
     bool     fSWTrigger;
