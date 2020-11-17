@@ -40,8 +40,19 @@ namespace sbndaq
 
     enum
     {
-      RULER_PROTO       = 0x5752,
-      PRIV_MEZZANINE_ID = SIOCDEVPRIVATE + 14
+      RULER_PROTO        = 0x5752,
+      PRIV_MEZZANINE_ID  = SIOCDEVPRIVATE + 14,
+      PRIV_MEZZANINE_CMD = SIOCDEVPRIVATE + 15,
+      WR_DIO_F_WAIT      = 0x10,
+      WR_DIO_F_MASK      = 0x04,
+    };
+
+    enum wr_dio_cmd_name 
+    {
+      WR_DIO_CMD_PULSE,
+      WR_DIO_CMD_STAMP,
+      WR_DIO_CMD_DAC,
+      WR_DIO_CMD_INOUT,
     };
 
   protected:
@@ -66,6 +77,7 @@ namespace sbndaq
     // General
     uint32_t runNumber_;
     std::string device;
+    uint32_t channel;
     uint32_t eventCounter;
     uint32_t messageCounter;
     std::atomic_bool running;

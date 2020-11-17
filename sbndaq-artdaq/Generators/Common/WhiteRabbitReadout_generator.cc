@@ -22,7 +22,8 @@ sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
-  device = ps.get<std::string>("device");
+  device  = ps.get<std::string>("device");
+  channel = ps.get<uint32_t>("channel");
   configure();
 }
 
@@ -33,10 +34,12 @@ sbndaq::WhiteRabbitReadout::~WhiteRabbitReadout()
 
 void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 {
+  TLOG(TLVL_DEBUG+1)<< "start";
   agentSocket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (agentSocket < 0) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout socket error " << strerror(errno);
+    TLOG(TLVL_ERROR) << "WhiteRadoutReadout socket error [" << 
+      errno <<  "] " << strerror(errno);
     return;
   }
 
@@ -46,7 +49,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
       /* EAGAIN is special: it means we have no ID to check yet */
 		&& errno != EAGAIN) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout ioctl [1] error device " << deviceName << " " << strerror(errno);
+    TLOG(TLVL_ERROR) << "WhiteRadoutReadout ioctl [1] error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
     close(agentSocket);
     return;
   }
@@ -54,7 +57,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
   /* Retrieve the interfaceindex */
   if (ioctl(agentSocket, SIOCGIFINDEX, &agentDevice) < 0) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout ioctl [2] error device " << deviceName << " " << strerror(errno);
+    TLOG(TLVL_ERROR) << "WhiteRadoutReadout ioctl [2] error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
     close(agentSocket);
     return;
   }
@@ -67,7 +70,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
   address.sll_pkttype   = PACKET_BROADCAST; /* that's what ruler sends */
   if (bind(agentSocket, (struct sockaddr *)&address, sizeof(address)) < 0) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout bind error device " << deviceName << " " << strerror(errno);
+    TLOG(TLVL_ERROR) << "WhiteRadoutReadout bind error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
     close(agentSocket);
     return;
   }
@@ -76,12 +79,14 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 
 void sbndaq::WhiteRabbitReadout::configure()
 {
+  TLOG(TLVL_DEBUG) << "hello";
   openWhiteRabbitSocket(device.c_str());
   eventCounter = 0;
 }
 
 void sbndaq::WhiteRabbitReadout::start()
 {
+  TLOG(TLVL_DEBUG) << "start";
   // Magically start worker getdata thread.
   share::ThreadFunctor functor = std::bind(&WhiteRabbitReadout::getData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
@@ -114,27 +119,28 @@ void sbndaq::WhiteRabbitReadout::stopNoMutex()
 bool sbndaq::WhiteRabbitReadout::getData()
 {
   int length;
+  int retcod;
+
+  struct sbndaq::WhiteRabbitEvent _event;
+  struct sbndaq::WhiteRabbitEvent *event = &_event;
+
+  event->flags = WR_DIO_F_WAIT;
+  event->channel = channel;
+  agentDevice.ifr_data = (char *)event;
   while ( running )
   {
-    length = recv(agentSocket, &rabbitFrame, sizeof(rabbitFrame), MSG_TRUNC);
-    if ( length != sizeof(rabbitFrame))
+    retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
+    if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
     {
-      TLOG(TLVL_ERROR) << "WhiteRadoutReadout recv error device " << device << " " << strerror(errno);
+      TLOG(TLVL_ERROR) << "WhiteReadoutReadout read error device " << device << " [" << errno <<  "] " 
+		       << strerror(errno);
       return(false);
     }
 
-    if ( ntohs(rabbitFrame.header.ether_type) != RULER_PROTO )
-    {
-      TLOG(TLVL_ERROR) << "WhiteRadoutReadout recv unexpected eth typ " << device << " " 
-		       << ntohs(rabbitFrame.header.ether_type);
-      return(false);
-    }
-
-    sbndaq::WhiteRabbitEvent event;
-    memcpy(&event,&rabbitFrame.rabbitCommand,sizeof(event));
+    TLOG(TLVL_INFO) << "WhiteRadoutReadout event " << event->timeStamp[0].tv_sec << " " << event->timeStamp[0].tv_nsec; 
 
     bufferLock.lock();
-    buffer.emplace_back(event);
+    buffer.emplace_back(_event);
     bufferLock.unlock();
   }
 
