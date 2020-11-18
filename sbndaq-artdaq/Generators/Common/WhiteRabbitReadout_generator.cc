@@ -46,10 +46,11 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 
   memset(&agentDevice, 0, sizeof(agentDevice));
   strncpy(agentDevice.ifr_name, deviceName, sizeof(agentDevice.ifr_name));
+
   if (ioctl(agentSocket, PRIV_MEZZANINE_ID, &agentDevice) < 0
-      /* EAGAIN is special: it means we have no ID to check yet */
 		&& errno != EAGAIN) 
   {
+    /* EAGAIN is special: it means we have no ID to check yet */
     TLOG(TLVL_ERROR) << "WhiteRabbitReadout ioctl [1] error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
     close(agentSocket);
     return;
@@ -82,7 +83,7 @@ void sbndaq::WhiteRabbitReadout::configure()
 {
   TLOG(TLVL_DEBUG) << "hello";
   openWhiteRabbitSocket(device.c_str());
-  eventCounter = 0;
+  eventSeqCounter = 0;
 }
 
 void sbndaq::WhiteRabbitReadout::start()
@@ -125,11 +126,12 @@ bool sbndaq::WhiteRabbitReadout::getData()
   struct sbndaq::WhiteRabbitEvent _event;
   struct sbndaq::WhiteRabbitEvent *event = &_event;
 
-  event->flags = WR_DIO_F_WAIT;
-  event->channel = channel;
-  agentDevice.ifr_data = (char *)event;
   while ( running )
   {
+    event->flags         = WR_DIO_F_WAIT;
+    event->channel       = channel;
+    event->command       = WR_DIO_CMD_STAMP;
+    agentDevice.ifr_data = (char *)event;
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
     {
@@ -138,11 +140,19 @@ bool sbndaq::WhiteRabbitReadout::getData()
       return(false);
     }
 
-    TLOG(TLVL_INFO) << "WhiteReadout event " << event->timeStamp[0].tv_sec << " " << event->timeStamp[0].tv_nsec; 
+    TLOG(TLVL_INFO) << "WhiteReadout event nstamp " << event->nstamp ;
+    for (uint32_t i=0; i<event->nstamp; i++)
+    {
+      TLOG(TLVL_INFO) << "WhiteReadout event " << i << " " << event->timeStamp[i].tv_sec << 
+	" " << event->timeStamp[i].tv_nsec; 
+    }
 
-    bufferLock.lock();
-    buffer.emplace_back(_event);
-    bufferLock.unlock();
+    if ( event->nstamp > 0 )
+    {
+      bufferLock.lock();
+      buffer.emplace_back(_event);
+      bufferLock.unlock();
+    }
   }
 
   return(true);
@@ -162,10 +172,13 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
 
   bufferLock.lock();
 
+  eventSeqCounter++;
+  TLOG(TLVL_INFO) << "WhiteRabbit event " << eventSeqCounter;
+
   for ( std::vector<struct sbndaq::WhiteRabbitEvent>::iterator i = buffer.begin(); i != buffer.end(); ++i)
   {
     std::unique_ptr<artdaq::Fragment> fragPtr(artdaq::Fragment::FragmentBytes(bytesWritten,
-									      eventCounter, 
+									      eventSeqCounter, 
 									      fragmentId,
 									      FragmentType::WhiteRabbit,
 									      WhiteRabbitFragmentMetadata()));
@@ -175,7 +188,6 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   }
   buffer.clear();
   bufferLock.unlock();
-  eventCounter++;
 
   return newData;
 }

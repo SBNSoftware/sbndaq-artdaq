@@ -79,7 +79,7 @@ namespace sbndaq
     uint32_t fragmentId;
     std::string device;
     uint32_t channel;
-    uint32_t eventCounter;
+    uint32_t eventSeqCounter;
     uint32_t messageCounter;
     std::atomic_bool running;
     std::mutex bufferLock;
