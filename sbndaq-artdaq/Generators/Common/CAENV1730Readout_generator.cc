@@ -247,7 +247,7 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
-  //Aiwu add - for LVDS logic settings
+  //Animesh & Aiwu add - for LVDS logic settings
   fLVDSLogicValueG1 = ps.get<uint32_t>("LVDSLogicValueG1"); // LVDS logic value for G1
   TLOG(TINFO)<<__func__ << ": LVDSLogicValueG1=" << fLVDSLogicValueG1;
   fLVDSLogicValueG2 = ps.get<uint32_t>("LVDSLogicValueG2"); // LVDS logic value for G2
@@ -264,8 +264,8 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   TLOG(TINFO)<<__func__ << ": LVDSLogicValueG7=" << fLVDSLogicValueG7;
   fLVDSLogicValueG8 = ps.get<uint32_t>("LVDSLogicValueG8"); // LVDS logic value for G8
   TLOG(TINFO)<<__func__ << ": LVDSLogicValueG8=" << fLVDSLogicValueG8;
-  //Aiwu add end
-  //Aiwu add - for LVDS output width
+  //Animesh & Aiwu add end
+  //Animesh & Aiwu add - for LVDS output width
   fLVDSOutWidthC1 = ps.get<uint32_t>("LVDSOutWidthC1"); // LVDS output width Ch1
   TLOG(TINFO)<<__func__ << ": LVDSOutWidthC1=" << fLVDSOutWidthC1;
   fLVDSOutWidthC2 = ps.get<uint32_t>("LVDSOutWidthC2"); // LVDS output width Ch2
@@ -298,8 +298,8 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   TLOG(TINFO)<<__func__ << ": LVDSOutWidthC15=" << fLVDSOutWidthC15;
   fLVDSOutWidthC16 = ps.get<uint32_t>("LVDSOutWidthC16"); // LVDS output width Ch16
   TLOG(TINFO)<<__func__ << ": LVDSOutWidthC16=" << fLVDSOutWidthC16;
-  //Aiwu add end
-  //Aiwu add - self trigger polarity
+  //Animesh & Aiwu add end
+  //Animesh & Aiwu add - self trigger polarity
   fSelfTrigBit = ps.get<uint32_t>("SelfTrigBit"); // LVDS output width Ch16
   TLOG(TINFO)<<__func__ << ": SelfTrigBit=" << fSelfTrigBit;
   fChargePedstalBitCh1 = ps.get<uint32_t>("ChargePedstalBitCh1"); // DPP algorithm feature
@@ -308,36 +308,36 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fBaselineCh1 = ps.get<uint32_t>("BaselineCh1"); // ch1 baseline
   TLOG(TINFO)<<__func__ << ": BaselineCh1=" << fBaselineCh1;
   fBaselineCh2 = ps.get<uint32_t>("BaselineCh2"); // ch2 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh2=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh2=" << fBaselineCh2;
   fBaselineCh3 = ps.get<uint32_t>("BaselineCh3"); // ch3 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh3=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh3=" << fBaselineCh3;
   fBaselineCh4 = ps.get<uint32_t>("BaselineCh4"); // ch4 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh4=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh4=" << fBaselineCh4;
   fBaselineCh5 = ps.get<uint32_t>("BaselineCh5"); // ch5 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh5=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh5=" << fBaselineCh5;
   fBaselineCh6 = ps.get<uint32_t>("BaselineCh6"); // ch6 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh6=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh6=" << fBaselineCh6;
   fBaselineCh7 = ps.get<uint32_t>("BaselineCh7"); // ch7 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh7=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh7=" << fBaselineCh7;
   fBaselineCh8 = ps.get<uint32_t>("BaselineCh8"); // ch8 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh8=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh8=" << fBaselineCh8;
   fBaselineCh9 = ps.get<uint32_t>("BaselineCh9"); // ch9 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh9=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh9=" << fBaselineCh9;
   fBaselineCh10 = ps.get<uint32_t>("BaselineCh10"); // ch10 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh10=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh10=" << fBaselineCh10;
   fBaselineCh11 = ps.get<uint32_t>("BaselineCh11"); // ch11 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh11=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh11=" << fBaselineCh11;
   fBaselineCh12 = ps.get<uint32_t>("BaselineCh12"); // ch12 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh12=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh12=" << fBaselineCh12;
   fBaselineCh13 = ps.get<uint32_t>("BaselineCh13"); // ch13 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh13=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh13=" << fBaselineCh13;
   fBaselineCh14 = ps.get<uint32_t>("BaselineCh14"); // ch14 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh14=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh14=" << fBaselineCh14;
   fBaselineCh15 = ps.get<uint32_t>("BaselineCh15"); // ch15 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh15=" << fBaselineCh1;
+  TLOG(TINFO)<<__func__ << ": BaselineCh15=" << fBaselineCh15;
   fBaselineCh16 = ps.get<uint32_t>("BaselineCh16"); // ch16 baseline
-  TLOG(TINFO)<<__func__ << ": BaselineCh16=" << fBaselineCh1;
-  //Aiwu addd end
+  TLOG(TINFO)<<__func__ << ": BaselineCh16=" << fBaselineCh16;
+  //Aimesh & Aiwu addd end
 
   fUseTimeTagForTimeStamp = ps.get<bool>("UseTimeTagForTimeStamp",true);
   TLOG(TINFO) <<__func__ <<": fUseTimeTagForTimeStamp=" << fUseTimeTagForTimeStamp;
@@ -404,7 +404,7 @@ void sbndaq::CAENV1730Readout::RunADCCalibration()
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
 }
 
-//Aiwu added function
+//Animesh & Aiwu added function
 void sbndaq::CAENV1730Readout::ConfigureOthers(){
   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
   uint32_t data,readBack,ioMode;
@@ -476,7 +476,7 @@ void sbndaq::CAENV1730Readout::ConfigureOthers(){
   //TLOG(TINFO) << "send a software trigger (whatever value is fine): 0x" << std::hex << readBack << std::dec;
 
 }
-//Aiwu add end
+//Animesh & Aiwu add end
 
 // Following SPI code is from CAEN
 CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value)
@@ -662,7 +662,7 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
 
   CheckReadback("FPOutputConfig", fBoardID, ioMode, readBack);
 
-  //Aiwu add - to set/read registers for LVDS logic values setting
+  //Animesh & Aiwu add - to set/read registers for LVDS logic values setting
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G1, fLVDSLogicValueG1);
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G2, fLVDSLogicValueG2);
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G3, fLVDSLogicValueG3);
@@ -688,9 +688,9 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   TLOG(TINFO) << "LVDS  Logic for G7: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
   TLOG(TINFO) << "LVDS  Logic for G8: 0x" << std::hex << readBack << std::dec;
-  //Aiwu add ends
+  //Animesh & Aiwu add ends
 
-  //Aiwu add - to set/read registers for LVDS output width values setting
+  //Animesh & Aiwu add - to set/read registers for LVDS output width values setting
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_OutWidth_Ch1, fLVDSOutWidthC1);
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_OutWidth_Ch2, fLVDSOutWidthC2);
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_OutWidth_Ch3, fLVDSOutWidthC3);
@@ -740,13 +740,13 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   TLOG(TINFO) << "LVDS  Logic output width for Ch15: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_OutWidth_Ch16, &readBack);
   TLOG(TINFO) << "LVDS  Logic output width for Ch16: 0x" << std::hex << readBack << std::dec;
-  //Aiwu add ends
+  //Animesh & Aiwu add ends
 
-  //Aiwu add - test self trigger polarity
+  //Animesh & Aiwu add - test self trigger polarity
   retcod = CAEN_DGTZ_WriteRegister(fHandle, CONFIG_READ_ADDR, fSelfTrigBit);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, CONFIG_READ_ADDR, &readBack);
   TLOG(TINFO) << "Address 0x8000, values inside: 0x" << std::hex << readBack << std::dec;
-  //Aiwu end
+  //Animesh & Aiwu end
 }
 
 void sbndaq::CAENV1730Readout::ConfigureRecordFormat()
@@ -925,7 +925,7 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   }
 
   ConfigureLVDS();
-  ConfigureOthers(); // Aiwu added new function
+  ConfigureOthers(); // Animesh & Aiwu added new function
   ConfigureSelfTriggerMode();
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;

@@ -154,6 +154,13 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   size_t pos = 0;
   //size_t delim_pos = 0;
   TRACE(TR_LOG, "string received:: %s", data_input.c_str());
+  //if shouldn't send fragments, then don't create fragment/send
+  if(generated_fragments_per_event_==0){
+    ++fEventCounter;
+    return true;
+  }
+
+
   std::string delimiter = ",";
   std::vector<std::string> sections;
   std::string token = "";
@@ -164,11 +171,6 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //delim_pos = pos;
   }
 
-  //if shouldn't send fragments, then don't create fragment/send
-  if(generated_fragments_per_event_==0){
-    ++fEventCounter;
-    return true;
-  }
   sections.push_back(data_input);
   
   if(sections.size() >= 4)
