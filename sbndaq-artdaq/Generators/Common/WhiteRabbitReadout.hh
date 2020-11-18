@@ -76,6 +76,7 @@ namespace sbndaq
 
     // General
     uint32_t runNumber_;
+    uint32_t fragmentId;
     std::string device;
     uint32_t channel;
     uint32_t eventCounter;

@@ -22,6 +22,7 @@ sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
+  fragmentId = ps.get<uint32_t>("fragmentId");
   device  = ps.get<std::string>("device");
   channel = ps.get<uint32_t>("channel");
   configure();
@@ -38,7 +39,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
   agentSocket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (agentSocket < 0) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout socket error [" << 
+    TLOG(TLVL_ERROR) << "WhiteRabbitReadout socket error [" << 
       errno <<  "] " << strerror(errno);
     return;
   }
@@ -49,7 +50,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
       /* EAGAIN is special: it means we have no ID to check yet */
 		&& errno != EAGAIN) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout ioctl [1] error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
+    TLOG(TLVL_ERROR) << "WhiteRabbitReadout ioctl [1] error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
     close(agentSocket);
     return;
   }
@@ -57,7 +58,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
   /* Retrieve the interfaceindex */
   if (ioctl(agentSocket, SIOCGIFINDEX, &agentDevice) < 0) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout ioctl [2] error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
+    TLOG(TLVL_ERROR) << "WhiteRabbitReadout ioctl [2] error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
     close(agentSocket);
     return;
   }
@@ -70,7 +71,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
   address.sll_pkttype   = PACKET_BROADCAST; /* that's what ruler sends */
   if (bind(agentSocket, (struct sockaddr *)&address, sizeof(address)) < 0) 
   {
-    TLOG(TLVL_ERROR) << "WhiteRadoutReadout bind error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
+    TLOG(TLVL_ERROR) << "WhiteRabbitReadout bind error device " << deviceName << " [" << errno <<  "] " << strerror(errno);
     close(agentSocket);
     return;
   }
@@ -132,12 +133,12 @@ bool sbndaq::WhiteRabbitReadout::getData()
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
     {
-      TLOG(TLVL_ERROR) << "WhiteReadoutReadout read error device " << device << " [" << errno <<  "] " 
+      TLOG(TLVL_ERROR) << "WhiteRabbitReadout read error device " << device << " [" << errno <<  "] " 
 		       << strerror(errno);
       return(false);
     }
 
-    TLOG(TLVL_INFO) << "WhiteRadoutReadout event " << event->timeStamp[0].tv_sec << " " << event->timeStamp[0].tv_nsec; 
+    TLOG(TLVL_INFO) << "WhiteReadout event " << event->timeStamp[0].tv_sec << " " << event->timeStamp[0].tv_nsec; 
 
     bufferLock.lock();
     buffer.emplace_back(_event);
@@ -165,7 +166,7 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   {
     std::unique_ptr<artdaq::Fragment> fragPtr(artdaq::Fragment::FragmentBytes(bytesWritten,
 									      eventCounter, 
-									      boardId,
+									      fragmentId,
 									      FragmentType::WhiteRabbit,
 									      WhiteRabbitFragmentMetadata()));
     memcpy(fragPtr->dataBeginBytes(), (void *)(&*i), bytesWritten);
