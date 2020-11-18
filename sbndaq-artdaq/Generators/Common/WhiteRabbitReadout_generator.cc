@@ -140,10 +140,10 @@ bool sbndaq::WhiteRabbitReadout::getData()
       return(false);
     }
 
-    TLOG(TLVL_INFO) << "WhiteReadout event nstamp " << event->nstamp ;
+    TLOG(TLVL_DEBUG +10) << "WhiteReadout event nstamp " << event->nstamp ;
     for (uint32_t i=0; i<event->nstamp; i++)
     {
-      TLOG(TLVL_INFO) << "WhiteReadout event " << i << " " << event->timeStamp[i].tv_sec << 
+      TLOG(TLVL_DEBUG+11) << "WhiteReadout event " << i << " " << event->timeStamp[i].tv_sec << 
 	" " << event->timeStamp[i].tv_nsec; 
     }
 
@@ -161,6 +161,11 @@ bool sbndaq::WhiteRabbitReadout::getData()
 bool sbndaq::WhiteRabbitReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
   FillFragment(frags,true);
+
+  for (auto const& frag : frags) {
+    TLOG(33) << " Sending setSequenceID " << frag->sequenceID() << ", fragmentID " << frag->fragmentID()
+             << ", timestamp " << frag->timestamp();
+	}
   return true;
 }
 
@@ -172,13 +177,13 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
 
   bufferLock.lock();
 
-  eventSeqCounter++;
-  TLOG(TLVL_INFO) << "WhiteRabbit event " << eventSeqCounter;
+//  eventSeqCounter++;
+  TLOG(TLVL_DEBUG+12) << "WhiteRabbit event " << eventSeqCounter;
 
   for ( std::vector<struct sbndaq::WhiteRabbitEvent>::iterator i = buffer.begin(); i != buffer.end(); ++i)
   {
     std::unique_ptr<artdaq::Fragment> fragPtr(artdaq::Fragment::FragmentBytes(bytesWritten,
-									      eventSeqCounter, 
+									      eventSeqCounter++, 
 									      fragmentId,
 									      FragmentType::WhiteRabbit,
 									      WhiteRabbitFragmentMetadata()));
@@ -188,6 +193,7 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   }
   buffer.clear();
   bufferLock.unlock();
+
 
   return newData;
 }
