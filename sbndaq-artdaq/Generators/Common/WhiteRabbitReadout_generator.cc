@@ -123,34 +123,36 @@ bool sbndaq::WhiteRabbitReadout::getData()
   int length;
   int retcod;
 
-  struct sbndaq::WhiteRabbitEvent _event;
-  struct sbndaq::WhiteRabbitEvent *event = &_event;
+  struct sbndaq::WhiteRabbitEvent event;
+  struct sbndaq::WhiteRabbitData *data = &event.data;
 
   while ( running )
   {
-    event->flags         = WR_DIO_F_WAIT;
-    event->channel       = channel;
-    event->command       = WR_DIO_CMD_STAMP;
-    agentDevice.ifr_data = (char *)event;
+    data->flags         = WR_DIO_F_WAIT;
+    data->channel       = channel;
+    data->command       = WR_DIO_CMD_STAMP;
+    agentDevice.ifr_data = (char *)data;
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
+    clock_gettime(CLOCK_REALTIME,&event.systemTime);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
     {
-      TLOG(TLVL_ERROR) << "WhiteRabbitReadout read error device " << device << " [" << errno <<  "] " 
+      TLOG(TLVL_ERROR) << "WhiteRabbitReadout read device error " << device << " [" << errno <<  "] " 
 		       << strerror(errno);
       return(false);
     }
 
-    TLOG(TLVL_DEBUG +10) << "WhiteReadout event nstamp " << event->nstamp ;
-    for (uint32_t i=0; i<event->nstamp; i++)
+    TLOG(TLVL_INFO) << "WhiteReadout data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
+      event.systemTime.tv_nsec;
+    for (uint32_t i=0; i<data->nstamp; i++)
     {
-      TLOG(TLVL_DEBUG+11) << "WhiteReadout event " << i << " " << event->timeStamp[i].tv_sec << 
-	" " << event->timeStamp[i].tv_nsec; 
+      TLOG(TLVL_INFO) << "WhiteReadout data " << i << " " << data->timeStamp[i].tv_sec << 
+	" " << data->timeStamp[i].tv_nsec; 
     }
 
-    if ( event->nstamp > 0 )
+    if ( data->nstamp > 0 )
     {
       bufferLock.lock();
-      buffer.emplace_back(_event);
+      buffer.emplace_back(event);
       bufferLock.unlock();
     }
   }
