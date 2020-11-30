@@ -91,13 +91,13 @@ namespace sbndaq
       READOUT_CONTROL    = 0xEF00,
       // Animesh & Aiwu add registers for the LVDS logic
       FP_LVDS_Logic_G1   = 0x1084,
-      FP_LVDS_Logic_G2   = 0x1284,
-      FP_LVDS_Logic_G3   = 0x1484,
-      FP_LVDS_Logic_G4   = 0x1684,
-      FP_LVDS_Logic_G5   = 0x1884,
-      FP_LVDS_Logic_G6   = 0x1A84,
-      FP_LVDS_Logic_G7   = 0x1C84,
-      FP_LVDS_Logic_G8   = 0x1E84,
+      FP_LVDS_Logic_G2   = 0x1184,
+      FP_LVDS_Logic_G3   = 0x1284,
+      FP_LVDS_Logic_G4   = 0x1384,
+      FP_LVDS_Logic_G5   = 0x1484,
+      FP_LVDS_Logic_G6   = 0x1584,
+      FP_LVDS_Logic_G7   = 0x1684,
+      FP_LVDS_Logic_G8   = 0x1784,
       // Animesh & Aiwu add end
       // Animesh & Aiwu add registers for the LVDS output width
       FP_LVDS_OutWidth_Ch1   = 0x1070,

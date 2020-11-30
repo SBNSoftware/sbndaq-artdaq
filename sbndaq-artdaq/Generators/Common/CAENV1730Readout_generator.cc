@@ -603,7 +603,8 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
 
   // Construct mode mask
   data = fModeLVDS | (fModeLVDS << 4) | (fModeLVDS << 8) | (fModeLVDS << 12);
-
+  TLOG(TINFO) << __func__ << " ModelLVDS: 0x" << 
+      std::hex << data << std::dec;
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_CONTROL, data);
   sbndaq::CAENDecoder::checkError(retcod,"WriteLVDSOutputConfig",fBoardID);
 
