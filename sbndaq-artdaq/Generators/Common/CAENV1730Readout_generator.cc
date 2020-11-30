@@ -201,7 +201,7 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fFragmentID = ps.get<uint32_t>("fragment_id");
   TLOG(TINFO)<< __func__ << ": fFragmentID=" << fFragmentID;
 
-  fVerbosity = ps.get<int>("Verbosity"); //-1
+  fVerbosity = ps.get<int>("Verbosity");
   TLOG(TINFO) << __func__<< ": Verbosity=" << fVerbosity;
 
   fBoardChainNumber = ps.get<int>("BoardChainNumber"); //0
