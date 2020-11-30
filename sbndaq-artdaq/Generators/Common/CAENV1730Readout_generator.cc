@@ -663,6 +663,28 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
 
   CheckReadback("FPOutputConfig", fBoardID, ioMode, readBack);
 
+
+
+ // Animesh added 
+
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
+  TLOG(TINFO) << "Register for G1: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
+  TLOG(TINFO) << "Register for G2: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
+  TLOG(TINFO) << "Register for G3: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
+  TLOG(TINFO) << "Register for G4: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
+  TLOG(TINFO) << "Register for G5: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
+  TLOG(TINFO) << "Register for G6: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
+  TLOG(TINFO) << "Register for G7: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
+  TLOG(TINFO) << "Register for G8: 0x" << std::hex << readBack << std::dec;
+
+
   //Animesh & Aiwu add - to set/read registers for LVDS logic values setting
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G1, fLVDSLogicValueG1);
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G2, fLVDSLogicValueG2);
