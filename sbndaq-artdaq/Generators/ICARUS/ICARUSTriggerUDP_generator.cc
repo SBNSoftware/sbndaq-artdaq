@@ -35,6 +35,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , ip_data_pmt_(ps.get<std::string>("data_pmt_ip", "127.0.0.1"))
   , n_init_retries_(ps.get<int>("n_init_retries",10))
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
+  , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
   
   configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -137,7 +138,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     ts = diff.total_nanoseconds();
   }
 
-  int size_bytes = poll_with_timeout(datasocket_,ip_data_,500);
+  int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
+  //int size_bytes = poll_with_timeout(datasocket_,ip_data_,500);
   //int buffersize = 0;
   std::string data_input = "";
   char buffer[size_bytes];
@@ -152,6 +154,13 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   size_t pos = 0;
   //size_t delim_pos = 0;
   TRACE(TR_LOG, "string received:: %s", data_input.c_str());
+  //if shouldn't send fragments, then don't create fragment/send
+  if(generated_fragments_per_event_==0){
+    ++fEventCounter;
+    return true;
+  }
+
+
   std::string delimiter = ",";
   std::vector<std::string> sections;
   std::string token = "";
@@ -161,6 +170,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     data_input.erase(0, pos + delimiter.length());
     //delim_pos = pos;
   }
+
   sections.push_back(data_input);
   
   if(sections.size() >= 4)
@@ -284,7 +294,7 @@ void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
 }
 
 //return size of available data
-int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, int timeout_ms)
+int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, struct sockaddr_in& si, int timeout_ms)
 {
 
   TRACE(TR_LOG,"poll:: DATA from %s with %d ms timeout",ip.c_str(),timeout_ms);
@@ -304,8 +314,10 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, int 
       
      
       uint8_t peekBuffer[2];
-      recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
-	       (struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
+      //recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
+      //(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
+      recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                               
+	       (struct sockaddr *) &si, (socklen_t*)sizeof(si));
       //std::cout << msg_size << std::endl;
       return (int)(peekBuffer[1]);
       //return sizeof(peekBuffer);
@@ -355,7 +367,7 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
   TRACE(TR_LOG,"sent! COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
 
   //send(TTLK_INIT);
-  int size_bytes = poll_with_timeout(configsocket_,ip_config_,sleep_time_ms);
+  int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
   if(size_bytes>0){
     //uint16_t buffer[size_bytes/2+1];
     char buffer[size_bytes];
