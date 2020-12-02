@@ -54,7 +54,7 @@ namespace sbndaq
     void resume() override;
     
     void send(const Command_t);
-    int poll_with_timeout(int,std::string,int);
+    int poll_with_timeout(int,std::string,struct sockaddr_in&, int);
     //int read(int,uint16_t*);
     int read(int, std::string, struct sockaddr_in&,int,char*);
     
@@ -93,6 +93,9 @@ namespace sbndaq
     int n_init_retries_;
     int n_init_timeout_ms_;
     int fEventCounter;
+
+    //expected fragments
+    int generated_fragments_per_event_;
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */

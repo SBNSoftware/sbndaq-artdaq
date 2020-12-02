@@ -19,8 +19,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   boardId(0),
   recordLength(0),
   postPercent(0),
-  maxEventsPerTransfer(0),
-  eventsPerInterrupt(0),
   irqWaitTime(0),
   allowTriggerOverlap(true),
   usePedestals(0),
@@ -29,7 +27,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   ioLevel(0),
   nChannels(0),
   triggerPolarity(0),
-  interruptLevel(0),
   extTrgMode(0),
   swTrgMode(0),
   acqMode(0),
@@ -45,7 +42,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   enableReadout        = ps.get<int>("enableReadout");
   boardId              = ps.get<int>("boardId");
   recordLength         = ps.get<int>("recordLength");
-  maxEventsPerTransfer = ps.get<int>("maxEventsPerTransfer");
   runSyncMode          = ps.get<int>("runSyncMode");
   outputSignalMode     = ps.get<int>("outputSignalMode");
   allowTriggerOverlap  = ps.get<bool>("allowTriggerOverlap");
@@ -61,14 +57,12 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   triggerPulseWidth    = ps.get<uint8_t>("triggerPulseWidth");
   debugLevel           = ps.get<int>("debugLevel");
   postPercent          = ps.get<int>("postPercent");
-  eventsPerInterrupt   = ps.get<int>("eventsPerInterrupt");
   irqWaitTime          = ps.get<int>("irqWaitTime");
   eventCounterWarning  = ps.get<int>("eventCounterWarning");
   memoryAlmostFull     = ps.get<int>("memoryAlmostFull");
   readoutMode          = ps.get<int>("readoutMode");
   analogMode           = ps.get<int>("analogMode");
   testPattern          = ps.get<int>("testPattern");
-  interruptLevel       = ps.get<int>("InterruptLevel");
 
   char tag[1024];
   channelEnableMask = 0;
@@ -121,10 +115,8 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  DacValue              " << e.dacValue << std::endl;
   os << "  DynamicRange          " << e.dynamicRange << std::endl;
   os << "  nChannels             " << e.nChannels << std::endl;
-  os << "  MaxEventsPerTransfer  " << e.maxEventsPerTransfer << std::endl;
   os << "  PostPercent           " << e.postPercent << "%" << std::endl;
   os << "  IrqWaitTime           " << e.irqWaitTime << std::endl;
-  os << "  EventsPerInterrupt    " << e.eventsPerInterrupt << std::endl;
   os << "  IOLevel (NIM or TTL)  " << e.ioLevel << " " 
      << sbndaq::CAENDecoder::IOLevel((CAEN_DGTZ_IOLevel_t)e.ioLevel) << std::endl;
   os << "  TriggerPolarity       " << e.triggerPolarity << " " 
@@ -144,7 +136,6 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;
   os << "  AnalogMode            " << e.analogMode << std::endl;
   os << "  TestPattern           " << e.testPattern << std::endl;
-  os << "  InterruptLevel        " << e.interruptLevel << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )
