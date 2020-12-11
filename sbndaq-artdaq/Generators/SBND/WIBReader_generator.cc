@@ -86,7 +86,7 @@ namespace sbndaq
    auto FEMB_configs               = WIB_config.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
       
    const std::string identification = "SBNDWIBReader::setupWIB";
-   TLOG_INFO(identification) << "Starting setupWIB " << TLOG_ENDL;
+   TLOG_INFO(identification) << "Now Starting setupWIB " << TLOG_ENDL;
    
       
    //TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
@@ -102,13 +102,13 @@ namespace sbndaq
    
    //wib=std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
    
-   TLOG_INFO(identification) << "Trying to execute configWIB function " << TLOG_ENDL;
+   TLOG_INFO(identification) << "Now Trying to execute configWIB function " << TLOG_ENDL;
    
    wib->configWIB(DTS_source);
    
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
    
-   TLOG_INFO(identification) << "Trying to talk to FEMBs " << TLOG_ENDL;
+   TLOG_INFO(identification) << "Now Trying to talk to FEMBs " << TLOG_ENDL;
       
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
        TLOG_INFO(identification) << "FEMB No. " << iFEMB << TLOG_ENDL; 
