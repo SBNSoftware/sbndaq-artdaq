@@ -152,7 +152,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
   
   TLOG(TLVL_DEBUG) << __func__ << "() called";
   
-  // Sleep until the next poll comes
+  // Sleep until the time for next poll comes
   int now = std::chrono::system_clock::now().time_since_epoch().count() % feb_poll_period_;
   usleep((feb_poll_period_ - now)/1000);
 
@@ -193,7 +193,8 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       for(int jj=0; jj<datalen; ) { // jj is incremented in processSingleEvent
         feb_read_events++;
         febdrv.processSingleEvent(jj, feb.event);
-        feb.metadata.increment_feb_events(1 + feb.event.lostcpu + feb.event.lostfpga);
+        feb.metadata.increment_feb_events(1 + feb.event.lostcpu + feb.last_lostfpga);
+        feb.last_lostfpga = feb.event.lostfpga; //Lost fpga contains hits omitted *after* the trigger event in given hit
         feb.buffer.push_back(std::make_pair(feb.event, feb.metadata));
       }
     }

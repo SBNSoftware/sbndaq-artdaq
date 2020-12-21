@@ -40,6 +40,7 @@ namespace sbndaq {
       uint32_t                     event_number = 0; //for given FEB
       uint64_t                     last_accepted_timestamp = 1; // 1 is as a flag in case hits are omitted at the very beginning of the run
       uint64_t                     last_accepted_event_number = 0;
+      uint8_t                      last_lostfpga = 0;
       
       sbndaq::BernCRTEvent event;
       BernCRTFragmentMetadata metadata;
