@@ -175,7 +175,8 @@ size_t sbndaq::BernCRTData::GetFEBData() {
     
     std::unique_lock<std::mutex> lock(*(feb.mutexptr));
     
-    unsigned int feb_read_events = 0;
+    unsigned int feb_read_hits = 0;
+    unsigned int feb_total_lostfpga = 0;
     uint64_t last_poll_event_number = feb.metadata.feb_event_number();
     
     while(true) {
@@ -191,19 +192,26 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       data_size += datalen;
       
       for(int jj=0; jj<datalen; ) { // jj is incremented in processSingleEvent
-        feb_read_events++;
-        febdrv.processSingleEvent(jj, feb.event);
-        feb.metadata.increment_feb_events(1 + feb.event.lostcpu + feb.last_lostfpga);
-        feb.last_lostfpga = feb.event.lostfpga; //Lost fpga contains hits omitted *after* the trigger event in given hit
+        feb_read_hits++;
+        febdrv.processSingleEvent(jj, feb.event); //read next hit
+
+        feb_total_lostfpga += feb.last_lostfpga;
+        feb.metadata.increment_feb_events(
+            1 //this hit
+            + feb.event.lostcpu * (feb.last_poll_total_lostfpga + feb.last_poll_total_read_hits + 0.001) / (feb.last_poll_total_read_hits + 0.001) //lostcpu doesn't include lostfpga. Here I try to estimate lostfpga in this perdiod based on the hit rate in the previous poll
+            + feb.last_lostfpga); //Lost fpga contains hits omitted *after* the trigger event in given hit, this is why we use the field from the previous hit here
+        feb.last_lostfpga = feb.event.lostfpga;
         feb.buffer.push_back(std::make_pair(feb.event, feb.metadata));
       }
     }
     
-    events += feb_read_events;
+    events += feb_read_hits;
+    feb.last_poll_total_read_hits = feb_read_hits;
+    feb.last_poll_total_lostfpga = feb_total_lostfpga;
     
     //only at the end of the poll we know how many events we have in the poll
     //loop over the poll again and update metadata
-    for(unsigned int i = feb.buffer.size() - feb_read_events; i < feb.buffer.size(); i++) {
+    for(unsigned int i = feb.buffer.size() - feb_read_hits; i < feb.buffer.size(); i++) {
       feb.buffer[i].second.set_feb_events_per_poll(feb.metadata.feb_event_number() - last_poll_event_number);
       //TODO perhaps we would like to save number of lost events as well?
     }
