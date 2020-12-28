@@ -177,11 +177,18 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   {
     std::string trig_name = sections[0];
     int trigger = -1;
+    int wr_trig = -1;
     if(trig_name == "TS1")
       trigger = 1;
     int event_no = std::stoi(sections[1]);
     int secs = std::stoi(sections[2]);
     long nanosecs = std::stol(sections[3]);
+    std::string wr_name = sections[4];
+    if(wr_name == "WR_TS1")
+      wr_trig = 2;
+    int event_no_wr = std::stoi(sections[5]);
+    long wr_secs = std::stoi(sections[6]);
+    long wr_nsecs = std::stoi(sections[7]);
     //std::cout << "trig_name:: " << trig_name << " event_number:: " << event_no << " seconds since start:: " << secs << " nanoseconds since start:: " << nanosecs << std::endl;
     
     //TRACE(TR_LOG, "trig_name:: %s", trig_name);
@@ -190,12 +197,12 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //TRACE(TR_LOG, "nanoseconds since start:: %h", nanosecs);    }
 
     //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly    
-    const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs);
+    const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs);
     //const auto fragment_size = metadata.ExpectedDataSize();
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
     size_t fragment_size = max_fragment_size_bytes_;
-    TRACE(TR_LOG, "Created ICARUSTriggerUDP Fragment with size of 100 bytes");
+    TRACE(TR_LOG, "Created ICARUSTriggerUDP Fragment with size of 300 bytes");
     frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
     std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
     //auto frag = artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter,fragment_id_,sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata);
@@ -205,7 +212,11 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     int number = metadata.getEventNo();
     int sec_frag = metadata.getSeconds();
     long nanosec_frag = metadata.getNanoSeconds();
-    std::cout << "Name: " << name << " Event Number: " << number << " Seconds: " << sec_frag << " Nanoseconds: " << nanosec_frag << std::endl; 
+    int wr_label = metadata.getWRName();
+    int wr_num = metadata.getWREventNo();
+    long wr_sec_frag = metadata.getWRSeconds();
+    long wr_nsec_frag = metadata.getWRNanoSeconds();
+    std::cout << "Name: " << name << " Event Number: " << number << " Seconds: " << sec_frag << " Nanoseconds: " << nanosec_frag << " WR: " << wr_label << " WR Event: " << wr_num << " WR Seconds: " << wr_sec_frag << " WR Nanoseconds" << std::endl; 
     //Old method, try new method which inserts data string from hardware into the fragment as well 
     //frags.emplace_back(nullptr);
     //std::swap(frags.back(), frag);
