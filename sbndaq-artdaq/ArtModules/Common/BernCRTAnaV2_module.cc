@@ -119,7 +119,7 @@ sbndaq::BernCRTAnaV2::~BernCRTAnaV2() {}
 void sbndaq::BernCRTAnaV2::analyze_fragment(artdaq::Fragment & frag) {
 
   BernCRTFragmentV2 bern_fragment(frag);
-  TLOG(TLVL_INFO) << bern_fragment;
+//  TLOG(TLVL_INFO) << bern_fragment;
 
   sequence_id               = frag.sequenceID();
 

@@ -221,7 +221,7 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
             sizeof(BernCRTHitV2)*metadata.hits_in_fragment(), //payload_size
             sequence_id_++,
             feb.fragment_id,
-            sbndaq::detail::FragmentType::BERNCRT,
+            sbndaq::detail::FragmentType::BERNCRTV2,
             metadata,
             fragment_timestamp
             ) );
