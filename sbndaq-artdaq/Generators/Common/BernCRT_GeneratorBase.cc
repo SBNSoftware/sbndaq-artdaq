@@ -44,11 +44,9 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
   std::vector<uint16_t> fragment_ids = ps_.get< std::vector<uint16_t> >("fragment_ids");
   std::sort(fragment_ids.begin(), fragment_ids.end());
 
-  omit_out_of_order_events_   = ps_.get<bool>("omit_out_of_order_events");
-  omit_out_of_sync_events_    = ps_.get<bool>("omit_out_of_sync_events");
-  out_of_sync_tolerance_ns_   = 1000000 * ps_.get<uint32_t>("out_of_sync_tolerance_ms");
   feb_restart_period_         = 1e9 * ps_.get<uint32_t>("feb_restart_period_s");
   initial_delay_ns_           = 1e9 * ps_.get<uint32_t>("initial_delay_s");
+  fragment_period_            = 1e6 * ps_.get<uint16_t>("fragment_period_ms");
 
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
   feb_poll_period_            = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
@@ -161,76 +159,14 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 
   TLOG(TLVL_DEBUG) <<__func__<< "() called";
 
-  unsigned long total_events = GetFEBData(); //read data FEB and fill circular buffer
-
-//   metricMan->sendMetric("TotalEventsAdded",total_events,"events",5,true,"BernCRTGenerator");
+  unsigned long total_hits = GetFEBData(); //read data FEB and fill circular buffer
+  
+  if(metricMan != nullptr) metricMan->sendMetric("total_hits_per_poll", total_hits, "CRT hits per poll", 5, artdaq::MetricMode::Average);
 
   return true;
 } //GetData
 
 /*-----------------------------------------------------------------------*/
-
-bool sbndaq::BernCRT_GeneratorBase::OmitHit(uint64_t const & timestamp, BernCRTFragmentMetadata & metadata, FEB_t & feb, uint64_t const& feb_id) {
-  /**
-   * Check if given CRT hit should be omitted, i.e. not sent to DAQ
-   * Perhaps we don't need this code at all - to be determined during testing
-   * This function returns true if a hit should be omitted
-   */
-  if(omit_out_of_sync_events_) {
-    /**
-     * Omit events in which T0 value from FEB seems out of sync with server clock.
-     * This is a method to alleviate problem of "spikes".  Otherwise it should not
-     * be needed.  Under normal conditions server clock can be off by up to 500ms
-     * before the data starts to be corrupted.
-     */
-    if(    timestamp < metadata.last_poll_start() - out_of_sync_tolerance_ns_
-        || timestamp > metadata.this_poll_end()   + out_of_sync_tolerance_ns_) {
-      TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Event: \n"<< metadata;
-      TLOG(TLVL_WARNING)<<__func__ <<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
-      TLOG(TLVL_WARNING) <<__func__<<"(feb_id=" << feb_id << ") Omitted FEB timestamp out of sync with server clock";
-      return true;
-    }
-  }
-
-  if(omit_out_of_order_events_) {
-    /**
-     * Omit events with nonmonotonically growing timestamp
-     * This is a method to alleviate problem of "spikes"
-     * Out of order events may appear due to corruption of FEB data
-     * or due to large desynchronisation of the server clock w.r.t. FEB PPS
-     */
-    if(timestamp <= feb.last_accepted_timestamp) {
-      TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Event: \n"<< metadata;
-      TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
-      TLOG(TLVL_WARNING)<<__func__<<"(feb_id=" << feb_id << ") Omitted out of order timestamp: "<<sbndaq::BernCRTFragment::print_timestamp(timestamp) <<" ≤ "<<sbndaq::BernCRTFragment::print_timestamp(feb.last_accepted_timestamp);
-      return true;
-    }
-  }
-  return false;
-}
-
-
-uint64_t sbndaq::BernCRT_GeneratorBase::CalculateTimestamp(BernCRTEvent const& data, BernCRTFragmentMetadata & metadata) {
-  /**
-   * Calculate timestamp based on nanosecond from FEB and poll times measured by server
-   * see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
-   */
-  int ts0  = data.ts0;
-
-  //add PPS cable length offset modulo 1s
-  ts0 = (ts0 + feb_configuration[data.mac5].GetPPSOffset()) % (1000*1000*1000);
-  if(ts0 < 0) ts0 += 1000*1000*1000; //just in case the cable offset is negative (should be positive normally)
-
-  uint64_t mean_poll_time = metadata.last_poll_start()/2 + metadata.this_poll_end()/2;
-  int mean_poll_time_ns = mean_poll_time % (1000*1000*1000); 
-
-  if(ts0 - mean_poll_time_ns < -500*1000*1000)
-    return mean_poll_time - mean_poll_time_ns + ts0 + 1000*1000*1000;
-  else if(ts0 - mean_poll_time_ns > 500*1000*1000)
-    return mean_poll_time - mean_poll_time_ns + ts0 - 1000*1000*1000;
-  else
-    return mean_poll_time - mean_poll_time_ns + ts0;
-}
 
 
 void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
@@ -259,40 +195,39 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   if(!discard_data) {
     //loop over all the CRTHit events in our buffer (for this FEB)
     for(size_t i_e=0; i_e<buffer_end; ++i_e) {
-      BernCRTEvent const& data = feb.buffer[i_e].first;
-      BernCRTFragmentMetadata & metadata = feb.buffer[i_e].second;
+      const std::vector<BernCRTHitV2> & data     = feb.buffer[i_e].hits;
+      const BernCRTFragmentMetadataV2 & metadata = feb.buffer[i_e].metadata;
+      const uint64_t & fragment_timestamp        = feb.buffer[i_e].fragment_timestamp;
 
-      if(i_e == 0)
-        if(metricMan != nullptr) metricMan->sendMetric(
-            std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
-            metadata.feb_events_per_poll() * 1e9 / (metadata.this_poll_end() - metadata.last_poll_end()),
-            "CRT rate", 5, artdaq::MetricMode::Average);
-
-      const uint64_t timestamp = CalculateTimestamp(data, metadata);
-
-      if(OmitHit(timestamp, metadata, feb, feb_id)) continue;
-
-      metadata.set_omitted_events(metadata.feb_event_number() - feb.last_accepted_event_number - 1);
-      metadata.set_last_accepted_timestamp(feb.last_accepted_timestamp);
-
-      feb.last_accepted_timestamp = timestamp;
-      feb.last_accepted_event_number = metadata.feb_event_number();
-
-      TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Event: " << i_e<<"\n"<< metadata;
-      TLOG(TLVL_SPECIAL)<<__func__ << "(feb_id=" << feb_id << ") Timestamp:       "<<sbndaq::BernCRTFragment::print_timestamp(timestamp);
+      if(i_e == 0) { //send metrics only once for each FillFragment call
+        if(metricMan != nullptr) {
+          metricMan->sendMetric(
+              std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
+              metadata.hits_in_poll() * 1e9 / (metadata.this_poll_end() - metadata.last_poll_end()),
+              "CRT hit rate", 5, artdaq::MetricMode::Average);
+          metricMan->sendMetric(
+              std::string("feb_poll_time_ms_")+std::to_string(feb.fragment_id & 0xff),
+              (metadata.this_poll_end() - metadata.this_poll_start()) * 1e6,
+              "CRT poll time", 5, artdaq::MetricMode::Average);
+          metricMan->sendMetric(
+              std::string("feb_poll_period_ms_")+std::to_string(feb.fragment_id & 0xff),
+              (metadata.this_poll_end() - metadata.last_poll_end()) * 1e6,
+              "CRT poll period", 5, artdaq::MetricMode::Average);
+        }
+      }
 
       //create our new fragment on the end of the frags vector
       frags.emplace_back( artdaq::Fragment::FragmentBytes(
-            sizeof(BernCRTEvent), //payload_size
+            sizeof(BernCRTHitV2)*metadata.hits_in_fragment(), //payload_size
             sequence_id_++,
             feb.fragment_id,
-            sbndaq::detail::FragmentType::BERNCRT,
+            sbndaq::detail::FragmentType::BERNCRTV2,
             metadata,
-            timestamp
+            fragment_timestamp
             ) );
 
       //copy the BernCRTEvent into the fragment we just created
-      memcpy(frags.back()->dataBeginBytes(), &data, sizeof(BernCRTEvent));
+      memcpy(frags.back()->dataBeginBytes(), data.data(), sizeof(BernCRTHitV2)*metadata.hits_in_fragment());
     } //loop over events in feb buffer
   }
 
@@ -321,7 +256,7 @@ size_t sbndaq::BernCRT_GeneratorBase::EraseFromFEBBuffer(FEB_t & feb, size_t con
 /*-----------------------------------------------------------------------*/
 
 
-void sbndaq::BernCRT_GeneratorBase::SendMetadataMetrics(BernCRTFragmentMetadata const& /*m*/) {
+void sbndaq::BernCRT_GeneratorBase::SendMetadataMetrics(BernCRTFragmentMetadataV2 const& /*m*/) {
 
   TLOG(TLVL_DEBUG)<<__func__<<"() called";
 

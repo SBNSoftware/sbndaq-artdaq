@@ -5,11 +5,11 @@
 #include "artdaq-core/Data/Fragment.hh" 
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
 
-#include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentV2.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragment.hh" //print_timestamp
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include "BernCRTFEBConfiguration.hh"
-// #include "febdrv.hh"
 
 #include <unistd.h>
 #include <vector>
@@ -30,28 +30,39 @@ namespace sbndaq {
     
   protected:
     
-    typedef boost::circular_buffer<BernCRTDataPair> EventBuffer_t;
+    typedef struct {
+      std::vector<BernCRTHitV2> hits;
+      BernCRTFragmentMetadataV2 metadata;
+      uint64_t fragment_timestamp;
+    } CRTBufferObject;
+
+    typedef boost::circular_buffer<CRTBufferObject> FragmentBuffer_t;
     
     typedef struct FEB {
-      EventBuffer_t                buffer;
+      FragmentBuffer_t                buffer;
 
       std::unique_ptr<std::mutex>  mutexptr;
       uint16_t                     fragment_id;
-      uint32_t                     event_number = 0; //for given FEB
-      uint64_t                     last_accepted_timestamp = 1; // 1 is as a flag in case hits are omitted at the very beginning of the run
-      uint64_t                     last_accepted_event_number = 0;
+      uint64_t                     last_accepted_timestamp = 1; // 1 = a flag in case hits are omitted at the very beginning of the run
+      uint64_t                     last_accepted_hit_number = 0;
+      uint8_t                      last_lostfpga = 0;
+      uint32_t                     last_poll_total_lostfpga = 0;
+      uint16_t                     last_poll_total_read_hits = 0;
+
+      uint64_t                     hit_number = 0;
       
-      sbndaq::BernCRTEvent event;
-      BernCRTFragmentMetadata metadata;
+      std::vector<BernCRTHitV2> hits;
+      BernCRTFragmentMetadataV2 metadata;
 
       FEB(uint32_t capacity, uint16_t id)
-        : buffer(EventBuffer_t(capacity)),
+        : buffer(FragmentBuffer_t(capacity)),
           mutexptr(new std::mutex),
           fragment_id(id)
-      { Init(); }
+      { Init(id&0xff); }
       FEB() { FEB(0, 0); }
-      void Init() {
+      void Init(uint8_t mac5) {
         buffer.clear();
+        metadata.set_mac5(mac5);
         mutexptr->unlock();
       }
     } FEB_t;
@@ -89,20 +100,17 @@ namespace sbndaq {
 
     uint64_t feb_restart_period_;
     uint32_t feb_poll_period_;
+    int32_t fragment_period_;
     
   private:
-
 
     bool GetData();
     void FillFragment(uint64_t const&, artdaq::FragmentPtrs &);
 
     size_t EraseFromFEBBuffer(FEB_t &, size_t const&);
 
-    uint64_t CalculateTimestamp(BernCRTEvent const& , BernCRTFragmentMetadata& );
-    bool OmitHit(uint64_t const & timestamp, BernCRTFragmentMetadata & metadata, FEB_t & feb, uint64_t const& feb_id);
-
     std::string GetFEBIDString(uint64_t const& id) const;
-    void SendMetadataMetrics(BernCRTFragmentMetadata const& m);
+    void SendMetadataMetrics(BernCRTFragmentMetadataV2 const& m);
     void UpdateBufferOccupancyMetrics(uint64_t const& ,size_t const&) const;
     
     share::WorkerThreadUPtr GetData_thread_;
@@ -113,10 +121,8 @@ namespace sbndaq {
     uint64_t run_start_time;
     
     //workarounds
-    bool omit_out_of_order_events_;
-    bool omit_out_of_sync_events_;
-    int32_t out_of_sync_tolerance_ns_;
     uint64_t initial_delay_ns_;
+
   };
 
 }
