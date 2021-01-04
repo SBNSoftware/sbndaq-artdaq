@@ -68,7 +68,7 @@ void icarus::PhysCrateData::InitializeVeto(){
   //veto_state     = true; //defaults to on
   veto_state = false;
   
-  TRACE(TR_LOG,"IP ADDRESS for veto is %s:%d\n",veto_host.c_str(),veto_host_port);
+  TRACE(TLVL_INFO,"IP ADDRESS for veto is %s:%d\n",veto_host.c_str(),veto_host_port);
   
   _doVetoTest    = ps_.get<bool>("DoVetoTest",false);
   if(_doVetoTest){
