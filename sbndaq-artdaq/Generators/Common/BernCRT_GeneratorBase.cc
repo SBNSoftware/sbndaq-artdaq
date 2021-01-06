@@ -178,7 +178,7 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
   size_t buffer_end = feb.buffer.size();
 
-  TLOG(TLVL_DEBUG) <<__func__ << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " events";
+  TLOG(TLVL_DEBUG+30) << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " fragments";
   if(metricMan != nullptr) metricMan->sendMetric("max_feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Maximum);
 
   //workaround: avoid processing hits at the beginning of the run, to prevent CRT from accumulating lot's of data before TPCs are ready
