@@ -135,7 +135,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
     ts = diff.total_nanoseconds();
   }
-
+  //std::cout << ts << std::endl;
   int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
   //int size_bytes = poll_with_timeout(datasocket_,ip_data_,500);
   //int buffersize = 0;
@@ -166,7 +166,6 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     token = data_input.substr(0, pos);
     sections.push_back(token);
     data_input.erase(0, pos + delimiter.length());
-    //delim_pos = pos;
   }
   sections.push_back(data_input);
 
@@ -189,18 +188,18 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     if(sections.size() > 5)
     {
       std::string wr_name = sections[4];
-      std::cout << wr_name << std::endl;
       if(wr_name == " WR_TS1")
 	wr_trig = 2;
       event_no_wr = std::stoi(sections[5]);
       wr_secs = std::stol(sections[6]);
       wr_nsecs = std::stol(sections[7]);
+      long long val = wr_secs*1e9+wr_nsecs;
+      ts = val;
     }
     if(wr_trig == -1 || event_no_wr == -2 || wr_secs == -3 || wr_nsecs == -4)
     {
       TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
     }
-
     //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly    
     const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs);
     //const auto fragment_size = metadata.ExpectedDataSize();
@@ -273,8 +272,9 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   } 
   */   
 //send_TRIG_ALLW();
+  TLOG(TLVL_DEBUG) << "The artdaq timestamp value is: " << ts;
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
-  std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
+  //std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
   return true;
 
 }
