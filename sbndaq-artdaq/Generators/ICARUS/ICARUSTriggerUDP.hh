@@ -93,6 +93,7 @@ namespace sbndaq
     int n_init_retries_;
     int n_init_timeout_ms_;
     int fEventCounter;
+    bool use_wr_time_;
 
     //expected fragments
     int generated_fragments_per_event_;
