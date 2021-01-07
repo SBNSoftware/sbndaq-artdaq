@@ -25,6 +25,8 @@ namespace sbndaq {
     void StartFebdrv();
     uint64_t GetTimeSinceLastRestart();
     std::chrono::time_point<std::chrono::system_clock> last_restart_time;
+    
+    void CalculateTimestamp(BernCRTHitV2&, BernCRTFragmentMetadataV2&);
 
     FEBDRV febdrv;
 

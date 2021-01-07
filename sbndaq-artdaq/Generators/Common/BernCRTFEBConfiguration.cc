@@ -129,7 +129,7 @@ void sbndaq::BernCRTFEBConfiguration::InitializeParameters() {
     boolean_channel_parameters  [ch+"high_high_bias"]         = {false, uint16_t(339 + channel* 9), false, ""};
     boolean_channel_parameters  [ch+"test_HG"]                = {false, uint16_t(631 + channel*15), false, ""};
     boolean_channel_parameters  [ch+"test_LG"]                = {false, uint16_t(632 + channel*15), false, ""};
-    boolean_channel_parameters  [ch+"enable_preamp"]          = {false, uint16_t(633 + channel*15), false, ""};
+    boolean_channel_parameters  [ch+"enable_preamp"]          = {false, uint16_t(633 + channel*15), true,  ""};
   }
 
 //                                                         value, bit, inverted_logic, comment
