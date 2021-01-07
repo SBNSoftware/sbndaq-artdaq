@@ -36,6 +36,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , n_init_retries_(ps.get<int>("n_init_retries",10))
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
+  , use_wr_time_(ps.get<bool>("use_wr_time"))
 {
   
   configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -194,7 +195,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       wr_secs = std::stol(sections[6]);
       wr_nsecs = std::stol(sections[7]);
       long long val = wr_secs*1e9+wr_nsecs;
-      ts = val;
+      if(use_wr_time_)
+	ts = val;
     }
     if(wr_trig == -1 || event_no_wr == -2 || wr_secs == -3 || wr_nsecs == -4)
     {
