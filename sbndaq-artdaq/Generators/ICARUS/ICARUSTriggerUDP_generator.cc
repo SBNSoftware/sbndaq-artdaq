@@ -88,7 +88,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
-  
+  /*
   pmtsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); 
   if(pmtsocket_ < 0)
     {
@@ -111,17 +111,15 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
       throw art::Exception(art::errors::Configuration) << "ICARUSPMTGate: Error creating socket!" << std::endl;
       exit(1);
     }
-  
+  */
   fEventCounter = 1;
 }
 bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 {
   static auto start= std::chrono::steady_clock::now();
-
   if (should_stop()){
     return false;
   }
-
   /*
     //do something in here to get data...
    */
@@ -137,7 +135,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
     ts = diff.total_nanoseconds();
   }
-
+  //std::cout << ts << std::endl;
   int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
   //int size_bytes = poll_with_timeout(datasocket_,ip_data_,500);
   //int buffersize = 0;
@@ -146,14 +144,14 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   if(size_bytes>0){
     //char buffer[size_bytes];
     read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
-    TRACE(TR_LOG,"data received:: %s",buffer);
+    TLOG(TLVL_DEBUG) << "data received:: " << buffer;
     //buffersize = sizeof(buffer)/sizeof(char);
     data_input = buffer;
   }
 
   size_t pos = 0;
   //size_t delim_pos = 0;
-  TRACE(TR_LOG, "string received:: %s", data_input.c_str());
+  TLOG(TLVL_DEBUG) << "string received:: " << buffer;
   //if shouldn't send fragments, then don't create fragment/send
   if(generated_fragments_per_event_==0){
     ++fEventCounter;
@@ -168,34 +166,47 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     token = data_input.substr(0, pos);
     sections.push_back(token);
     data_input.erase(0, pos + delimiter.length());
-    //delim_pos = pos;
   }
-
   sections.push_back(data_input);
-  
+
+  int trigger = -1;
+  int wr_trig = -1;
+  int event_no = -2;
+  int event_no_wr = -2;
+  int secs = -3;
+  long wr_secs = -3;
+  long nanosecs = -4;
+  long wr_nsecs = -4;
   if(sections.size() >= 4)
   {
     std::string trig_name = sections[0];
-    int trigger = -1;
-    if(trig_name == "TS1")
+    if(trig_name == "Local_TS1")
       trigger = 1;
-    int event_no = std::stoi(sections[1]);
-    int secs = std::stoi(sections[2]);
-    long nanosecs = std::stol(sections[3]);
-    //std::cout << "trig_name:: " << trig_name << " event_number:: " << event_no << " seconds since start:: " << secs << " nanoseconds since start:: " << nanosecs << std::endl;
-    
-    //TRACE(TR_LOG, "trig_name:: %s", trig_name);
-    //TRACE(TR_LOG, "event_number:: %i", event_no);
-    //TRACE(TR_LOG, "seconds since start:: %i", secs);
-    //TRACE(TR_LOG, "nanoseconds since start:: %h", nanosecs);    }
-
+    event_no = std::stoi(sections[1]);
+    secs = std::stoi(sections[2]);
+    nanosecs = std::stol(sections[3]);
+    if(sections.size() > 5)
+    {
+      std::string wr_name = sections[4];
+      if(wr_name == " WR_TS1")
+	wr_trig = 2;
+      event_no_wr = std::stoi(sections[5]);
+      wr_secs = std::stol(sections[6]);
+      wr_nsecs = std::stol(sections[7]);
+      long long val = wr_secs*1e9+wr_nsecs;
+      ts = val;
+    }
+    if(wr_trig == -1 || event_no_wr == -2 || wr_secs == -3 || wr_nsecs == -4)
+    {
+      TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
+    }
     //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly    
-    const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs);
+    const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs);
     //const auto fragment_size = metadata.ExpectedDataSize();
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
     size_t fragment_size = max_fragment_size_bytes_;
-    TRACE(TR_LOG, "Created ICARUSTriggerUDP Fragment with size of 100 bytes");
+    TLOG(TLVL_DEBUG) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
     frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
     std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
     //auto frag = artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter,fragment_id_,sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata);
@@ -205,37 +216,41 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     int number = metadata.getEventNo();
     int sec_frag = metadata.getSeconds();
     long nanosec_frag = metadata.getNanoSeconds();
-    std::cout << "Name: " << name << " Event Number: " << number << " Seconds: " << sec_frag << " Nanoseconds: " << nanosec_frag << std::endl; 
+    int wr_label = metadata.getWRName();
+    int wr_num = metadata.getWREventNo();
+    long wr_sec_frag = metadata.getWRSeconds();
+    long wr_nsec_frag = metadata.getWRNanoSeconds();
+    //std::cout << "Name: " << name << " Event Number: " << number << " Seconds: " << sec_frag << " Nanoseconds: " << nanosec_frag << " WR: " << wr_label << " WR Event: " << wr_num << " WR Seconds: " << wr_sec_frag << " WR Nanoseconds " << wr_nsec_frag << std::endl; 
     //Old method, try new method which inserts data string from hardware into the fragment as well 
     //frags.emplace_back(nullptr);
     //std::swap(frags.back(), frag);
     /*
-    size_bytes = poll_with_timeout(pmtsocket_, ip_data_pmt_, 500);
-    data_input = "";
-    char buffer_pmt[size_bytes];
-    if(size_bytes>0)
+      size_bytes = poll_with_timeout(pmtsocket_, ip_data_pmt_, 500);
+      data_input = "";
+      char buffer_pmt[size_bytes];
+      if(size_bytes>0)
       {
-	read(pmtsocket_, ip_data_pmt_, si_pmtdata_, size_bytes, buffer_pmt);
-	TRACE(TR_LOG,"data received:: %s", buffer_pmt);
-	data_input = buffer_pmt;
-	TRACE(TR_LOG,"string received:: %s", data_input.c_str());
+      read(pmtsocket_, ip_data_pmt_, si_pmtdata_, size_bytes, buffer_pmt);
+      TRACE(TR_LOG,"data received:: %s", buffer_pmt);
+      data_input = buffer_pmt;
+      TRACE(TR_LOG,"string received:: %s", data_input.c_str());
       }
-    size_t pos = 0;
+      size_t pos = 0;
 
-    delimiter = ",";
-    std::vector<std::string> sections_pmt;
-    token = "";
-    while ((pos = data_input.find(delimiter)) != std::string::npos) {
+      delimiter = ",";
+      std::vector<std::string> sections_pmt;
+      token = "";
+      while ((pos = data_input.find(delimiter)) != std::string::npos) {
       token = data_input.substr(0, pos);
       sections_pmt.push_back(token);
       data_input.erase(0, pos + delimiter.length());
-    }
-    if(sections_pmt.size() > 0)
-    {
+      }
+      if(sections_pmt.size() > 0)
+      {
       std::vector<int> mult;
       for(unsigned int i = 0; i < sections_pmt.size(); ++i)
       {
-	int pmt_mult = std::stoi(sections_pmt[i]);
+      int pmt_mult = std::stoi(sections_pmt[i]);
 	mult.push_back(pmt_mult);
       }
       const auto metadata_pmt = icarus::ICARUSPMTGateFragmentMetadata(mult);
@@ -247,7 +262,6 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     */
     ++fEventCounter;
   }
-
   /*
   int size_bytes = poll_with_timeout(sleep_time_ms);
   if(size_bytes>0){
@@ -258,8 +272,9 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   } 
   */   
 //send_TRIG_ALLW();
+  TLOG(TLVL_DEBUG) << "The artdaq timestamp value is: " << ts;
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
-  std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
+  //std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
   return true;
 
 }
@@ -285,20 +300,19 @@ void sbndaq::ICARUSTriggerUDP::resume()
 
 //send a command
 void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
-{
-  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
+{  
+  TLOG(TLVL_DEBUG) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
 
   sendto(configsocket_,&cmd,sizeof(Command_t), 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
 
-  TRACE(TR_LOG,"send:: COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
+  TLOG(TLVL_DEBUG) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
 }
 
 //return size of available data
 int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, struct sockaddr_in& si, int timeout_ms)
 {
 
-  TRACE(TR_LOG,"poll:: DATA from %s with %d ms timeout",ip.c_str(),timeout_ms);
-
+  TLOG(TLVL_DEBUG) << "poll:: DATA from " << ip.c_str() << " with " << timeout_ms << " ms timeout";
   struct pollfd ufds[1];
   ufds[0].fd = socket;
   ufds[0].events = POLLIN | POLLPRI;
@@ -306,8 +320,8 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
   //have something
   if (rv > 0){
-    TRACE(TR_LOG,"poll:: rv=%d with revents=%d",rv,ufds[0].revents);
-    
+    TLOG(TLVL_DEBUG) << "poll:: rv=" << rv << " with revents=" << ufds[0].revents;
+
     //have something good
     if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
       //do something to get data size here?
@@ -327,12 +341,12 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
   }
   //timeout
   else if(rv==0){
-    TRACE(TR_LOG,"poll:: timed out after %d ms (rv=%d)",timeout_ms,rv);
+    TLOG(TLVL_DEBUG) << "poll:: timed out after " << timeout_ms << " ms (rv=" << rv << ")";
     return 0;
   }
   //error
   else{
-    TRACE(TR_ERROR,"poll:: error in poll (rv=%d)",rv);
+    TLOG(TLVL_ERROR) << "poll:: error in poll (rv=" << rv << ")";
     return -1;
   }
 
@@ -342,13 +356,13 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
 //read data size from socket
 int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TRACE(TR_LOG,"read:: get %d bytes from %s\n",size,ip.c_str());
+  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
   int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
   
-  if(size_rcv<0) 
-    TRACE(TR_ERROR,"read:: error receiving data (%d bytes from %s)\n",size_rcv,ip.c_str());
+  if(size_rcv<0)
+    TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
   else
-    TRACE(TR_LOG,"read:: received %d bytes from %s\n",size_rcv,ip.c_str());
+    TLOG(TLVL_DEBUG) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
 
   return size_rcv;
 }
@@ -361,19 +375,17 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
   char cmd[16];
   sprintf(cmd,"%s","TTLK_CMD_INIT");
 
-  TRACE(TR_LOG,"to send:: COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
+  TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
   sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
 
-  TRACE(TR_LOG,"sent! COMMAND %s to %s:%d\n",cmd,ip_config_.c_str(),configport_);  
-
+  TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
   //send(TTLK_INIT);
   int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
   if(size_bytes>0){
     //uint16_t buffer[size_bytes/2+1];
     char buffer[size_bytes];
     read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
-    TRACE(TR_LOG,"received:: %s",buffer);
-    
+    TLOG(TLVL_DEBUG) << "received:: " << buffer;
     return retries;
   }
   
