@@ -38,7 +38,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
-  /*
+  
   configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (configsocket_ < 0)
     {
@@ -64,7 +64,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_config_ << "\n";
       exit(1);
     }
-  */
+  
   datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (datasocket_ < 0)
     {
@@ -291,7 +291,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  //send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_); //comment out for fake trigger tests
+  send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_); //comment out for fake trigger tests
   //send_TRIG_ALLW();
 }
 void sbndaq::ICARUSTriggerUDP::stop()
@@ -398,9 +398,10 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
   int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
   if(size_bytes>0){
     //uint16_t buffer[size_bytes/2+1];
-    char bufferinit[size_bytes];
-    read(configsocket_,ip_config_,si_config_,size_bytes,bufferinit);
-    TLOG(TLVL_DEBUG) << "received:: " << bufferinit;
+    //char bufferinit[size_bytes];
+    buffer[size_bytes+1] = {'\0'};
+    read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
+    TLOG(TLVL_DEBUG) << "received:: " << buffer;
     return retries;
   }
   
