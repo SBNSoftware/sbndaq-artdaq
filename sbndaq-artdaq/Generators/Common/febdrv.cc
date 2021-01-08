@@ -488,13 +488,13 @@ uint32_t sbndaq::FEBDRV::GrayToBin(uint32_t n) {
   return res;
 }
 
-void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTEvent & event) {
+void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit) {
   auto ovrwr_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-  event.lostcpu = *ovrwr_ptr;
+  hit.lostcpu = *ovrwr_ptr;
   jj=jj+2;
   
   auto lif_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-  event.lostfpga = *lif_ptr;
+  hit.lostfpga = *lif_ptr;
   jj=jj+2;
   
   auto ts0_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
@@ -522,24 +522,23 @@ void sbndaq::FEBDRV::processSingleEvent(int & jj, sbndaq::BernCRTEvent & event) 
   ts0=tt0;
   ts1=tt1;
   
-  event.ts0 = ts0;
-  event.ts1 = ts1;
-  event.flags = 0;
-  event.mac5=rpkt.src_mac[5];
-  
-  if(!NOts0)    event.flags |= 1; //opposite logic! 1 if TS is present, 0 if not!
-  if(!NOts1)    event.flags |= 2;
-  if(REFEVTts0) event.flags |= 4; //bit indicating TS0 reference event
-  if(REFEVTts1) event.flags |= 8; //bit indicating TS1 reference event
+  hit.ts0 = ts0;
+  hit.ts1 = ts1;
+
+  hit.flags = 0;
+  if(!NOts0)    hit.flags |= 1; //opposite logic! 1 if TS is present, 0 if not!
+  if(!NOts1)    hit.flags |= 2;
+  if(REFEVTts0) hit.flags |= 4; //bit indicating TS0 reference hit
+  if(REFEVTts1) hit.flags |= 8; //bit indicating TS1 reference hit
   
   for(int kk=0; kk<32; kk++) {
     auto adc_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-    event.adc[kk] = *adc_ptr;
+    hit.adc[kk] = *adc_ptr;
     jj += 2;
   }
   
   auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  event.coinc = *coinc_ptr;
+  hit.coinc = *coinc_ptr;
   jj += 4;
 }
 
@@ -551,7 +550,7 @@ int sbndaq::FEBDRV::GetData() {
    */
   
   if(rpkt.CMD == FEB_EOF_CDR) {
-    //no more events to read
+    //no more hits to read
     return 0;
   }
   
@@ -566,9 +565,9 @@ int sbndaq::FEBDRV::GetData() {
     return -1;
   }
   
-  int event_size = 80; //TODO move this to sbndaq_artdaq_core?
-  if(numbytes % 80 != 18) {
-    TLOG(TLVL_ERROR)<<__func__<<"() Size of data: "<<(numbytes - 18)<<" received from FEB is not a multiple of 80";
+  const int hit_size = 80; //size of data received from FEB
+  if(numbytes % hit_size != 18) {
+    TLOG(TLVL_ERROR)<<__func__<<"() Size of data: "<<(numbytes - 18)<<" received from FEB is not a multiple of "<<std::to_string(hit_size);
   }
   
   return numbytes;

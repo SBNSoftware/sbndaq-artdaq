@@ -240,9 +240,9 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       if(size_bytes>0)
       {
       read(pmtsocket_, ip_data_pmt_, si_pmtdata_, size_bytes, buffer_pmt);
-      TRACE(TR_LOG,"data received:: %s", buffer_pmt);
+      TRACE(TLVL_INFO,"data received:: %s", buffer_pmt);
       data_input = buffer_pmt;
-      TRACE(TR_LOG,"string received:: %s", data_input.c_str());
+      TRACE(TLVL_INFO,"string received:: %s", data_input.c_str());
       }
       size_t pos = 0;
 
@@ -264,7 +264,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       }
       const auto metadata_pmt = icarus::ICARUSPMTGateFragmentMetadata(mult);
       fragment_size = max_fragment_size_bytes_pmt_;
-      TRACE(TR_LOG, "Created ICARUSPMTGate Fragment with size of 500 bytes");
+      TRACE(TLVL_INFO, "Created ICARUSPMTGate Fragment with size of 500 bytes");
       frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter, fragment_id_pmt_, sbndaq::detail::FragmentType::ICARUSPMTGate, metadata_pmt, ts));
       std::copy(&buffer_pmt[0], &buffer_pmt[sizeof(buffer_pmt)/sizeof(char)], (char*)(frags.back()->dataBeginBytes()));
     }
@@ -277,7 +277,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //uint16_t buffer[size_bytes/2+1];
     char buffer[size_bytes];
     read(size_bytes,buffer);
-    TRACE(TR_LOG,"received:: %s",buffer);
+    TRACE(TLVL_INFO,"received:: %s",buffer);
   } 
   */   
 //send_TRIG_ALLW();
