@@ -145,9 +145,10 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   std::string data_input = "";
   //char buffer[size_bytes];
   //buffer[500] = {'\0'};
+  buffer[0] = '\0';
   if(size_bytes>0){
     //char buffer[size_bytes];
-    buffer[size_bytes+1]={'\0'};
+    //buffer[size_bytes]='\0';
     //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
     int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
     TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
@@ -159,7 +160,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
   size_t pos = 0;
   //size_t delim_pos = 0;
-  TLOG(TLVL_DEBUG) << "string received:: " << buffer;
+  TLOG(TLVL_DEBUG) << "string received:: " << data_input;
   //if shouldn't send fragments, then don't create fragment/send
   if(generated_fragments_per_event_==0){
     ++fEventCounter;
