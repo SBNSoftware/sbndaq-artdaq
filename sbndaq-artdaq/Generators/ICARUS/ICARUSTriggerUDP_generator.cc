@@ -150,8 +150,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     buffer[size_bytes+1]={'\0'};
     //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
     int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
-    TLOG(TLVL_INFO) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
-    TLOG(TLVL_INFO) << "The error is:: " << strerror(errno);
+    TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
+    //TLOG(TLVL_DEBUG) << "The error is:: " << strerror(errno);
     //TLOG(TLVL_DEBUG) << "data received:: " << buffer;
     //buffersize = sizeof(buffer)/sizeof(char);
     data_input = buffer;
@@ -159,7 +159,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
   size_t pos = 0;
   //size_t delim_pos = 0;
-  TLOG(TLVL_INFO) << "string received:: " << buffer;
+  TLOG(TLVL_DEBUG) << "string received:: " << buffer;
   //if shouldn't send fragments, then don't create fragment/send
   if(generated_fragments_per_event_==0){
     ++fEventCounter;
@@ -345,7 +345,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
       int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                                    
 			 (struct sockaddr *) &si, &slen);    
       //std::cout << msg_size << std::endl;
-      TLOG(TLVL_INFO) << "peek recvfrom:: " << ret << " " << errno;
+      TLOG(TLVL_DEBUG) << "peek recvfrom:: " << ret << " " << errno;
       return (int)(peekBuffer[1]);
       //return sizeof(peekBuffer);
       //return sizeof(peekBuffer[1]);
@@ -369,7 +369,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
 //read data size from socket
 int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TLOG(TLVL_INFO) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
   socklen_t slen = sizeof(si);
   //int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
   int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, &slen);
