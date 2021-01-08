@@ -35,10 +35,10 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , ip_data_pmt_(ps.get<std::string>("data_pmt_ip", "127.0.0.1"))
   , n_init_retries_(ps.get<int>("n_init_retries",10))
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
-  , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
   , use_wr_time_(ps.get<bool>("use_wr_time"))
+  , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
-  
+  /*
   configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (configsocket_ < 0)
     {
@@ -64,7 +64,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_config_ << "\n";
       exit(1);
     }
-  
+  */
   datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (datasocket_ < 0)
     {
@@ -89,6 +89,8 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
+  //buffer = {'\0'};
+  //peekBuffer = {0,0};
   /*
   pmtsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); 
   if(pmtsocket_ < 0)
@@ -141,18 +143,23 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   //int size_bytes = poll_with_timeout(datasocket_,ip_data_,500);
   //int buffersize = 0;
   std::string data_input = "";
-  char buffer[size_bytes];
+  //char buffer[size_bytes];
+  //buffer[500] = {'\0'};
   if(size_bytes>0){
     //char buffer[size_bytes];
-    read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
-    TLOG(TLVL_DEBUG) << "data received:: " << buffer;
+    buffer[size_bytes+1]={'\0'};
+    //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
+    int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
+    TLOG(TLVL_INFO) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
+    TLOG(TLVL_INFO) << "The error is:: " << strerror(errno);
+    //TLOG(TLVL_DEBUG) << "data received:: " << buffer;
     //buffersize = sizeof(buffer)/sizeof(char);
     data_input = buffer;
   }
 
   size_t pos = 0;
   //size_t delim_pos = 0;
-  TLOG(TLVL_DEBUG) << "string received:: " << buffer;
+  TLOG(TLVL_INFO) << "string received:: " << buffer;
   //if shouldn't send fragments, then don't create fragment/send
   if(generated_fragments_per_event_==0){
     ++fEventCounter;
@@ -284,7 +291,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_); //comment out for fake trigger tests
+  //send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_); //comment out for fake trigger tests
   //send_TRIG_ALLW();
 }
 void sbndaq::ICARUSTriggerUDP::stop()
@@ -329,12 +336,16 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
       //do something to get data size here?
       
      
-      uint8_t peekBuffer[2];
+      peekBuffer[1] = {0};
       //recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
       //(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
-      recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                               
-	       (struct sockaddr *) &si, (socklen_t*)sizeof(si));
+      socklen_t slen = sizeof(si);
+      //int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                               
+      //(struct sockaddr *) &si, (socklen_t*)sizeof(si));
+      int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                                    
+			 (struct sockaddr *) &si, &slen);    
       //std::cout << msg_size << std::endl;
+      TLOG(TLVL_INFO) << "peek recvfrom:: " << ret << " " << errno;
       return (int)(peekBuffer[1]);
       //return sizeof(peekBuffer);
       //return sizeof(peekBuffer[1]);
@@ -358,8 +369,10 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
 //read data size from socket
 int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
-  int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
+  TLOG(TLVL_INFO) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  socklen_t slen = sizeof(si);
+  //int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
+  int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, &slen);
   
   if(size_rcv<0)
     TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
@@ -385,9 +398,9 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
   int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
   if(size_bytes>0){
     //uint16_t buffer[size_bytes/2+1];
-    char buffer[size_bytes];
-    read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
-    TLOG(TLVL_DEBUG) << "received:: " << buffer;
+    char bufferinit[size_bytes];
+    read(configsocket_,ip_config_,si_config_,size_bytes,bufferinit);
+    TLOG(TLVL_DEBUG) << "received:: " << bufferinit;
     return retries;
   }
   
