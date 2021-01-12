@@ -76,7 +76,7 @@ endif()
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v3_09_03 )
+find_ups_product( artdaq v3_09_04 )
 find_ups_product( artdaq_utilities v1_05_09)
 find_ups_product( artdaq_core v3_06_05 )
 
@@ -100,7 +100,7 @@ find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
-find_ups_product( sbndaq_artdaq_core v0_07_02 )
+find_ups_product( sbndaq_artdaq_core v0_07_03 )
 
 find_ups_product (jsoncpp v1_7_7c) 
 

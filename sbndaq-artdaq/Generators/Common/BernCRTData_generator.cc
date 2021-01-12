@@ -252,7 +252,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
           const uint64_t fragment_timestamp = (start_timestamp + 0.5) * fragment_period_;
           feb.buffer.push_back({fragment_hits, feb.metadata, fragment_timestamp});
 
-          TLOG(TLVL_DEBUG+31) << "pushing " << std::to_string(feb.metadata.hits_in_fragment() << " hits into a fragment for MAC "<<std::to_string(mac)<<" at "<< sbndaq::BernCRTFragment::print_timestamp(fragment_timestamp);
+          TLOG(TLVL_DEBUG+31) << "pushing " << std::to_string(feb.metadata.hits_in_fragment()) << " hits into a fragment for MAC "<<std::to_string(mac)<<" at "<< sbndaq::BernCRTFragment::print_timestamp(fragment_timestamp);
 
           if(i < feb.hits.size()) {
             start_index = i;
