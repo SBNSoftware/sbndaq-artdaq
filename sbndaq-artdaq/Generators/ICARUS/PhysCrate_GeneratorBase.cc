@@ -56,6 +56,8 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   least_data_block_bytes_ = (size_t)SamplesPerChannel_*(size_t)ChannelsPerBoard_*2+12+32;
 
   fTimeOffsetNanoSec = ps_.get<uint32_t>("TimeOffsetNanoSec",1200000); //1.2ms by default
+
+  event_offset_ = 0;
 }
 
 void icarus::PhysCrate_GeneratorBase::start() {
@@ -259,8 +261,10 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
   metricMan->sendMetric("MaxBoardTimeStampDiff",max_ts_diff,"ticks",1,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
+  if(ev_num==0)
+    event_offset_ = 1;
 
-  frags.back()->setSequenceID(ev_num);
+  frags.back()->setSequenceID(ev_num+event_offset_);
 
   
   metricMan->sendMetric("FragmentsSent",ev_counter(), "Events", 1,artdaq::MetricMode::LastPoint);
