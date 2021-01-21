@@ -68,7 +68,7 @@ void icarus::PhysCrateData::InitializeVeto(){
   //veto_state     = true; //defaults to on
   veto_state = false;
   
-  TRACE(TR_LOG,"IP ADDRESS for veto is %s:%d\n",veto_host.c_str(),veto_host_port);
+  TRACE(TLVL_INFO,"IP ADDRESS for veto is %s:%d\n",veto_host.c_str(),veto_host_port);
   
   _doVetoTest    = ps_.get<bool>("DoVetoTest",false);
   if(_doVetoTest){
@@ -326,7 +326,7 @@ int icarus::PhysCrateData::GetData(){
   //end loop timer
   _tloop_end = std::chrono::high_resolution_clock::now();
   UpdateDuration();
-  TRACEN("PhysCrateData",TR_TIMER,"GetData : waitData loop time was %lf seconds",_tloop_duration.count());
+  TRACEN("PhysCrateData",TLVL_TIMER,"GetData : waitData loop time was %lf seconds",_tloop_duration.count());
   metricMan->sendMetric(".GetData.ReturnTime",_tloop_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
@@ -337,7 +337,7 @@ int icarus::PhysCrateData::GetData(){
   _tloop_start = std::chrono::high_resolution_clock::now();
 
   _tloop_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_start-_tloop_end);
-  TRACEN("PhysCrateData",TR_TIMER,"GetData : waitData call time was %lf seconds",_tloop_duration.count());
+  TRACEN("PhysCrateData",TLVL_TIMER,"GetData : waitData call time was %lf seconds",_tloop_duration.count());
   metricMan->sendMetric(".GetData.WaitTime",_tloop_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
@@ -389,7 +389,7 @@ int icarus::PhysCrateData::GetData(){
   _tloop_start = std::chrono::high_resolution_clock::now();
 
   _tloop_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_start-_tloop_end);
-  TRACEN("PhysCrateData",TR_TIMER,"GetData : waitData fill time was %lf seconds",_tloop_duration.count());
+  TRACEN("PhysCrateData",TLVL_TIMER,"GetData : waitData fill time was %lf seconds",_tloop_duration.count());
   metricMan->sendMetric(".GetData.FillTime",_tloop_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 

@@ -93,9 +93,11 @@ namespace sbndaq
     int n_init_retries_;
     int n_init_timeout_ms_;
     int fEventCounter;
-
+    bool use_wr_time_;
     //expected fragments
     int generated_fragments_per_event_;
+    char buffer[500] = {'\0'};
+    uint8_t peekBuffer[2] = {0,0};
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */
