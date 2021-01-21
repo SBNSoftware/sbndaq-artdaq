@@ -108,7 +108,7 @@ namespace sbndaq
    
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
    
-   TLOG_INFO(identification) << "Now Trying to talk to FEMBs " << TLOG_ENDL;
+   TLOG_INFO(identification) << "Now Connecting to FEMBs " << TLOG_ENDL;
       
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
        TLOG_INFO(identification) << "FEMB No. " << iFEMB << TLOG_ENDL; 
