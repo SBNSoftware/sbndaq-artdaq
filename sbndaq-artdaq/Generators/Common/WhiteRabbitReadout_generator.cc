@@ -176,6 +176,7 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   bool newData = false;
   uint32_t bytesWritten = sizeof(struct sbndaq::WhiteRabbitEvent);
   int boardId = 0 ;
+  uint64_t zeit;
 
   bufferLock.lock();
 
@@ -189,6 +190,8 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
 									      fragmentId,
 									      FragmentType::WhiteRabbit,
 									      WhiteRabbitFragmentMetadata()));
+    zeit = (uint64_t)((*i).systemTime.tv_sec) * 1E9 + uint64_t((*i).systemTime.tv_nsec);
+    fragPtr->setTimestamp(zeit);
     memcpy(fragPtr->dataBeginBytes(), (void *)(&*i), bytesWritten);
     frags.emplace_back(std::move(fragPtr));
     newData = true;
