@@ -144,6 +144,27 @@ uint64_t sbndaq::BernCRTData::GetTimeSinceLastRestart() {
   return (std::chrono::system_clock::now() -  last_restart_time).count();
 }
 
+void sbndaq::BernCRTData::CalculateTimestamp(BernCRTHitV2& hit, BernCRTFragmentMetadataV2& metadata) {
+  /**
+   * Calculate timestamp based on nanosecond from FEB and poll times measured by server
+   * see: https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
+   */
+  int32_t ts0  = hit.ts0; //must be signed int
+
+  //add PPS cable length offset modulo 1s
+  ts0 = (ts0 + feb_configuration[metadata.MAC5()].GetPPSOffset()) % (1000*1000*1000);
+  if(ts0 < 0) ts0 += 1000*1000*1000; //just in case the cable offset is negative (should be positive normally)
+
+  uint64_t mean_poll_time = metadata.last_poll_start()/2 + metadata.this_poll_end()/2;
+  int mean_poll_time_ns = mean_poll_time % (1000*1000*1000); 
+  
+  hit.timestamp = mean_poll_time - mean_poll_time_ns + ts0
+    + (ts0 - mean_poll_time_ns < -500*1000*1000) * 1000*1000*1000
+    - (ts0 - mean_poll_time_ns >  500*1000*1000) * 1000*1000*1000;
+}
+
+
+    
 /*---------------BERN CRT FEB DATA-------------------------------------*/
 size_t sbndaq::BernCRTData::GetFEBData() {
   /**
@@ -152,71 +173,94 @@ size_t sbndaq::BernCRTData::GetFEBData() {
   
   TLOG(TLVL_DEBUG) << __func__ << "() called";
   
-  // Sleep until the next poll comes
+  // Sleep until the time for next poll comes
   int now = std::chrono::system_clock::now().time_since_epoch().count() % feb_poll_period_;
   usleep((feb_poll_period_ - now)/1000);
 
-  size_t data_size=0;
-  
-  size_t events = 0;
+  size_t hit_count_all_febs = 0;
   
   for(auto mac : MAC5s_) {
     FEB_t & feb = FEBs_[mac];
-    
+    feb.hits.clear();
+
     uint64_t poll_start = std::chrono::system_clock::now().time_since_epoch().count();
     int32_t system_clock_deviation = poll_start - steady_clock_offset - std::chrono::steady_clock::now().time_since_epoch().count();
+    feb.metadata.set_clock_deviation(system_clock_deviation);
     
     febdrv.pollfeb(mac);
     
-    uint64_t poll_end = std::chrono::system_clock::now().time_since_epoch().count();
-    
-    feb.metadata.update_poll_time(poll_start, poll_end);
-    feb.metadata.set_clock_deviation(system_clock_deviation);
-    
-    std::unique_lock<std::mutex> lock(*(feb.mutexptr));
-    
-    unsigned int feb_read_events = 0;
-    uint64_t last_poll_event_number = feb.metadata.feb_event_number();
     
     while(true) {
-      //loop over events received via ethernet and push into circular buffer
+      //loop over hits received via ethernet and push into circular buffer
       int numbytes = febdrv.GetData();
       if(numbytes<=0) break;
       
       int datalen = numbytes-18;
       
-      
       TLOG(TLVL_DEBUG)<<__func__<<"()  datalen = "<<datalen;
         
-      data_size += datalen;
-      
-      for(int jj=0; jj<datalen; ) { // jj is incremented in processSingleEvent
-        feb_read_events++;
-        febdrv.processSingleEvent(jj, feb.event);
-        feb.metadata.increment_feb_events(1 + feb.event.lostcpu + feb.event.lostfpga);
-        feb.buffer.push_back(std::make_pair(feb.event, feb.metadata));
+      //loop over bytes of the data
+      for(int jj = 0; jj < datalen; ) { // jj is incremented in processSingleHit
+        BernCRTHitV2 hit;
+
+        febdrv.processSingleHit(jj, hit); //read next hit
+        feb.hits.push_back(hit);
       }
     }
+
+    uint64_t poll_end = std::chrono::system_clock::now().time_since_epoch().count();
     
-    events += feb_read_events;
-    
-    //only at the end of the poll we know how many events we have in the poll
-    //loop over the poll again and update metadata
-    for(unsigned int i = feb.buffer.size() - feb_read_events; i < feb.buffer.size(); i++) {
-      feb.buffer[i].second.set_feb_events_per_poll(feb.metadata.feb_event_number() - last_poll_event_number);
-      //TODO perhaps we would like to save number of lost events as well?
+    feb.metadata.update_poll_time(poll_start, poll_end);
+
+    const double last_poll_hit_rate = (feb.last_poll_total_lostfpga + feb.last_poll_total_read_hits + 0.001) / (feb.last_poll_total_read_hits + 0.001);
+    unsigned int feb_total_lostfpga = 0;
+    uint64_t last_poll_hit_number = feb.hit_number;
+
+    for(auto & hit : feb.hits) {
+      CalculateTimestamp(hit, feb.metadata);
+
+      //compute hit number, including lost hits
+      feb_total_lostfpga += feb.last_lostfpga;
+      hit.lost_hits = //hits lost since the last measured hit
+          hit.lostcpu * last_poll_hit_rate //estimate lostfpga during lostcpu (not counted by FEB)
+        + feb.last_lostfpga; //Lost fpga contains hits omitted *after* the trigger event in given hit, this is why we use the field from the previous hit here
+      feb.last_lostfpga = hit.lostfpga;
+      hit.feb_hit_number = (feb.hit_number += 1 + hit.lost_hits);
+
+      hit.last_accepted_timestamp = feb.last_accepted_timestamp;
+      feb.last_accepted_timestamp = hit.timestamp;
     }
 
-//the commented code below doesn't work: to be investigated
-/*    if(metricMan != nullptr) metricMan->sendMetric(
-      std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
-      feb.metadata.feb_events_per_poll() * 1e9 / (feb.metadata.this_poll_end() - feb.metadata.last_poll_end()),
-      "CRT rate", 5, artdaq::MetricMode::Average);
-    if(metricMan != nullptr) metricMan->sendMetric(
-      std::string("feb_read_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
-      feb_read_events * 1e9 / (feb.metadata.this_poll_end() - feb.metadata.last_poll_end()),
-      "CRT rate", 5, artdaq::MetricMode::Average); */
-    
+    hit_count_all_febs += feb.hits.size();
+    feb.last_poll_total_read_hits = feb.hits.size();
+    feb.last_poll_total_lostfpga = feb_total_lostfpga;
+
+    feb.metadata.set_hits_in_poll(feb.hit_number - last_poll_hit_number);
+
+
+    std::unique_lock<std::mutex> lock(*(feb.mutexptr));
+
+    //split hits vector into fragments in windows of size fragment_period
+    //note these are not the same windows as those defined by window pull mode
+    if(!feb.hits.empty()) { //form fragments only if there are any hits
+      int start_index = 0;
+      uint64_t start_timestamp = feb.hits[0].timestamp / fragment_period_;
+      for(unsigned int i = 0; i <= feb.hits.size(); i++) {
+        if(i == feb.hits.size()  ||  feb.hits[i].timestamp / fragment_period_ != start_timestamp) {
+          feb.metadata.set_hits_in_fragment(i - start_index);
+          std::vector<BernCRTHitV2> fragment_hits(feb.hits.cbegin() + start_index, feb.hits.cbegin() + i);
+          const uint64_t fragment_timestamp = (start_timestamp + 0.5) * fragment_period_;
+          feb.buffer.push_back({fragment_hits, feb.metadata, fragment_timestamp});
+
+          TLOG(TLVL_DEBUG+31) << "pushing " << std::to_string(feb.metadata.hits_in_fragment()) << " hits into a fragment for MAC "<<std::to_string(mac)<<" at "<< sbndaq::BernCRTFragment::print_timestamp(fragment_timestamp);
+
+          if(i < feb.hits.size()) {
+            start_index = i;
+            start_timestamp = feb.hits[i].timestamp / fragment_period_;
+          }
+        }
+      } //loop over buffer
+    } //add fragments to fragment buffer
   } //loop over FEBs
   
   //workaround for spike issue: periodically restart febdrv
@@ -226,9 +270,9 @@ size_t sbndaq::BernCRTData::GetFEBData() {
     }
   }
   
-  TLOG(TLVL_DEBUG) << __func__ << "() read " << std::to_string(events) << " events of size of " << std::to_string(data_size);
+  TLOG(TLVL_DEBUG) << __func__ << "() read " << std::to_string(hit_count_all_febs) << " hits";
 
-  return events;
+  return hit_count_all_febs;
 } //GetFEBData
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::BernCRTData) 

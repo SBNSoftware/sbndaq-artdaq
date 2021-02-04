@@ -88,7 +88,56 @@ namespace sbndaq
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,
       FP_LVDS_CONTROL    = 0x81A0,
-      READOUT_CONTROL    = 0xEF00
+      READOUT_CONTROL    = 0xEF00,
+      // Animesh & Aiwu add registers for the LVDS logic
+      FP_LVDS_Logic_G1   = 0x1084,
+      FP_LVDS_Logic_G2   = 0x1184,
+      FP_LVDS_Logic_G3   = 0x1284,
+      FP_LVDS_Logic_G4   = 0x1384,
+      FP_LVDS_Logic_G5   = 0x1484,
+      FP_LVDS_Logic_G6   = 0x1584,
+      FP_LVDS_Logic_G7   = 0x1684,
+      FP_LVDS_Logic_G8   = 0x1784,
+      // Animesh & Aiwu add end
+      // Animesh & Aiwu add registers for the LVDS output width
+      FP_LVDS_OutWidth_Ch1   = 0x1070,
+      FP_LVDS_OutWidth_Ch2   = 0x1170,
+      FP_LVDS_OutWidth_Ch3   = 0x1270,
+      FP_LVDS_OutWidth_Ch4   = 0x1370,
+      FP_LVDS_OutWidth_Ch5   = 0x1470,
+      FP_LVDS_OutWidth_Ch6   = 0x1570,
+      FP_LVDS_OutWidth_Ch7   = 0x1670,
+      FP_LVDS_OutWidth_Ch8   = 0x1770,
+      FP_LVDS_OutWidth_Ch9   = 0x1870,
+      FP_LVDS_OutWidth_Ch10   = 0x1970,
+      FP_LVDS_OutWidth_Ch11   = 0x1A70,
+      FP_LVDS_OutWidth_Ch12   = 0x1B70,
+      FP_LVDS_OutWidth_Ch13   = 0x1C70,
+      FP_LVDS_OutWidth_Ch14   = 0x1D70,
+      FP_LVDS_OutWidth_Ch15   = 0x1E70,
+      FP_LVDS_OutWidth_Ch16   = 0x1F70,
+      // Animesh & Aiwu add - check DPP algorithm feature
+      DPP_Alo_Feature_Ch1 = 0x1080,
+      DPP_Alo_Feature_Ch2 = 0x1180,
+      Baseline_Ch1 = 0x1098,
+      Baseline_Ch2 = 0x1198,
+      Baseline_Ch3 = 0x1298,
+      Baseline_Ch4 = 0x1398,
+      Baseline_Ch5 = 0x1498,
+      Baseline_Ch6 = 0x1598,
+      Baseline_Ch7 = 0x1698,
+      Baseline_Ch8 = 0x1798,
+      Baseline_Ch9 = 0x1898,
+      Baseline_Ch10 = 0x1998,
+      Baseline_Ch11 = 0x1A98,
+      Baseline_Ch12 = 0x1B98,
+      Baseline_Ch13 = 0x1C98,
+      Baseline_Ch14 = 0x1D98,
+      Baseline_Ch15 = 0x1E98,
+      Baseline_Ch16 = 0x1F98,
+      // want to send a software trigger
+      // SWTriggerValue = 0x8108
+      // Animesh & Aiwu add end
     } ADDRESS_t;
 
     typedef enum 
@@ -125,9 +174,7 @@ namespace sbndaq
     //fhicl parameters
     int fVerbosity;
     int fBoardChainNumber;
-    uint8_t  fInterruptLevel;
-    uint16_t fInterruptEventNumber;
-    uint32_t fInterruptStatusID;
+    uint8_t  fInterruptEnable;
     uint32_t fGetNextSleep;
     uint32_t fGetNextFragmentBunchSize;
     bool     fSWTrigger;
@@ -143,6 +190,58 @@ namespace sbndaq
 
     bool fUseTimeTagForTimeStamp;
     uint32_t fTimeOffsetNanoSec;
+
+    // Animesh & Aiwu add fhicl parameters - LVDS logic
+    uint32_t fLVDSLogicValueG1;
+    uint32_t fLVDSLogicValueG2;
+    uint32_t fLVDSLogicValueG3;
+    uint32_t fLVDSLogicValueG4;
+    uint32_t fLVDSLogicValueG5;
+    uint32_t fLVDSLogicValueG6;
+    uint32_t fLVDSLogicValueG7;
+    uint32_t fLVDSLogicValueG8;
+    // Animesh & Aiwu add end
+    // Animesh & Aiwu add fhicl parameters - LVDS output pulse width
+    uint32_t fLVDSOutWidthC1;
+    uint32_t fLVDSOutWidthC2;
+    uint32_t fLVDSOutWidthC3;
+    uint32_t fLVDSOutWidthC4;
+    uint32_t fLVDSOutWidthC5;
+    uint32_t fLVDSOutWidthC6;
+    uint32_t fLVDSOutWidthC7;
+    uint32_t fLVDSOutWidthC8;
+    uint32_t fLVDSOutWidthC9;
+    uint32_t fLVDSOutWidthC10;
+    uint32_t fLVDSOutWidthC11;
+    uint32_t fLVDSOutWidthC12;
+    uint32_t fLVDSOutWidthC13;
+    uint32_t fLVDSOutWidthC14;
+    uint32_t fLVDSOutWidthC15;
+    uint32_t fLVDSOutWidthC16;
+    // Animesh & Aiwu add end
+    //Animesh & Aiwu add - self trigger polarity
+    uint32_t fSelfTrigBit;
+    //Animesh & Aiwu add end
+    // Animesh & Aiwu add - dpp algorithm feature 0x1n80
+    uint32_t fChargePedstalBitCh1;
+    uint32_t fBaselineCh1;
+    uint32_t fBaselineCh2;
+    uint32_t fBaselineCh3;
+    uint32_t fBaselineCh4;
+    uint32_t fBaselineCh5;
+    uint32_t fBaselineCh6;
+    uint32_t fBaselineCh7;
+    uint32_t fBaselineCh8;
+    uint32_t fBaselineCh9;
+    uint32_t fBaselineCh10;
+    uint32_t fBaselineCh11;
+    uint32_t fBaselineCh12;
+    uint32_t fBaselineCh13;
+    uint32_t fBaselineCh14;
+    uint32_t fBaselineCh15;
+    uint32_t fBaselineCh16;
+    //uint32_t fSWTriggerValue;
+    // Animesh & Aiwu add end
 
     //internals
     size_t   fNChannels;
@@ -166,6 +265,7 @@ namespace sbndaq
     void ConfigureReadout();
     void ConfigureAcquisition();
     void ConfigureLVDS();
+    void ConfigureOthers();
     void ConfigureSelfTriggerMode();
     void RunADCCalibration();
     void SetLockTempCalibration(bool onOff, uint32_t ch);

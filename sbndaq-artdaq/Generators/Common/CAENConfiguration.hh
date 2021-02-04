@@ -30,7 +30,6 @@ class CAENConfiguration
     int  boardId;
     int  recordLength;
     int  postPercent;
-    int  maxEventsPerTransfer;
     int  eventsPerInterrupt;
     int  irqWaitTime;
     bool allowTriggerOverlap;
@@ -42,7 +41,6 @@ class CAENConfiguration
     int  triggerPolarity;
     uint16_t triggerThresholds[MAX_CHANNELS];
     uint8_t   triggerPulseWidth;
-    int  interruptLevel;
     int  extTrgMode;
     int  swTrgMode;
     int  selfTrgMode;
