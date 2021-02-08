@@ -40,11 +40,15 @@ namespace sbndaq
 
     enum
     {
-      RULER_PROTO        = 0x5752,
-      PRIV_MEZZANINE_ID  = SIOCDEVPRIVATE + 14,
-      PRIV_MEZZANINE_CMD = SIOCDEVPRIVATE + 15,
-      WR_DIO_F_WAIT      = 0x10,
-      WR_DIO_F_MASK      = 0x04,
+      RULER_PROTO         = 0x5752,
+      PRIV_MEZZANINE_ID   = SIOCDEVPRIVATE + 14,
+      PRIV_MEZZANINE_CMD  = SIOCDEVPRIVATE + 15,
+      WR_DIO_F_WAIT       = 0x10,
+      WR_DIO_F_MASK       = 0x04,
+      WR_DIO_INOUT_DIO    = 0x00000001,
+      WR_DIO_INOUT_VALUE  = 0x00000100,
+      WR_DIO_INOUT_OUTPUT = 0x00010000,
+      WR_DIO_INOUT_TERM   = 0x01000000,
     };
 
     enum wr_dio_cmd_name 
