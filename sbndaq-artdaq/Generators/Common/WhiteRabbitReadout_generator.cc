@@ -128,16 +128,18 @@ bool sbndaq::WhiteRabbitReadout::getData()
 
   while ( running )
   {
-    data->flags         = WR_DIO_F_WAIT;
-    data->channel       = channel;
+    data->flags         = WR_DIO_F_WAIT | WR_DIO_F_MASK;
+    data->channel       = 0x1F;
     data->command       = WR_DIO_CMD_STAMP;
+    data->value         = 0;
     agentDevice.ifr_data = (char *)data;
+    TLOG(TLVL_INFO) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
     clock_gettime(CLOCK_REALTIME,&event.systemTime);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
     {
-      TLOG(TLVL_ERROR) << "WhiteRabbitReadout read device error " << device << " [" << errno <<  "] " 
-		       << strerror(errno);
+      TLOG(TLVL_ERROR) << "WhiteRabbitReadout read device error " << device 
+		       << " [" << errno <<  "] " << strerror(errno);
       return(false);
     }
 
@@ -176,6 +178,7 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
   bool newData = false;
   uint32_t bytesWritten = sizeof(struct sbndaq::WhiteRabbitEvent);
   int boardId = 0 ;
+  uint64_t zeit;
 
   bufferLock.lock();
 
@@ -189,6 +192,8 @@ bool sbndaq::WhiteRabbitReadout::FillFragment(artdaq::FragmentPtrs &frags, bool)
 									      fragmentId,
 									      FragmentType::WhiteRabbit,
 									      WhiteRabbitFragmentMetadata()));
+    zeit = (uint64_t)((*i).systemTime.tv_sec) * 1E9 + uint64_t((*i).systemTime.tv_nsec);
+    fragPtr->setTimestamp(zeit);
     memcpy(fragPtr->dataBeginBytes(), (void *)(&*i), bytesWritten);
     frags.emplace_back(std::move(fragPtr));
     newData = true;
