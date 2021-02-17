@@ -218,9 +218,9 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
     size_t fragment_size = max_fragment_size_bytes_;
     TLOG(TLVL_DEBUG) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
-    frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, event_no, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
+    //frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, event_no, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
+    frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
     std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
-    //auto frag = artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter,fragment_id_,sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata);
     icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
     //const char *name = metadata.getName();
     int name = metadata.getName();
