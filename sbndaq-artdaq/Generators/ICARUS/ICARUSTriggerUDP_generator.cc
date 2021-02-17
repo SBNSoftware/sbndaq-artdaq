@@ -206,7 +206,6 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       if(use_wr_time_)
 	ts = val;
     }
-  
     if(wr_trig == -1 || event_no_wr == -2 || wr_secs == -3 || wr_nsecs == -4)
       {
 	TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
