@@ -23,6 +23,10 @@
 #include <iterator>
 #include <algorithm>
 
+
+#include "sbndaq-artdaq-core/Trace/trace_defines.h"
+#include "TRACE/tracemf3.h"
+
 namespace sbndaq {
   class IncompleteEventAna;
 }
@@ -59,7 +63,6 @@ public:
 private:
 
   std::set<artdaq::Fragment::fragment_id_t> fFragIDSet;
-  bool fFirstEvt;
 
   std::set<artdaq::Fragment::fragment_id_t> fThisEvFragIDSet;
 
@@ -69,7 +72,6 @@ private:
 sbndaq::IncompleteEventAna::IncompleteEventAna(IncompleteEventAna::Parameters const& pset): art::EDAnalyzer(pset)
 {
   fFragIDSet.clear();
-  fFirstEvt = true;
 }
 
 void sbndaq::IncompleteEventAna::beginJob()
@@ -89,6 +91,9 @@ sbndaq::IncompleteEventAna::~IncompleteEventAna()
 void sbndaq::IncompleteEventAna::analyze(const art::Event& evt)
 {
 
+  auto run = evt.run();
+  auto event = evt.event();
+
   fThisEvFragIDSet.clear();
 
   std::vector< art::Handle< std::vector<artdaq::Fragment> > > rawFragHandles;
@@ -105,21 +110,25 @@ void sbndaq::IncompleteEventAna::analyze(const art::Event& evt)
 
   }
 
-  if(fFirstEvt){
-    fFragIDSet = fThisEvFragIDSet;
-    fFirstEvt = false;
-  }
-
   if(fThisEvFragIDSet.size()>fFragIDSet.size()){
 
-    /*
-    //print a message here to say we are updating?
-    */
+    TLOG_INFO("IncompleteEventAna") 
+      << "(Run,Ev)=(" << run << "," << event << "): "
+      << "Updating reference FragIDSet from size "
+      << fFragIDSet.size() << " to size "
+      << fThisEvFragIDSet.size();
 
     fFragIDSet=fThisEvFragIDSet;
   }
   
   if(fFragIDSet.size()!=fThisEvFragIDSet.size()){
+
+    TLOG_WARNING("IncompleteEventAna") 
+      << "(Run,Ev)=(" << run << "," << event << "): "
+      << "Incomplete Event. "
+      << fThisEvFragIDSet.size()
+      << " / "
+      << fFragIDSet.size() << " fragments detected.";
 
     std::set<artdaq::Fragment::fragment_id_t> fragIDDiffSet;
     
@@ -132,9 +141,11 @@ void sbndaq::IncompleteEventAna::analyze(const art::Event& evt)
     //maybe do a lookup table?
     */
 
-    for(auto id : fragIDDiffSet){
-      std::cout << "\t\t\tMissing fragment id " << id << std::endl;
-    }
+    for(auto id : fragIDDiffSet)
+      TLOG_WARNING("IncompleteEventAna") 
+      << "(Run,Ev)=(" << run << "," << event << "): "
+      << "Missing fragment id " << id;
+    
   }
 
 }
