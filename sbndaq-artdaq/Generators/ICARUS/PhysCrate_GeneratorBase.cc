@@ -156,13 +156,21 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   //initialize for looking up data
   uint16_t iBoard = 0;
   uint16_t const* first_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData();
-  auto const* first_dt [[gnu::unused]] = reinterpret_cast< DataTile const* >(first_dt_begin_ptr);
+  //auto const* first_dt [[gnu::unused]] = reinterpret_cast< DataTile const* >(first_dt_begin_ptr);
   
   //loop over number of boards
   while(iBoard < nBoards_){
     
     std::this_thread::sleep_for(1us);
     TLOG(TLVL_DEBUG +5) << __func__  << "data_size_bytes/sizeof(uint16_t): " << data_size_bytes/sizeof(uint16_t);
+
+    //check if we have enough data for a DataTile.
+    //if not, sleep and return.
+    if( fCircularBuffer.Size() < (data_size_bytes+sizeof(DataTile))/sizeof(uint16_t) ){
+      TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile in circular buffer.";
+      usleep(1000);
+      return true;
+    }
 
     //  the Tile Header is at the beginning of the board data:
     auto const* next_dt_begin_ptr = first_dt_begin_ptr + data_size_bytes/sizeof(uint16_t);
@@ -174,8 +182,8 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
     //check if there's enogh data for this board.
     //if not, sleep and return.
-    if(fCircularBuffer.Size() <= (sizeof(DataTile)*(iBoard+1)+data_size_bytes+this_data_size_bytes)/sizeof(uint16_t)){
-      TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile " << iBoard+1 << " in circular buffer.";
+    if(fCircularBuffer.Size() < (data_size_bytes+this_data_size_bytes)/sizeof(uint16_t)){
+      TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile " << iBoard << " in circular buffer.";
       usleep(1000);
       return true;
     }
