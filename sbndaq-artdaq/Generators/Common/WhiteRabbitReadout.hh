@@ -61,13 +61,6 @@ namespace sbndaq
 
   protected:
 
-    struct RabbitFrame
-    {
-      struct ether_header header;
-      unsigned char padding[2];
-      struct sbndaq::WhiteRabbitEvent rabbitCommand;
-    } rabbitFrame;
-
     std::vector<struct sbndaq::WhiteRabbitEvent> buffer;
 
     bool getNext_(artdaq::FragmentPtrs & output) override;
@@ -82,7 +75,7 @@ namespace sbndaq
     uint32_t runNumber_;
     uint32_t fragmentId;
     std::string device;
-    uint32_t channel;
+    uint32_t channelMask;
     uint32_t eventSeqCounter;
     uint32_t messageCounter;
     std::atomic_bool running;
