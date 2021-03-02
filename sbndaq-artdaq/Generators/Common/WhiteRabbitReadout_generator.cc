@@ -22,9 +22,9 @@ sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
-  fragmentId = ps.get<uint32_t>("fragmentId");
-  device  = ps.get<std::string>("device");
-  channel = ps.get<uint32_t>("channel");
+  fragmentId  = ps.get<uint32_t>("fragmentId");
+  device      = ps.get<std::string>("device");
+  channelMask = ps.get<uint32_t>("channelMask");
   configure();
 }
 
@@ -129,7 +129,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
   while ( running )
   {
     data->flags         = WR_DIO_F_WAIT | WR_DIO_F_MASK;
-    data->channel       = 0x1F;
+    data->channel       = channelMask;
     data->command       = WR_DIO_CMD_STAMP;
     data->value         = 0;
     agentDevice.ifr_data = (char *)data;
