@@ -29,7 +29,8 @@ sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   for (int i=0; i<N_CHANNELS; i++)
   {
     sprintf(name,"channelMode%d", i);
-    channelMode[i] = ps.get<char>(name,'X');
+    std::string mode = ps.get<std::string>(name,"X");
+    channelMode[i] = mode[0];
 
     sprintf(name,"channelPPS%d", i);
     channelMode[i] = ps.get<bool>(name,false);
