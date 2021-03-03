@@ -51,7 +51,7 @@ for onequal in "${quals[@]}"; do
     e[679]|e1[0-9]|c[0-9])
       basequal=${onequal}
       ;;
-    s7[0-9]|s8[0-9]|s9[0-9])
+    s7[0-9]|s8[0-9]|s9[0-9]|s10[0-9])
       squal=${onequal}
       ;;
     py2|py3)
