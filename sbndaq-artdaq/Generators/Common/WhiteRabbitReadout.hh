@@ -40,11 +40,14 @@ namespace sbndaq
 
     enum
     {
+      N_CHANNELS          = 5,
       RULER_PROTO         = 0x5752,
       PRIV_MEZZANINE_ID   = SIOCDEVPRIVATE + 14,
       PRIV_MEZZANINE_CMD  = SIOCDEVPRIVATE + 15,
       WR_DIO_F_WAIT       = 0x10,
+      WR_DIO_F_REL        = 0x02,
       WR_DIO_F_MASK       = 0x04,
+      WR_DIO_F_LOOP       = 0x08,
       WR_DIO_INOUT_DIO    = 0x00000001,
       WR_DIO_INOUT_VALUE  = 0x00000100,
       WR_DIO_INOUT_OUTPUT = 0x00010000,
@@ -57,6 +60,7 @@ namespace sbndaq
       WR_DIO_CMD_STAMP,
       WR_DIO_CMD_DAC,
       WR_DIO_CMD_INOUT,
+
     };
 
   protected:
@@ -70,14 +74,19 @@ namespace sbndaq
     void stopAll();
     void configure();
     void openWhiteRabbitSocket(const char *deviceName);
+    void configureModes();
+    void configurePPS();
 
     // General
-    uint32_t runNumber_;
-    uint32_t fragmentId;
+    uint32_t    runNumber_;
+    uint32_t    fragmentId;
     std::string device;
-    uint32_t channelMask;
-    uint32_t eventSeqCounter;
-    uint32_t messageCounter;
+    uint32_t    channelMask;
+    uint32_t    eventSeqCounter;
+    uint32_t    messageCounter;
+    char        channelMode[N_CHANNELS];
+    int         channelPPS[N_CHANNELS];
+
     std::atomic_bool running;
     std::mutex bufferLock;
 

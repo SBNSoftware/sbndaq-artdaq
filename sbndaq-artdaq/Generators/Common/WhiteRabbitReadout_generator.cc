@@ -25,6 +25,16 @@ sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   fragmentId  = ps.get<uint32_t>("fragmentId");
   device      = ps.get<std::string>("device");
   channelMask = ps.get<uint32_t>("channelMask");
+  char name[80];
+  for (int i=0; i<N_CHANNELS; i++)
+  {
+    sprintf(name,"channelMode%d", i);
+    std::string mode = ps.get<std::string>(name,"X");
+    channelMode[i] = mode[0];
+
+    sprintf(name,"channelPPS%d", i);
+    channelMode[i] = ps.get<bool>(name,false);
+  }
   configure();
 }
 
@@ -76,6 +86,10 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
     close(agentSocket);
     return;
   }
+
+  // Configure channel modes and PPS
+  configureModes();
+  configurePPS();
 }
 
 
@@ -85,6 +99,117 @@ void sbndaq::WhiteRabbitReadout::configure()
   openWhiteRabbitSocket(device.c_str());
   eventSeqCounter = 0;
 }
+
+void sbndaq::WhiteRabbitReadout::configureModes()
+{
+  int retcod  = 0;
+  struct sbndaq::WhiteRabbitData cmd;
+  cmd.command = WR_DIO_CMD_INOUT;
+  cmd.flags   = WR_DIO_F_MASK;
+  cmd.value   = 0;
+  cmd.channel = 0;
+  agentDevice.ifr_data = (char *)&cmd;
+
+  // Channel 0 cannot be changed
+  for (int c = 1; c < N_CHANNELS; c++)
+  {
+    cmd.channel = ( 1 << c );
+    if ( channelMode[c] != 'X' )
+    {
+      switch (channelMode[c] )
+      {
+	case 'D':
+	  cmd.value |= ( WR_DIO_INOUT_TERM << c);
+	  cmd.value |= ( WR_DIO_INOUT_DIO << c);
+          cmd.value |= ( WR_DIO_INOUT_OUTPUT << c);
+	break;
+
+	case 'd':
+	  cmd.value |= ( WR_DIO_INOUT_DIO << c);
+          cmd.value |= ( WR_DIO_INOUT_OUTPUT << c);
+	break;
+
+	case 'C':
+	  cmd.value |= ( WR_DIO_INOUT_TERM << c);
+	  cmd.value |= ( WR_DIO_INOUT_DIO << c);
+	  cmd.value |= ( WR_DIO_INOUT_VALUE << c);
+	break;
+
+	case 'c':
+	  cmd.value |= ( WR_DIO_INOUT_DIO << c);
+	  cmd.value |= ( WR_DIO_INOUT_VALUE << c);
+	break;
+
+	case 'P':
+	  cmd.value |= ( WR_DIO_INOUT_TERM << c);
+	  cmd.value |= ( WR_DIO_INOUT_DIO << c);
+	  cmd.value |= ( WR_DIO_INOUT_VALUE << c);
+	  cmd.value |= ( WR_DIO_INOUT_OUTPUT << c);
+        break;
+
+	case 'p':
+	  cmd.value |= ( WR_DIO_INOUT_DIO << c);
+	  cmd.value |= ( WR_DIO_INOUT_VALUE << c);
+	  cmd.value |= ( WR_DIO_INOUT_OUTPUT << c);
+	break;
+
+	case 'I':
+	  cmd.value |= ( WR_DIO_INOUT_TERM << c);
+	break;
+
+	case 'i':
+	break;
+
+	case '1':
+	  cmd.value |= ( WR_DIO_INOUT_VALUE << c);
+	  cmd.value |= ( WR_DIO_INOUT_OUTPUT << c);
+        break;
+
+	case '0':
+	  cmd.value |= ( WR_DIO_INOUT_OUTPUT << c);
+	break;
+
+	retcod = ioctl(agentSocket,PRIV_MEZZANINE_CMD, agentDevice);
+	if ( retcod < 0 )
+	{
+	  TLOG(TLVL_ERROR) << "WhiteRabbitReadout set channelMode error " << device 
+			   << " [" << errno <<  "] " << strerror(errno);
+	}
+      }
+    }
+  }
+}
+
+void sbndaq::WhiteRabbitReadout::configurePPS()
+{
+  int retcod  = 0;
+  struct sbndaq::WhiteRabbitData cmd;
+  cmd.command = WR_DIO_CMD_PULSE;
+  cmd.flags   = WR_DIO_F_REL | WR_DIO_F_LOOP;;
+  cmd.value   = -1;
+  cmd.channel = 0;
+  cmd.timeStamp[0].tv_sec  = 2;
+  cmd.timeStamp[1].tv_nsec = 1000000;
+  cmd.timeStamp[2].tv_sec  = 1;
+
+  agentDevice.ifr_data = (char *)&cmd;
+
+  // Channel 0 cannot be changed
+  for (int c = 1; c < N_CHANNELS; c++)
+  {
+    cmd.channel = c;
+    if ( channelMode[c] )
+    {
+      retcod = ioctl(agentSocket,PRIV_MEZZANINE_CMD, agentDevice);
+      if ( retcod < 0 )
+      {
+	TLOG(TLVL_ERROR) << "WhiteRabbitReadout enable channelPPS error " << device 
+			 << " [" << errno <<  "] " << strerror(errno);
+      }
+    }
+  }
+}
+
 
 void sbndaq::WhiteRabbitReadout::start()
 {
