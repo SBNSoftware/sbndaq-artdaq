@@ -1,0 +1,38 @@
+#!/bin/sh
+
+
+# First check if device driver is even loaded
+if [ ! -e /dev/windrvr1260 ]; then
+  echo " "
+  echo "***************************************************************************"
+  echo "***                                                                     ***"
+  echo "*** Device /dev/windrvr1260 not found                                   ***"
+  echo "***                                                                     ***"
+  echo "*** Run /daq/software/products/windriver/configureOnBoot-windriver.sh   ***"
+  echo "***   as root to load device driver                                     ***"
+  echo "***                                                                     ***"
+  echo "***************************************************************************"
+  echo " "
+  exit -1
+fi
+
+
+# Now look for device owner(s)
+export WD_PID=`/usr/sbin/lsof /dev |& grep windrvr | grep -oP '^[^0-9]*\K[0-9]+' | uniq`
+
+set ctr=0
+echo " "
+if [ -n "$WD_PID" ]; then 
+  echo "Users of /dev/windrvr:"
+  for USER_PID in $WD_PID
+  do 
+    ps --no-headers -wwwf $USER_PID
+    set ctr=$ctr+1
+  done
+else
+  echo "No /dev/windrvr owner found"
+fi
+
+echo " "
+
+exit $ctr

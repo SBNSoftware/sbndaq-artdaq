@@ -1,0 +1,35 @@
+#!/bin/sh
+
+# First check if device driver is even loaded
+if [ ! -e /dev/a3818_0 ]; then
+  echo " "
+  echo "********************************************************************"
+  echo "***                                                              ***"
+  echo "*** Device /dev/a3818 not found                                  ***"
+  echo "***                                                              ***"
+  echo "*** Run A3818 device driver's make install                       ***"
+  echo "***   as root to load device driver                              ***"
+  echo "***                                                              ***"
+  echo "********************************************************************"
+  echo " "
+  exit -1
+fi
+
+export A3818_PID=`/usr/sbin/lsof /dev |& grep a3818 | grep -oP '^[^0-9]*\K[0-9]+' | uniq`
+
+set ctr=0
+echo " "
+if [ -n "$A3818_PID" ]; then 
+  echo "Users of /dev/a3818:"
+  for USER_PID in $A3818_PID
+  do 
+    ps --no-headers -wwwf $USER_PID
+    set ctr=$ctr+1
+  done
+else
+  echo "No /dev/a3818 owner found"
+fi
+
+echo " "
+
+exit $ctr
