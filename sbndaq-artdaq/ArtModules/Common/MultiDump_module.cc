@@ -272,16 +272,25 @@ void sbndaq::MultiDump::analyze_wr_fragment(artdaq::Fragment & frag)  {
 
       for (int i=0;i<(int)fragdata.nstamp;++i) {
 
-	int diff = TTS_ns-fragdata.timeStamp[i].tv_nsec;
+	uint diff = 0;
+	uint this_time = fragdata.timeStamp[i].tv_nsec;
+	if (TTS_ns>this_time) {
+	  diff = TTS_ns-this_time;
+	  if (diff>500000000) diff = 10000000000-diff;
+	}
+	else {
+	  diff = this_time-TTS_ns;
+	  if (diff>500000000) diff = 10000000000-diff;
+	}
 
 	// print out only timestamps within specified window of TTS
-	if (abs(diff)<(uint)fWindow && fragdata.channel==1) 	
+	if (diff<(uint)fWindow && fragdata.channel==1) 	
 	  std::cout << " Event " << fEvent << " PMT" <<
 	    " Timestamp " << i << "  : " << fragdata.timeStamp[i].tv_sec << " " << 
 	    fragdata.timeStamp[i].tv_nsec << 
 	    " TTS " << TTS_ns << 
 	    " TTS diff " << diff << std::endl;
-	if (abs(diff)<50000000 && fragdata.channel==2) 	
+	if (diff<500000000 && fragdata.channel==2) 	
 	  std::cout << " Event " << fEvent << " RWM" << 
 	    " Timestamp " << i << "  : " << fragdata.timeStamp[i].tv_sec << " " << 
 	    fragdata.timeStamp[i].tv_nsec << 
