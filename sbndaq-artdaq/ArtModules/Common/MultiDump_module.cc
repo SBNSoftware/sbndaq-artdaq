@@ -253,6 +253,12 @@ void sbndaq::MultiDump::analyze(const art::Event& evt)
 
 void sbndaq::MultiDump::analyze_wr_fragment(artdaq::Fragment & frag)  {
 
+
+
+      std::cout <<  "     timestamp is  " << frag.timestamp() << std::endl;
+      std::cout <<  "     seq ID is " << frag.sequenceID() << std::endl;
+  
+
       const WhiteRabbitEvent *event_ptr = reinterpret_cast<WhiteRabbitEvent const*>(frag.dataBeginBytes()); 
       timespec sysTime=event_ptr->systemTime;
       std::cout << "systime  " << sysTime.tv_sec << " " << sysTime.tv_nsec << std::endl;
@@ -309,6 +315,10 @@ void sbndaq::MultiDump::analyze_wr_fragment(artdaq::Fragment & frag)  {
 }
 
 void sbndaq::MultiDump::analyze_caen_fragment(artdaq::Fragment & frag)  {
+  
+
+      std::cout <<  "     timestamp is  " << frag.timestamp() << std::endl;
+      std::cout <<  "     seq ID is " << frag.sequenceID() << std::endl;
   
 
 

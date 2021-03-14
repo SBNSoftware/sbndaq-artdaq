@@ -5,6 +5,18 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
  	       sbndaq-artdaq-core_Overlays_Common
 )
 
+simple_plugin( FragmentDump "module"
+  art_Framework_Services_Registry
+  art_root_io_tfile_support
+  art_root_io_TFileService_service
+  #art_root_io_tfile_support ${ROOT_CORE}
+  #art_root_io_TFileService_service
+  ${ROOT_BASIC_LIB_LIST}
+	${ARTDAQ-CORE_UTILITIES}
+  sbndaq-artdaq-core_Overlays_Common 
+  artdaq-core_Data
+)
+
 simple_plugin( MultiDump "module"
   art_Framework_Services_Registry
   art_root_io_tfile_support
