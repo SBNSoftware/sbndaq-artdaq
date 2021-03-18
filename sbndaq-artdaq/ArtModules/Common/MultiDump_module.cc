@@ -60,7 +60,7 @@ public:
     };
     fhicl::Atom<int> window_wr {
       fhicl::Name("window_wr"),
-      fhicl::Comment("window around CAEN TTS to keep WR timestamps.  integer values from 0 to 10^9")
+      fhicl::Comment("window around CAEN TTT to keep WR timestamps.  integer values from 0 to 10^9")
     };
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
@@ -102,7 +102,7 @@ private:
   //  std::vector<uint64_t> 
   
   bool firstEvt = true;
-  uint32_t TTS_ns;  // will be set to value in CAEN fragement header
+  uint32_t TTT_ns;  // will be set to value in CAEN fragement header
 
   bool finclude_caen;
   int fShift; 
@@ -280,32 +280,45 @@ void sbndaq::MultiDump::analyze_wr_fragment(artdaq::Fragment & frag)  {
 
 	uint diff = 0;
 	uint this_time = fragdata.timeStamp[i].tv_nsec;
-	if (TTS_ns>this_time) {
-	  diff = TTS_ns-this_time;
-	  if (diff>500000000) diff = 10000000000-diff;
+	if (TTT_ns>this_time) {
+	  diff = TTT_ns-this_time;
+	  if (diff>500000000) diff = 1000000000-diff;
 	}
 	else {
-	  diff = this_time-TTS_ns;
-	  if (diff>500000000) diff = 10000000000-diff;
-	}
+	  diff = this_time-TTT_ns;
+	  if (diff>500000000) diff = 1000000000-diff;
+	} 
+	if (diff>500000000) std::cout<< "diff " << diff << "this_time " << this_time << " TTT_ns " << TTT_ns << std::endl;
 
-	// print out only timestamps within specified window of TTS
+	// print out only timestamps within specified window of TTT
 	if (diff<(uint)fWindow && fragdata.channel==1) 	
 	  std::cout << " Event " << fEvent << " PMT" <<
-	    " Timestamp " << i << "  : " << fragdata.timeStamp[i].tv_sec << " " << 
-	    fragdata.timeStamp[i].tv_nsec << 
-	    " TTS " << TTS_ns << 
-	    " TTS diff " << diff << std::endl;
-	if (diff<500000000 && fragdata.channel==2) 	
+	    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<  
+	    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec << 
+	    " TTT " << std::setw(9) << TTT_ns << 
+	    " TTT diff  " << std::setw(9)  << diff << std::endl;
+	//	if (diff< 500000000 && fragdata.channel==2) 	
+	if (fragdata.channel==2) 	
 	  std::cout << " Event " << fEvent << " RWM" << 
-	    " Timestamp " << i << "  : " << fragdata.timeStamp[i].tv_sec << " " << 
-	    fragdata.timeStamp[i].tv_nsec << 
-	    " TTS " << TTS_ns << 
-	    " TTS diff " << diff << std::endl;
+	    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<  
+	    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec << 
+	    " TTT " << std::setw(9) << TTT_ns << 
+	    " TTT diff  " << std::setw(9)  << diff << std::endl;
 
-	// print out all timestamps
-	// std::cout << "Timestamp " << i << "  : " << fragdata.timeStamp[i].tv_sec << " " << 
-	//   printf("%09d",(int)fragdata.timeStamp[i].tv_nsec) << " TTS diff " << diff << std::endl; 
+	if (fragdata.channel==0 ) 	
+	  std::cout << " Event " << fEvent << " PPS" << 
+	    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<  
+	    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec << 
+	    " TTT " << std::setw(9) << TTT_ns << 
+	    " TTT diff  " << std::setw(9)  << diff << std::endl;
+
+	// if (diff<(uint)fWindow && fragdata.channel==3 ) 	
+	if (fragdata.channel==3 ) 	
+	  std::cout << " Event " << fEvent << " TRIG" << 
+	    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<  
+	    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec << 
+	    " TTT " << std::setw(9) << TTT_ns << 
+	    " TTT diff  " << std::setw(9)  << diff << std::endl;
 
       }    
       std::cout << " ----------------------- " << std::endl;
@@ -341,7 +354,7 @@ void sbndaq::MultiDump::analyze_caen_fragment(artdaq::Fragment & frag)  {
       std::cout << "\tShift back, fragment id of "  << fShift << "\n";
       
       uint32_t t0 = header.triggerTimeTag;
-      TTS_ns = t0*8;
+      TTT_ns = t0*8;
       std::cout << "\n\tTriggerTimeTag in ns is " << 8*header.triggerTimeTag << "\n";  // 500 MHz is 2 ns per tick
       hEventCounter->Fill(header.eventCounter);
       hTriggerTimeTag->Fill(t0);

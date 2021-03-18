@@ -116,18 +116,20 @@ void sbndaq::FragmentDump::analyze(const art::Event& evt)
       for (auto cont : *handle) {
 	artdaq::ContainerFragment contf(cont);
 	std::cout << "    Found " << contf.block_count() << " Fragments in container of type " ;
-	artdaq::Fragment::timestamp_t start,end;
-	for (size_t ii = 0; ii < contf.block_count(); ++ii) {
-	  auto thisfrag = *contf[ii].get();
-	  if (ii==0) { get_frag_desc(thisfrag); start=thisfrag.timestamp(); end=thisfrag.timestamp(); 
+	artdaq::Fragment::timestamp_t start,end; start=0; end=0; 
+	if (contf.block_count()>0) {
+	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
+	    auto thisfrag = *contf[ii].get();
+	    if (ii==0) { get_frag_desc(thisfrag); start=thisfrag.timestamp(); end=thisfrag.timestamp(); 
+	    }
+	    else {
+	      if (thisfrag.timestamp()<start) start=thisfrag.timestamp();
+	      else if (thisfrag.timestamp()>end) end=thisfrag.timestamp();	    
+	    }
 	  }
-	  else {
-	    if (thisfrag.timestamp()<start) start=thisfrag.timestamp();
-	    else if (thisfrag.timestamp()>end) end=thisfrag.timestamp();
-	    
-	  }
-	}
-	std::cout << "timestamp range from " << start << " to " << end << std::endl;
+	  std::cout << "timestamp range from " << printf("%24.9f",start*1e-9) << " to " << printf("%24.9f",end*1e-9) << 
+	    " diff = " << printf("%010.6f",1e-6*difftime(end,start)) << " ms" << std::endl;
+	}  // if there is at least one fragment in the container
       }
     }
     else {      
@@ -166,7 +168,7 @@ void sbndaq::FragmentDump::get_frag_desc(artdaq::Fragment & frag)
 	//   ICARUSPMTGate = artdaq::Fragment::FirstUserFragmentType + 11,
 
 
-  std::cout <<   std::endl<< "     timestamp " << frag.timestamp()  <<  "     seq ID is " << frag.sequenceID() <<  std::endl;;
+  std::cout <<   std::endl<< "     timestamp " << printf("%24.9f",frag.timestamp()*1e-9)  <<  "  seq ID is " << frag.sequenceID() <<  std::endl;;
 
 
 }
