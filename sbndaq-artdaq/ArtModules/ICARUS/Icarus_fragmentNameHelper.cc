@@ -106,13 +106,13 @@ IcarusFragmentNameHelper::GetInstanceNameForFragment(artdaq::Fragment const& fra
 
 	auto idmask = fragment.fragmentID() & 0xff00;
 	
-	if(idmask==0x10000 || idmask==0x1100)
+	if(idmask==0x1000 || idmask==0x1100)
 	  instance_name += "TPCEE";
-	else if(idmask==0x12000 || idmask==0x1300)
+	else if(idmask==0x1200 || idmask==0x1300)
 	  instance_name += "TPCEW";
-	else if(idmask==0x13000 || idmask==0x1500)
+	else if(idmask==0x1300 || idmask==0x1500)
 	  instance_name += "TPCWE";
-	else if(idmask==0x14000 || idmask==0x1700)
+	else if(idmask==0x1400 || idmask==0x1700)
 	  instance_name += "TPCWW";
       }
 
