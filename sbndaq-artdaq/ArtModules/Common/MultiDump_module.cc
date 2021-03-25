@@ -86,7 +86,7 @@ private:
   TNtuple* nt_header;
   
   TH1F*    hEventCounter;
-  TH1F*    hTriggerTimeTag;
+  TH1D*    hTriggerTimeTag;
   TH1F*    h_wvfm_ev0_ch0;
 
   TTree* fEventTree;
@@ -132,7 +132,7 @@ void sbndaq::MultiDump::beginJob()
   nt_header       = tfs->make<TNtuple>("nt_header","Multi Header Ntuple","art_ev:caen_ev:caenv_ev_tts"); 
   /************************************************************************************************/
   hEventCounter   = tfs->make<TH1F>("hEventCounter","Event Counter Histogram",10000,0,10000);
-  hTriggerTimeTag = tfs->make<TH1F>("hTriggerTimeTag","Trigger Time Tag Histogram",10,2000000000,4500000000);
+  hTriggerTimeTag = tfs->make<TH1D>("hTriggerTimeTag","Trigger Time Tag Histogram",12500,0,125000000);
   h_wvfm_ev0_ch0  = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",2000,0,2000);  
   /************************************************************************************************/
   //--make tree to store the channel waveform info:
@@ -355,9 +355,9 @@ void sbndaq::MultiDump::analyze_caen_fragment(artdaq::Fragment & frag)  {
       
       uint32_t t0 = header.triggerTimeTag;
       TTT_ns = t0*8;
-      std::cout << "\n\tTriggerTimeTag in ns is " << 8*header.triggerTimeTag << "\n";  // 500 MHz is 2 ns per tick
+      std::cout << "\n\tTriggerTimeTag in ns is " << TTT_ns << "\n";  // 500 MHz is 2 ns per tick
       hEventCounter->Fill(header.eventCounter);
-      hTriggerTimeTag->Fill(t0);
+      hTriggerTimeTag->Fill((int)t0);
       nt_header->Fill(fEvent,header.eventCounter,t0);
       nChannels = md->nChannels;
       std::cout << "\tNumber of channels: " << nChannels << "\n";
