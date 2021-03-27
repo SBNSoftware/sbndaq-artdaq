@@ -64,6 +64,8 @@ namespace icarus {
     statpack last_stat_pack_;
 
     std::vector<int> pcieLinks_;
+
+    size_t event_offset_;
     
   protected:
 
@@ -77,7 +79,7 @@ namespace icarus {
     sbndaq::CircularBuffer<uint16_t> fCircularBuffer;
     size_t fCircularBufferSize;
 
-    uint32_t fTimeOffsetNanoSec; //offset to be used for fragment timestamp
+    uint32_t fTimeOffsetNanoSec; //offset to be used for fragment timestamp    
 
   private:
     
