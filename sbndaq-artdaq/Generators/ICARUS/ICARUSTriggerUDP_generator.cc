@@ -117,6 +117,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   */
   fEventCounter = 1;
   fLastEvent = 0;
+  fLastTimestamp = 0;
 }
 bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 {
@@ -184,7 +185,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   int wr_trig = -1;
   uint64_t event_no = fEventCounter;
   uint64_t event_no_wr = fEventCounter;
-  uint64_t secs = -3;
+  uint64_t secs = 0;
   long wr_secs = -3;
   long nanosecs = -4;
   long wr_nsecs = -4;
@@ -204,7 +205,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       event_no_wr = std::stoi(sections[5]);
       wr_secs = std::stol(sections[6]);
       wr_nsecs = std::stol(sections[7]);
-      long long val = wr_secs*1e9+wr_nsecs;
+      uint64_t val = wr_secs*1e9+wr_nsecs;
+      
       if(use_wr_time_)
 	ts = val;
     }
@@ -216,7 +218,9 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
     if(fLastEvent < event_no)
     {
-      const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs);
+      if(fLastEvent == 0)
+	fLastTimestamp = ts;
+      const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs, fLastTimestamp);
       //const auto fragment_size = metadata.ExpectedDataSize();
       //Put data string in fragment -> make frag size size of data string, copy data string into fragment
       //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
@@ -240,6 +244,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //frags.emplace_back(nullptr);
       //std::swap(frags.back(), frag);
       fLastEvent = event_no;
+      fLastTimestamp = ts;
     }
   /*
     size_bytes = poll_with_timeout(pmtsocket_, ip_data_pmt_, 500);

@@ -94,6 +94,7 @@ namespace sbndaq
     int n_init_timeout_ms_;
     uint64_t fEventCounter;
     uint64_t fLastEvent;
+    uint64_t fLastTimestamp;
     bool use_wr_time_;
     //expected fragments
     int generated_fragments_per_event_;
