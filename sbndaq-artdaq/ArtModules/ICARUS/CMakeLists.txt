@@ -71,5 +71,6 @@ simple_plugin(Icarus "fragmentNameHelper"
   ${ARTDAQ-CORE_UTILITIES}
   ${MF_MESSAGELOGGER}
   ${FHICLCPP}
+  ${CETLIB_EXCEPT}
   )
 
