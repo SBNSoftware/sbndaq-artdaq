@@ -42,7 +42,6 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
 
   //read parameters from FHiCL file
   std::vector<uint16_t> fragment_ids = ps_.get< std::vector<uint16_t> >("fragment_ids");
-  std::sort(fragment_ids.begin(), fragment_ids.end());
 
   feb_restart_period_         = 1e9 * ps_.get<uint32_t>("feb_restart_period_s");
   initial_delay_ns_           = 1e9 * ps_.get<uint32_t>("initial_delay_s");
