@@ -9,29 +9,39 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration() {
 }
 
 
-sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB) {
+sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, uint8_t const& mac5) {
   InitializeParameters();
   
   std::vector<uint16_t> fragment_ids = ps_.get< std::vector<uint16_t> >("fragment_ids");
-  std::sort(fragment_ids.begin(), fragment_ids.end());
-  std::vector<uint8_t> mac5s;
+
+  //find at which position mac5 is in the array of fragment_ids in the Fhicl file
+  //so that we can read the PPS offset and HV on permissions from corresponding arrays
+  int iFEB = -1;
   for( auto id : fragment_ids ) {
+    iFEB++;
     uint8_t MAC5 = id & 0xff; //last 8 bits of fragment ID are last 8 bits of FEB MAC5
-    mac5s.push_back(MAC5);
+    if(MAC5 == mac5) {
+      break;
+    }
   }
+  if(iFEB == -1 || iFEB >= (int)fragment_ids.size()) { //it should never happen... but just in case
+    TLOG(TLVL_ERROR)<< "Couldn't find MAC5 "<<(int)mac5<<" in the list of FEBs!";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + "Couldn't find MAC5 "+std::to_string(mac5)+" in the list of fragment_ids!" );
+  }
+
   
 //SlowControl configuration in the FHiCL file can have two formats, and the format is detected automatically
 //if bitstream exists in FHiCL file, it is loaded, otherwise human readable format is used
-  std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(mac5s[iFEB]), "failure");
+  std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(mac5), "failure");
   if(s.compare("failure")) {
-    TLOG(TLVL_INFO)<< __func__ << " Loading bitstream configuration for FEB" + mac5s[iFEB];
-    if(!read_bitstream(ps_, mac5s[iFEB]))
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5s[iFEB]));
+    TLOG(TLVL_INFO)<< __func__ << " Loading bitstream configuration for FEB" + mac5;
+    if(!read_bitstream(ps_, mac5))
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5));
   }
   else {
-    TLOG(TLVL_INFO)<< __func__ << " Loading human-readable configuration for FEB" + mac5s[iFEB];
-    if(!read_human_readable_parameters(ps_, mac5s[iFEB]))
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5s[iFEB]));
+    TLOG(TLVL_INFO)<< __func__ << " Loading human-readable configuration for FEB" << (int)mac5;
+    if(!read_human_readable_parameters(ps_, mac5))
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5));
   }
   
   //Probe configuration is always in bitstream format
@@ -40,7 +50,7 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
     ProbeBitStream,
     PROBE_BITSTREAM_NBITS)) {
       TLOG(TLVL_ERROR)<<__func__ << " Failed to load PROBE bit stream";
-      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL PROBE configuration for FEB " + std::to_string(mac5s[iFEB]));
+      throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL PROBE configuration for FEB " + std::to_string(mac5));
   }
   
   //load HV on/off settings and cable delays
@@ -49,15 +59,15 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
   
 
   //validate size of the arrays in the FHiCL file
-  if(hv_on_permissions.size() != mac5s.size()) {
-    TLOG(TLVL_ERROR)<< __func__ << " TurnOnHV array size differs from MAC5s array size";
-    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " TurnOnHV array size differs from MAC5s array size");
+  if(hv_on_permissions.size() != fragment_ids.size()) {
+    TLOG(TLVL_ERROR)<< __func__ << " TurnOnHV array size differs from fragment_ids array size";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " TurnOnHV array size differs from fragment_ids array size");
   }
   hv_on_permission = hv_on_permissions[iFEB];
   
-  if(PPS_offsets.size() != mac5s.size()) {
-    TLOG(TLVL_ERROR)<< __func__ << " PPS_offset_ns array size differs from MAC5s array size";
-    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " PPS_offset_ns array size differs from MAC5s array size");
+  if(PPS_offsets.size() != fragment_ids.size()) {
+    TLOG(TLVL_ERROR)<< __func__ << " PPS_offset_ns array size differs from fragment_ids array size";
+    throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " PPS_offset_ns array size differs from fragment_ids array size");
   }
   PPS_offset = PPS_offsets[iFEB];
 }

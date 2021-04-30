@@ -33,9 +33,14 @@ sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
   VerifyMACConfiguration(hardware_macs);
 
 
-  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
-    TLOG(TLVL_DEBUG) << __func__ << " Reading configuration for MAC5 #" << std::to_string(iFEB) << ": " << std::to_string(MAC5s_[iFEB]);
-    feb_configuration[MAC5s_[iFEB]] = sbndaq::BernCRTFEBConfiguration(ps_, iFEB); //create configuration object
+  for(const uint8_t& mac5 : MAC5s_) {
+    TLOG(TLVL_DEBUG) << __func__ << " Reading configuration for MAC5 " << std::to_string(mac5);
+    feb_configuration[mac5] = sbndaq::BernCRTFEBConfiguration(ps_, mac5); //create configuration object
+
+    TLOG(TLVL_INFO)<<__func__
+      <<"Read configuration for CRT FEB "<<(int)(mac5)
+      <<" PPS offset: "<<feb_configuration[mac5].GetPPSOffset()
+      <<" Turn on HV: "<<(feb_configuration[mac5].GetHVOnPermission()?"yes":"no");
   }
 
   TLOG(TLVL_INFO) << __func__ << "() constructor completed";
@@ -114,7 +119,7 @@ void sbndaq::BernCRTData::StartFebdrv() {
   last_restart_time = std::chrono::system_clock::now();
 }
 
-void sbndaq::BernCRTData::VerifyMACConfiguration(const std::vector<uint8_t> &  hardware_macs) {
+void sbndaq::BernCRTData::VerifyMACConfiguration(std::vector<uint8_t> hardware_macs) {
   /**
    * Check if the FEB list defined in FHiCL file agrees with FEBs detected by febdrv
    */
@@ -123,16 +128,19 @@ void sbndaq::BernCRTData::VerifyMACConfiguration(const std::vector<uint8_t> &  h
   bool configuration_ok = (hardware_macs.size() == nFEBs());
 
   //check FEB MAC addresses
-  //here we rely on both hardware_macs and MAC5s_ being sorted already
+  //sort both arrays
+  std::sort(hardware_macs.begin(), hardware_macs.end());
+  auto mac5s = MAC5s_;
+  std::sort(mac5s.begin(), mac5s.end());
   for(unsigned int i = 0; i < nFEBs() && configuration_ok; i++) {
-    configuration_ok = (hardware_macs[i] == MAC5s_[i]);
+    configuration_ok = (hardware_macs[i] == mac5s[i]);
   }
 
   //print error message and crash
   if(!configuration_ok) {
     std::string error_message = __func__;
-    error_message += "() List of "+std::to_string(MAC5s_.size())+ " FEBs declared in the FHiCL file (dec):";
-    for(auto m : MAC5s_) error_message += " " + std::to_string(m);
+    error_message += "() List of "+std::to_string(mac5s.size())+ " FEBs declared in the FHiCL file (dec):";
+    for(auto m : mac5s) error_message += " " + std::to_string(m);
     error_message += " doesn't match list of " + std::to_string(hardware_macs.size()) + " detected FEBs:";
     for(auto h : hardware_macs) error_message += " " + std::to_string(h);
     TLOG(TLVL_ERROR) << error_message;
