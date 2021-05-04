@@ -139,6 +139,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     time_duration diff = t_now - time_t_epoch;
 
     ts = diff.total_nanoseconds();
+    fNTP_time = ts;
   }
   //std::cout << ts << std::endl;
   int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
@@ -220,7 +221,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     {
       if(fLastEvent == 0)
 	fLastTimestamp = ts;
-      const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs, fLastTimestamp);
+      //const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs, fLastTimestamp);
+      const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time, fLastTimestamp);
       //const auto fragment_size = metadata.ExpectedDataSize();
       //Put data string in fragment -> make frag size size of data string, copy data string into fragment
       //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
@@ -230,7 +232,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       //frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
       std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
       icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
-    //const char *name = metadata.getName();
+      /*
       int name = metadata.getName();
       int number = metadata.getEventNo();
       int sec_frag = metadata.getSeconds();
@@ -239,10 +241,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       int wr_num = metadata.getWREventNo();
       long wr_sec_frag = metadata.getWRSeconds();
       long wr_nsec_frag = metadata.getWRNanoSeconds();
-      //std::cout << "Name: " << name << " Event Number: " << number << " Seconds: " << sec_frag << " Nanoseconds: " << nanosec_frag << " WR: " << wr_label << " WR Event: " << wr_num << " WR Seconds: " << wr_sec_frag << " WR Nanoseconds " << wr_nsec_frag << std::endl; 
-    //Old method, try new method which inserts data string from hardware into the fragment as well 
-    //frags.emplace_back(nullptr);
-      //std::swap(frags.back(), frag);
+      */
       fLastEvent = event_no;
       fLastTimestamp = ts;
     }
