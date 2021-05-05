@@ -18,7 +18,7 @@ namespace sbndaq {
   class BernCRTFEBConfiguration  {
     public:
       
-      BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, int iFEB);
+      BernCRTFEBConfiguration(fhicl::ParameterSet const & ps_, uint8_t const & mac5);
       BernCRTFEBConfiguration();
       
       uint8_t * GetProbeBitStream();
