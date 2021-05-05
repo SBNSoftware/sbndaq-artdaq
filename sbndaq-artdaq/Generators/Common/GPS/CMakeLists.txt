@@ -7,6 +7,8 @@ include_directories( $ENV{PQXX_INC} )
 include_directories( $ENV{BOOST_INC} )
 include_directories( . )
 
+cet_add_compiler_flags(-Wno-deprecated-copy -DBOOST_BIND_GLOBAL_PLACEHOLDERS)
+
 cet_find_library( EPICS_CA	NAMES ca	PATHS ENV EPICS_LIBRARY		NO_DEFAULT_PATH )
 cet_find_library( PQXX		NAMES pqxx	PATHS ENV PQXX_LIBRARIES	NO_DEFAULT_PATH )
 cet_find_library( BOOST_SYSTEM	NAMES boost_system	PATHS ENV BOOST_LIB	NO_DEFAULT_PATH )
