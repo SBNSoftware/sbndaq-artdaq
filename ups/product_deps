@@ -25,7 +25,7 @@ caenvme               v2_50
 caendigitizer         v2_12_0
 pqxx                  v6_2_5d
 epics                 v3_16_2a
-zmq                   v4_3_1a
+zmq                   v4_3_1
 jsoncpp               v1_7_7e
 wibtools              v0_03_10     -
 windriver             v12_06_00    -
