@@ -139,29 +139,16 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     time_duration diff = t_now - time_t_epoch;
 
     ts = diff.total_nanoseconds();
+    fNTP_time = ts;
   }
-  //std::cout << ts << std::endl;
   int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
-  //int size_bytes = poll_with_timeout(datasocket_,ip_data_,500);
-  //int buffersize = 0;
   std::string data_input = "";
-  //char buffer[size_bytes];
-  //buffer[500] = {'\0'};
   buffer[0] = '\0';
   if(size_bytes>0){
-    //char buffer[size_bytes];
-    //buffer[size_bytes]='\0';
-    //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
     int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
     TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
-    //TLOG(TLVL_DEBUG) << "The error is:: " << strerror(errno);
-    //TLOG(TLVL_DEBUG) << "data received:: " << buffer;
-    //buffersize = sizeof(buffer)/sizeof(char);
     data_input = buffer;
   }
-
-  size_t pos = 0;
-  //size_t delim_pos = 0;
   TLOG(TLVL_DEBUG) << "string received:: " << data_input;
   //if shouldn't send fragments, then don't create fragment/send
   if(generated_fragments_per_event_==0){
@@ -169,83 +156,41 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     ++fEventCounter;
     return true;
   }
+  
+  icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerString(buffer);
 
-
-  std::string delimiter = ",";
-  std::vector<std::string> sections;
-  std::string token = "";
-  while ((pos = data_input.find(delimiter)) != std::string::npos) {
-    token = data_input.substr(0, pos);
-    sections.push_back(token);
-    data_input.erase(0, pos + delimiter.length());
-  }
-  sections.push_back(data_input);
-
-  int trigger = -1;
-  int wr_trig = -1;
   uint64_t event_no = fEventCounter;
-  uint64_t event_no_wr = fEventCounter;
-  uint64_t secs = 0;
-  long wr_secs = -3;
-  long nanosecs = -4;
-  long wr_nsecs = -4;
-  if(sections.size() >= 4)
+  uint64_t conv_val = datastream_info.getNanoseconds_since_UTC_epoch();
+  if(use_wr_time_ && conv_val > 0)
+    ts = conv_val;
+  if(use_wr_time_ && conv_val == 0)
   {
-    std::string trig_name = sections[0];
-    if(trig_name == "Local_TS1")
-      trigger = 1;
-    event_no = std::stoi(sections[1]);
-    secs = std::stoi(sections[2]);
-    nanosecs = std::stol(sections[3]);
-    if(sections.size() > 5)
-    {
-      std::string wr_name = sections[4];
-      if(wr_name == " WR_TS1")
-	wr_trig = 2;
-      event_no_wr = std::stoi(sections[5]);
-      wr_secs = std::stol(sections[6]);
-      wr_nsecs = std::stol(sections[7]);
-      uint64_t val = wr_secs*1e9+wr_nsecs;
-      
-      if(use_wr_time_)
-	ts = val;
-    }
-    if(wr_trig == -1 || wr_secs == -3 || wr_nsecs == -4)
-      {
-	TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
-      }
-    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly
+    TLOG(TLVL_WARNING) << "WR time = 0";
+  }
+  if(datastream_info.event_no > -1)
+    event_no = datastream_info.event_no;
+
+  if(datastream_info.wr_name == " WR_TS1" || datastream_info.wr_seconds == -3 || datastream_info.wr_nanoseconds == -4)
+  {
+    TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
+  }
+    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    
+  //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly
     //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
-    if(fLastEvent < event_no)
-    {
-      if(fLastEvent == 0)
-	fLastTimestamp = ts;
-      const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(trigger, event_no, secs, nanosecs,wr_trig, event_no_wr, wr_secs, wr_nsecs, fLastTimestamp);
-      //const auto fragment_size = metadata.ExpectedDataSize();
-      //Put data string in fragment -> make frag size size of data string, copy data string into fragment
-      //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
-      size_t fragment_size = max_fragment_size_bytes_;
-      TLOG(TLVL_DEBUG) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
-      frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, event_no, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
-      //frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
-      std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
-      icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
-    //const char *name = metadata.getName();
-      int name = metadata.getName();
-      int number = metadata.getEventNo();
-      int sec_frag = metadata.getSeconds();
-      long nanosec_frag = metadata.getNanoSeconds();
-      int wr_label = metadata.getWRName();
-      int wr_num = metadata.getWREventNo();
-      long wr_sec_frag = metadata.getWRSeconds();
-      long wr_nsec_frag = metadata.getWRNanoSeconds();
-      //std::cout << "Name: " << name << " Event Number: " << number << " Seconds: " << sec_frag << " Nanoseconds: " << nanosec_frag << " WR: " << wr_label << " WR Event: " << wr_num << " WR Seconds: " << wr_sec_frag << " WR Nanoseconds " << wr_nsec_frag << std::endl; 
-    //Old method, try new method which inserts data string from hardware into the fragment as well 
-    //frags.emplace_back(nullptr);
-      //std::swap(frags.back(), frag);
-      fLastEvent = event_no;
+  if(fLastEvent < event_no)
+  {
+    if(fLastEvent == 0)
       fLastTimestamp = ts;
-    }
+    const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time, fLastTimestamp);
+    //Put data string in fragment -> make frag size size of data string, copy data string into fragment
+    //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
+    size_t fragment_size = max_fragment_size_bytes_;
+    TLOG(TLVL_DEBUG + 10) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
+    frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, event_no, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
+    std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
+    icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
+    fLastEvent = event_no;
+    fLastTimestamp = ts;
   /*
     size_bytes = poll_with_timeout(pmtsocket_, ip_data_pmt_, 500);
     data_input = "";
@@ -323,18 +268,18 @@ void sbndaq::ICARUSTriggerUDP::resume()
 //send a command
 void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
 {  
-  TLOG(TLVL_DEBUG) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
+  TLOG(TLVL_DEBUG + 10) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
 
   sendto(configsocket_,&cmd,sizeof(Command_t), 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
 
-  TLOG(TLVL_DEBUG) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
+  TLOG(TLVL_DEBUG + 10) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
 }
 
 //return size of available data
 int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, struct sockaddr_in& si, int timeout_ms)
 {
 
-  TLOG(TLVL_DEBUG) << "poll:: DATA from " << ip.c_str() << " with " << timeout_ms << " ms timeout";
+  TLOG(TLVL_DEBUG + 10) << "poll:: DATA from " << ip.c_str() << " with " << timeout_ms << " ms timeout";
   struct pollfd ufds[1];
   ufds[0].fd = socket;
   ufds[0].events = POLLIN | POLLPRI;
@@ -342,7 +287,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
   //have something
   if (rv > 0){
-    TLOG(TLVL_DEBUG) << "poll:: rv=" << rv << " with revents=" << ufds[0].revents;
+    TLOG(TLVL_DEBUG + 10) << "poll:: rv=" << rv << " with revents=" << ufds[0].revents;
 
     //have something good
     if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
@@ -358,7 +303,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
       int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                                    
 			 (struct sockaddr *) &si, &slen);    
       //std::cout << msg_size << std::endl;
-      TLOG(TLVL_DEBUG) << "peek recvfrom:: " << ret << " " << errno;
+      TLOG(TLVL_DEBUG + 10) << "peek recvfrom:: " << ret << " " << errno;
       return (int)(peekBuffer[1]);
       //return sizeof(peekBuffer);
       //return sizeof(peekBuffer[1]);
@@ -367,7 +312,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
   }
   //timeout
   else if(rv==0){
-    TLOG(TLVL_DEBUG) << "poll:: timed out after " << timeout_ms << " ms (rv=" << rv << ")";
+    TLOG(TLVL_DEBUG + 10) << "poll:: timed out after " << timeout_ms << " ms (rv=" << rv << ")";
     return 0;
   }
   //error
@@ -382,7 +327,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
 //read data size from socket
 int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  TLOG(TLVL_DEBUG + 10) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
   socklen_t slen = sizeof(si);
   //int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
   int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, &slen);
@@ -390,7 +335,7 @@ int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_i
   if(size_rcv<0)
     TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
   else
-    TLOG(TLVL_DEBUG) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
+    TLOG(TLVL_DEBUG + 10) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
 
   return size_rcv;
 }
