@@ -7,7 +7,7 @@ include_directories( ${CAENDIGITIZER_INC} )
 include_directories( ${ARTDAQ_INC} )
 include_directories( ./GPS )
 
-cet_add_compiler_flags(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
+#cet_add_compiler_flags(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 cet_find_library( CAENDIGITIZER    NAMES CAENDigitizer    PATHS ENV CAENDIGITIZER_LIB   NO_DEFAULT_PATH )
 cet_find_library( CAEN_VME         NAMES CAENVME          PATHS ENV CAENVME_LIB         NO_DEFAULT_PATH )
