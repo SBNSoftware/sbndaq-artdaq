@@ -97,6 +97,7 @@ namespace sbndaq
     uint64_t fNTP_time;
     uint64_t fLastTimestamp;
     bool use_wr_time_;
+    long wr_time_offset_ns_;
     //expected fragments
     int generated_fragments_per_event_;
     char buffer[500] = {'\0'};

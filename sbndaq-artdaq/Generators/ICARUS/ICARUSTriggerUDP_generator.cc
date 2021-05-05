@@ -36,6 +36,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , n_init_retries_(ps.get<int>("n_init_retries",10))
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
   , use_wr_time_(ps.get<bool>("use_wr_time"))
+  , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
   
@@ -89,32 +90,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
-  //buffer = {'\0'};
-  //peekBuffer = {0,0};
-  /*
-  pmtsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); 
-  if(pmtsocket_ < 0)
-    {
-      throw art::Exception(art::errors::Configuration) << "ICARUSPMTGate: Error creating socket!" << std::endl;
-      exit(1);
-    }
-  struct sockaddr_in si_me_pmtdata;
-  si_me_pmtdata.sin_family = AF_INET;
-  si_me_pmtdata.sin_port = htons(pmtdataport_);
-  si_me_pmtdata.sin_addr.s_addr = htonl(INADDR_ANY);
-  if(bind(pmtsocket_, (struct sockaddr *)&si_me_pmtdata, sizeof(si_me_pmtdata)) == -1)
-    {
-      throw art::Exception(art::errors::Configuration) << "ICARUSPMTGate: Cannot bind config socket to port " << pmtdataport_ << std::endl;
-      exit(1);
-    }
-  si_pmtdata_.sin_family = AF_INET;
-  si_pmtdata_.sin_port = htons(pmtdataport_);
-  if(inet_aton(ip_data_pmt_.c_str(), &si_pmtdata_.sin_addr) == 0)
-    {
-      throw art::Exception(art::errors::Configuration) << "ICARUSPMTGate: Error creating socket!" << std::endl;
-      exit(1);
-    }
-  */
+
   fEventCounter = 1;
   fLastEvent = 0;
   fLastTimestamp = 0;
@@ -129,6 +105,16 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //do something in here to get data...
    */
 
+  int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
+  std::string data_input = "";
+  buffer[0] = '\0';
+  if(size_bytes>0){
+    int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
+    TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
+    data_input = buffer;
+  }
+  TLOG(TLVL_DEBUG) << "string received:: " << data_input;
+
   artdaq::Fragment::timestamp_t ts(0);
   {
     using namespace boost::gregorian;
@@ -141,15 +127,12 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     ts = diff.total_nanoseconds();
     fNTP_time = ts;
   }
-  int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
-  std::string data_input = "";
-  buffer[0] = '\0';
-  if(size_bytes>0){
-    int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
-    TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
-    data_input = buffer;
+
+  if(data_input==""){
+    TLOG(TLVL_DEBUG) << "No data after poll with timeout? " << data_input;
+    return true;
   }
-  TLOG(TLVL_DEBUG) << "string received:: " << data_input;
+
   //if shouldn't send fragments, then don't create fragment/send
   if(generated_fragments_per_event_==0){
     fLastEvent = fEventCounter;
@@ -160,17 +143,17 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerString(buffer);
 
   uint64_t event_no = fEventCounter;
-  uint64_t conv_val = datastream_info.getNanoseconds_since_UTC_epoch();
-  if(use_wr_time_ && conv_val > 0)
-    ts = conv_val;
-  if(use_wr_time_ && conv_val == 0)
+  uint64_t wr_ts = datastream_info.getNanoseconds_since_UTC_epoch() + wr_time_offset_ns_;
+  if(use_wr_time_ && wr_ts > 0)
+    ts = wr_ts;
+  if(use_wr_time_ && wr_ts == 0)
   {
     TLOG(TLVL_WARNING) << "WR time = 0";
   }
   if(datastream_info.event_no > -1)
     event_no = datastream_info.event_no;
 
-  if(datastream_info.wr_name == " WR_TS1" || datastream_info.wr_seconds == -3 || datastream_info.wr_nanoseconds == -4)
+  if(datastream_info.wr_name != " WR_TS1" || datastream_info.wr_seconds == -3 || datastream_info.wr_nanoseconds == -4)
   {
     TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
   }
@@ -190,56 +173,22 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
     icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
     fLastEvent = event_no;
+
+    TLOG(TLVL_DEBUG) << "The artdaq timestamp value is: " << ts << ". Diff from last timestamp is " << ts-fLastTimestamp;
+
+    long tdiff = (long)wr_ts - (long)fNTP_time;
+    
+    TLOG(TLVL_DEBUG) << "(WR TIME - NTP TIME) is (" << wr_ts << " - " << fNTP_time << ") = " << tdiff << " nanoseconds."
+		     << " (" << tdiff/1e6 << " ms)";
+    
+    if(wr_ts>0 && std::abs(tdiff) > 20e6)
+      TLOG(TLVL_WARNING) << "abs(WR TIME - NTP TIME) is " << tdiff << " nanoseconds, which is greater than 20e6 threshold!!";
+    
+
     fLastTimestamp = ts;
-  /*
-    size_bytes = poll_with_timeout(pmtsocket_, ip_data_pmt_, 500);
-    data_input = "";
-    char buffer_pmt[size_bytes];
-    if(size_bytes>0)
-      {
-      read(pmtsocket_, ip_data_pmt_, si_pmtdata_, size_bytes, buffer_pmt);
-      TRACE(TLVL_INFO,"data received:: %s", buffer_pmt);
-      data_input = buffer_pmt;
-      TRACE(TLVL_INFO,"string received:: %s", data_input.c_str());
-      }
-      size_t pos = 0;
-      
-      delimiter = ",";
-      std::vector<std::string> sections_pmt;
-      token = "";
-      while ((pos = data_input.find(delimiter)) != std::string::npos) {
-      token = data_input.substr(0, pos);
-      sections_pmt.push_back(token);
-      data_input.erase(0, pos + delimiter.length());
-      }
-      if(sections_pmt.size() > 0)
-      {
-      std::vector<int> mult;
-      for(unsigned int i = 0; i < sections_pmt.size(); ++i)
-      {
-      int pmt_mult = std::stoi(sections_pmt[i]);
-	mult.push_back(pmt_mult);
-      }
-      const auto metadata_pmt = icarus::ICARUSPMTGateFragmentMetadata(mult);
-      fragment_size = max_fragment_size_bytes_pmt_;
-      TRACE(TLVL_INFO, "Created ICARUSPMTGate Fragment with size of 500 bytes");
-      frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, fEventCounter, fragment_id_pmt_, sbndaq::detail::FragmentType::ICARUSPMTGate, metadata_pmt, ts));
-      std::copy(&buffer_pmt[0], &buffer_pmt[sizeof(buffer_pmt)/sizeof(char)], (char*)(frags.back()->dataBeginBytes()));
-    }
-    */
-  ++fEventCounter;
+    ++fEventCounter;
   }
-  /*
-  int size_bytes = poll_with_timeout(sleep_time_ms);
-  if(size_bytes>0){
-    //uint16_t buffer[size_bytes/2+1];
-    char buffer[size_bytes];
-    read(size_bytes,buffer);
-    TRACE(TLVL_INFO,"received:: %s",buffer);
-  } 
-  */   
-//send_TRIG_ALLW();
-  TLOG(TLVL_DEBUG) << "The artdaq timestamp value is: " << ts;
+
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
   //std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
   return true;
