@@ -15,6 +15,13 @@ simple_plugin( MultiDump "module"
 	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common 
   artdaq-core_Data
+	)
+
+simple_plugin( IncompleteEventAna "module"
+  art_Framework_Services_Registry
+  #${ROOT_BASIC_LIB_LIST}
+  ${ARTDAQ-CORE_UTILITIES}
+  #sbndaq-artdaq-core_Overlays_Common 
 )
 
 simple_plugin( CAENV1730Dump "module"

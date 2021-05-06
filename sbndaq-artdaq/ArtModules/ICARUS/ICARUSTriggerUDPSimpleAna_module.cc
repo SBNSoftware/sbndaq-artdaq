@@ -83,10 +83,10 @@ void icarus::ICARUSTriggerUDPSimpleAna::analyze(art::Event const & evt)
   {
     const auto& frag((*raw_data)[idx]);
     ICARUSTriggerUDPFragment trigfrag(frag);
-    int eventno = trigfrag.getEventNo();
-    int seconds = trigfrag.getSeconds();
-    long nanoseconds = trigfrag.getNanoSeconds();
-    fTuple->Fill(evt.run(),eventNumber, idx, eventno, seconds, nanoseconds);
+    //int eventno = trigfrag.getEventNo();
+    //int seconds = trigfrag.getSeconds();
+    //long nanoseconds = trigfrag.getNanoSeconds();
+    //fTuple->Fill(evt.run(),eventNumber, idx, eventno, seconds, nanoseconds);
   }
 }
 
