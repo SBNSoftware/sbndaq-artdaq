@@ -96,6 +96,16 @@ namespace sbndaq
     uint64_t fLastEvent;
     uint64_t fNTP_time;
     uint64_t fLastTimestamp;
+    uint64_t fLastTimestampBNB;
+    uint64_t fLastTimestampNuMI;
+    long fLastGatesNum;
+    long fLastGatesNumBNB;
+    long fLastGatesNumNuMI;
+    long fDeltaGates;
+    long fDeltaGatesBNB;
+    long fDeltaGatesNuMI;
+    uint64_t fStartOfRun;
+    int fInitialStep;
     bool use_wr_time_;
     long wr_time_offset_ns_;
     //expected fragments

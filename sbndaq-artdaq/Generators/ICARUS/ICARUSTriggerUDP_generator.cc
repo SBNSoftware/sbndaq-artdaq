@@ -94,6 +94,16 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   fEventCounter = 1;
   fLastEvent = 0;
   fLastTimestamp = 0;
+  fLastTimestampBNB = 0;
+  fLastTimestampNuMI = 0;
+  fLastGatesNum = 0;
+  fLastGatesNumBNB = 0;
+  fLastGatesNumNuMI = 0;
+  fDeltaGates = 0;
+  fDeltaGatesBNB = 0;
+  fDeltaGatesNuMI = 0;
+  fStartOfRun = 0;
+  fInitialStep = 0;
 }
 bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 {
@@ -126,6 +136,12 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
     ts = diff.total_nanoseconds();
     fNTP_time = ts;
+  }
+
+  if(fInitialStep == 0)
+  {
+    fStartOfRun = ts;
+    fInitialStep = 1;
   }
 
   if(data_input==""){
@@ -163,8 +179,32 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   if(fLastEvent < event_no)
   {
     if(fLastEvent == 0)
-      fLastTimestamp = ts;
-    const auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time, fLastTimestamp);
+    {
+      fLastTimestamp = fStartOfRun;
+      fLastTimestampBNB = fStartOfRun;
+      fLastTimestampNuMI = fStartOfRun;
+    }
+    if(datastream_info.gate_type == 1)
+    {
+      fDeltaGatesBNB = datastream_info.gate_id - fLastGatesNumBNB;
+      if(fDeltaGatesBNB <= 0)
+	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
+    }
+    if(datastream_info.gate_type == 2)
+    {
+      fDeltaGatesNuMI = datastream_info.gate_id - fLastGatesNumNuMI;
+      if(fDeltaGatesNuMI <= 0)
+        TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
+    }
+    else 
+      fDeltaGates = 0;
+    auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata();
+    if(datastream_info.gate_type == 1)
+      metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time, fLastTimestampBNB, fDeltaGatesBNB);
+    else if(datastream_info.gate_type == 2)
+      metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time, fLastTimestampNuMI, fDeltaGatesNuMI);
+    else
+      metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time, fLastTimestamp, fDeltaGates);
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
     size_t fragment_size = max_fragment_size_bytes_;
@@ -186,6 +226,17 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     
 
     fLastTimestamp = ts;
+    fLastGatesNum = datastream_info.gate_id;
+    if(datastream_info.gate_type == 1)
+    {
+      fLastTimestampBNB = ts;
+      fLastGatesNumBNB = datastream_info.gate_id;
+    }
+    if(datastream_info.gate_type == 2)
+    {
+      fLastTimestampNuMI = ts;
+      fLastGatesNumNuMI = datastream_info.gate_id;
+    }
     ++fEventCounter;
   }
 
