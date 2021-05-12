@@ -74,8 +74,10 @@ simple_plugin(ICARUSTriggerUDP "generator"
     sbndaq-artdaq-core_Overlays_ICARUS
     sbndaq-artdaq_Common_Utilities
     artdaq_Generators
+    artdaq_Application
     artdaq_DAQdata
     artdaq-core_Utilities
+    artdaq-utilities_Plugins
     artdaq-core_Data
   ${Boost_SYSTEM_LIBRARY}
   canvas
