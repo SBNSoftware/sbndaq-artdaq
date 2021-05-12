@@ -87,7 +87,7 @@ void icarus::ICARUSTriggerUDPDump::analyze(art::Event const & evt)
     std::string data = trigfrag.GetDataString();
     char *buffer = const_cast<char*>(data.c_str());
     icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerString(buffer);
-    uint64_t wr_ts = datastream_info.getNanoseconds_since_UTC_epoch() + 2; //hardcode additional TAI->UTC offset for now
+    uint64_t wr_ts = datastream_info.getNanoseconds_since_UTC_epoch() + 2e9; //hardcode additional TAI->UTC offset for now
     long event_no = datastream_info.wr_event_no;
     long gate_id = datastream_info.gate_id;
     long gate_type = datastream_info.gate_type;
