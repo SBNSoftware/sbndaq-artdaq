@@ -67,57 +67,55 @@ void icarus::ICARUSTriggerUDPDump::analyze(art::Event const & evt)
   art::Handle< std::vector<artdaq::Fragment> > raw_data;
   evt.getByLabel(raw_data_label_, "ICARUSTriggerUDP", raw_data);
   
-  //art::Handle< std::vector<artdaq::Fragment> > pmt_gate;
-  //evt.getByLabel(raw_data_label_, "ICARUSPMTGate", pmt_gate);
-  
   if(!raw_data.isValid()) {
     TLOG(TLVL_INFO) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerUDP Fragments in module ";
     return;
   }
 
-  //if(!pmt_gate.isValid()) {
-  //TLOG(TLVL_INFO) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSPMTGate Fragments in module ";
-    //return;
-  //}
-
   TLOG(TLVL_INFO) <<  "######################################################################";
   std::cout << "Run " << evt.run() << ", subrun " << evt.subRun()
 		  << ", event " << eventNumber << " has " << raw_data->size()
 	    << " ICARUSTriggerUDP fragment(s)." << std::endl;
-  std::cout << raw_data->size() << std::endl; 
+  std::cout << raw_data->size() << std::endl;
   for(size_t idx=0; idx<raw_data->size(); ++idx){
     const auto& frag((*raw_data)[idx]);
+    uint64_t artdaq_ts = frag.timestamp();
     ICARUSTriggerUDPFragment trigfrag(frag);
-    std::cout << " " << trigfrag << std::endl;
-    int buffer_size = 23;
-    for(int i = 0; i <= buffer_size; ++i)
-    {
-      if(i < buffer_size)
-	std::cout << *((char*)frag.dataBeginBytes()+i*sizeof(char));
-      if(i == buffer_size)
-	std::cout << *((char*)frag.dataBeginBytes()+i*sizeof(char)) << std::endl;
-      
-    }
-    //std::cout << "Name: " << trigfrag.Metadata()->getName() << std::endl;
-    //std::cout << "Event Number: " << trigfrag.Metadata()->getEventNo() << std::endl;
-    //std::cout << "Seconds: " << trigfrag.Metadata()->getSeconds() << std::endl;
-    //std::cout << "Nanoseconds: " << trigfrag.Metadata()->getNanoSeconds() << std::endl;
+    //Print fragment 
+    std::cout << " " << trigfrag << " artdaq TS: " << artdaq_ts << std::endl;
+    //Parse data and dump similar information after parsing, test of offline decoding
+    std::string data = trigfrag.GetDataString();
+    char *buffer = const_cast<char*>(data.c_str());
+    icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerString(buffer);
+    uint64_t wr_ts = datastream_info.getNanoseconds_since_UTC_epoch() + 2e9; //hardcode additional TAI->UTC offset for now
+    long event_no = datastream_info.wr_event_no;
+    long gate_id = datastream_info.gate_id;
+    long gate_type = datastream_info.gate_type;
+    bool isBNB = trigfrag.isBNB();
+    bool isNuMI = trigfrag.isNuMI();
+    uint64_t last_ts = trigfrag.getLastTimestamp();
+    uint64_t last_ts_bnb = trigfrag.getLastTimestampBNB();
+    uint64_t last_ts_numi = trigfrag.getLastTimestampNuMI();
+    uint64_t ntp_time = trigfrag.getNTPTime();
+    long delta_gates = trigfrag.getDeltaGates();
+    long delta_gates_bnb = trigfrag.getDeltaGatesBNB();
+    long delta_gates_numi = trigfrag.getDeltaGatesNuMI();
+    
+    std::cout << "Event No: " << event_no << std::endl;
+    std::cout << "Timestamp: " << wr_ts << std::endl;
+    std::cout << "Gate ID: " << gate_id << std::endl;
+    std::cout << "Gate Type: " << gate_type << std::endl;
+    std::cout << "isBNB: " << isBNB << std::endl;
+    std::cout << "isNuMI: " << isNuMI << std::endl;
+    std::cout << "Last Timestamp: " << last_ts << std::endl;
+    std::cout << "Last Timestamp BNB: " << last_ts_bnb << std::endl;
+    std::cout << "Last Timestamp NuMI: " << last_ts_numi << std::endl;
+    std::cout << "NTP Time: " << ntp_time << std::endl;
+    std::cout << "Delta Gates: " << delta_gates << std::endl;
+    std::cout << "Delta Gates BNB: " << delta_gates_bnb << std::endl;
+    std::cout << "Delta Gates NuMI: " << delta_gates_numi << std::endl;
   }
 
-  //std::cout << "Run " << evt.run() << ", subrun " << evt.subRun()
-  //	    << ", event " << eventNumber << " has " << pmt_gate->size()
-  //        << " ICARUSPMTGate fragment(s)." << std::endl;
-  //std::cout << pmt_gate->size() << std::endl;
-
-  /*
-  for(size_t idx=0; idx<pmt_gate->size(); ++idx){
-    const auto& frag((*pmt_gate)[idx]);
-    ICARUSPMTGateFragment pmtfrag(frag);
-    //std::vector<int> data = pmtfrag.Metadata()->getNum();
-    //for(unsigned int i=1; i<data.size(); ++i)
-    //std::cout << "PMT pair " << i << ": " << data[i] << std::endl; 
-  } 
-  */
 }										        
 
 DEFINE_ART_MODULE(icarus::ICARUSTriggerUDPDump)
