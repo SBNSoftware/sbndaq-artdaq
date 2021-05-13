@@ -117,7 +117,13 @@ bool sbndaq::FEBDRV::initif() {
   }
 
   memcpy(&hostmac,((uint8_t *)&if_mac.ifr_hwaddr.sa_data),6);
-  TLOG(TLVL_INFO)<<__func__<<"() Initialized "<<ifName<<" with host MAC  "<<std::hex<< hostmac[0]<<":"<<hostmac[1]<<":"<<hostmac[2]<<":"<<hostmac[3]<<":"<<hostmac[4]<<":"<<hostmac[5]<<std::dec;
+  TLOG(TLVL_INFO)<<"Initialized Ethernet port "<<ifName<<" with host MAC  "
+    <<std::hex<<(int)hostmac[0]
+    <<":"<<(int)hostmac[1]
+    <<":"<<(int)hostmac[2]
+    <<":"<<(int)hostmac[3]
+    <<":"<<(int)hostmac[4]
+    <<":"<<(int)hostmac[5]<<std::dec;
   return true;
 } //initif
 
@@ -127,7 +133,7 @@ void sbndaq::FEBDRV::pingclients() {
    */
   
   //NOTE OK
-  TLOG(TLVL_INFO)<<__func__<<"() called";
+  TLOG(TLVL_INFO)<<"called";
   dstmac[5]=0xff;
   sendcommand(dstmac, FEB_SET_RECV, 0, hostmac);
   
@@ -138,13 +144,18 @@ void sbndaq::FEBDRV::pingclients() {
       macs.push_back(tmp_mac);
       
       TLOG(TLVL_INFO)<<__func__<<"() Found FEB: "
-            <<std::hex<<tmp_mac[0]<<":"<<tmp_mac[1]<<":"<<tmp_mac[2]<<":"<<tmp_mac[3]<<":"<<tmp_mac[4]<<":"<<tmp_mac[5]
-            <<" (decimal: "<<std::dec<<tmp_mac[5]
+            <<std::hex<<(int)tmp_mac[0]
+            <<":"<<(int)tmp_mac[1]
+            <<":"<<(int)tmp_mac[2]
+            <<":"<<(int)tmp_mac[3]
+            <<":"<<(int)tmp_mac[4]
+            <<":"<<(int)tmp_mac[5]
+            <<" (decimal: "<<std::dec<<(int)tmp_mac[5]
             <<") firmware: "<<rpkt.Data;
     }
   }
 
-  TLOG(TLVL_INFO)<<__func__<<"() In total "<<macs.size()<<" FEBs connected.";
+  TLOG(TLVL_INFO)<<"In total "<<macs.size()<<" FEBs connected.";
 } //pingclients
 
 void sbndaq::FEBDRV::ConfigSetBit(uint8_t *buffer, uint16_t bitlen, uint16_t bit_index, bool value) {
@@ -177,14 +188,14 @@ bool sbndaq::FEBDRV::sendtofeb(int len, FEBDTP_PKT_t const& spkt) { //sending sp
   memset(&if_idx, 0, sizeof(struct ifreq));
   strncpy(if_idx.ifr_name, ifName, IFNAMSIZ);
   if (ioctl(sockfd_w, SIOCGIFINDEX, &if_idx) < 0) {
-    TLOG(TLVL_ERROR)<<__func__<<"(len="<<len<<",cmd="<<spkt.CMD<<",mac5="<<thisdstmac[5]<<") : SIOCGIFINDEX error";
+    TLOG(TLVL_ERROR)<<__func__<<"(len="<<len<<",cmd="<<spkt.CMD<<",mac5="<<(int)thisdstmac[5]<<") : SIOCGIFINDEX error";
     return 0;
   }
   /* Get the MAC address of the interface to send on */
   memset(&if_mac, 0, sizeof(struct ifreq));
   strncpy(if_mac.ifr_name, ifName, IFNAMSIZ);
   if (ioctl(sockfd_w, SIOCGIFHWADDR, &if_mac) < 0) {
-    TLOG(TLVL_ERROR)<<__func__<<"(len="<<len<<",cmd="<<spkt.CMD<<",mac5="<<thisdstmac[5]<<") : SIOCGIFHWADDR error";
+    TLOG(TLVL_ERROR)<<__func__<<"(len="<<len<<",cmd="<<spkt.CMD<<",mac5="<<(int)thisdstmac[5]<<") : SIOCGIFHWADDR error";
     return 0;
   }
   
@@ -197,7 +208,7 @@ bool sbndaq::FEBDRV::sendtofeb(int len, FEBDTP_PKT_t const& spkt) { //sending sp
   /* Send packet */
   if (sendto(sockfd_w, (char*)&spkt, len, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0) {
     driver_state=DRV_SENDERROR;
-    TLOG(TLVL_ERROR)<<__func__<<"(len="<<len<<",cmd="<<spkt.CMD<<",mac5="<<thisdstmac[5]<<") : sendto error";
+    TLOG(TLVL_ERROR)<<__func__<<"(len="<<len<<",cmd="<<spkt.CMD<<",mac5="<<(int)thisdstmac[5]<<") : sendto error";
     return 0;
   }
 
@@ -214,7 +225,7 @@ int sbndaq::FEBDRV::recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt) {//resul
   tv.tv_usec=timeout_us;
   
   if (setsockopt(sockfd_r, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(struct timeval))== -1){
-    TLOG(TLVL_ERROR)<<__func__<<"(cmd="<<rcvrpkt.CMD<<",mac5="<<rcvrpkt.src_mac[5]<<") : socket timeout error (SO_SETTIMEOUT)";
+    TLOG(TLVL_ERROR)<<__func__<<"(cmd="<<rcvrpkt.CMD<<",mac5="<<(int)rcvrpkt.src_mac[5]<<") : socket timeout error (SO_SETTIMEOUT)";
     return 0;
   }
   int numbytes = recvfrom(sockfd_r, &rcvrpkt, 1500, 0, NULL, NULL); //TODO 1500 = MAXPACKLEN
@@ -284,7 +295,7 @@ int sbndaq::FEBDRV::sendcommand(const uint8_t *mac, uint16_t cmd, uint16_t reg, 
 bool sbndaq::FEBDRV::startDAQ(uint8_t mac5) {
   //NOTE OK
 
-  TLOG(TLVL_INFO)<<__func__<<"("<<mac5<<") called";
+  TLOG(TLVL_INFO)<<__func__<<"("<<(int)(mac5)<<") called";
 
   unsigned int nreplies=0;
   dstmac[5]=mac5;
@@ -344,7 +355,7 @@ bool sbndaq::FEBDRV::startDAQ(uint8_t mac5) {
 
 void sbndaq::FEBDRV::biasON(uint8_t mac5) {
   //NOTE: OK
-  TLOG(TLVL_INFO)<<__func__<<"("<<mac5<<") called.";
+  TLOG(TLVL_INFO)<<__func__<<"("<<(int)mac5<<") called.";
 
   unsigned int nreplies=0;
   dstmac[5]=mac5;
@@ -354,17 +365,17 @@ void sbndaq::FEBDRV::biasON(uint8_t mac5) {
   
   while(recvfromfeb(10000,rpkt)) {
     if(rpkt.CMD!=FEB_OK){
-      TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  RESPONSE COMMAND NOT OK! "<<rpkt.CMD;
+      TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  RESPONSE COMMAND NOT OK! "<<rpkt.CMD;
       status = false;
     }
     nreplies++;
   }
   if(nreplies==0) {
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  nreplies = "<<nreplies<<" ≠ "<<macs.size();
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  nreplies = "<<nreplies<<" ≠ "<<macs.size();
     status = false;
   }
   if(nreplies!=macs.size() && mac5==255) {
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  nreplies ≠ nclients ("<<nreplies<<" ≠ "<<macs.size()<<")";
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  nreplies ≠ nclients ("<<nreplies<<" ≠ "<<macs.size()<<")";
     status = false;
   }
   
@@ -379,7 +390,7 @@ void sbndaq::FEBDRV::biasOFF(uint8_t mac5) {
    * If mac5 equals 255 voltage is turned off on all FEBs
    * NOTE: OK
    */
-  TLOG(TLVL_INFO)<<__func__<<"("<<mac5<<") called.";
+  TLOG(TLVL_INFO)<<__func__<<"("<<(int)(mac5)<<") called.";
 
   unsigned int nreplies=0;
   dstmac[5]=mac5;
@@ -389,17 +400,17 @@ void sbndaq::FEBDRV::biasOFF(uint8_t mac5) {
   
   while(recvfromfeb(10000,rpkt)) {
     if(rpkt.CMD!=FEB_OK){
-      TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  RESPONSE COMMAND NOT OK! "<<rpkt.CMD;
+      TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  RESPONSE COMMAND NOT OK! "<<rpkt.CMD;
       status = false;
     }
     nreplies++;
   }
   if(nreplies==0) {
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  nreplies = "<<nreplies;
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  nreplies = "<<nreplies;
     status = false;
   }
   if(nreplies!=macs.size() && mac5==255) {
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  nreplies ("<<nreplies<<") ≠ nclients ("<<macs.size()<<")";
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  nreplies ("<<nreplies<<") ≠ nclients ("<<macs.size()<<")";
     status = false;
   }
   
@@ -413,7 +424,7 @@ bool sbndaq::FEBDRV::sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR,
    * Send PROBE and SLOW CONTROL configuration to FEB
    * //NOTE: OK
    */
-  TLOG(TLVL_DEBUG)<<__func__<<"("<<mac5<<", bufSCR, "<<lenSCR<<", bufPMR, "<< lenPMR<<") called";
+  TLOG(TLVL_DEBUG)<<__func__<<"("<<(int)mac5<<", bufSCR, "<<lenSCR<<", bufPMR, "<< lenPMR<<") called";
   
   if(lenSCR != 1144/8){
     TLOG(TLVL_ERROR)<<__func__<<"()  Bad slow control config length: "<<lenSCR<<" is not the expected "<<(1144/8);
@@ -429,42 +440,42 @@ bool sbndaq::FEBDRV::sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR,
   sendcommand(dstmac,FEB_WR_SCR,0x0000,bufSCR);
   while(recvfromfeb(50000,rpkt)) {
     if(rpkt.CMD!=FEB_OK_SCR) {
-      TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  SCR bad config! cmd "<<rpkt.CMD<<" ≠ "<<FEB_OK_SCR;
+      TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  SCR bad config! cmd "<<rpkt.CMD<<" ≠ "<<FEB_OK_SCR;
       return 0;
     }
     nreplies++;
   }
   if(nreplies==0){
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  SCR bad config! nreplies="<<nreplies;
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  SCR bad config! nreplies="<<nreplies;
     return 0;
   }
   if(nreplies!=macs.size() && mac5==255){
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  SCR bad config! nreplies("<<nreplies<<") ≠ nclients("<<macs.size()<<")";
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  SCR bad config! nreplies("<<nreplies<<") ≠ nclients("<<macs.size()<<")";
     return 0;
   }
 
   sendcommand(dstmac,FEB_WR_PMR,0x0000,bufPMR);
   if(!recvfromfeb(50000,rpkt)){
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  PMR bad config! No cmd received";
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  PMR bad config! No cmd received";
     return 0;
   }
   while(recvfromfeb(50000,rpkt)) {
     if(rpkt.CMD!=FEB_OK_PMR) {
-      TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  PMR bad config! cmd "<<rpkt.CMD<<" ≠ "<<FEB_OK_PMR;
+      TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  PMR bad config! cmd "<<rpkt.CMD<<" ≠ "<<FEB_OK_PMR;
       return 0;
     }
     nreplies++;
   }
   if(nreplies==0){
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  PMR bad config! nreplies="<<nreplies;
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  PMR bad config! nreplies="<<nreplies;
     return 0;
   }
   if(nreplies!=macs.size() && mac5==255){
-    TLOG(TLVL_ERROR)<<__func__<<"("<<mac5<<")  PMR bad config! nreplies("<<nreplies<<")≠ nclients("<<macs.size()<<")";
+    TLOG(TLVL_ERROR)<<__func__<<"("<<(int)mac5<<")  PMR bad config! nreplies("<<nreplies<<")≠ nclients("<<macs.size()<<")";
     return 0;
   }
   
-  TLOG(TLVL_DEBUG)<<__func__<<"("<<mac5<<", bufSCR, "<<lenSCR<<", bufPMR, "<< lenPMR<<") completed, configuration loaded successfully";
+  TLOG(TLVL_DEBUG)<<__func__<<"("<<(int)mac5<<", bufSCR, "<<lenSCR<<", bufPMR, "<< lenPMR<<") completed, configuration loaded successfully";
   return 1;
 }
 
@@ -580,20 +591,19 @@ void sbndaq::FEBDRV::pollfeb(uint8_t mac) {
    * NOTE: OK
    */
   
-  TLOG(TLVL_DEBUG)<<__func__<<"("<<mac<<") called";
+  TLOG(TLVL_DEBUG)<<__func__<<"("<<(int)mac<<") called";
   dstmac[5] = mac;
   
   sendcommand(dstmac,FEB_RD_CDR,0,buf);
   rpkt.CMD=0; //AA: this is required for the logic of the loop. Perhaps it could be written more nicely, but I don't want to touch it at this point
-  TLOG(TLVL_DEBUG)<<__func__<<"("<<mac<<") completed";
+  TLOG(TLVL_DEBUG)<<__func__<<"("<<(int)mac<<") completed";
 }
 
 std::vector<uint8_t> sbndaq::FEBDRV::GetMACs() {
   /**
-   * Returns sorted vector with last 8 bits of the FEB MAC addresses
+   * Returns vector with last 8 bits of the FEB MAC addresses
    */
   std::vector<uint8_t> out;
   for(auto mac : macs) out.push_back(mac[5]);
-  std::sort(out.begin(), out.end());
   return out;
 }

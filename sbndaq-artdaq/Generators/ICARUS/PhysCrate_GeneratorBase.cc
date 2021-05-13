@@ -56,6 +56,8 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   least_data_block_bytes_ = (size_t)SamplesPerChannel_*(size_t)ChannelsPerBoard_*2+12+32;
 
   fTimeOffsetNanoSec = ps_.get<uint32_t>("TimeOffsetNanoSec",1200000); //1.2ms by default
+
+  event_offset_ = 0;
 }
 
 void icarus::PhysCrate_GeneratorBase::start() {
@@ -141,26 +143,35 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
 
   size_t data_size_bytes = 0;
-    TLOG(TLVL_DEBUG +3 ) << __func__ << " : nBoards_: " << nBoards_;
+  TLOG(TLVL_DEBUG +3 ) << __func__ << " : nBoards_: " << nBoards_;
 
-  if( fCircularBuffer.Size() <= least_data_block_bytes_/sizeof(uint16_t)*(size_t)( nBoards_ ) ){
-     TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data in circular buffer.";
+  //check if we have enough data for a DataTile.
+  //if not, sleep and return.
+  if( fCircularBuffer.Size() <= sizeof(DataTile)/sizeof(uint16_t) ){
+    TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile in circular buffer.";
     usleep(1000);
     return true;
   }
-
+  
+  //initialize for looking up data
   uint16_t iBoard = 0;
   uint16_t const* first_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData();
+  //auto const* first_dt [[gnu::unused]] = reinterpret_cast< DataTile const* >(first_dt_begin_ptr);
+  
+  //loop over number of boards
+  while(iBoard < nBoards_){
+    
+    std::this_thread::sleep_for(1us);
+    TLOG(TLVL_DEBUG +5) << __func__  << "data_size_bytes/sizeof(uint16_t): " << data_size_bytes/sizeof(uint16_t);
 
+    //check if we have enough data for a DataTile.
+    //if not, sleep and return.
+    if( fCircularBuffer.Size() < (data_size_bytes+sizeof(DataTile))/sizeof(uint16_t) ){
+      TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile in circular buffer.";
+      usleep(1000);
+      return true;
+    }
 
-  do {
-
-    do {
-      std::this_thread::sleep_for(1us);
-      TLOG(TLVL_DEBUG +5) << __func__  << "data_size_bytes/sizeof(uint16_t): " << data_size_bytes/sizeof(uint16_t);
-    } while ( fCircularBuffer.Size() <= least_data_block_bytes_/sizeof(uint16_t)*(size_t)( nBoards_ - iBoard ) );
-
-    auto const* first_dt [[gnu::unused]] = reinterpret_cast< DataTile const* >(first_dt_begin_ptr);
     //  the Tile Header is at the beginning of the board data:
     auto const* next_dt_begin_ptr = first_dt_begin_ptr + data_size_bytes/sizeof(uint16_t);
     auto const* next_dt = reinterpret_cast< DataTile const* >(next_dt_begin_ptr);
@@ -168,6 +179,15 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     uint32_t this_data_size_bytes = ntohl( nt_header.packSize );
     TLOG(TLVL_DEBUG +6) << __func__ << " : Board ID: " << (nt_header.info2 & 0x0000000F);
     TLOG(TLVL_DEBUG +6) << __func__ << ": this_data_size_bytes: " << this_data_size_bytes;
+
+    //check if there's enogh data for this board.
+    //if not, sleep and return.
+    if(fCircularBuffer.Size() < (data_size_bytes+this_data_size_bytes)/sizeof(uint16_t)){
+      TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile " << iBoard << " in circular buffer.";
+      usleep(1000);
+      return true;
+    }
+
     data_size_bytes += this_data_size_bytes;
     ++iBoard;
     TLOG(TLVL_DEBUG +7 ) << __func__  << " : iBoard: " << iBoard 
@@ -179,10 +199,9 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     TLOG(TLVL_DEBUG)<< __func__ << ": BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
 	<< board_block->header.time_stamp ;
 
-  } while ( iBoard < nBoards_ );
+  }
 
   //timestamp
-
   artdaq::Fragment::timestamp_t ts(0);
   {
     using namespace boost::gregorian;
@@ -259,8 +278,10 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
   metricMan->sendMetric("MaxBoardTimeStampDiff",max_ts_diff,"ticks",1,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
+  if(ev_num==0)
+    event_offset_ = 1;
 
-  frags.back()->setSequenceID(ev_num);
+  frags.back()->setSequenceID(ev_num+event_offset_);
 
   
   metricMan->sendMetric("FragmentsSent",ev_counter(), "Events", 1,artdaq::MetricMode::LastPoint);

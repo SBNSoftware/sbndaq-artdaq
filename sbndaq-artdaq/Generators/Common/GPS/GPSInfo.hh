@@ -7,6 +7,11 @@
 #ifndef _GPSINFO_HH
 #define _GPSINFO_HH
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
+
 #include <cstdlib>
 #include <deque>
 #include <iostream>

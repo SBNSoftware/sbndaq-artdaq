@@ -632,7 +632,13 @@ int sendstats2() { //send statistics in binary packet format
       fs.evtrate=*((float*)(rpkt.Data));
       fs.configured=FEB_configured[macs[f][5]];
       fs.biason=FEB_biason[macs[f][5]];
-      sprintf(fs.fwcpu,"%s",verstr[f]);
+			
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+			//TODO:GAL make gcc 9.3 happy
+      snprintf(fs.fwcpu,sizeof(fs.fwcpu),"%s",verstr[f]);
+#pragma GCC diagnostic pop
+
       sprintf(fs.fwfpga,"rev3.1");
       memcpy(fs.mac,macs[f],6);
       

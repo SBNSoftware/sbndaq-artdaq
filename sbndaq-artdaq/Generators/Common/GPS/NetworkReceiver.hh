@@ -7,6 +7,10 @@
 #ifndef _NETWORKRECEIVER_HH
 #define _NETWORKRECEIVER_HH
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
 #include <cstdlib>
 #include <deque>
 #include <iostream>

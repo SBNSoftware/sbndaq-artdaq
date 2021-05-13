@@ -7,6 +7,7 @@
 #ifndef _GPSRECEIVER_HH
 #define _GPSRECEIVER_HH
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1
 #include <cstdlib>
 #include <deque>
 #include <iostream>
@@ -18,6 +19,10 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+
+#include <boost/bind/bind.hpp>
+
+using namespace boost::placeholders;
 
 using boost::asio::ip::tcp;
 
