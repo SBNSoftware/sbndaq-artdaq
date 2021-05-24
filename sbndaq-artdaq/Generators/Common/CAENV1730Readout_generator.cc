@@ -1247,9 +1247,9 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
 
     
     auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
-    
+        
     if( readoutwindow_trigger_counter_gap > 1u ){
-      TLOG (TLVL_ERROR) << __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
+      TLOG (TLVL_DEBUG) << __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
 			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
 			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
     }
@@ -1363,7 +1363,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     if( readoutwindow_event_counter_gap > 1u ){
       if ( last_sent_rwcounter > 0 )
       {
-	TLOG (TLVL_ERROR) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
+	TLOG (TLVL_DEBUG) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
                         << readoutwindow_event_counter_gap;
 	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
       }
