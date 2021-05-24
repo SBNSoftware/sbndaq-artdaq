@@ -21,6 +21,7 @@
 #include "workerThread.hh"
 
 #include <string>
+#include <unordered_map>
 
 namespace sbndaq
 {
@@ -279,6 +280,11 @@ namespace sbndaq
     sbndaq::PoolBuffer fPoolBuffer; 		
     size_t fCircularBufferSize;
     std::unique_ptr<uint16_t[]> fBuffer;
+
+    std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
+    boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
+    boost::posix_time::ptime fTimeEpoch;
+    boost::posix_time::time_duration fTimeDiffPollBegin,fTimeDiffPollEnd;
 
     void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
 
