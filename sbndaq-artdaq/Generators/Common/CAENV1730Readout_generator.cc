@@ -218,6 +218,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fInterruptEnable = ps.get<uint8_t>("InterruptEnable",0); 
   TLOG(TINFO) << __func__ << ": InterruptEnable=" << fInterruptEnable;
 
+  fIRQTimeoutMS = ps.get<uint32_t>("IRQTimeoutMS",500);
+  TLOG(TINFO) << __func__ << ": IRQTimeoutMS=" << fIRQTimeoutMS;
+
   fSWTrigger = ps.get<bool>("SWTrigger"); //false
   TLOG(TINFO)<<__func__ << ": SWTrigger=" << fSWTrigger ;
 
@@ -1143,11 +1146,17 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
 
   TLOG(TGETDATA) << __func__<< ": Begin of readSingleWindowDataBlock()";
 
-  metricMan->sendMetric("Free DataBlocks",fPoolBuffer.freeBlockCount(),"fragments",1,artdaq::MetricMode::LastPoint);
-  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, 500);
+  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, fIRQTimeoutMS);
 
+  fTimePollEnd = boost::posix_time::microsec_clock::universal_time();
+  
+  fTimeDiffPollBegin = fTimePollBegin - fTimeEpoch;
+  fTimeDiffPollEnd = fTimePollEnd - fTimeEpoch;
+  
+  fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
+  
   if (retcode == CAEN_DGTZ_Timeout) {
-    TLOG(TGETDATA) << __func__ <<  ": Exiting after a timeout";
+    TLOG(TGETDATA) << __func__ <<  ": Exiting after a timeout. Poll time was " << (fTimeDiffPollEnd - fTimeDiffPollBegin).total_milliseconds() << " ms.";
     return true;
   }
   else if(retcode !=CAEN_DGTZ_Success) {
@@ -1158,6 +1167,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
 
   auto fragment_count=fGetNextFragmentBunchSize;
 
+  metricMan->sendMetric("Free DataBlocks",fPoolBuffer.freeBlockCount(),"fragments",1,artdaq::MetricMode::LastPoint);
   while (--fragment_count) {
     auto block =  fPoolBuffer.takeFreeBlock();
 
@@ -1186,13 +1196,6 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
     block->verify_redzone();
     block->data_size= read_data_size;
 
-    fTimePollEnd = boost::posix_time::microsec_clock::universal_time();
-
-    fTimeDiffPollBegin = fTimePollBegin -fTimeEpoch;
-    fTimeDiffPollEnd = fTimePollEnd -fTimeEpoch;
-
-    fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
-
     if (retcode !=CAEN_DGTZ_Success) {
         TLOG(TLVL_ERROR) << __func__ << ": CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
         fPoolBuffer.returnFreeBlock(block);
@@ -1217,32 +1220,35 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
                        << block->data_size << ", header=" << header_event_size;
     }
 
-    uint64_t mean_poll_time = fTimeDiffPollBegin.total_nanoseconds()/2 + fTimeDiffPollEnd.total_nanoseconds()/2;
-    uint64_t mean_poll_time_ns = mean_poll_time%(1000000000);
-    artdaq::Fragment::timestamp_t ts;
-
-    TLOG(TGETDATA) << __func__ << ": Poll begin/end/mean/ns = " << fTimeDiffPollBegin.total_nanoseconds()
-		   << "/" << fTimeDiffPollEnd.total_nanoseconds() 
-		   << "/" << mean_poll_time
-		   << "/" << mean_poll_time_ns;
+    fMeanPollTime = fTimeDiffPollBegin.total_nanoseconds()/2 + fTimeDiffPollEnd.total_nanoseconds()/2;
+    fMeanPollTimeNS = fMeanPollTime%(1000000000);
+    fTTT=0;
+    fTTT_ns = -1;
 
     if(fUseTimeTagForTimeStamp){
-      const auto TTT = uint32_t{header->triggerTimeTag}; // 
-      long ttt_ns = TTT*8;
+      fTTT = uint32_t{header->triggerTimeTag}; // 
+      fTTT_ns = fTTT*8;
       
-      ts = mean_poll_time - mean_poll_time_ns + ttt_ns
-	+ (ttt_ns - (long)mean_poll_time_ns < -500*1000*1000) * 1000*1000*1000
-	- (ttt_ns - (long)mean_poll_time_ns >  500*1000*1000) * 1000*1000*1000
+      fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
+	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
 	- fTimeOffsetNanoSec;
 
-      TLOG(TGETDATA) << __func__ << ": TTT/TTT_ns/TS_ns = " << TTT << "/" << ttt_ns << "/" << ts;
     }
     else{
-      ts = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
-      TLOG(TGETDATA) << __func__ << ": TS_ns = " << ts;
+      fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
     }
-    fTimestampMap[uint32_t{header->eventCounter}] = ts;
-    TLOG(TGETDATA) << __func__ << " Timestamp for event " << header->eventCounter << " = " << ts;
+    fTimestampMap[uint32_t{header->eventCounter}] = fTS;
+
+    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+		   << ": Poll begin/end/mean/ns = " << fTimeDiffPollBegin.total_nanoseconds()
+		   << "/" << fTimeDiffPollEnd.total_nanoseconds() 
+		   << "/" << fMeanPollTime
+		   << "/" << fMeanPollTimeNS;
+    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+		   << ": TTT/TTT_ns/TS_ns = " << fTTT << "/" << fTTT_ns << "/" << fTS;
+    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
 
 
     
@@ -1318,42 +1324,56 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(fragment_uptr->dataBeginBytes());
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
     fragment_uptr->setSequenceID(readoutwindow_event_counter);
-    fragment_uptr->setTimestamp(fTimestampMap[readoutwindow_event_counter]);
 
+    auto ts_iter = fTimestampMap.find(readoutwindow_event_counter);
 
-    /*
-    if(fUseTimeTagForTimeStamp){
-      const auto TTT = uint32_t {header->triggerTimeTag};
+    if(ts_iter==fTimestampMap.end()){
+      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+			 << " Will sleep for 200 ms and try again.";
+      ::usleep(200000);
+      ts_iter = fTimestampMap.find(readoutwindow_event_counter);
+    }
 
-      using namespace boost::gregorian;
-      using namespace boost::posix_time;
-      
-      ptime t_now(second_clock::universal_time());
-      ptime time_t_epoch(date(1970,1,1));
-      time_duration diff = t_now - time_t_epoch;
-      uint32_t t_offset_s = diff.total_seconds();
-      uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
-      uint64_t t_truetriggertime = t_offset_ticks + TTT;
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
-      
-      artdaq::Fragment::timestamp_t ts = (t_truetriggertime*8); //in 1ns ticks
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
-      fragment_uptr->setTimestamp( ts );
+    if(ts_iter!=fTimestampMap.end()){
+      fragment_uptr->setTimestamp(fTimestampMap[readoutwindow_event_counter]);
+      //fTimestampMap.erase(ts_iter);
     }
     else{
-      using namespace boost::gregorian;
-      using namespace boost::posix_time;
-      
-      ptime t_now(microsec_clock::universal_time());
-      ptime time_t_epoch(date(1970,1,1));
-      time_duration diff = t_now - time_t_epoch;
+      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+		       << " Will generate new one now...";
 
-      artdaq::Fragment::timestamp_t ts = diff.total_nanoseconds() - fTimeOffsetNanoSec;;
-
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
-      fragment_uptr->setTimestamp( ts );
+      if(fUseTimeTagForTimeStamp){
+	const auto TTT = uint32_t {header->triggerTimeTag};
+	
+	using namespace boost::gregorian;
+	using namespace boost::posix_time;
+	
+	ptime t_now(second_clock::universal_time());
+	ptime time_t_epoch(date(1970,1,1));
+	time_duration diff = t_now - time_t_epoch;
+	uint32_t t_offset_s = diff.total_seconds();
+	uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+	uint64_t t_truetriggertime = t_offset_ticks + TTT;
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+	
+	artdaq::Fragment::timestamp_t ts = (t_truetriggertime*8); //in 1ns ticks
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
+	fragment_uptr->setTimestamp( ts );
+      }
+      else{
+	using namespace boost::gregorian;
+	using namespace boost::posix_time;
+	
+	ptime t_now(microsec_clock::universal_time());
+	ptime time_t_epoch(date(1970,1,1));
+	time_duration diff = t_now - time_t_epoch;
+	
+	artdaq::Fragment::timestamp_t ts = diff.total_nanoseconds() - fTimeOffsetNanoSec;;
+	
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
+	fragment_uptr->setTimestamp( ts );
+      }
     }
-    */
     auto readoutwindow_event_counter_gap= readoutwindow_event_counter - last_sent_rwcounter;
 
     TLOG(TMAKEFRAG)<<__func__ << ": Created fragment " << fFragmentID << " for event " << readoutwindow_event_counter
@@ -1374,7 +1394,6 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     
     fEvCounter++;
     last_sent_rwcounter = readoutwindow_event_counter;
-    fTimestampMap.erase(readoutwindow_event_counter);
     delta = std::chrono::steady_clock::now()-start;
 
     min_fragment_create_time=std::min(delta.count(),min_fragment_create_time);

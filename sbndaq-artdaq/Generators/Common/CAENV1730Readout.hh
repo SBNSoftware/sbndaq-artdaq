@@ -176,6 +176,7 @@ namespace sbndaq
     int fVerbosity;
     int fBoardChainNumber;
     uint8_t  fInterruptEnable;
+    uint32_t fIRQTimeoutMS;
     uint32_t fGetNextSleep;
     uint32_t fGetNextFragmentBunchSize;
     bool     fSWTrigger;
@@ -244,6 +245,7 @@ namespace sbndaq
     //uint32_t fSWTriggerValue;
     // Animesh & Aiwu add end
 
+
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
@@ -282,9 +284,17 @@ namespace sbndaq
     std::unique_ptr<uint16_t[]> fBuffer;
 
     std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
+
+    //internals in getting the data
     boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
     boost::posix_time::ptime fTimeEpoch;
     boost::posix_time::time_duration fTimeDiffPollBegin,fTimeDiffPollEnd;
+    
+    artdaq::Fragment::timestamp_t fTS;
+    uint64_t fMeanPollTime;
+    uint64_t fMeanPollTimeNS;
+    uint32_t fTTT;
+    long fTTT_ns;
 
     void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
 
