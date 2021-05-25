@@ -1328,18 +1328,20 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
     fragment_uptr->setSequenceID(readoutwindow_event_counter);
 
-    auto ts_iter = fTimestampMap.find(readoutwindow_event_counter);
+    auto ts_count = fTimestampMap.count(readoutwindow_event_counter);
 
-    if(ts_iter==fTimestampMap.end()){
+    int ts_loop=0;
+
+    while(ts_loop<5 && fTimestampMap.count(readoutwindow_event_counter)==0){
       TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
-			 << " Will sleep for 200 ms and try again.";
+			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
-      ts_iter = fTimestampMap.find(readoutwindow_event_counter);
+      ++ts_loop;
     }
 
-    if(ts_iter!=fTimestampMap.end()){
-      fragment_uptr->setTimestamp(fTimestampMap[readoutwindow_event_counter]);
-      //fTimestampMap.erase(ts_iter);
+    if(fTimestampMap.count(readoutwindow_event_counter)>0){
+      fragment_uptr->setTimestamp(fTimestampMap.at(readoutwindow_event_counter));
+      //fTimestampMap.erase(readoutwindow_event_counter);
     }
     else{
       TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
