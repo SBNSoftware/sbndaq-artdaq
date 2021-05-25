@@ -1229,6 +1229,9 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
       fTTT = uint32_t{header->triggerTimeTag}; // 
       fTTT_ns = fTTT*8;
       
+
+      // Scheme borrowed from what Antoni developed for CRT.
+      // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
       fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
 	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
 	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
