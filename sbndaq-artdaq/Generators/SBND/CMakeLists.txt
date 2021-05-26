@@ -138,3 +138,19 @@ simple_plugin(MBBReader "generator"
 #  ${WIBEXCEPTION}
   )
 
+cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_DAPHNE_MBBReader
+		  SOURCE DAPHNEReader_generator.cc
+		  LIBRARIES
+			artdaq_DAQdata
+			artdaq_Generators
+  			artdaq-core_Utilities
+  			sbndaq-artdaq_Common_Utilities
+			${Boost_SYSTEM_LIBRARY}
+			${ART_UTILITIES}
+			${FHICLCPP}
+			${MF_MESSAGELOGGER}
+			${MF_UTILITIES}
+			${TRACE}
+			${CETLIB}
+			${CETLIB_EXCEPT}
+)
