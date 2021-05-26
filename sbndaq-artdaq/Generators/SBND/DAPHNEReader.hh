@@ -27,5 +27,6 @@ namespace sbndaq
      void stopNoMutex() override {}
 
      void setupDAPHNE(fhicl::ParameterSet const& ps);
+     uint16_t pedestal;
   };
 }
