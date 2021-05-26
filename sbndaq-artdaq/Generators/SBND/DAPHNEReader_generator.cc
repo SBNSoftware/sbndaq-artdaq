@@ -31,7 +31,9 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
 
   const std::string identification = "DAPHNEReader::setupDAPHNE";
   TLOG_INFO(identification) << "Starting setupDAPHNE " << TLOG_ENDL;
-}
+  pedestal = ps.get<uint16_t>("DAPHNE.pedestal");
+  TLOG_INFO(identification) << "Using DAPHNE pedestal " << pedestal 
+			    << TLOG_ENDL;}
   
 
 // "shutdown" transition
