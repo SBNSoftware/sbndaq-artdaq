@@ -5,7 +5,7 @@
 // Description: Filter if Gate Matches
 /////////////////////////////////////////////////////////////////////
 
-#include "art/Framework/Core/EDAnalyzer.h"
+#include "art/Framework/Core/EDFilter.h"
 #include "art/Framework/Core/ModuleMacros.h"
 #include "art/Framework/Principal/Event.h"
 #include "art/Framework/Principal/Handle.h"
@@ -42,7 +42,7 @@ public:
   explicit ICARUSGateFilter(fhicl::ParameterSet const & pset);
   virtual ~ICARUSGateFilter();
 
-  virtual void filter(art::Event const & evt);
+  virtual bool filter(art::Event & evt) override;
 
 private:
   std::string raw_data_label_;
@@ -51,7 +51,7 @@ private:
 };
 
 icarus::ICARUSGateFilter::ICARUSGateFilter(fhicl::ParameterSet const & pset)
-  : EDAnalyzer(pset),
+  : EDFilter(pset),
     raw_data_label_(pset.get<std::string>("raw_data_label")),
     gate_type_(pset.get<int>("gate_type"))
 {
@@ -61,7 +61,7 @@ icarus::ICARUSGateFilter::~ICARUSGateFilter()
 {
 }
 
-void icarus::ICARUSGateFilter::filter(art::Event const & evt)
+bool icarus::ICARUSGateFilter::filter(art::Event & evt)
 {
   art::EventNumber_t eventNumber = evt.event();
 
@@ -90,6 +90,8 @@ void icarus::ICARUSGateFilter::filter(art::Event const & evt)
     }
     
   }
+
+  return false;
 }
 
 DEFINE_ART_MODULE(icarus::ICARUSGateFilter)
