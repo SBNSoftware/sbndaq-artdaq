@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
 
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
@@ -37,17 +39,17 @@ namespace sbndaq
 
      void setupDAPHNE(fhicl::ParameterSet const& ps);
 
-     void write(uint16_t address, uint16_t data);
-     uint16_t read(uint16_t address);
-     void lc_write(uint16_t address, uint16_t data);
-     uint16_t lc_read(uint16_t address);
+     void write(uint16_t address, uint16_t data, bool LC=false);
+     uint16_t read(uint16_t address, bool LC=false);
      bool sendCommand(char *cmd);
 
      int localSocket;
      FILE *file;
      struct sockaddr_in remoteSocket;
      struct hostent *remoteHost;
-     char addressString[256];
+     std::string addressString;
+     uint32_t port;
+    uint32_t timeOut;
 
      uint16_t pedestal;
   };

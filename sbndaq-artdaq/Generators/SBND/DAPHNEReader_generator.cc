@@ -28,18 +28,121 @@ DAPHNEReader::DAPHNEReader(fhicl::ParameterSet const& ps): CommandableFragmentGe
 
 void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps) 
 {
+  int retcod;
+
   const std::string identification = "DAPHNEReader::setupDAPHNE";
-  TLOG_INFO(identification) << "Starting setupDAPHNE " << TLOG_ENDL;
+
+  addressString = ps.get<std::string>("DAPHNE.ipAddress");
+  port = ps.get<uint32_t>("DAPHNE.port");
+  TLOG_INFO(identification) << "Starting setupDAPHNE at " << port << "@" << addressString << TLOG_ENDL;
+
+
   pedestal = ps.get<uint16_t>("DAPHNE.pedestal");
-  TLOG_INFO(identification) << "Using DAPHNE pedestal " << pedestal 
-			    << TLOG_ENDL;
+  TLOG_INFO(identification) << "Using DAPHNE pedestal " << pedestal << TLOG_ENDL;
+
+  timeOut = ps.get<uint32_t>("DAPHNE.timeOut");
+  TLOG_INFO(identification) << "Using DAPHNE timeOut " << timeOut << TLOG_ENDL;
+
+  // Connect network sockets
+  localSocket = socket(AF_INET, SOCK_STREAM, 0);
+  if ( localSocket < 0 )
+  {
+    std::stringstream line;
+    line << "Error opening socket " <<  strerror(errno);
+
+    TLOG_ERROR("DAPHNEReader") << line.str();
+    throw std::runtime_error(line.str());
+    return;
+  }
+
+  file = fdopen(localSocket,"rw"); 
+  if ( file == NULL )
+  {
+    std::stringstream line;
+    line << "Error creating file descriptor for DAPHNE controller " 
+	      << strerror(errno);
+    TLOG_ERROR("DAPHNEReader") << line.str();
+    throw std::runtime_error(line.str());
+    return;
+  }
+
+  remoteHost = gethostbyname(addressString.c_str());
+  if ( remoteHost == NULL )
+  {
+    std::stringstream line;
+    line << "Error finding host " << 
+      addressString << " " << strerror(errno);
+    TLOG_ERROR("DAPHNEReader") << line.str();
+    throw std::runtime_error(line.str());
+    return;
+  }
+
+  remoteSocket.sin_family = remoteHost->h_addrtype;
+  remoteSocket.sin_port   = htons(port);
+  remoteSocket.sin_addr   = *((struct in_addr *) remoteHost->h_addr ) ;
+
+  char *addressStringPtr = inet_ntoa(remoteSocket.sin_addr);
+  strcpy(addressString.c_str(), addressStringPtr);
+
+  retcod = connect(localSocket,
+		   (const sockaddr*)&remoteSocket,sizeof(remoteSocket));
+  if ( retcod < 0 )
+  {
+    std::stringstream line;
+    line <<"Error connecting to " << port << 
+      "@" <<  addressString << " " << strerror(errno);
+    TLOG_ERROR("DAPHNEReader") << line.str();
+    throw std::runtime_error(line.str());
+    return;
+  }
+
+  struct timeval timeOut;
+  timeOut.tv_sec  = timeOut;
+  timeOut.tv_usec = 100000;
+  retcod = setsockopt(localSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, 
+	     sizeof(struct timeval));
+  if ( retcod < 0 )
+  {
+    std::stringstream line;
+    line << "Error setsockopt SO_RCVTIMEO " <<  strerror(errno);
+
+    TLOG_ERROR("DAPHNEReader") << line.str();
+    throw std::runtime_error(line.str());
+    return;
+  }
+
+  int flag = 1;
+  retcod = setsockopt(localSocket, IPPROTO_TCP,TCP_NODELAY,(char *)&flag, sizeof(flag)); 
+  if ( retcod < 0 )
+  {
+    std::stringstream line;
+    line << "Error setsockopt TCP_NODELAY " <<  strerror(errno);
+
+    TLOG_ERROR("DAPHNEReader") << line.str();
+    throw std::runtime_error(line.str());
+    return;
+  }
 }
   
 
 // "shutdown" transition
 DAPHNEReader::~DAPHNEReader() 
 {
+  int retcod;
+  retcod = shutdown(localSocket,2);
+  if ( retcod < 0 )
+  {
+    TLOG_ERROR("DAPHNEReader") << "Error on socket shutdown "<<
+      strerror(errno);
+    return;
+  }
 
+  retcod = close(localSocket);
+  if ( retcod < 0 )
+  {
+    TLOG_ERROR("DAPHNEReader") << "Error on socket close "<< 
+      strerror(errno);
+  }
 }
 
 // "start" transition
@@ -62,5 +165,77 @@ bool DAPHNEReader::getNext_(artdaq::FragmentPtrs& /*frags*/)
 }
 
 } // namespace
+
+// Network communications functions
+bool DAPHNEReader::sendCommand(char * cmd)
+{
+  bool retcod = false;
+  //  char lf = 10;
+  std::stringstream barfer;
+
+  int m = strlen(cmd);
+  for ( int i=0; i<m; i++)
+  {
+    barfer << cmd[i] ;
+    int retcod = send(localSocket, &cmd[i], 1, 0);
+    if ( retcod <= 0 )
+    {
+      std::stringstream line;
+      line << "DAPHNEReader: Error on send socket " << 
+	strerror(errno);
+      TLOG_ERROR("DAPHNEReader") << line.str();
+      throw std::runtime_error(line.str());
+      return(retcod);
+    }
+    usleep(100);
+  }
+  //  TLOG_INFO("DAPHNEReader") << barfer.str();
+  usleep(100000);
+  retcod = true;
+
+  return(retcod);
+}
+
+void DAPHNEReader::write(uint16_t address, uint16_t data, bool LC)
+{
+  char cmd[256];
+
+  if ( LC ) { sprintf(cmd, "lc wr %x %x\r", address, data);}
+  else      { sprintf(cmd, "wr %x %x\r", address, data);}
+
+  sendCommand(cmd);
+}
+
+uint16_t DAPHNEReader::read(uint16_t address, bool LC)
+{
+  uint32_t data;
+  char cmd[256];
+  char reply[65536];
+  //int responseLength;
+  int length=0,size=0,p=0;
+  
+  // avoid set but not used compiler warning
+  length = size;
+  size = length;
+
+  if ( LC ) { sprintf(cmd, "lc rd %x\r", address);}
+  else      { sprintf(cmd, "rd %x\r", address);}
+
+  sendCommand(cmd);
+
+  data = 0; p = 1;
+  size = sizeof(reply);
+  bzero(reply,sizeof(reply));
+  reply[0] = '0';
+  while ( reply[p-1] != 10 && ( p < (int)(sizeof(reply) - 1 )) && (length<4))
+  {
+    length = recv(localSocket,&reply[p],sizeof(char),0);
+    p++;
+  }
+
+  if ( p > 0 ) { sscanf(reply,"%x", &data); }
+  else         { data = -1; }
+  return(data);
+}
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::DAPHNEReader)
