@@ -42,7 +42,12 @@ namespace sbndaq
      bool sendCommand(char *cmd);
      void selectPort(uint16_t port);
      void linkInit();
+     void trig(uint16_t onOff);
+     void trigOld(uint16_t onOff);
+     void takeData();
+     int nFEBs;
 
+   private:
      int localSocket;
      FILE *file;
      struct sockaddr_in remoteSocket;

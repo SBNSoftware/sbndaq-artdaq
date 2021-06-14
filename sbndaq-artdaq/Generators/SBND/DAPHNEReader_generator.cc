@@ -34,15 +34,17 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
 
   const std::string identification = "DAPHNEReader::setupDAPHNE";
 
-  addressString = ps.get<std::string>("DAPHNE.ipAddress");
-  port = ps.get<uint32_t>("DAPHNE.port");
+  addressString = ps.get<std::string>("ipAddress");
+  port = ps.get<uint32_t>("port");
   TLOG_INFO(identification) << "Starting setupDAPHNE at " << port << "@" << addressString << TLOG_ENDL;
 
+  nFEBs = ps.get<int>("nFEBs");
+  TLOG_INFO(identification) << "Running with " << nFEBs << " FEBs" << TLOG_ENDL;
 
-  pedestal = ps.get<uint16_t>("DAPHNE.pedestal");
+  pedestal = ps.get<uint16_t>("pedestal");
   TLOG_INFO(identification) << "Using DAPHNE pedestal " << pedestal << TLOG_ENDL;
 
-  timeOut = ps.get<uint32_t>("DAPHNE.timeOut");
+  timeOut = ps.get<uint32_t>("timeOut");
   TLOG_INFO(identification) << "Using DAPHNE timeOut " << timeOut << TLOG_ENDL;
 
   // Connect network sockets
@@ -225,6 +227,34 @@ void DAPHNEReader::linkInit()
   sprintf(cmd, "LI\r");
   sendCommand(cmd);
 }
+
+// Enable Trigger mode
+void DAPHNEReader::trig(uint16_t onOff)
+{
+  char cmd[256];
+
+  sprintf(cmd, "TRIG %x\r", onOff);
+  sendCommand(cmd);
+}
+
+// Enable Old Trigger mode
+void DAPHNEReader::trigOld(uint16_t onOff)
+{
+  char cmd[256];
+
+  sprintf(cmd, "TRIG_OLD %x\r", onOff);
+  sendCommand(cmd);
+}
+
+// Forward data requests (?)
+void DAPHNEReader::takeData()
+{
+  char cmd[256];
+
+  sprintf(cmd, "UB1\r");
+  sendCommand(cmd);
+}
+
 
 uint16_t DAPHNEReader::read(uint16_t address, bool LC)
 {
