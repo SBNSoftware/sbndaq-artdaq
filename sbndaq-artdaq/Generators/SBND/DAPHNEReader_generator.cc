@@ -1,5 +1,5 @@
 //
-//  sbndaq-artdaq/Generators/SBND/DAPHNEReader_generator.cc
+//  sbndaq-artdaq/Generators/SBND/DAPHNEReader_generator.cc   (W.Badgett)
 //
 //  Configuring board reader for the DAPHNE SiPM Readout
 //
@@ -14,6 +14,8 @@
 #include <iomanip>
 #include <chrono>
 #include <thread>
+
+using namespace sbndaq;
 
 namespace sbndaq 
 {
@@ -82,7 +84,7 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   remoteSocket.sin_addr   = *((struct in_addr *) remoteHost->h_addr ) ;
 
   char *addressStringPtr = inet_ntoa(remoteSocket.sin_addr);
-  strcpy(addressString.c_str(), addressStringPtr);
+  strcpy(addressStringPtr, addressString.c_str());
 
   retcod = connect(localSocket,
 		   (const sockaddr*)&remoteSocket,sizeof(remoteSocket));
@@ -96,10 +98,10 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
     return;
   }
 
-  struct timeval timeOut;
-  timeOut.tv_sec  = timeOut;
-  timeOut.tv_usec = 100000;
-  retcod = setsockopt(localSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeOut, 
+  struct timeval timer;
+  timer.tv_sec  = timeOut;
+  timer.tv_usec = 100000;
+  retcod = setsockopt(localSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timer, 
 	     sizeof(struct timeval));
   if ( retcod < 0 )
   {
@@ -206,6 +208,24 @@ void DAPHNEReader::write(uint16_t address, uint16_t data, bool LC)
   sendCommand(cmd);
 }
 
+// Select port for subsequent link reads/writes
+void DAPHNEReader::selectPort(uint16_t port)
+{
+  char cmd[256];
+
+  sprintf(cmd, "LP %x\r", port);
+  sendCommand(cmd);
+}
+
+// Detect and initialize links
+void DAPHNEReader::linkInit()
+{
+  char cmd[256];
+
+  sprintf(cmd, "LI\r");
+  sendCommand(cmd);
+}
+
 uint16_t DAPHNEReader::read(uint16_t address, bool LC)
 {
   uint32_t data;
@@ -218,8 +238,8 @@ uint16_t DAPHNEReader::read(uint16_t address, bool LC)
   length = size;
   size = length;
 
-  if ( LC ) { sprintf(cmd, "lc rd %x\r", address);}
-  else      { sprintf(cmd, "rd %x\r", address);}
+  if ( LC ) { sprintf(cmd, "LC RD %x\r", address);}
+  else      { sprintf(cmd, "RD %x\r", address);}
 
   sendCommand(cmd);
 

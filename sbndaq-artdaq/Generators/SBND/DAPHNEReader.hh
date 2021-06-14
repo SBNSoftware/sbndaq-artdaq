@@ -1,5 +1,5 @@
 //
-// sbndaq-artdaq/Generators/SBND/DAPHNEReader.hh
+// sbndaq-artdaq/Generators/SBND/DAPHNEReader.hh  (W.Badgett)
 //
 
 #ifndef _DAPHNEReader_h
@@ -27,8 +27,6 @@ namespace sbndaq
       // "shutdown" transition happens at the destructor
       virtual ~DAPHNEReader();
 
-    protected:
-
      // "start" transition
      void start() override;
  
@@ -42,6 +40,8 @@ namespace sbndaq
      void write(uint16_t address, uint16_t data, bool LC=false);
      uint16_t read(uint16_t address, bool LC=false);
      bool sendCommand(char *cmd);
+     void selectPort(uint16_t port);
+     void linkInit();
 
      int localSocket;
      FILE *file;
@@ -49,7 +49,7 @@ namespace sbndaq
      struct hostent *remoteHost;
      std::string addressString;
      uint32_t port;
-    uint32_t timeOut;
+     uint32_t timeOut;
 
      uint16_t pedestal;
   };
