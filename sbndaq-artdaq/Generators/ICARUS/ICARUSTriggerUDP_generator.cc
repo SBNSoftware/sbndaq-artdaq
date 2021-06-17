@@ -122,7 +122,9 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   std::string data_input = "";
   buffer[0] = '\0';
   if(size_bytes>0){
-    int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
+    //Not currently using peek buffer result, just using buffer
+    //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
+    int x = read(datasocket_,ip_data_,si_data_,sizeof(buffer)-1,buffer);   
     TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
     data_input = buffer;
   }
@@ -315,7 +317,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
     if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
       //do something to get data size here?
       
-     
+      
       peekBuffer[1] = {0};
       //recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
       //(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
@@ -325,11 +327,12 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
       int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                                    
 			 (struct sockaddr *) &si, &slen);    
       //std::cout << msg_size << std::endl;
-      TLOG(TLVL_DEBUG + 10) << "peek recvfrom:: " << ret << " " << errno;
-      return (int)(peekBuffer[1]);
+      TLOG(TLVL_DEBUG) << "peek recvfrom:: " << ret << " " << errno << " size: " << (int)(peekBuffer[1]);
+      //return (int)(peekBuffer[1]);
       //return sizeof(peekBuffer);
       //return sizeof(peekBuffer[1]);
       //return 1400;
+      return 1;
     }
   }
   //timeout
@@ -349,7 +352,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
 //read data size from socket
 int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TLOG(TLVL_DEBUG + 10) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
   socklen_t slen = sizeof(si);
   //int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
   int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, &slen);
@@ -357,7 +360,7 @@ int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_i
   if(size_rcv<0)
     TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
   else
-    TLOG(TLVL_DEBUG + 10) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
+    TLOG(TLVL_DEBUG) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
 
   return size_rcv;
 }
