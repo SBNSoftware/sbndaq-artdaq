@@ -38,6 +38,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   
   last_rcvd_rwcounter=0x0;
   last_sent_rwcounter=0x1;
+  last_sent_ts=0;
   CAEN_DGTZ_ErrorCode retcode;
 
   fail_GetNext=false;
@@ -1468,9 +1469,10 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   TLOG(TMAKEFRAG)<< __func__ << ": Created CAENV1730FragmentMetadata with expected data size of "
                  << fragment_datasize_bytes << " bytes.";
 
-  auto fragment_count=fGetNextFragmentBunchSize;
+  //auto fragment_count=fGetNextFragmentBunchSize;
 
-  while(--fragment_count && fPoolBuffer.activeBlockCount()){
+  //just get anything that's there...
+  while(fPoolBuffer.activeBlockCount()){
 
     start= std::chrono::steady_clock::now();
 //    TLOG(21) << __func__ << ": b4 FragmentBytes";
@@ -1585,11 +1587,23 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       }
     }
 
+    if( readoutwindow_event_counter < last_sent_rwcounter )
+      {
+	TLOG(TLVL_ERROR) << __func__ << " SequnceIDs processed out of order!! "
+			 << readoutwindow_event_counter << " < " << last_sent_rwcounter << TLOG_ENDL;
+      }
+    if( last_sent_ts > ts_frag)
+      {
+	TLOG(TLVL_ERROR) << __func__ << " Timestamps out of order!! Last event later than current one."
+			 << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
+      }
+
     fragments.emplace_back(nullptr);
     std::swap(fragments.back(),fragment_uptr);
     
     fEvCounter++;
     last_sent_rwcounter = readoutwindow_event_counter;
+    last_sent_ts = ts_frag;
     delta = std::chrono::steady_clock::now()-start;
 
     min_fragment_create_time=std::min(delta.count(),min_fragment_create_time);
