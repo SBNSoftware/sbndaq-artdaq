@@ -37,8 +37,13 @@ namespace sbndaq
 
      void setupDAPHNE(fhicl::ParameterSet const& ps);
 
-     void write(uint16_t address, uint16_t data, bool LC=false);
-     uint16_t read(uint16_t address, bool LC=false);
+     void write(uint16_t address, uint16_t data);
+     void writeLC(uint16_t address, uint16_t data);
+     void writeLCAll(uint16_t address, uint16_t data);
+     uint16_t read(uint16_t address);
+     uint16_t read(uint16_t address, bool LC);
+     uint16_t readLC(uint16_t address);
+     void flushSocket();
      bool sendCommand(char *cmd);
      void selectPort(uint16_t port);
      void linkInit();

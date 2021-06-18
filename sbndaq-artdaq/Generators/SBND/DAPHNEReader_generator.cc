@@ -171,6 +171,20 @@ bool DAPHNEReader::getNext_(artdaq::FragmentPtrs& /*frags*/)
 } // namespace
 
 // Network communications functions
+void DAPHNEReader::flushSocket()
+{
+  //turn on non-blocking
+  fcntl(localSocket, F_SETFL, fcntl(localSocket, F_GETFL)| O_NONBLOCK);
+  int ret;
+  char buffer[256];
+  do { ret = recv(localSocket,buffer,sizeof(buffer),0); }
+  while(ret != -1);
+
+  // turn back on blocking
+  fcntl(localSocket, F_SETFL, fcntl(localSocket, F_GETFL) & (~O_NONBLOCK));
+}
+
+
 bool DAPHNEReader::sendCommand(char * cmd)
 {
   bool retcod = false;
@@ -200,13 +214,27 @@ bool DAPHNEReader::sendCommand(char * cmd)
   return(retcod);
 }
 
-void DAPHNEReader::write(uint16_t address, uint16_t data, bool LC)
+void DAPHNEReader::write(uint16_t address, uint16_t data)
 {
   char cmd[256];
 
-  if ( LC ) { sprintf(cmd, "lc wr %x %x\r", address, data);}
-  else      { sprintf(cmd, "wr %x %x\r", address, data);}
+  sprintf(cmd, "WR %x %x\r", address, data);
+  sendCommand(cmd);
+}
 
+void DAPHNEReader::writeLC(uint16_t address, uint16_t data)
+{
+  char cmd[256];
+
+  sprintf(cmd, "LC WR %x %x\r", address, data);
+  sendCommand(cmd);
+}
+
+void DAPHNEReader::writeLCAll(uint16_t address, uint16_t data)
+{
+  char cmd[256];
+
+  sprintf(cmd, "LCA WR %x %x\r", address, data);
   sendCommand(cmd);
 }
 
@@ -256,8 +284,16 @@ void DAPHNEReader::takeData()
 }
 
 
+uint16_t DAPHNEReader::read(uint16_t address)
+{ return(read(address,false));}
+
+uint16_t DAPHNEReader::readLC(uint16_t address)
+{ return(read(address,true));}
+
 uint16_t DAPHNEReader::read(uint16_t address, bool LC)
 {
+  flushSocket();
+
   uint32_t data;
   char cmd[256];
   char reply[65536];
@@ -268,9 +304,8 @@ uint16_t DAPHNEReader::read(uint16_t address, bool LC)
   length = size;
   size = length;
 
-  if ( LC ) { sprintf(cmd, "LC RD %x\r", address);}
-  else      { sprintf(cmd, "RD %x\r", address);}
-
+  if ( LC  ) {  sprintf(cmd, "LC RD %x\r", address);}
+  else       {  sprintf(cmd, "RD %x\r", address);}
   sendCommand(cmd);
 
   data = 0; p = 1;
