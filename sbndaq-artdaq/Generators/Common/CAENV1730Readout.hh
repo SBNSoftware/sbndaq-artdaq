@@ -43,6 +43,7 @@ namespace sbndaq
   private:
     bool readSingleWindowFragments(artdaq::FragmentPtrs &);
     bool readSingleWindowDataBlock();
+    bool readWindowDataBlocks();
 	
     bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
 		
