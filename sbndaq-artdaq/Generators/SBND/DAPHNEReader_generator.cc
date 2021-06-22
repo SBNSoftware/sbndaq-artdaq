@@ -126,6 +126,16 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
     throw std::runtime_error(line.str());
     return;
   }
+
+  // DAPHNE Initialization Specifics
+  linkInit(); // LI
+  selectPort(1); // Only port 1 works for now (FEB plugged in)
+  writeLC(0x316, 100); // Set pedestal (*** note: just one value for "all FEBS" for now)
+  write(0x800, 8); // Disable FPGA2
+  write(0xc00, 8); // Disable FPGA3
+  write(0x400, 100); // Initialize FPGA1
+  //  write(0x400, a8); // Enable FPGA1 sequencer
+
 }
   
 
