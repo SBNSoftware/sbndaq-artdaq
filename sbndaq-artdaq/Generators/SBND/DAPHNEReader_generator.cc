@@ -130,11 +130,23 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   // DAPHNE Initialization Specifics
   linkInit(); // LI
   selectPort(1); // Only port 1 works for now (FEB plugged in)
-  writeLC(0x316, 100); // Set pedestal (*** note: just one value for "all FEBS" for now)
-  write(0x800, 8); // Disable FPGA2
-  write(0xc00, 8); // Disable FPGA3
-  write(0x400, 100); // Initialize FPGA1
-  //  write(0x400, a8); // Enable FPGA1 sequencer
+  writeLC(0x316, 0x100); // Set pedestal (*** note: just one value for "all FEBS" for now)
+  write(0x800, 0x8); // Disable FPGA2
+  write(0xc00, 0x8); // Disable FPGA3
+  write(0x400, 0x100); // Initialize FPGA1
+  write(0x400, 0xa8); // Enable FPGA1 sequencer
+  writeLC(0x30e, 0x2); // Enable external triggers on FEB0
+  writeLC(0x305, 0x100); // Beam on spill len
+  writeLC(0x306, 0x100); // Beam off spill len
+  writeLC(0x304, 0x5); // Pipeline delay
+  takeData(); // UB1
+  trigOld(1); 
+
+  if ( read(0x27) != 0x0007 ) write(0x27, 0x300); // Are all FIFOs empty?
+
+  if ( read(0x2) != 0x000C ) write(0x2, 0x1); // Input buffer state on fiber link
+  
+  
 
 }
   
