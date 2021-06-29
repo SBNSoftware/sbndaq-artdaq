@@ -62,6 +62,7 @@ namespace sbndaq
      uint32_t timeOut;
 
      uint16_t pedestal;
+     std::vector<uint16_t> pedestals;
   };
 }
 

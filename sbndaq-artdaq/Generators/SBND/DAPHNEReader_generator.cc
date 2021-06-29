@@ -39,10 +39,14 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   TLOG_INFO(identification) << "Starting setupDAPHNE at " << port << "@" << addressString << TLOG_ENDL;
 
   nFEBs = ps.get<int>("nFEBs");
-  TLOG_INFO(identification) << "Running with " << nFEBs << " FEBs" << TLOG_ENDL;
+  TLOG_INFO(identification) << "Running with " << nFEBs << " FEB(s)" << TLOG_ENDL;
 
-  pedestal = ps.get<uint16_t>("pedestal");
-  TLOG_INFO(identification) << "Using DAPHNE pedestal " << pedestal << TLOG_ENDL;
+  //pedestal = ps.get<uint16_t>("pedestal");
+  //TLOG_INFO(identification) << "Using DAPHNE pedestal " << pedestal << TLOG_ENDL;
+
+  // Vector of pedestals so we can set a different value for each FEB
+  pedestals = ps.get<std::vector<uint16_t>>("pedestals");
+  TLOG_INFO(identification) << "Using DAPHNE pedestals " << pedestals[0] << ", " << pedestals[1] << ", " << pedestals[2] << ", " << pedestals[3] << TLOG_ENDL;
 
   timeOut = ps.get<uint32_t>("timeOut");
   TLOG_INFO(identification) << "Using DAPHNE timeOut " << timeOut << TLOG_ENDL;
@@ -130,7 +134,14 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   // DAPHNE Initialization Specifics
   linkInit(); // LI
   selectPort(1); // Only port 1 works for now (FEB plugged in)
-  writeLC(0x316, 0x100); // Set pedestal (*** note: just one value for "all FEBS" for now)
+  //  writeLC(0x316, 0x100); // Set pedestal (*** note: just one value for "all FEBS" for now)
+
+  // Write unique pedestal value for each FEB
+  writeLC(0x000, pedestals[0]); 
+  writeLC(0x400, pedestals[1]); 
+  writeLC(0x800, pedestals[2]); 
+  writeLC(0xC00, pedestals[3]); 
+
   write(0x800, 0x8); // Disable FPGA2
   write(0xc00, 0x8); // Disable FPGA3
   write(0x400, 0x100); // Initialize FPGA1
@@ -138,7 +149,9 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   writeLC(0x30e, 0x2); // Enable external triggers on FEB0
   writeLC(0x305, 0x100); // Beam on spill len
   writeLC(0x306, 0x100); // Beam off spill len
+  writeLC(0x308, 0x5); // Front pipeline delay
   writeLC(0x304, 0x5); // Pipeline delay
+  writeLC(0x30c, 0x8); // # ADC samples per flash above threshold
   takeData(); // UB1
   trigOld(1); 
 
