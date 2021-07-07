@@ -51,6 +51,9 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   timeOut = ps.get<uint32_t>("timeOut");
   TLOG_INFO(identification) << "Using DAPHNE timeOut " << timeOut << TLOG_ENDL;
 
+  voltage = ps.get<uint16_t>("voltage");
+  TLOG_INFO(identification) << "Biasing SiPMs to " << voltage << " V " << TLOG_ENDL;
+
   // Connect network sockets
   localSocket = socket(AF_INET, SOCK_STREAM, 0);
   if ( localSocket < 0 )
@@ -137,7 +140,7 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   //  writeLC(0x316, 0x100); // Set pedestal (*** note: just one value for "all FEBS" for now)
 
   // Write unique pedestal value for each FEB
-  writeLC(0x000, pedestals[0]); 
+  writeLC(FEB_1_PEDESTAL, pedestals[0]); 
   writeLC(0x400, pedestals[1]); 
   writeLC(0x800, pedestals[2]); 
   writeLC(0xC00, pedestals[3]); 
@@ -155,11 +158,24 @@ void DAPHNEReader::setupDAPHNE(fhicl::ParameterSet const& ps)
   takeData(); // UB1
   trigOld(1); 
 
-  if ( read(0x27) != 0x0007 ) write(0x27, 0x300); // Are all FIFOs empty?
+  if ( read(0x27) != 0x0007 ) 
+    {
+      TLOG_INFO(identification) << "Register 0x27 not at nominal value. It is: " << read(0x27) << ". Setting to 7..." << TLOG_ENDL;      
+      write(0x27, 0x300); // Are all FIFOs empty?
+      TLOG_INFO(identification) << "0x27 now reads: " << read(0x27) << TLOG_ENDL;
+    }
 
-  if ( read(0x2) != 0x000C ) write(0x2, 0x1); // Input buffer state on fiber link
-  
-  
+  if ( read(0x2) != 0x000C ) 
+    {
+      TLOG_INFO(identification) << "Register 0x2 not at nominal value. It is: " << read(0x2) << ". Setting to 12..." << TLOG_ENDL;      
+      write(0x2, 0x1); // Input buffer state on fiber link
+      TLOG_INFO(identification) << "0x2 now reads: " << read(0x2) << TLOG_ENDL;
+    }
+
+  writeLC(0x44, voltage); // bias the SiPMs
+  writeLC(0x44, 0x00); // unbias SiPMs
+
+  TLOG_INFO(identification) << "Done with setupDAPHNE" << TLOG_ENDL;  
 
 }
   

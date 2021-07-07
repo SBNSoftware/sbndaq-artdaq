@@ -52,6 +52,11 @@ namespace sbndaq
      void takeData();
      int nFEBs;
 
+    enum {
+      ALL_FEB_PEDESTALS = 0x316,
+      FEB_1_PEDESTAL = 0x000
+    };
+
    private:
      int localSocket;
      FILE *file;
@@ -60,6 +65,7 @@ namespace sbndaq
      std::string addressString;
      uint32_t port;
      uint32_t timeOut;
+     uint16_t voltage;
 
      uint16_t pedestal;
      std::vector<uint16_t> pedestals;
