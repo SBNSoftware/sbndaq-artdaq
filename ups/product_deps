@@ -30,7 +30,7 @@ jsoncpp               v1_7_7e
 wibtools              v0_04_00     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
-cetbuildtools         v2_18_03     -       only_for_build
+cetbuildtools         v8_08_02     -       only_for_build
 smc_compiler          v6_6_0       -nq-    only_for_build
 end_product_list
 
