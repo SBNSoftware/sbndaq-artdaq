@@ -6,15 +6,15 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
 )
 
 simple_plugin( MultiDump "module"
-  art_Framework_Services_Registry
+	artdaq_core::artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+	art_Framework_Services_Registry
   art_root_io_tfile_support
   art_root_io_TFileService_service
   #art_root_io_tfile_support ${ROOT_CORE}
   #art_root_io_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common 
-  artdaq-core_Data
 	)
 
 simple_plugin( IncompleteEventAna "module"
@@ -47,39 +47,39 @@ simple_plugin( CAENV1730WaveformAna "module"
 )
 
 simple_plugin( BernCRTZMQAna "module"
+	artdaq_core::artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
   art_Framework_Services_Registry
   art_root_io_tfile_support
   art_root_io_TFileService_service
   #art_Framework_Services_Optional
   #art_Framework_Services_Optional_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common
-  artdaq-core_Data
 )
 
 simple_plugin( BernCRTAna "module"
+	artdaq_core::artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
   art_Framework_Services_Registry
   art_root_io_tfile_support
   art_root_io_TFileService_service
   #art_Framework_Services_Optional
   #art_Framework_Services_Optional_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common
-  artdaq-core_Data
 )
 
 simple_plugin( BernCRTAnaV2 "module"
+	artdaq_core::artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
   art_Framework_Services_Registry
   art_root_io_tfile_support
   art_root_io_TFileService_service
   #art_Framework_Services_Optional
   #art_Framework_Services_Optional_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-	${ARTDAQ-CORE_UTILITIES}
   sbndaq-artdaq-core_Overlays_Common
-  artdaq-core_Data
 )
 
 # Subdirectories.

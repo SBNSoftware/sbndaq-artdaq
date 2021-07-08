@@ -1,7 +1,7 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq    v0_07_07
-defaultqual     e19:s97
+parent sbndaq_artdaq    
+defaultqual     e19:s108
 
 # These optional lines define the installed directories where
 # headers, libraries, and executables will be found
@@ -18,19 +18,19 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_09_06
-sbndaq_artdaq_core    v0_07_07
+artdaq                v3_10_01
+sbndaq_artdaq_core    v0_08_00
 caencomm              v1_2a
 caenvme               v2_50
 caendigitizer         v2_12_0
-pqxx                  v6_2_5d
+pqxx                  v6_2_5e
 epics                 v3_16_2a
 zmq                   v4_3_1
 jsoncpp               v1_7_7e
-wibtools              v0_03_10     -
+wibtools              v0_04_00     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
-cetbuildtools         v7_17_01     -       only_for_build
+cetbuildtools         v2_18_03     -       only_for_build
 smc_compiler          v6_6_0       -nq-    only_for_build
 end_product_list
 
@@ -38,37 +38,31 @@ end_product_list
 # -nq- here means there is no qualifier
 # a "-" here means the dependent product is not required by the parent and will not be setup
 
-qualifier                   artdaq               sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx               epics  zmq   jsoncpp    wibtools       windriver redis
-e19:py2:prof:s94            e19:py2:s94:prof     e19:py2:prof:s94      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   e19:prof:s94   prof      prof
-e19:py2:debug:s94           e19:py2:s94:debug    e19:py2:debug:s94     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  e19:debug:s94  debug     debug
-e19:py2:prof:s94:icarus     e19:py2:s94:prof     e19:py2:prof:s94      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   -              -         prof
-e19:py2:debug:s94:icarus    e19:py2:s94:debug    e19:py2:debug:s94     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  -              -         debug
-e19:py2:prof:s94:sbnd       e19:py2:s94:prof     e19:py2:prof:s94      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   e19:prof:s94   prof      prof
-e19:py2:debug:s94:sbnd      e19:py2:s94:debug    e19:py2:debug:s94     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  e19:debug:s94  debug     debug
-e19:py2:prof:s96            e19:py2:s96:prof     e19:py2:prof:s96      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   e19:prof:s96   prof      prof
-e19:py2:debug:s96           e19:py2:s96:debug    e19:py2:debug:s96     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  e19:debug:s96  debug     debug
-e19:py2:prof:s96:icarus     e19:py2:s96:prof     e19:py2:prof:s96      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   -              -         prof
-e19:py2:debug:s96:icarus    e19:py2:s96:debug    e19:py2:debug:s96     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  -              -         debug
-e19:py2:prof:s96:sbnd       e19:py2:s96:prof     e19:py2:prof:s96      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   e19:prof:s96   prof      prof
-e19:py2:debug:s96:sbnd      e19:py2:s96:debug    e19:py2:debug:s96     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  e19:debug:s96  debug     debug
-e19:py2:prof:s97            e19:py2:s97:prof     e19:py2:prof:s97      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   e19:prof:s97   prof      prof
-e19:py2:debug:s97           e19:py2:s97:debug    e19:py2:debug:s97     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  e19:debug:s97  debug     debug
-e19:py2:prof:s97:icarus     e19:py2:s97:prof     e19:py2:prof:s97      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   -              -         prof
-e19:py2:debug:s97:icarus    e19:py2:s97:debug    e19:py2:debug:s97     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  -              -         debug
-e19:py2:prof:s97:sbnd       e19:py2:s97:prof     e19:py2:prof:s97      -nq-    -nq-     -nq-          e19:p2715a:prof    e19    e19   e19:prof   e19:prof:s97   prof      prof
-e19:py2:debug:s97:sbnd      e19:py2:s97:debug    e19:py2:debug:s97     -nq-    -nq-     -nq-          e19:p2715a:debug   e19    e19   e19:debug  e19:debug:s97  debug     debug
-e19:prof:s106               e19:s106:prof        e19:prof:s106         -nq-    -nq-     -nq-          e19:p383b:prof     e19    e19   e19:prof   e19:prof:s106   prof     prof
-e19:debug:s106              e19:s106:debug       e19:debug:s106        -nq-    -nq-     -nq-          e19:p383b:debug    e19    e19   e19:debug  e19:debug:s106  debug    debug
-e19:prof:s106:icarus        e19:s106:prof        e19:prof:s106         -nq-    -nq-     -nq-          e19:p383b:prof     e19    e19   e19:prof   -              -         prof
-e19:debug:s106:icarus       e19:s106:debug       e19:debug:s106        -nq-    -nq-     -nq-          e19:p383b:debug    e19    e19   e19:debug  -              -         debug
-e19:prof:s106:sbnd          e19:s106:prof        e19:prof:s106         -nq-    -nq-     -nq-          e19:p383b:prof     e19    e19   e19:prof   e19:prof:s106   prof     prof
-e19:debug:s106:sbnd         e19:s106:debug       e19:debug:s106        -nq-    -nq-     -nq-          e19:p383b:debug    e19    e19   e19:debug  e19:debug:s106  debug    debug
-e20:prof:s106               e20:s106:prof        e20:prof:s106         -nq-    -nq-     -nq-          e20:p383b:prof     e20    e20   e20:prof   e20:prof:s106   prof     prof
-e20:debug:s106              e20:s106:debug       e20:debug:s106        -nq-    -nq-     -nq-          e20:p383b:debug    e20    e20   e20:debug  e20:debug:s106  debug    debug
-e20:prof:s106:icarus        e20:s106:prof        e20:prof:s106         -nq-    -nq-     -nq-          e20:p383b:prof     e20    e20   e20:prof   -              -         prof
-e20:debug:s106:icarus       e20:s106:debug       e20:debug:s106        -nq-    -nq-     -nq-          e20:p383b:debug    e20    e20   e20:debug  -              -         debug
-e20:prof:s106:sbnd          e20:s106:prof        e20:prof:s106         -nq-    -nq-     -nq-          e20:p383b:prof     e20    e20   e20:prof   e20:prof:s106   prof     prof
-e20:debug:s106:sbnd         e20:s106:debug       e20:debug:s106        -nq-    -nq-     -nq-          e20:p383b:debug    e20    e20   e20:debug  e20:debug:s106  debug    debug
+qualifier                   artdaq               sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx              epics  zmq   jsoncpp    wibtools        windriver redis
+e19:prof:s108               e19:s108:prof        e19:prof:s108         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   e19:prof:s108   prof      prof
+e19:debug:s108              e19:s108:debug       e19:debug:s108        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  e19:debug:s108  debug     debug
+e19:prof:s108:icarus        e19:s108:prof        e19:prof:s108         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   -              -          prof
+e19:debug:s108:icarus       e19:s108:debug       e19:debug:s108        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  -              -          debug
+e19:prof:s108:sbnd          e19:s108:prof        e19:prof:s108         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   e19:prof:s108   prof      prof
+e19:debug:s108:sbnd         e19:s108:debug       e19:debug:s108        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  e19:debug:s108  debug     debug
+e20:prof:s108               e20:s108:prof        e20:prof:s108         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s108   prof      prof
+e20:debug:s108              e20:s108:debug       e20:debug:s108        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s108  debug     debug
+e20:prof:s108:icarus        e20:s108:prof        e20:prof:s108         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   -              -          prof
+e20:debug:s108:icarus       e20:s108:debug       e20:debug:s108        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
+e20:prof:s108:sbnd          e20:s108:prof        e20:prof:s108         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s108   prof      prof
+e20:debug:s108:sbnd         e20:s108:debug       e20:debug:s108        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s108  debug     debug
+e19:prof:s109               e19:s109:prof        e19:prof:s109         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   e19:prof:s109   prof      prof
+e19:debug:s109              e19:s109:debug       e19:debug:s109        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  e19:debug:s109  debug     debug
+e19:prof:s109:icarus        e19:s109:prof        e19:prof:s109         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   -              -          prof
+e19:debug:s109:icarus       e19:s109:debug       e19:debug:s109        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  -              -          debug
+e19:prof:s109:sbnd          e19:s109:prof        e19:prof:s109         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   e19:prof:s109   prof      prof
+e19:debug:s109:sbnd         e19:s109:debug       e19:debug:s109        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  e19:debug:s109  debug     debug
+e20:prof:s109               e20:s109:prof        e20:prof:s109         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s109   prof      prof
+e20:debug:s109              e20:s109:debug       e20:debug:s109        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s109  debug     debug
+e20:prof:s109:icarus        e20:s109:prof        e20:prof:s109         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   -              -          prof
+e20:debug:s109:icarus       e20:s109:debug       e20:debug:s109        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
+e20:prof:s109:sbnd          e20:s109:prof        e20:prof:s109         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s109   prof      prof
+e20:debug:s109:sbnd         e20:s109:debug       e20:debug:s109        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s109  debug     debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")

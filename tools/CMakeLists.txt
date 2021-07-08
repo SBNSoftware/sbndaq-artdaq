@@ -14,10 +14,9 @@ art_make_exec(NAME artdaqDriver
   artdaq_Application # needed for messagefacility
   artdaq_DAQrate
   artdaq_DAQdata
-	artdaq-core_Core
-  artdaq-core_Utilities
-  artdaq-core_Generators
-  artdaq-utilities_Plugins
+	artdaq_core::artdaq-core_Core
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Generators
 	${FHICLCPP}
   ${CETLIB}
 	${CETLIB_EXCEPT}
@@ -36,10 +35,9 @@ art_make_exec(NAME boardreader
   artdaq_BuildInfo
   artdaq_DAQrate
   artdaq_DAQdata
-	artdaq-core_Core
-  artdaq-core_Utilities
-  artdaq-core_Generators
-  artdaq-utilities_Plugins
+	artdaq_core::artdaq-core_Core
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Generators
 	artdaq_ExternalComms
 	canvas
 	${FHICLCPP}

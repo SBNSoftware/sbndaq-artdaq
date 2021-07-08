@@ -9,9 +9,10 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
 )
 
 simple_plugin(IcarusArtdaqBuildInfo "module"
-  artdaq_DAQdata
+	artdaq_DAQdata
   artdaq_BuildInfo
-  artdaq-core_BuildInfo
+  artdaq_core::artdaq-core_BuildInfo
+  artdaq_utilities::artdaq-utilities_BuildInfo
   sbndaq-artdaq_BuildInfo
   sbndaq-artdaq-core_BuildInfo
   ${MF_MESSAGELOGGER}
@@ -21,54 +22,54 @@ simple_plugin(IcarusArtdaqBuildInfo "module"
 )
 
 simple_plugin(PhysCrateDump "module"
-         			${ARTDAQ-CORE_UTILITIES}
+							artdaq_core::artdaq-core_Utilities
               sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS)
 
 simple_plugin(ICARUSTriggerUDPDump "module" 
-				   ${ARTDAQ-CORE_UTILITIES}
+							artdaq_core::artdaq-core_Utilities
               sbndaq-artdaq-core_Overlays
 	      sbndaq-artdaq-core_Overlays_ICARUS)
 
 simple_plugin(PhysCrateWriteICARUSDataFile "module"
-         			${ARTDAQ-CORE_UTILITIES}
+							artdaq_core::artdaq-core_Utilities
               sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS)
 
 simple_plugin(PhysCrateViewer "module"
+							artdaq_core::artdaq-core_Utilities
               sbndaq-artdaq-core_Overlays
               sbndaq-artdaq-core_Overlays_ICARUS
 	      art_root_io_tfile_support ${ROOT_CORE}
 	      art_Framework_Services_Registry
 	      art_root_io_TFileService_service
-	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )
 
 simple_plugin(PhysCrateSimpleAna "module"
-	sbndaq-artdaq-core_Overlays
-              sbndaq-artdaq-core_Overlays_ICARUS
+       artdaq_core::artdaq-core_Utilities
+	     sbndaq-artdaq-core_Overlays
+        sbndaq-artdaq-core_Overlays_ICARUS
 	      art_root_io_tfile_support ${ROOT_CORE}
 	      art_Framework_Services_Registry
 	      art_root_io_TFileService_service
-	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )
 
 simple_plugin(ICARUSTriggerUDPSimpleAna "module"
-	      sbndaq-artdaq-core_Overlays
+        artdaq_core::artdaq-core_Utilities
+				sbndaq-artdaq-core_Overlays
 	      sbndaq-artdaq-core_Overlays_ICARUS
 	      art_root_io_tfile_support ${ROOT_CORE}
 	      art_Framework_Services_Registry
 	      art_root_io_TFileService_service
-	      ${ARTDAQ-CORE_UTILITIES}
 	      ${ROOT_BASIC_LIB_LIST} )	
 
 simple_plugin(Icarus "fragmentNameHelper"
-  artdaq-core_Data_Artdaq_fragmentNameHelper
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+	artdaq_core::artdaq-core_Data
+  artdaq_core::artdaq-core_Data_Artdaq_fragmentNameHelper
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq-core_Overlays_ICARUS
-  ${ARTDAQ-CORE_UTILITIES}
   ${MF_MESSAGELOGGER}
   ${FHICLCPP}
   ${CETLIB_EXCEPT}

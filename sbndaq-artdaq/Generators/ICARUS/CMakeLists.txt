@@ -18,9 +18,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 			artdaq_Generators
 			artdaq_Application
 			artdaq_DAQdata
-			artdaq-core_Utilities
-			artdaq-utilities_Plugins
-			artdaq-core_Data
+			artdaq_core::artdaq-core_Utilities
+			artdaq_core::artdaq-core_Data
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
 			${FHICLCPP}
@@ -41,8 +40,8 @@ simple_plugin(PhysCrateData "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${REDIS}
   ${Boost_SYSTEM_LIBRARY}
   ${FHICLCPP}
@@ -76,9 +75,8 @@ simple_plugin(ICARUSTriggerUDP "generator"
     artdaq_Generators
     artdaq_Application
     artdaq_DAQdata
-    artdaq-core_Utilities
-    artdaq-utilities_Plugins
-    artdaq-core_Data
+    artdaq_core::artdaq-core_Utilities
+    artdaq_core::artdaq-core_Data
   ${Boost_SYSTEM_LIBRARY}
   canvas
     ${FHICLCPP}

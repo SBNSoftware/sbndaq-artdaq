@@ -8,11 +8,12 @@
 # ======================================================================
 
 
-# use cmake 3.7 or later
-cmake_minimum_required (VERSION 3.7)
+cmake_minimum_required (VERSION 3.16)
 
+find_package(cetbuildtools)
 
-project(sbndaq-artdaq)
+project(sbndaq_artdaq VERSION 0.08.00)
+
 
 string(FIND $ENV{MRB_QUALS} "icarus" ICARUS_FOUND)
 IF (ICARUS_FOUND EQUAL -1)
@@ -76,35 +77,36 @@ endif()
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v3_09_04 )
-find_ups_product( artdaq_utilities v1_05_09)
-find_ups_product( artdaq_core v3_06_05 )
-
+find_ups_product( artdaq v3_10_01 )
+find_ups_product( artdaq_utilities v1_06_01)
+find_ups_product( artdaq_core v3_07_01 )
+find_ups_product( canvas v3_12_01 )
 find_ups_product( art v3_05_01 )
-find_ups_product( art_root_io v1_03_01 )
-find_ups_product( fhiclcpp v4_11_01 )
-find_ups_product( messagefacility v2_06_01)
-find_ups_product( cetlib v3_10_00 )
-find_ups_product( cetlib_except  v1_04_01)
-find_ups_root( v6_18_04d )
-find_ups_boost( v1_70_0 filesystem
+find_ups_product( art_root_io v1_08_00 )
+find_ups_product( fhiclcpp v4_15_00 )
+find_ups_product( messagefacility v2_08_01)
+find_ups_product( cetlib v3_13_01 )
+find_ups_product( cetlib_except  v1_07_01)
+find_ups_root(  v6_22_06b )
+find_ups_boost( v1_75_0 filesystem
                         program_options
                         system
                         unit_test_framework
  )
 find_ups_product( pqxx v6_2_5a )
-find_ups_product( cetbuildtools v7_17_01 )
-find_ups_product( sqlite v3_26_00_00)
+find_ups_product( cetbuildtools v2_18_03 )
+find_ups_product( sqlite v3_34_01_00)
+find_ups_product( libxml2 )
  
 find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
-find_ups_product( sbndaq_artdaq_core v0_07_03 )
+find_ups_product( sbndaq_artdaq_core v0_08_00 )
 
 find_ups_product (jsoncpp v1_7_7c) 
 
-find_ups_product (TRACE v3_16_02)
+find_ups_product (TRACE v3_17_01)
 
 find_ups_product( zmq v4_3_1 ) 
 find_ups_product( redis v5_0_5 )

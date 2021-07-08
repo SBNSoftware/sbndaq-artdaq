@@ -27,12 +27,11 @@ simple_plugin(TriggerBoardReader "generator"
   sbndaq-artdaq-core_Overlays_SBND
   sbndaq-artdaq_Generators_SBND_TriggerBoard
   sbndaq-artdaq_Common_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Data
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
   ${ART_UTILITIES}
   ${CANVAS}
   ${TRACE}
@@ -48,7 +47,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_WIBReader
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
+  		artdaq_core::artdaq-core_Utilities
   			sbndaq-artdaq_Common_Utilities
                         WIB
                         ToolException
@@ -69,7 +68,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_MBBReader
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
+  	  artdaq_core::artdaq-core_Utilities
   			sbndaq-artdaq_Common_Utilities
                         WIB
                         MBB
@@ -94,12 +93,11 @@ simple_plugin(WIBReader "generator"
   sbndaq-artdaq-core_Overlays_SBND
   sbndaq-artdaq_Generators_SBND_WIBReader
   sbndaq-artdaq_Common_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Data
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
   WIB
   ToolException
   ${ART_UTILITIES}
@@ -119,12 +117,11 @@ simple_plugin(MBBReader "generator"
   sbndaq-artdaq-core_Overlays_SBND
   sbndaq-artdaq_Generators_SBND_MBBReader
   sbndaq-artdaq_Common_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Data
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
   WIB
   ToolException
   ${ART_UTILITIES}

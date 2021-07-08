@@ -10,9 +10,10 @@ art_make(NO_PLUGINS # WAnt different link lists for modues
 )
 
 simple_plugin(SBNDArtdaqBuildInfo "module"
-  artdaq_DAQdata
+	artdaq_DAQdata
   artdaq_BuildInfo
-  artdaq-core_BuildInfo
+  artdaq_core::artdaq-core_BuildInfo
+  artdaq_utilities::artdaq-utilities_BuildInfo
   sbndaq-artdaq_BuildInfo
   sbndaq-artdaq-core_BuildInfo
   ${MF_MESSAGELOGGER}
@@ -22,12 +23,12 @@ simple_plugin(SBNDArtdaqBuildInfo "module"
 )
 
 simple_plugin(SBND "fragmentNameHelper"
-  artdaq-core_Data_Artdaq_fragmentNameHelper
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+	artdaq_core::artdaq-core_Data
+  artdaq_core::artdaq-core_Data_Artdaq_fragmentNameHelper
   sbndaq-artdaq-core_Overlays
   sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq-core_Overlays_ICARUS
-  ${ARTDAQ-CORE_UTILITIES}
   ${MF_MESSAGELOGGER}
   ${FHICLCPP} 
   )

@@ -12,8 +12,8 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_NevisTPCGeneratorBase
 			artdaq_Generators
 			artdaq_Application
 			artdaq_DAQdata
-			artdaq-core_Utilities
-			artdaq-core_Data
+      artdaq_core::artdaq-core_Utilities
+      artdaq_core::artdaq-core_Data
 			sbndaq-artdaq-core_Overlays
 			sbndaq-artdaq_nevishwutils
 			sbndaq-artdaq_Common_Utilities
@@ -32,8 +32,8 @@ simple_plugin(NevisTPCData "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -49,8 +49,8 @@ simple_plugin(NevisTPC2StreamNUandSNXMIT "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -66,8 +66,8 @@ simple_plugin(NevisTPCNUXMIT "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -83,8 +83,8 @@ simple_plugin(NevisTPCCALIB "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -98,8 +98,8 @@ simple_plugin(NevisTPCFile "generator"
   sbndaq-artdaq-core_Overlays
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   artdaq_Generators
   ${ART_UTILITIES}
   ${FHICLCPP}

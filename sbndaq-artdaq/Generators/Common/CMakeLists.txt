@@ -34,7 +34,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
+  			artdaq_core::artdaq-core_Utilities
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
@@ -55,9 +55,8 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
-                        artdaq-utilities_Plugins
-                        artdaq-core_Data
+  			artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
@@ -75,9 +74,8 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
-                        artdaq-utilities_Plugins
-                        artdaq-core_Data
+  			artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			${ART_UTILITIES}
@@ -100,9 +98,8 @@ simple_plugin(CAENV1730Readout "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -122,8 +119,8 @@ simple_plugin(SpectraTimeReadout "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -140,8 +137,8 @@ simple_plugin(WhiteRabbitReadout "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${ART_UTILITIES}
   ${FHICLCPP}
   ${MF_MESSAGELOGGER}
@@ -159,9 +156,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
                         artdaq_Generators
                         artdaq_Application
                         artdaq_DAQdata
-                        artdaq-core_Utilities
-                        artdaq-core_Data
-                        artdaq-utilities_Plugins
+                        artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
                         BernCRTFEBConfiguration
                         ${ART_UTILITIES}
                         ${FHICLCPP}
@@ -180,9 +176,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRT_GeneratorBase
                         artdaq_Generators
                         artdaq_Application
                         artdaq_DAQdata
-                        artdaq-core_Utilities
-                        artdaq-core_Data
-                        artdaq-utilities_Plugins
+                        artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
                         BernCRTFEBConfiguration
                         ${ART_UTILITIES}
                         ${FHICLCPP}
@@ -225,9 +220,8 @@ simple_plugin(BernCRTZMQData "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   BernCRTFEBConfiguration
   febdrv
   ${ART_UTILITIES}
@@ -246,9 +240,8 @@ simple_plugin(BernCRTData "generator"
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   BernCRTFEBConfiguration
   febdrv
  # ${ARTDAQ_UTILITIES}
@@ -267,9 +260,8 @@ simple_plugin(DummyGenerator "generator"
   artdaq_Generators
   artdaq_DAQdata
   artdaq_DAQrate
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${FHICLCPP}
   ${MESSAGEFACILITY_LIBS}
   ${CETLIB}
