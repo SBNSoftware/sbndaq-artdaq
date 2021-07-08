@@ -68,12 +68,10 @@ int main(int argc, char * argv[]) {
   cet::filepath_lookup policy("FHICL_FILE_PATH");
 
   // parse a configuration file; obtain intermediate form
-  fhicl::intermediate_table tbl;
-  fhicl::parse_document(infile_name, policy, tbl);
+  fhicl::intermediate_table tbl =fhicl::parse_document(infile_name, policy);
 
   // convert to ParameterSet
-  fhicl::ParameterSet pset;
-  fhicl::make_ParameterSet(tbl, pset);
+  fhicl::ParameterSet pset= fhicl::ParameterSet::make(tbl);
   
   fhicl::ParameterSet fragment_receiver = pset.get<fhicl::ParameterSet>("fragment_receiver");
   
