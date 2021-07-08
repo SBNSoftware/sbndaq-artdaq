@@ -92,8 +92,8 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
 
 simple_plugin(CAENV1730Readout "generator"
   sbndaq-artdaq_Common_CAENV1730_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
@@ -113,8 +113,8 @@ simple_plugin(CAENV1730Readout "generator"
 
 simple_plugin(SpectraTimeReadout "generator"
   sbndaq-artdaq_Common_SpectraTime_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
@@ -131,8 +131,8 @@ simple_plugin(SpectraTimeReadout "generator"
 
 simple_plugin(WhiteRabbitReadout "generator"
   sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
@@ -150,8 +150,8 @@ simple_plugin(WhiteRabbitReadout "generator"
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
                   SOURCE BernCRTZMQ_GeneratorBase.cc
                   LIBRARIES
-                        sbndaq-artdaq-core_Overlays
-                        sbndaq-artdaq-core_Overlays_Common
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
                         sbndaq-artdaq_Common_Utilities
                         artdaq_Generators
                         artdaq_Application
@@ -170,8 +170,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRT_GeneratorBase
                   SOURCE BernCRT_GeneratorBase.cc
                   LIBRARIES
-                        sbndaq-artdaq-core_Overlays
-                        sbndaq-artdaq-core_Overlays_Common
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
                         sbndaq-artdaq_Common_Utilities
                         artdaq_Generators
                         artdaq_Application
@@ -197,7 +197,7 @@ art_make_library( LIBRARY_NAME BernCRTFEBConfiguration
 art_make_library( LIBRARY_NAME febdrv
   SOURCE febdrv.cc
   LIBRARIES
-    sbndaq-artdaq-core_Overlays_Common
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
     ${FHICLCPP}
     ${CETLIB_EXCEPT}
 )
@@ -214,8 +214,8 @@ cet_make_exec( ConvertCRTConfiguration
 
 simple_plugin(BernCRTZMQData "generator"
   sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   zmq
   artdaq_Generators
   artdaq_Application
@@ -234,8 +234,8 @@ simple_plugin(BernCRTZMQData "generator"
 
 simple_plugin(BernCRTData "generator"
   sbndaq-artdaq_Common_BernCRT_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   zmq
   artdaq_Generators
   artdaq_Application
@@ -254,8 +254,8 @@ simple_plugin(BernCRTData "generator"
   )
 
 simple_plugin(DummyGenerator "generator"
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_DAQdata

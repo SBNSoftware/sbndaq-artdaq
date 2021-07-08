@@ -14,7 +14,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_NevisTPCGeneratorBase
 			artdaq_DAQdata
       artdaq_core::artdaq-core_Utilities
       artdaq_core::artdaq-core_Data
-			sbndaq-artdaq-core_Overlays
+			sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
 			sbndaq-artdaq_nevishwutils
 			sbndaq-artdaq_Common_Utilities
 			${ART_UTILITIES}
@@ -27,7 +27,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_NevisTPCGeneratorBase
 
 simple_plugin(NevisTPCData "generator"
   sbndaq-artdaq_NevisTPCGeneratorBase
-  sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq-artdaq_nevishwutils
   artdaq_Generators
   artdaq_Application
@@ -44,7 +44,7 @@ simple_plugin(NevisTPCData "generator"
 
 simple_plugin(NevisTPC2StreamNUandSNXMIT "generator"
   sbndaq-artdaq_NevisTPCGeneratorBase
-  sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq-artdaq_nevishwutils
   artdaq_Generators
   artdaq_Application
@@ -61,7 +61,7 @@ simple_plugin(NevisTPC2StreamNUandSNXMIT "generator"
 
 simple_plugin(NevisTPCNUXMIT "generator"
   sbndaq-artdaq_NevisTPCGeneratorBase
-  sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq-artdaq_nevishwutils
   artdaq_Generators
   artdaq_Application
@@ -78,7 +78,7 @@ simple_plugin(NevisTPCNUXMIT "generator"
 
 simple_plugin(NevisTPCCALIB "generator"
   sbndaq-artdaq_NevisTPCGeneratorBase
-  sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq-artdaq_nevishwutils
   artdaq_Generators
   artdaq_Application
@@ -95,7 +95,7 @@ simple_plugin(NevisTPCCALIB "generator"
 
 simple_plugin(NevisTPCFile "generator"
   sbndaq-artdaq_NevisTPCGeneratorBase
-  sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   artdaq_Application
   artdaq_DAQdata
   artdaq_core::artdaq-core_Utilities

@@ -12,8 +12,8 @@ cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB
 art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 		  SOURCE PhysCrate_GeneratorBase.cc
 		  LIBRARIES
-			sbndaq-artdaq-core_Overlays
-			sbndaq-artdaq-core_Overlays_ICARUS
+			sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+			sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
 			sbndaq-artdaq_Common_Utilities
 			artdaq_Generators
 			artdaq_Application
@@ -34,8 +34,8 @@ simple_plugin(PhysCrateData "generator"
   icarus-base_VetoUDP
   icarus-base_PhysCrate
   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_ICARUS
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
@@ -53,8 +53,8 @@ simple_plugin(PhysCrateData "generator"
 
 # simple_plugin(PhysCrateFakeData "generator"
 #   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
-#   sbndaq-artdaq-core_Overlays
-#   sbndaq-artdaq-core_Overlays_ICARUS
+#   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+#   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
 #   sbndaq-artdaq_Common_Utilities
 #   artdaq_Application
 #   artdaq_DAQdata
@@ -69,8 +69,8 @@ simple_plugin(PhysCrateData "generator"
 
 simple_plugin(ICARUSTriggerUDP "generator"
 #    artdaq-core-demo_Overlays
-    sbndaq-artdaq-core_Overlays
-    sbndaq-artdaq-core_Overlays_ICARUS
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
     sbndaq-artdaq_Common_Utilities
     artdaq_Generators
     artdaq_Application
@@ -88,8 +88,8 @@ simple_plugin(ICARUSTriggerUDP "generator"
 #JCZ - obsolete interpretation
 #simple_plugin(ICARUSPMTGate "generator"
 #    artdaq-core-demo_Overlays
-#    sbndaq-artdaq-core_Overlays
-#    sbndaq-artdaq-core_Overlays_ICARUS
+#    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+#    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
 #    sbndaq-artdaq_Common_Utilities
 #    artdaq_Generators
 #    artdaq_DAQdata

@@ -1,8 +1,8 @@
 art_make(NO_PLUGINS # WAnt different link lists for modues
  BASENAME_ONLY
  LIBRARY_NAME sbndaq-artdaq_ArtModules_Common
- LIB_LIBRARIES sbndaq-artdaq-core_Overlays
- 	       sbndaq-artdaq-core_Overlays_Common
+ LIB_LIBRARIES sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+ 	       sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
 simple_plugin( MultiDump "module"
@@ -14,14 +14,14 @@ simple_plugin( MultiDump "module"
   #art_root_io_tfile_support ${ROOT_CORE}
   #art_root_io_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-  sbndaq-artdaq-core_Overlays_Common 
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
 	)
 
 simple_plugin( IncompleteEventAna "module"
   art_Framework_Services_Registry
   #${ROOT_BASIC_LIB_LIST}
   ${ARTDAQ-CORE_UTILITIES}
-  #sbndaq-artdaq-core_Overlays_Common 
+  #sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
 )
 
 simple_plugin( CAENV1730Dump "module"
@@ -32,7 +32,7 @@ simple_plugin( CAENV1730Dump "module"
   #art_root_io_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
 	${ARTDAQ-CORE_UTILITIES}
-  sbndaq-artdaq-core_Overlays_Common 
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
 )
 
 simple_plugin( CAENV1730WaveformAna "module"
@@ -43,7 +43,7 @@ simple_plugin( CAENV1730WaveformAna "module"
   #art_root_io_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
 	${ARTDAQ-CORE_UTILITIES}
-  sbndaq-artdaq-core_Overlays_Common 
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
 )
 
 simple_plugin( BernCRTZMQAna "module"
@@ -55,7 +55,7 @@ simple_plugin( BernCRTZMQAna "module"
   #art_Framework_Services_Optional
   #art_Framework_Services_Optional_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
 simple_plugin( BernCRTAna "module"
@@ -67,7 +67,7 @@ simple_plugin( BernCRTAna "module"
   #art_Framework_Services_Optional
   #art_Framework_Services_Optional_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
 simple_plugin( BernCRTAnaV2 "module"
@@ -79,7 +79,7 @@ simple_plugin( BernCRTAnaV2 "module"
   #art_Framework_Services_Optional
   #art_Framework_Services_Optional_TFileService_service
   ${ROOT_BASIC_LIB_LIST}
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
 # Subdirectories.
