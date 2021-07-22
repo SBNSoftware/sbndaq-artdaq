@@ -209,7 +209,7 @@ cet_make_exec( ConvertCRTConfiguration
     fhiclcpp
     cetlib
     cetlib_except
-    ${Boost_PROGRAM_OPTIONS_LIBRARY_RELEASE}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 
 simple_plugin(BernCRTZMQData "generator"
