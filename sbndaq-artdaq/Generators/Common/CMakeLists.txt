@@ -21,8 +21,8 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		  pthread
 		  artdaq_DAQdata
 		  ${MF_UTILITIES}
-		  ${TRACE}
-		  ${MF_MESSAGELOGGER}
+		  
+		  MF_MessageLogger
 		  ${Boost_SYSTEM_LIBRARY}
 		)
 
@@ -34,16 +34,16 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
+  			artdaq_core::artdaq-core_Utilities
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
-			${ART_UTILITIES}
-			${FHICLCPP}
-			${MF_MESSAGELOGGER}
+			art_Utilities
+			fhiclcpp
+			MF_MessageLogger
 			${MF_UTILITIES}
-			${TRACE}
-			${CETLIB}
-			${CETLIB_EXCEPT}
+			
+			cetlib
+			cetlib_except
 			${CAENVME}
 			${CAENCOMM}
 			${CAENDIGITIZER}
@@ -55,18 +55,17 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
-                        artdaq-utilities_Plugins
-                        artdaq-core_Data
+  			artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
-			${ART_UTILITIES}
-			${FHICLCPP}
-			${MF_MESSAGELOGGER}
+			art_Utilities
+			fhiclcpp
+			MF_MessageLogger
 			${MF_UTILITIES}
-			${TRACE}
-			${CETLIB}
-			${CETLIB_EXCEPT}
+			
+			cetlib
+			cetlib_except
 )
 
 
@@ -75,18 +74,17 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq-core_Utilities
-                        artdaq-utilities_Plugins
-                        artdaq-core_Data
+  			artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
   			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
-			${ART_UTILITIES}
-			${FHICLCPP}
-			${MF_MESSAGELOGGER}
+			art_Utilities
+			fhiclcpp
+			MF_MessageLogger
 			${MF_UTILITIES}
-			${TRACE}
-			${CETLIB}
-			${CETLIB_EXCEPT}
+			
+			cetlib
+			cetlib_except
 )
 
 
@@ -94,21 +92,20 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
 
 simple_plugin(CAENV1730Readout "generator"
   sbndaq-artdaq_Common_CAENV1730_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
-  ${ART_UTILITIES}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
+  art_Utilities
+  fhiclcpp
+  MF_MessageLogger
   ${MF_UTILITIES}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  cetlib
+  cetlib_except
   ${CAENDIGITIZER}
   ${CAEN_VME}
   ${CAENCOMM}
@@ -116,163 +113,158 @@ simple_plugin(CAENV1730Readout "generator"
 
 simple_plugin(SpectraTimeReadout "generator"
   sbndaq-artdaq_Common_SpectraTime_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  ${ART_UTILITIES}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
+  art_Utilities
+  fhiclcpp
+  MF_MessageLogger
   ${MF_UTILITIES}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  cetlib
+  cetlib_except
 )
 
 simple_plugin(WhiteRabbitReadout "generator"
   sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  ${ART_UTILITIES}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
+  art_Utilities
+  fhiclcpp
+  MF_MessageLogger
   ${MF_UTILITIES}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  cetlib
+  cetlib_except
 )
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
                   SOURCE BernCRTZMQ_GeneratorBase.cc
                   LIBRARIES
-                        sbndaq-artdaq-core_Overlays
-                        sbndaq-artdaq-core_Overlays_Common
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
                         sbndaq-artdaq_Common_Utilities
                         artdaq_Generators
                         artdaq_Application
                         artdaq_DAQdata
-                        artdaq-core_Utilities
-                        artdaq-core_Data
-                        artdaq-utilities_Plugins
+                        artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
                         BernCRTFEBConfiguration
-                        ${ART_UTILITIES}
-                        ${FHICLCPP}
-                        ${MF_MESSAGELOGGER}
+                        art_Utilities
+                        fhiclcpp
+                        MF_MessageLogger
                         ${MF_UTILITIES}
-                        ${CETLIB}
-                        ${CETLIB_EXCEPT}
+                        cetlib
+                        cetlib_except
 )
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_BernCRT_GeneratorBase
                   SOURCE BernCRT_GeneratorBase.cc
                   LIBRARIES
-                        sbndaq-artdaq-core_Overlays
-                        sbndaq-artdaq-core_Overlays_Common
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+                        sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
                         sbndaq-artdaq_Common_Utilities
                         artdaq_Generators
                         artdaq_Application
                         artdaq_DAQdata
-                        artdaq-core_Utilities
-                        artdaq-core_Data
-                        artdaq-utilities_Plugins
+                        artdaq_core::artdaq-core_Utilities
+                        artdaq_core::artdaq-core_Data
                         BernCRTFEBConfiguration
-                        ${ART_UTILITIES}
-                        ${FHICLCPP}
-                        ${MF_MESSAGELOGGER}
+                        art_Utilities
+                        fhiclcpp
+                        MF_MessageLogger
                         ${MF_UTILITIES}
-                        ${CETLIB}
-                        ${CETLIB_EXCEPT}
+                        cetlib
+                        cetlib_except
 )
 
 art_make_library( LIBRARY_NAME BernCRTFEBConfiguration
   SOURCE BernCRTFEBConfiguration.cc
   LIBRARIES
-    ${FHICLCPP}
-    ${CETLIB_EXCEPT}
+    fhiclcpp
+    cetlib_except
 )
 
 art_make_library( LIBRARY_NAME febdrv
   SOURCE febdrv.cc
   LIBRARIES
-    sbndaq-artdaq-core_Overlays_Common
-    ${FHICLCPP}
-    ${CETLIB_EXCEPT}
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+    fhiclcpp
+    cetlib_except
 )
 
 cet_make_exec( ConvertCRTConfiguration
   SOURCE ConvertCRTConfiguration.cc
   LIBRARIES
     BernCRTFEBConfiguration
-    ${FHICLCPP}
-    ${CETLIB}
-    ${CETLIB_EXCEPT}
+    fhiclcpp
+    cetlib
+    cetlib_except
     ${Boost_PROGRAM_OPTIONS_LIBRARY_RELEASE}
 )
 
 simple_plugin(BernCRTZMQData "generator"
   sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   zmq
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   BernCRTFEBConfiguration
   febdrv
-  ${ART_UTILITIES}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
+  art_Utilities
+  fhiclcpp
+  MF_MessageLogger
   ${MF_UTILITIES}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  cetlib
+  cetlib_except
   )
 
 simple_plugin(BernCRTData "generator"
   sbndaq-artdaq_Common_BernCRT_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   zmq
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   BernCRTFEBConfiguration
   febdrv
  # ${ARTDAQ_UTILITIES}
-  ${ART_UTILITIES}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
+  art_Utilities
+  fhiclcpp
+  MF_MessageLogger
   ${MF_UTILITIES}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  cetlib
+  cetlib_except
   )
 
 simple_plugin(DummyGenerator "generator"
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_DAQdata
   artdaq_DAQrate
-  artdaq-core_Utilities
-  artdaq-core_Data
-  artdaq-utilities_Plugins
-  ${FHICLCPP}
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
+  fhiclcpp
   ${MESSAGEFACILITY_LIBS}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  cetlib
+  cetlib_except
   )
 

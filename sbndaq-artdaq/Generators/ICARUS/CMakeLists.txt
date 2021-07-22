@@ -12,22 +12,21 @@ cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB
 art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 		  SOURCE PhysCrate_GeneratorBase.cc
 		  LIBRARIES
-			sbndaq-artdaq-core_Overlays
-			sbndaq-artdaq-core_Overlays_ICARUS
+			sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+			sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
 			sbndaq-artdaq_Common_Utilities
 			artdaq_Generators
 			artdaq_Application
 			artdaq_DAQdata
-			artdaq-core_Utilities
-			artdaq-utilities_Plugins
-			artdaq-core_Data
+			artdaq_core::artdaq-core_Utilities
+			artdaq_core::artdaq-core_Data
 			${Boost_SYSTEM_LIBRARY}
-			${ART_UTILITIES}
-			${FHICLCPP}
-			${MF_MESSAGELOGGER}
+			art_Utilities
+			fhiclcpp
+			MF_MessageLogger
 			${MF_UTILITIES}
-			${CETLIB}
-			${CETLIB_EXCEPT}
+			cetlib
+			cetlib_except
 		)
 
 simple_plugin(PhysCrateData "generator"
@@ -35,63 +34,62 @@ simple_plugin(PhysCrateData "generator"
   icarus-base_VetoUDP
   icarus-base_PhysCrate
   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_ICARUS
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
   sbndaq-artdaq_Common_Utilities
   artdaq_Generators
   artdaq_Application
   artdaq_DAQdata
-  artdaq-core_Utilities
-  artdaq-core_Data
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Data
   ${REDIS}
   ${Boost_SYSTEM_LIBRARY}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  fhiclcpp
+  MF_MessageLogger
+  cetlib
+  cetlib_except
   ${CAENCOMM}
   )
 
 # simple_plugin(PhysCrateFakeData "generator"
 #   sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
-#   sbndaq-artdaq-core_Overlays
-#   sbndaq-artdaq-core_Overlays_ICARUS
+#   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+#   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
 #   sbndaq-artdaq_Common_Utilities
 #   artdaq_Application
 #   artdaq_DAQdata
 #   artdaq-core_Utilities
 #   artdaq-core_Data
 #   ${Boost_SYSTEM_LIBRARY}
-#   ${FHICLCPP}
-#   ${MF_MESSAGELOGGER}
-#   ${CETLIB}
-#   ${CETLIB_EXCEPT}
+#   fhiclcpp
+#   MF_MessageLogger
+#   cetlib
+#   cetlib_except
 #   )
 
 simple_plugin(ICARUSTriggerUDP "generator"
 #    artdaq-core-demo_Overlays
-    sbndaq-artdaq-core_Overlays
-    sbndaq-artdaq-core_Overlays_ICARUS
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
     sbndaq-artdaq_Common_Utilities
     artdaq_Generators
     artdaq_Application
     artdaq_DAQdata
-    artdaq-core_Utilities
-    artdaq-utilities_Plugins
-    artdaq-core_Data
+    artdaq_core::artdaq-core_Utilities
+    artdaq_core::artdaq-core_Data
   ${Boost_SYSTEM_LIBRARY}
   canvas
-    ${FHICLCPP}
+    fhiclcpp
   ${MESSAGEFACILITY_LIBS}
-    ${CETLIB}
- ${CETLIB_EXCEPT}
+    cetlib
+ cetlib_except
     )
 
 #JCZ - obsolete interpretation
 #simple_plugin(ICARUSPMTGate "generator"
 #    artdaq-core-demo_Overlays
-#    sbndaq-artdaq-core_Overlays
-#    sbndaq-artdaq-core_Overlays_ICARUS
+#    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+#    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
 #    sbndaq-artdaq_Common_Utilities
 #    artdaq_Generators
 #    artdaq_DAQdata
@@ -99,8 +97,8 @@ simple_plugin(ICARUSTriggerUDP "generator"
 #    artdaq-core_Data
 #  ${Boost_SYSTEM_LIBRARY}
 #  canvas
-#    ${FHICLCPP}
+#    fhiclcpp
 #  ${MESSAGEFACILITY_LIBS}
-#    ${CETLIB}
-# ${CETLIB_EXCEPT}
+#    cetlib
+# cetlib_except
 #    )

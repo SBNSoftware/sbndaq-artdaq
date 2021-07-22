@@ -14,17 +14,16 @@ art_make_exec(NAME artdaqDriver
   artdaq_Application # needed for messagefacility
   artdaq_DAQrate
   artdaq_DAQdata
-	artdaq-core_Core
-  artdaq-core_Utilities
-  artdaq-core_Generators
-  artdaq-utilities_Plugins
-	${FHICLCPP}
-  ${CETLIB}
-	${CETLIB_EXCEPT}
+	artdaq_core::artdaq-core_Core
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Generators
+	fhiclcpp
+  cetlib
+	cetlib_except
 	${Boost_PROGRAM_OPTIONS_LIBRARY}
 	${Boost_SYSTEM_LIBRARY}
 	${ROOT_CORE}
-  ${MF_MESSAGELOGGER}
+  MF_MessageLogger
   )
  
 art_make_exec(NAME boardreader
@@ -36,19 +35,18 @@ art_make_exec(NAME boardreader
   artdaq_BuildInfo
   artdaq_DAQrate
   artdaq_DAQdata
-	artdaq-core_Core
-  artdaq-core_Utilities
-  artdaq-core_Generators
-  artdaq-utilities_Plugins
+	artdaq_core::artdaq-core_Core
+  artdaq_core::artdaq-core_Utilities
+  artdaq_core::artdaq-core_Generators
 	artdaq_ExternalComms
 	canvas
-	${FHICLCPP}
-  ${CETLIB}
-	${CETLIB_EXCEPT}
+	fhiclcpp
+  cetlib
+	cetlib_except
 	${Boost_PROGRAM_OPTIONS_LIBRARY}
 	${Boost_SYSTEM_LIBRARY}
 	${ROOT_CORE}
-  ${MF_MESSAGELOGGER}
+  MF_MessageLogger
 
  )
 

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from io import StringIO
 import re,sys,getopt
 
@@ -49,7 +50,7 @@ class Product:
         rqual=list(filter(re.compile(r'(e[0-9]{2}|c[0-9]{1})').search , qualifiers))
         bqual=list(filter(re.compile(r'(debug|prof)').search , qualifiers))
         squal=list(filter(re.compile(r's[0-9]{2,3}').search , qualifiers))
-        pyqual=list(filter(re.compile(r'(py(2|3)|p2715a|p383b)').search , qualifiers))
+        pyqual=list(filter(re.compile(r'(py(2|3)|p2715a|p383b|p392)').search , qualifiers))
         aqual=list(filter(re.compile(r'(noarch|slf7-x86_64)').search , qualifiers))
 
         arch='slf7-x86_64' if not aqual else aqual[0]
@@ -110,6 +111,10 @@ class ManifestBuilder:
 
         for index,product in self.df_products.iterrows():
             qualifiers='noarch' if product[0] not in product_qualifiers else product_qualifiers[product[0]]
+
+            if product[2] not in [np.nan,'-'] and not all(q in product_qualifiers['qualifier'].split(':') for q in product[2].split(':')):
+                    continue
+
             product=Product(product,qualifiers)
             manifest.write(product.manifest_entry())
 

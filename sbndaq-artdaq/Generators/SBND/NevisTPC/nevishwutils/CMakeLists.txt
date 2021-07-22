@@ -32,12 +32,12 @@ cet_make( LIBRARY_NAME sbndaq-artdaq_nevishwutils
 			 XMITModule.cpp
 			 XMITReader.cpp
                   LIBRARIES
-                        ${CETLIB}
-                        ${CETLIB_EXCEPT}
+                        cetlib
+                        cetlib_except
 			${WINDRIVERLIB}
-			${TRACE}
-			${FHICLCPP}
-                        ${MF_MESSAGELOGGER}
+			
+			fhiclcpp
+                        MF_MessageLogger
                         ${MF_UTILITIES}
 	)
 
