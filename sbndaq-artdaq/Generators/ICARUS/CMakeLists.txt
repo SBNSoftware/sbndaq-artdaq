@@ -1,4 +1,5 @@
 add_subdirectory(icarus-base)
+add_subdirectory(readout_linux)
 
 include_directories( ${CAENCOMM_INC} )
 #include_directories( ${CAENVME_INC} )

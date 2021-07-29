@@ -1,5 +1,6 @@
 add_subdirectory(GPS)
 add_subdirectory(Bern)
+add_subdirectory(BottomInterface)
 
 include_directories( ${CAENCOMM_INC} )
 include_directories( ${CAENVME_INC} )
@@ -276,3 +277,19 @@ simple_plugin(DummyGenerator "generator"
   ${CETLIB_EXCEPT}
   )
 
+simple_plugin(CRTFragGen "generator"
+  sbndaq-artdaq-core_Overlays
+  sbndaq-artdaq_Generators_Common_BottomInterface
+  artdaq_Application
+  artdaq_Generators 
+  artdaq_DAQdata
+  artdaq-core_Utilities
+  artdaq-core_Data
+  artdaq-utilities_Plugins
+  ${CANVAS_LIB_LIST}
+  ${FHICLCPP}
+  ${MF_MESSAGELOGGER}
+  ${MF_UTILITIES}
+  ${CETLIB}
+  ${CETLIB_EXCEPT}
+  )
