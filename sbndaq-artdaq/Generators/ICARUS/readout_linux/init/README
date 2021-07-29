@@ -1,0 +1,6 @@
+README for the init scripts
+
+To install, copy the script file to /etc/init.d/
+
+Then, add to the inittab file with option 'respawn':
+ov:234:respawn:/etc/init.d/OVreadout start

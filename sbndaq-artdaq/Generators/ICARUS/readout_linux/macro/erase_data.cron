@@ -1,0 +1,2 @@
+00 16 1,5,10,15,20,25 * * perl erase_data.pl
+00 16 4,9,14,19,24,30 * * perl erase_timing_data.pl
