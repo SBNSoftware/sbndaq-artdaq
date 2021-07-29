@@ -12,7 +12,7 @@ cmake_minimum_required (VERSION 3.16)
 
 find_package(cetbuildtools)
 
-project(sbndaq_artdaq VERSION 0.08.01)
+project(sbndaq_artdaq VERSION 0.08.02)
 
 
 string(FIND $ENV{MRB_QUALS} "icarus" ICARUS_FOUND)
