@@ -31,6 +31,11 @@ simple_plugin(ICARUSTriggerUDPDump "module"
               sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
 	      sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS)
 
+simple_plugin(ICARUSGateFilter "module" 
+				   ${ARTDAQ-CORE_UTILITIES}
+              sbndaq-artdaq-core_Overlays
+	      sbndaq-artdaq-core_Overlays_ICARUS)
+
 simple_plugin(PhysCrateWriteICARUSDataFile "module"
 							artdaq_core::artdaq-core_Utilities
               sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays

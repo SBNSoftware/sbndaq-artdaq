@@ -16,6 +16,10 @@
 #include <algorithm>
 #include "CAENDecoder.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
+
+#include "boost/date_time/microsec_time_clock.hpp"
+#include "boost/date_time/posix_time/posix_time.hpp"
+
 using namespace sbndaq;
 
 // constructor of the CAENV1730Readout. It wants the param set 
@@ -95,6 +99,10 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   TLOG_ARB(TCONFIG,TRACE_NAME) << "GetData worker thread setup." << TLOG_ENDL;
 
   TLOG(TCONFIG) << "Configuration complete with OK=" << fOK << TLOG_ENDL;
+
+
+  //epoch time
+  fTimeEpoch = boost::posix_time::ptime(boost::gregorian::date(1970,1,1));
 }
 
 void sbndaq::CAENV1730Readout::configureInterrupts() 
@@ -209,6 +217,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 
   fInterruptEnable = ps.get<uint8_t>("InterruptEnable",0); 
   TLOG(TINFO) << __func__ << ": InterruptEnable=" << fInterruptEnable;
+
+  fIRQTimeoutMS = ps.get<uint32_t>("IRQTimeoutMS",500);
+  TLOG(TINFO) << __func__ << ": IRQTimeoutMS=" << fIRQTimeoutMS;
 
   fSWTrigger = ps.get<bool>("SWTrigger"); //false
   TLOG(TINFO)<<__func__ << ": SWTrigger=" << fSWTrigger ;
@@ -856,8 +867,10 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
   sbndaq::CAENDecoder::checkError(retcode,"FreeReadoutBuffer",fBoardID);
 
   TLOG_ARB(TSTART,TRACE_NAME) << "Configuring Circular Buffer of size " << fCircularBufferSize << TLOG_ENDL;
-	fPoolBuffer.allocate(fBufferSize,fCircularBufferSize,true);
-	fPoolBuffer.debugInfo();
+  fPoolBuffer.allocate(fBufferSize,fCircularBufferSize,true);
+  fPoolBuffer.debugInfo();
+
+  fTimestampMap.clear();
 }
 
 void sbndaq::CAENV1730Readout::ConfigureTrigger()
@@ -1064,6 +1077,7 @@ void sbndaq::CAENV1730Readout::start()
 
   fEvCounter=0;
 
+  fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
   GetData_thread_->start();
 
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
@@ -1132,11 +1146,17 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
 
   TLOG(TGETDATA) << __func__<< ": Begin of readSingleWindowDataBlock()";
 
-  metricMan->sendMetric("Free DataBlocks",fPoolBuffer.freeBlockCount(),"fragments",1,artdaq::MetricMode::LastPoint);
-  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, 500);
+  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, fIRQTimeoutMS);
 
+  fTimePollEnd = boost::posix_time::microsec_clock::universal_time();
+  
+  fTimeDiffPollBegin = fTimePollBegin - fTimeEpoch;
+  fTimeDiffPollEnd = fTimePollEnd - fTimeEpoch;
+  
+  fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
+  
   if (retcode == CAEN_DGTZ_Timeout) {
-    TLOG(TGETDATA) << __func__ <<  ": Exiting after a timeout";
+    TLOG(TGETDATA) << __func__ <<  ": Exiting after a timeout. Poll time was " << (fTimeDiffPollEnd - fTimeDiffPollBegin).total_milliseconds() << " ms.";
     return true;
   }
   else if(retcode !=CAEN_DGTZ_Success) {
@@ -1147,6 +1167,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
 
   auto fragment_count=fGetNextFragmentBunchSize;
 
+  metricMan->sendMetric("Free DataBlocks",fPoolBuffer.freeBlockCount(),"fragments",1,artdaq::MetricMode::LastPoint);
   while (--fragment_count) {
     auto block =  fPoolBuffer.takeFreeBlock();
 
@@ -1199,23 +1220,57 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
                        << block->data_size << ", header=" << header_event_size;
     }
 
+    fMeanPollTime = fTimeDiffPollBegin.total_nanoseconds()/2 + fTimeDiffPollEnd.total_nanoseconds()/2;
+    fMeanPollTimeNS = fMeanPollTime%(1000000000);
+    fTTT=0;
+    fTTT_ns = -1;
 
-		auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
+    if(fUseTimeTagForTimeStamp){
+      fTTT = uint32_t{header->triggerTimeTag}; // 
+      fTTT_ns = fTTT*8;
+      
 
-		if( readoutwindow_trigger_counter_gap > 1u ){
-  	  TLOG (TLVL_ERROR) << __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
-      << readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
+      // Scheme borrowed from what Antoni developed for CRT.
+      // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
+      fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
+	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
+	- fTimeOffsetNanoSec;
+
+    }
+    else{
+      fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
+    }
+    fTimestampMap[uint32_t{header->eventCounter}] = fTS;
+
+    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+		   << ": Poll begin/end/mean/ns = " << fTimeDiffPollBegin.total_nanoseconds()
+		   << "/" << fTimeDiffPollEnd.total_nanoseconds() 
+		   << "/" << fMeanPollTime
+		   << "/" << fMeanPollTimeNS;
+    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+		   << ": TTT/TTT_ns/TS_ns = " << fTTT << "/" << fTTT_ns << "/" << fTS;
+    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
+
+
+    
+    auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
+        
+    if( readoutwindow_trigger_counter_gap > 1u ){
+      TLOG (TLVL_DEBUG) << __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
+			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
 			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
-		}
-
+    }
+    
     last_rcvd_rwcounter = uint32_t{header->eventCounter};
     fPoolBuffer.returnActiveBlock(block);
     
     TLOG(TGETDATA) << __func__ << ": CAEN_DGTZ_ReadData returned DataBlock header.eventCounter=" 
-			<< header->eventCounter << ", header.eventSize=" << header_event_size;
-		}
-
-    return true;
+		   << header->eventCounter << ", header.eventSize=" << header_event_size;
+  }
+  
+  return true;
 }
 
 // this is really the DAQ part where the server reads data from 
@@ -1273,48 +1328,67 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
     fragment_uptr->setSequenceID(readoutwindow_event_counter);
 
-    if(fUseTimeTagForTimeStamp){
-      const auto TTT = uint32_t {header->triggerTimeTag};
+    auto ts_count = fTimestampMap.count(readoutwindow_event_counter);
 
-      using namespace boost::gregorian;
-      using namespace boost::posix_time;
-      
-      ptime t_now(second_clock::universal_time());
-      ptime time_t_epoch(date(1970,1,1));
-      time_duration diff = t_now - time_t_epoch;
-      uint32_t t_offset_s = diff.total_seconds();
-      uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
-      uint64_t t_truetriggertime = t_offset_ticks + TTT;
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
-      
-      artdaq::Fragment::timestamp_t ts = (t_truetriggertime*8); //in 1ns ticks
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
-      fragment_uptr->setTimestamp( ts );
+    int ts_loop=0;
+
+    while(ts_loop<5 && fTimestampMap.count(readoutwindow_event_counter)==0){
+      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
+      ::usleep(200000);
+      ++ts_loop;
+    }
+
+    if(fTimestampMap.count(readoutwindow_event_counter)>0){
+      fragment_uptr->setTimestamp(fTimestampMap.at(readoutwindow_event_counter));
+      //fTimestampMap.erase(readoutwindow_event_counter);
     }
     else{
-      using namespace boost::gregorian;
-      using namespace boost::posix_time;
-      
-      ptime t_now(microsec_clock::universal_time());
-      ptime time_t_epoch(date(1970,1,1));
-      time_duration diff = t_now - time_t_epoch;
+      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+		       << " Will generate new one now...";
 
-      artdaq::Fragment::timestamp_t ts = diff.total_nanoseconds() - fTimeOffsetNanoSec;;
-
-      TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
-      fragment_uptr->setTimestamp( ts );
+      if(fUseTimeTagForTimeStamp){
+	const auto TTT = uint32_t {header->triggerTimeTag};
+	
+	using namespace boost::gregorian;
+	using namespace boost::posix_time;
+	
+	ptime t_now(second_clock::universal_time());
+	ptime time_t_epoch(date(1970,1,1));
+	time_duration diff = t_now - time_t_epoch;
+	uint32_t t_offset_s = diff.total_seconds();
+	uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+	uint64_t t_truetriggertime = t_offset_ticks + TTT;
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+	
+	artdaq::Fragment::timestamp_t ts = (t_truetriggertime*8); //in 1ns ticks
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
+	fragment_uptr->setTimestamp( ts );
+      }
+      else{
+	using namespace boost::gregorian;
+	using namespace boost::posix_time;
+	
+	ptime t_now(microsec_clock::universal_time());
+	ptime time_t_epoch(date(1970,1,1));
+	time_duration diff = t_now - time_t_epoch;
+	
+	artdaq::Fragment::timestamp_t ts = diff.total_nanoseconds() - fTimeOffsetNanoSec;;
+	
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts << TLOG_ENDL;
+	fragment_uptr->setTimestamp( ts );
+      }
     }
-
     auto readoutwindow_event_counter_gap= readoutwindow_event_counter - last_sent_rwcounter;
 
     TLOG(TMAKEFRAG)<<__func__ << ": Created fragment " << fFragmentID << " for event " << readoutwindow_event_counter
                    << " triggerTimeTag " << header->triggerTimeTag ;
 
-
+    
     if( readoutwindow_event_counter_gap > 1u ){
       if ( last_sent_rwcounter > 0 )
       {
-	TLOG (TLVL_ERROR) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
+	TLOG (TLVL_DEBUG) << __func__ << ": Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
                         << readoutwindow_event_counter_gap;
 	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
       }
@@ -1322,7 +1396,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     fragments.emplace_back(nullptr);
     std::swap(fragments.back(),fragment_uptr);
-
+    
     fEvCounter++;
     last_sent_rwcounter = readoutwindow_event_counter;
     delta = std::chrono::steady_clock::now()-start;
