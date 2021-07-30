@@ -258,6 +258,7 @@ namespace sbndaq
     //uint32_t event_size;	
     uint32_t n_readout_windows;
     uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
+    uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
     
     //functions
     void Configure();
@@ -274,6 +275,7 @@ namespace sbndaq
     void SetLockTempCalibration(bool onOff, uint32_t ch);
     CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
     CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+    void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
 
 
     bool WaitForTrigger();

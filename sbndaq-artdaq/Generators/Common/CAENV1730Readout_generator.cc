@@ -486,6 +486,20 @@ void sbndaq::CAENV1730Readout::ConfigureOthers(){
 }
 //Animesh & Aiwu add end
 
+void CAENV1730Readout::ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status)
+{
+
+  status = 0xdeadbeef;
+  uint32_t SPIBusyAddr = 0x1088 + (ch<<8);
+
+  auto ret = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &status);
+  
+  if(ret!=CAEN_DGTZ_Success)
+    TLOG(TLVL_WARNING) << __func__ << ": Failed reading busy status for channel " << ch;
+     
+}
+
+
 // Following SPI code is from CAEN
 CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value)
 {
@@ -1110,11 +1124,33 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
                                << ", Channel: " << ch
                                << ", temp: " << ch_temps[ch] << "  C"
                                << TLOG_ENDL;
-    std::ostringstream tempStream;
-    tempStream << "Card: " << fBoardID
-               << ", Channel: " << ch << " temp.";
-    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
-                          artdaq::MetricMode::Average, "CAENV1730");
+
+    {
+      std::ostringstream tempStream;
+      tempStream << "Card: " << fBoardID
+		 << ", Channel: " << ch << " temp.";
+      metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+			    artdaq::MetricMode::Average, "CAENV1730");
+    }
+    ReadChannelBusyStatus(fHandle,ch,&(ch_status[ch]));
+    TLOG_ARB(TSTATUS,TRACE_NAME) << "Card: " << fBoardID
+				 << ", Channel: " << ch
+				 << ", status: " 
+				 << std::hex << ch_status[ch]
+				 << std::dec << TLOG_ENDL;
+
+
+    if(ch_status[ch]==0xdeadbeef){
+      TLOG(TLVL_WARNING) << __func__ << ": Failed reading busy status for channel " << ch;
+    }
+    else{
+      std::ostringstream tempStream;
+      tempStream << "Card" << fBoardID
+		 << ".Channel" << ch << ".Status";
+      metricMan->sendMetric(tempStream.str(), int(ch_status[ch]), "", 1,
+			    artdaq::MetricMode::LastPoint, "CAENV1730");
+    }
+
   }
 
   return true;
@@ -1414,7 +1450,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
 
-  checkHWStatus_();
+  //checkHWStatus_();
 
   TLOG(TGETNEXT) << __func__<< ": End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 
