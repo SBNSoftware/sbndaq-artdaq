@@ -43,6 +43,7 @@ namespace sbndaq
   private:
     bool readSingleWindowFragments(artdaq::FragmentPtrs &);
     bool readSingleWindowDataBlock();
+    bool readWindowDataBlocks();
 	
     bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
 		
@@ -254,6 +255,7 @@ namespace sbndaq
     uint32_t fEvCounter; // set to zero at the beginning
     uint32_t last_rcvd_rwcounter;
     uint32_t last_sent_rwcounter;
+    uint32_t last_sent_ts;
     uint32_t total_data_size;
     //uint32_t event_size;	
     uint32_t n_readout_windows;
