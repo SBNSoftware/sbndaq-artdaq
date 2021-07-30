@@ -1132,7 +1132,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
       metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
 			    artdaq::MetricMode::Average, "CAENV1730");
     }
-    ReadChannelBusyStatus(fHandle,ch,&(ch_status[ch]));
+    ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
     TLOG_ARB(TSTATUS,TRACE_NAME) << "Card: " << fBoardID
 				 << ", Channel: " << ch
 				 << ", status: " 
