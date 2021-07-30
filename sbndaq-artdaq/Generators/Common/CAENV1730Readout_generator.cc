@@ -1120,36 +1120,54 @@ void sbndaq::CAENV1730Readout::stop()
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
   for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
+
+    std::ostringstream tempStream;
+    tempStream << "CAENV1730.Card" << fBoardID
+		  << ".Channel" << ch << ".Temp"; 
+    std::ostringstream statStream;
+    statStream << "CAENV1730.Card" << fBoardID
+		  << ".Channel" << ch << ".Status"; 
+    std::ostringstream memfullStream;
+    memfullStream << "CAENV1730.Card" << fBoardID
+		  << ".Channel" << ch << ".MemoryFull"; 
+   
+
     CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
-    TLOG_ARB(TTEMP,TRACE_NAME) << "Card: " << fBoardID
-                               << ", Channel: " << ch
-                               << ", temp: " << ch_temps[ch] << "  C"
+    TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
+                               << ": " << ch_temps[ch] << "  C"
                                << TLOG_ENDL;
 
-    {
-      std::ostringstream tempStream;
-      tempStream << "Card: " << fBoardID
-		 << ", Channel: " << ch << " temp.";
-      metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
-			    artdaq::MetricMode::Average, "CAENV1730");
-    }
+    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+			  artdaq::MetricMode::Average);
+
+
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
-    TLOG_ARB(TSTATUS,TRACE_NAME) << "Card: " << fBoardID
-				 << ", Channel: " << ch
-				 << ", status: " 
-				 << std::hex << ch_status[ch]
-				 << std::dec << TLOG_ENDL;
+    TLOG_ARB(TTEMP,TRACE_NAME) << statStream.str()
+			       << std::hex
+                               << ": 0x" << ch_status[ch]
+			       << std::dec << TLOG_ENDL;
 
 
     if(ch_status[ch]==0xdeadbeef){
       TLOG(TLVL_WARNING) << __func__ << ": Failed reading busy status for channel " << ch;
     }
     else{
-      std::ostringstream tempStream;
-      tempStream << "Card" << fBoardID
-		 << ".Channel" << ch << ".Status";
-      metricMan->sendMetric(tempStream.str(), int(ch_status[ch]), "", 1,
-			    artdaq::MetricMode::LastPoint, "CAENV1730");
+      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 1,
+			    artdaq::MetricMode::LastPoint);
+
+      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 1,
+			    artdaq::MetricMode::LastPoint);
+
+      /*
+      metricMan->sendMetric("MemoryEmpty", int((ch_status[ch] & 0x2)>>1), "", 1,
+			    artdaq::MetricMode::LastPoint,tempStream.str());
+
+      metricMan->sendMetric("DACBusy", int((ch_status[ch] & 0x4)>>2), "", 1,
+			    artdaq::MetricMode::LastPoint,tempStream.str());
+
+      metricMan->sendMetric("ADCPowerDown", int((ch_status[ch] & 0x100)>>8), "", 1,
+			    artdaq::MetricMode::LastPoint,tempStream.str());
+      */
     }
 
   }
