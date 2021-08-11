@@ -21,11 +21,13 @@ function publishscisoft(){
 -q s109-e19 \
 -q s110-e19 \
 -q s111-e19 \
+-q s112-e19 \
 -q s106-e20 \
 -q s108-e20 \
 -q s109-e20 \
 -q s110-e20 \
 -q s111-e20 \
+-q s112-e20 \
  sbndaq_artdaq-build
 
 

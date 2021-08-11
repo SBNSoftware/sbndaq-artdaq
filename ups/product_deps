@@ -1,7 +1,7 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
 parent sbndaq_artdaq
-defaultqual     e19:s110
+defaultqual     e19:s112
 
 # These optional lines define the installed directories where
 # headers, libraries, and executables will be found
@@ -28,6 +28,7 @@ pqxx                  v6_2_5e     s108
 pqxx                  v6_2_5e     s109
 pqxx                  v6_2_5d     s110
 pqxx                  v6_2_5e     s111
+pqxx                  v6_2_5e     s112
 epics                 v3_16_2a
 zmq                   v4_3_1
 jsoncpp               v1_7_7e
@@ -103,6 +104,18 @@ e20:prof:s111:icarus        e20:s111:prof        e20:prof:s111         -nq-    -
 e20:debug:s111:icarus       e20:s111:debug       e20:debug:s111        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
 e20:prof:s111:sbnd          e20:s111:prof        e20:prof:s111         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s111   prof      prof
 e20:debug:s111:sbnd         e20:s111:debug       e20:debug:s111        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s111  debug     debug
+e19:prof:s112               e19:s112:prof        e19:prof:s112         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   e19:prof:s112   prof      prof
+e19:debug:s112              e19:s112:debug       e19:debug:s112        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  e19:debug:s112  debug     debug
+e19:prof:s112:icarus        e19:s112:prof        e19:prof:s112         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   -              -          prof
+e19:debug:s112:icarus       e19:s112:debug       e19:debug:s112        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  -              -          debug
+e19:prof:s112:sbnd          e19:s112:prof        e19:prof:s112         -nq-    -nq-     -nq-          e19:p392:prof     e19    e19   e19:prof   e19:prof:s112   prof      prof
+e19:debug:s112:sbnd         e19:s112:debug       e19:debug:s112        -nq-    -nq-     -nq-          e19:p392:debug    e19    e19   e19:debug  e19:debug:s112  debug     debug
+e20:prof:s112               e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s112   prof      prof
+e20:debug:s112              e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s112  debug     debug
+e20:prof:s112:icarus        e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   -              -          prof
+e20:debug:s112:icarus       e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
+e20:prof:s112:sbnd          e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s112   prof      prof
+e20:debug:s112:sbnd         e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s112  debug     debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
