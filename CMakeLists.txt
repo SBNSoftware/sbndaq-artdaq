@@ -12,7 +12,7 @@ cmake_minimum_required (VERSION 3.17)
 
 find_package(cetbuildtools)
 
-project(sbndaq_artdaq VERSION 0.08.02)
+project(sbndaq_artdaq VERSION 0.08.03)
 
 
 string(FIND $ENV{MRB_QUALS} "icarus" ICARUS_FOUND)
@@ -77,9 +77,9 @@ endif()
 cet_report_compiler_flags()
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v3_10_02 )
-find_ups_product( artdaq_utilities v1_06_02)
-find_ups_product( artdaq_core v3_07_03 )
+find_ups_product( artdaq v3_10_03 )
+find_ups_product( artdaq_utilities v1_06_03)
+find_ups_product( artdaq_core v3_07_05 )
 find_ups_product( canvas v3_12_01 )
 find_ups_product( art v3_05_01 )
 find_ups_product( art_root_io v1_08_00 )
@@ -95,7 +95,7 @@ find_ups_boost( v1_73_0 filesystem
  )
 find_ups_product( pqxx v6_2_5a )
 
-find_ups_product( cetbuildtools v2_18_03 )
+find_ups_product( cetbuildtools v8_13_04 )
 
 find_ups_product( sqlite v3_34_01_00)
 find_ups_product( libxml2 )
@@ -104,7 +104,7 @@ find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
-find_ups_product( sbndaq_artdaq_core v0_08_01 )
+find_ups_product( sbndaq_artdaq_core v0_08_02 )
 
 find_ups_product (jsoncpp v1_7_7c) 
 
