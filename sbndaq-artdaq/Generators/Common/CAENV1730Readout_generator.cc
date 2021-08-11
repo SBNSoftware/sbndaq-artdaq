@@ -256,6 +256,10 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
+  fMaxEventsPerTransfer = ps.get<uint32_t>("maxEventsPerTransfer",1);
+  TLOG(TINFO) <<__func__ <<": fMaxEventsPerTransfer=" << fMaxEventsPerTransfer;
+
+
   //Animesh & Aiwu add - for LVDS logic settings
   fLVDSLogicValueG1 = ps.get<uint32_t>("LVDSLogicValueG1"); // LVDS logic value for G1
   TLOG(TINFO)<<__func__ << ": LVDSLogicValueG1=" << fLVDSLogicValueG1;
@@ -869,6 +873,10 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
 
   CAEN_DGTZ_ErrorCode retcode;
 
+  //
+  retcode = CAEN_DGTZ_SetMaxNumEventsBLT(fHandle,fMaxEventsPerTransfer);
+  sbndaq::CAENDecoder::checkError(retcode,"SetMaxNumEventsBLT",fBoardID);
+
   //we do this shenanigans so we can get the BufferSize. We then allocate our own...
   char* myBuffer=NULL;
   retcode = CAEN_DGTZ_MallocReadoutBuffer(fHandle,&myBuffer,&fBufferSize);
@@ -1199,12 +1207,14 @@ bool sbndaq::CAENV1730Readout::GetData() {
 bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
   if(fail_GetNext) {
-    TLOG(TLVL_ERROR) << __func__ << " : Not calling CAEN_DGTZ_ReadData due a previous critical error...";
+    TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		     << __func__ << " : Not calling CAEN_DGTZ_ReadData due a previous critical error...";
     ::usleep(50000);
     return false;
   }
 
-  TLOG(TGETDATA) << __func__<< ": Begin of readSingleWindowDataBlock()";
+  TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"    
+		 << __func__<< ": Begin.";
 
   //wait for one event, then interrupt
   CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, fIRQTimeoutMS);
@@ -1215,7 +1225,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     //end of this poll
     fTimePollEnd = boost::posix_time::microsec_clock::universal_time();
     
-    TLOG(TGETDATA) << __func__ <<  ": Exiting after a timeout. Poll time was " 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ <<  ": Exiting after a timeout. Poll time was " 
 		   << (fTimePollEnd - fTimePollBegin).total_milliseconds() << " ms.";
     
     //update the polling time for the next poll
@@ -1225,11 +1236,22 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     return true;
   }
 
+  TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		 << __func__<< ": No timeout. TimePollBegin=" 
+		 << fTimePollBegin << " TimePollEnd=" << fTimePollEnd;
+
   uint32_t read_data_size = 1;
+  size_t n_reads=0;
 
   //gianluca won't let me do a do while
   //we want to do ReadData until there is no more data to read
+
+  TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		 << __func__ << "Start while loop read. " << read_data_size; 
   while(read_data_size!=0){
+
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << "Last read data size was " << read_data_size; 
 
     //reset read_data_size to 0, just in case
     read_data_size = 0;
@@ -1237,21 +1259,27 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     //get a block of data from the PoolBuffer. Hopefully doesn't take very long.
     auto block =  fPoolBuffer.takeFreeBlock();
     if(!block) {
-      TLOG(TLVL_ERROR) << __func__ <<": PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
-      TLOG(TLVL_ERROR) << __func__ <<": PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
-                       <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
-      TLOG(TLVL_ERROR) << __func__ <<": Critical error; aborting boardreader process....";				
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       << __func__ <<": PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       << __func__ <<": PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
+                       << "(FragID=" << fFragmentID << ")"
+		       <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       << __func__ <<": Critical error; aborting boardreader process....";				
 
       fail_GetNext = true;
 
       std::this_thread::yield();
       return false;
     }
-    TLOG(TGETDATA) << __func__ << ": Got a free DataBlock from PoolBuffer";
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << ": Got a free DataBlock from PoolBuffer";
 
 
     //call ReadData
-    TLOG(TGETDATA) << __func__ << ": Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << ": Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
                    << ",&block.size="<<(void*)&(block->size) << ")";
 
     retcode = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
@@ -1261,9 +1289,14 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
+
+    ++n_reads;
     
     block->verify_redzone();
     block->data_size= read_data_size;
+
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << "This read data size was " << read_data_size; 
 
     //check to make sure no errors on readout.
     if (retcode !=CAEN_DGTZ_Success) {
@@ -1274,15 +1307,30 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     }
 
     fTimePollEnd = boost::posix_time::microsec_clock::universal_time();
-    TLOG(TGETDATA) << __func__ <<  ": CAEN_DGTZ_ReadData complete with returned data size " << block->data_size
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ <<  ": CAEN_DGTZ_ReadData complete with returned data size " << block->data_size
                    << " retcod=" << int{retcode};
 
 
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(block->begin);
+    
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ 
+		   << ": PMT_EVENT_COUNTER=" << header->eventCounter
+		   << ", PMT_EVENT_SIZE=" << header->eventSize
+		   << ", PMT_TIME_TAG=" << header->triggerTimeTag;
+
     const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
     if(block->data_size != header_event_size ) {
-      TLOG(TLVL_ERROR)<<__func__ << ": Wrong event size; returned="
-                       << block->data_size << ", header=" << header_event_size;
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       <<__func__ << ": Wrong event size; returned="
+                       << block->data_size << ", header=" << header_event_size
+		       << ". PMT_EVENT_COUNTER=" << header->eventCounter
+		       << ", PMT_EVENT_SIZE=" << header->eventSize
+		       << ", PMT_TIME_TAG=" << header->triggerTimeTag 
+		       << ". DROPPING THIS FRAGMENT.";
+      fPoolBuffer.returnFreeBlock(block);
+      break;
     }
 
     //do all the timestamp assignment
@@ -1313,21 +1361,25 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     fTimestampMap[uint32_t{header->eventCounter}] = fTS;
 
     //print out timestamping info
-    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << "TIMESTAMP " << fFragmentID 
 		   << ": Poll begin/end/mean/ns = " << fTimeDiffPollBegin.total_nanoseconds()
 		   << "/" << fTimeDiffPollEnd.total_nanoseconds() 
 		   << "/" << fMeanPollTime
 		   << "/" << fMeanPollTimeNS;
-    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << "TIMESTAMP " << fFragmentID 
 		   << ": TTT/TTT_ns/TS_ns = " << fTTT << "/" << fTTT_ns << "/" << fTS;
-    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << "TIMESTAMP " << fFragmentID 
 		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
 
 
     //check trigger counter gaps
     auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
     if( readoutwindow_trigger_counter_gap > 1u ){
-      TLOG (TLVL_DEBUG) << __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
+      TLOG (TLVL_DEBUG) << "(FragID=" << fFragmentID << ")"
+			<< __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
 			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
 			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
     }    
@@ -1336,12 +1388,15 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     //return active block
     fPoolBuffer.returnActiveBlock(block);
     
-    TLOG(TGETDATA) << __func__ << ": CAEN_DGTZ_ReadData returned DataBlock header.eventCounter=" 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << ": CAEN_DGTZ_ReadData returned DataBlock header.eventCounter=" 
 		   << header->eventCounter << ", header.eventSize=" << header_event_size;
 
   }//end while read_data_size is not zero
 
-
+  TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		 << __func__ << ": n_reads=" << n_reads; 
+  
   //update the polling time for the next poll
   fTimePollBegin = fTimePollEnd;
 
@@ -1351,13 +1406,15 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
 //old single block code ... probably should not be used anymore
 bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
+
   if(fail_GetNext) {
-    TLOG(TLVL_ERROR) << __func__ << " : Not calling CAEN_DGTZ_ReadData due a previous critical error...";
+    TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		     << __func__ << " : Not calling CAEN_DGTZ_ReadData due a previous critical error...";
     ::usleep(50000);
     return false;
   }
 
-  TLOG(TGETDATA) << __func__<< ": Begin of readSingleWindowDataBlock()";
+  TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")" << __func__<< ": Begin of readSingleWindowDataBlock()";
 
   CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, fIRQTimeoutMS);
 
@@ -1369,12 +1426,14 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
   fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
   
   if (retcode == CAEN_DGTZ_Timeout) {
-    TLOG(TGETDATA) << __func__ <<  ": Exiting after a timeout. Poll time was " 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ <<  ": Exiting after a timeout. Poll time was " 
 		   << (fTimeDiffPollEnd - fTimeDiffPollBegin).total_milliseconds() << " ms.";
     return true;
   }
   else if(retcode !=CAEN_DGTZ_Success) {
-    TLOG(TLVL_ERROR) << __func__ << ": CAEN_DGTZ_IRQWait returned non zero return code; return code=" << int{retcode};
+    TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		     << __func__ << ": CAEN_DGTZ_IRQWait returned non zero return code; return code=" << int{retcode};
     std::this_thread::yield();
     return false;
   }
@@ -1386,10 +1445,14 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
     auto block =  fPoolBuffer.takeFreeBlock();
 
     if(!block) {
-      TLOG(TLVL_ERROR) << __func__ <<": PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
-      TLOG(TLVL_ERROR) << __func__ <<": PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
-                       <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
-      TLOG(TLVL_ERROR) << __func__ <<": Critical error; aborting boardreader process....";				
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       << __func__ <<": PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       << __func__ <<": PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
+                       << "(FragID=" << fFragmentID << ")"
+		       <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       << __func__ <<": Critical error; aborting boardreader process....";				
 
       fail_GetNext = true;
 
@@ -1397,11 +1460,13 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
       return false;
     }
 
-    TLOG(TGETDATA) << __func__ << ": Got a free DataBlock from PoolBuffer";
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << ": Got a free DataBlock from PoolBuffer";
 
     uint32_t read_data_size =0;
 
-    TLOG(TGETDATA) << __func__ << ": Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << ": Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
                    << ",&block.size="<<(void*)&(block->size) << ")";
 
     retcode = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
@@ -1411,17 +1476,20 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
     block->data_size= read_data_size;
 
     if (retcode !=CAEN_DGTZ_Success) {
-        TLOG(TLVL_ERROR) << __func__ << ": CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
+        TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+			 << __func__ << ": CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
         fPoolBuffer.returnFreeBlock(block);
 				std::this_thread::yield();
         return false;
     }
 
-    TLOG(TGETDATA) << __func__ <<  ": CAEN_DGTZ_ReadData complete with returned data size " << block->data_size
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ <<  ": CAEN_DGTZ_ReadData complete with returned data size " << block->data_size
                    << " retcod=" << int{retcode};
 
     if (block->data_size == 0) { 
-      TLOG(TGETDATA)<< __func__ << ": CAEN_DGTZ_ReadData returned zero data size";
+      TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		     << __func__ << ": CAEN_DGTZ_ReadData returned zero data size";
       fPoolBuffer.returnFreeBlock(block);
 			std::this_thread::yield();
       return false;
@@ -1429,8 +1497,16 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
 
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(block->begin);
     const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
+
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ 
+		   << ": PMT_EVENT_COUNTER=" << header->eventCounter
+		   << ", PMT_EVENT_SIZE=" << header->eventSize
+		   << ", PMT_TIME_TAG=" << header->triggerTimeTag;
+
     if(block->data_size != header_event_size ) {
-      TLOG(TLVL_ERROR)<<__func__ << ": Wrong event size; returned="
+      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
+		       <<__func__ << ": Wrong event size; returned="
                        << block->data_size << ", header=" << header_event_size;
     }
 
@@ -1457,14 +1533,18 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
     }
     fTimestampMap[uint32_t{header->eventCounter}] = fTS;
 
-    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ 
+		   << "TIMESTAMP " <<  fFragmentID 
 		   << ": Poll begin/end/mean/ns = " << fTimeDiffPollBegin.total_nanoseconds()
 		   << "/" << fTimeDiffPollEnd.total_nanoseconds() 
 		   << "/" << fMeanPollTime
 		   << "/" << fMeanPollTimeNS;
-    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << "TIMESTAMP " << fFragmentID 
 		   << ": TTT/TTT_ns/TS_ns = " << fTTT << "/" << fTTT_ns << "/" << fTS;
-    TLOG(TGETDATA) << "TIMESTAMP " << fFragmentID 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << "TIMESTAMP " << fFragmentID 
 		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
 
 
@@ -1472,7 +1552,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
     auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
         
     if( readoutwindow_trigger_counter_gap > 1u ){
-      TLOG (TLVL_DEBUG) << __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
+      TLOG (TLVL_DEBUG) << "(FragID=" << fFragmentID << ")"
+			<< __func__ << " : Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
 			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
 			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
     }
@@ -1480,7 +1561,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
     last_rcvd_rwcounter = uint32_t{header->eventCounter};
     fPoolBuffer.returnActiveBlock(block);
     
-    TLOG(TGETDATA) << __func__ << ": CAEN_DGTZ_ReadData returned DataBlock header.eventCounter=" 
+    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
+		   << __func__ << ": CAEN_DGTZ_ReadData returned DataBlock header.eventCounter=" 
 		   << header->eventCounter << ", header.eventSize=" << header_event_size;
   }
   

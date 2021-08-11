@@ -180,6 +180,7 @@ namespace sbndaq
     uint32_t fIRQTimeoutMS;
     uint32_t fGetNextSleep;
     uint32_t fGetNextFragmentBunchSize;
+    uint32_t fMaxEventsPerTransfer;
     bool     fSWTrigger;
     uint32_t fSelfTriggerMode;
     uint32_t fSelfTriggerMask;
