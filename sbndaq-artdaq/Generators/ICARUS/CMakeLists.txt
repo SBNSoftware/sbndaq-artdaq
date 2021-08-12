@@ -1,13 +1,7 @@
 add_subdirectory(icarus-base)
 
-include_directories( ${CAENCOMM_INC} )
-#include_directories( ${CAENVME_INC} )
-#include_directories( ${CAENDIGITIZER_INC} )
-
-#cet_find_library( CAENDIGITIZER    NAMES CAENDigitizer    PATHS ENV CAENDIGITIZER_LIB   NO_DEFAULT_PATH )
-#cet_find_library( CAEN_VME         NAMES CAENVME          PATHS ENV CAENVME_LIB         NO_DEFAULT_PATH )
-cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB        NO_DEFAULT_PATH )
-
+link_directories($ENV{CAENCOMM_LIB})
+link_directories($ENV{REDIS_LIB})
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 		  SOURCE PhysCrate_GeneratorBase.cc
@@ -42,13 +36,13 @@ simple_plugin(PhysCrateData "generator"
   artdaq_DAQdata
   artdaq_core::artdaq-core_Utilities
   artdaq_core::artdaq-core_Data
-  ${REDIS}
+  hiredis
   ${Boost_SYSTEM_LIBRARY}
   fhiclcpp
   MF_MessageLogger
   cetlib
   cetlib_except
-  ${CAENCOMM}
+  CAENComm
   )
 
 # simple_plugin(PhysCrateFakeData "generator"

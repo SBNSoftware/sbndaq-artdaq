@@ -113,20 +113,6 @@ find_ups_product (TRACE v3_17_01)
 find_ups_product( zmq v4_3_1 ) 
 find_ups_product( redis v5_0_5 )
 
-#include CAEN directories...
-include_directories($ENV{CAENCOMM_INC})
-link_directories($ENV{CAENCOMM_LIB})
-
-
-#define redis lib
-cet_find_library( REDIS         NAMES hiredis         PATHS ENV REDIS_LIB        NO_DEFAULT_PATH )
-
-
-#experiment specific products needed
-IF(ICARUS_BUILD)
-  #find_ups_product( icarus_artdaq_base v0_09_00 )
-ENDIF()
-
 IF(SBND_BUILD)
   find_ups_product( libxml2 v2_9_9 )
 ENDIF()

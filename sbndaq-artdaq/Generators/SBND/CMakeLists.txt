@@ -9,18 +9,7 @@ include_directories(../../../../wibtools/WIB/include)
 include_directories(../../../../wibtools/MBB/include)
 include_directories(../../../../wibtools/exception/include)
 
-include_directories($ENV{JSONCPP_INC})
-include_directories($ENV{TRACE_INC})
-include_directories($ENV{WIBTOOLS_INC})
-include_directories(./TriggerBoard)
-
-#cet_find_library( WIBTOOLS_WIB    NAMES WIB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
-#cet_find_library( WIBTOOLS_MBB    NAMES MBB           PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
-#cet_find_library( WIBEXCEPTION    NAMES ToolException PATHS ENV WIBTOOLS_LIB   NO_DEFAULT_PATH )
-
-#MESSAGE (STATUS "************* WIBTOOLS_WIB=${WIBTOOLS_WIB}<")
-#MESSAGE (STATUS "************* WIBTOOLS_MBB=${WIBTOOLS_MBB}<")
-#MESSAGE (STATUS "************* WIBEXCEPTION=${WIBEXCEPTION}<")
+link_directories($ENV{JSONCPP_LIB})
 
 simple_plugin(TriggerBoardReader "generator"
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
@@ -35,12 +24,11 @@ simple_plugin(TriggerBoardReader "generator"
   artdaq_core::artdaq-core_Utilities
   art_Utilities
   canvas
-  
   fhiclcpp
   MF_MessageLogger
   cetlib
   cetlib_except
-  $ENV{JSONCPP_LIB}/libjsoncpp.so
+  jsoncpp
   )
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_WIBReader
@@ -77,7 +65,6 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Generators_SBND_MBBReader
 			fhiclcpp
 			MF_MessageLogger
 			${MF_UTILITIES}
-			
 			cetlib
 			cetlib_except
 )
@@ -98,7 +85,6 @@ simple_plugin(WIBReader "generator"
 	wibtools::ToolException
   art_Utilities
   canvas
-  
   fhiclcpp
   MF_MessageLogger
   cetlib
@@ -120,7 +106,6 @@ simple_plugin(MBBReader "generator"
 	wibtools::ToolException
   art_Utilities
   canvas
-  
   fhiclcpp
   MF_MessageLogger
   cetlib

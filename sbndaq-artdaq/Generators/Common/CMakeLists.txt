@@ -1,17 +1,12 @@
 add_subdirectory(GPS)
 add_subdirectory(Bern)
 
-include_directories( ${CAENCOMM_INC} )
-include_directories( ${CAENVME_INC} )
-include_directories( ${CAENDIGITIZER_INC} )
-include_directories( ${ARTDAQ_INC} )
 include_directories( ./GPS )
 
-#cet_add_compiler_flags(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
+link_directories($ENV{CAENCOMM_LIB})
+link_directories($ENV{CAENVME_LIB})
+link_directories($ENV{CAENDIGITIZER_LIB})
 
-cet_find_library( CAENDIGITIZER    NAMES CAENDigitizer    PATHS ENV CAENDIGITIZER_LIB   NO_DEFAULT_PATH )
-cet_find_library( CAEN_VME         NAMES CAENVME          PATHS ENV CAENVME_LIB         NO_DEFAULT_PATH )
-cet_find_library( CAENCOMM         NAMES CAENComm         PATHS ENV CAENCOMM_LIB        NO_DEFAULT_PATH )
 
 art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		  SOURCE workerThread.cpp 
@@ -21,7 +16,6 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		  pthread
 		  artdaq_DAQdata
 		  ${MF_UTILITIES}
-		  
 		  MF_MessageLogger
 		  ${Boost_SYSTEM_LIBRARY}
 		)
@@ -29,41 +23,39 @@ art_make_library( LIBRARY_NAME sbndaq-artdaq_Common_Utilities
 		  
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_CAENV1730_GeneratorBase
 		  SOURCE CAENDecoder.cc
-			 CAENConfiguration.cc
-			 CAENException.cc
+			CAENConfiguration.cc
+			CAENException.cc
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq_core::artdaq-core_Utilities
-  			sbndaq-artdaq_Common_Utilities
+ 			artdaq_core::artdaq-core_Utilities
+ 			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			art_Utilities
 			fhiclcpp
 			MF_MessageLogger
 			${MF_UTILITIES}
-			
 			cetlib
 			cetlib_except
-			${CAENVME}
-			${CAENCOMM}
-			${CAENDIGITIZER}
+			CAENComm
+			CAENVME
+			CAENDigitizer
 )
 
 cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_SpectraTime_GeneratorBase
-                  SOURCE  SpectraTimeReadout_generator.cc
-                          GPS/GPSInfo.cc
+      SOURCE  SpectraTimeReadout_generator.cc
+      GPS/GPSInfo.cc
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq_core::artdaq-core_Utilities
-                        artdaq_core::artdaq-core_Data
-  			sbndaq-artdaq_Common_Utilities
+ 			artdaq_core::artdaq-core_Utilities
+      artdaq_core::artdaq-core_Data
+  		sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			art_Utilities
 			fhiclcpp
 			MF_MessageLogger
 			${MF_UTILITIES}
-			
 			cetlib
 			cetlib_except
 )
@@ -74,15 +66,14 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
 		  LIBRARIES
 			artdaq_DAQdata
 			artdaq_Generators
-  			artdaq_core::artdaq-core_Utilities
-                        artdaq_core::artdaq-core_Data
-  			sbndaq-artdaq_Common_Utilities
+ 			artdaq_core::artdaq-core_Utilities
+      artdaq_core::artdaq-core_Data
+ 			sbndaq-artdaq_Common_Utilities
 			${Boost_SYSTEM_LIBRARY}
 			art_Utilities
 			fhiclcpp
 			MF_MessageLogger
 			${MF_UTILITIES}
-			
 			cetlib
 			cetlib_except
 )
@@ -106,9 +97,9 @@ simple_plugin(CAENV1730Readout "generator"
   ${MF_UTILITIES}
   cetlib
   cetlib_except
-  ${CAENDIGITIZER}
-  ${CAEN_VME}
-  ${CAENCOMM}
+  CAENComm
+  CAENVME
+  CAENDigitizer
   )
 
 simple_plugin(SpectraTimeReadout "generator"
