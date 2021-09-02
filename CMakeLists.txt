@@ -12,7 +12,7 @@ cmake_minimum_required (VERSION 3.17)
 
 find_package(cetbuildtools)
 
-project(sbndaq_artdaq VERSION 0.08.03)
+project(sbndaq_artdaq VERSION 0.08.04)
 
 
 string(FIND $ENV{MRB_QUALS} "icarus" ICARUS_FOUND)
@@ -43,7 +43,7 @@ IF (NOT CETBUILDTOOLS_VERSION)
     MESSAGE (FATAL_ERROR "ERROR: setup cetbuildtools to get the cmake modules")
 ENDIF()
 
-set(CMAKE_MODULE_PATH 
+set(CMAKE_MODULE_PATH
         $ENV{ART_DIR}/Modules
         $ENV{CETBUILDTOOLS_DIR}/Modules
         ${CMAKE_MODULE_PATH})
@@ -99,18 +99,18 @@ find_ups_product( cetbuildtools v8_13_04 )
 
 find_ups_product( sqlite v3_34_01_00)
 find_ups_product( libxml2 )
- 
+
 find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
 find_ups_product( sbndaq_artdaq_core v0_08_02 )
 
-find_ups_product (jsoncpp v1_7_7c) 
+find_ups_product (jsoncpp v1_7_7c)
 
 find_ups_product (TRACE v3_17_01)
 
-find_ups_product( zmq v4_3_1 ) 
+find_ups_product( zmq v4_3_1 )
 find_ups_product( redis v5_0_5 )
 
 IF(SBND_BUILD)
