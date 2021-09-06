@@ -40,7 +40,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
   
-  configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  configsocket_ = socket(AF_INET, SOCK_DGRAM, 0);
   if (configsocket_ < 0)
     {
       throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
@@ -273,7 +273,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_); //comment out for fake trigger tests
+  if(send_TTLK_INIT(n_init_timeout_ms_) < 0) //comment out for fake trigger tests
+     TLOG(TLVL_ERROR) << "Did not receive response from SPEXI!" << "\n";
   //send_TRIG_ALLW();
 }
 void sbndaq::ICARUSTriggerUDP::stop()
@@ -290,7 +291,7 @@ void sbndaq::ICARUSTriggerUDP::resume()
 }
 
 //send a command
-void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
+void sbndaq::ICARUSTriggerUDP::sendUDP(const Command_t cmd)
 {  
   TLOG(TLVL_DEBUG + 10) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
 
@@ -365,16 +366,34 @@ int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_i
   return size_rcv;
 }
 
+int sbndaq::ICARUSTriggerUDP::readTCP(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
+  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  socklen_t slen = sizeof(si); 
+  int size_rcv = recv(socket, buffer, size, 0); //for TCP/IP stuff
 
-int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
+  if(size_rcv<0)
+    TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
+  else
+    TLOG(TLVL_DEBUG) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
+
+  return size_rcv;
+}
+
+
+int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int sleep_time_ms)
 {
-  while(retries>-1){
-  
+  // while(retries>-1){
+  socklen_t configlen = sizeof((struct sockaddr_in&) si_config_);
+  if(listen(configsocket_, 1) >= 0)
+    accept(configsocket_, (struct sockaddr *) &si_config_, &configlen);
+  else
+    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";
   char cmd[16];
   sprintf(cmd,"%s","TTLK_CMD_INIT");
 
   TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
-  sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+  //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+  send(configsocket_,&cmd,16, 0);
 
   TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
   //send(TTLK_INIT);
@@ -383,27 +402,27 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
     //uint16_t buffer[size_bytes/2+1];
     //char bufferinit[size_bytes];
     buffer[size_bytes+1] = {'\0'};
-    read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
+    readTCP(configsocket_,ip_config_,si_config_,size_bytes,buffer);
     TLOG(TLVL_DEBUG) << "received:: " << buffer;
-    return retries;
+    return 0;
   }
   
-  retries--;
-  }
+  //retries--;
+  //}
   
-  return retries;
+  return -1;
   
 }
 
 //no need for confirmation on these...
 void sbndaq::ICARUSTriggerUDP::send_TRIG_VETO()
 {
-  send(TRIG_VETO);
+  sendUDP(TRIG_VETO);
 }
 
 void sbndaq::ICARUSTriggerUDP::send_TRIG_ALLW()
 {
-  send(TRIG_ALLW);
+  sendUDP(TRIG_ALLW);
 }
 
 // The following macro is defined in artdaq's GeneratorMacros.hh header
