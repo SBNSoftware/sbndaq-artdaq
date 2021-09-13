@@ -40,7 +40,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
   
-  configsocket_ = socket(AF_INET, SOCK_DGRAM, 0);
+  configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (configsocket_ < 0)
     {
       throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
@@ -273,7 +273,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  if(send_TTLK_INIT(n_init_timeout_ms_) < 0) //comment out for fake trigger tests
+  if(send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
      TLOG(TLVL_ERROR) << "Did not receive response from SPEXI!" << "\n";
   //send_TRIG_ALLW();
 }
@@ -380,38 +380,48 @@ int sbndaq::ICARUSTriggerUDP::readTCP(int socket, std::string ip, struct sockadd
 }
 
 
-int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int sleep_time_ms)
+int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
 {
-  // while(retries>-1){
-  socklen_t configlen = sizeof((struct sockaddr_in&) si_config_);
-  if(listen(configsocket_, 1) >= 0)
-    accept(configsocket_, (struct sockaddr *) &si_config_, &configlen);
-  else
-    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";
-  char cmd[16];
-  sprintf(cmd,"%s","TTLK_CMD_INIT");
-
-  TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
-  //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
-  send(configsocket_,&cmd,16, 0);
-
-  TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
-  //send(TTLK_INIT);
-  int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
-  if(size_bytes>0){
-    //uint16_t buffer[size_bytes/2+1];
-    //char bufferinit[size_bytes];
-    buffer[size_bytes+1] = {'\0'};
-    readTCP(configsocket_,ip_config_,si_config_,size_bytes,buffer);
-    TLOG(TLVL_DEBUG) << "received:: " << buffer;
-    return 0;
-  }
   
-  //retries--;
-  //}
+  while(retries>-1){
+    socklen_t configlen = sizeof((struct sockaddr_in&) si_config_);
+    if(listen(configsocket_, 1) >= 0)
+      accept(configsocket_, (struct sockaddr *) &si_config_, &configlen);
+    else
+      TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";
+    char cmd[16];
+    sprintf(cmd,"%s","TTLK_CMD_INIT");
+    
+    TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
+    //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+    send(configsocket_,&cmd,16, 0);
+    
+    TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    //send(TTLK_INIT);
+    int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
+    if(size_bytes>0){
+      //uint16_t buffer[size_bytes/2+1];
+      //char bufferinit[size_bytes];
+      buffer[size_bytes+1] = {'\0'};
+      readTCP(configsocket_,ip_config_,si_config_,size_bytes,buffer);
+      TLOG(TLVL_DEBUG) << "received:: " << buffer;
+      return 0;
+    }
+  
+    retries--;
+  }
   
   return -1;
   
+}
+
+void sbndaq::ICARUSTriggerUDP::configure_socket(int socket, struct sockaddr_in& si)
+{
+  socklen_t socketlen = sizeof((struct sockaddr_in&) si);
+  if(listen(socket, 1) >= 0)
+    accept(socket, (struct sockaddr *) &si, &socketlen);
+  else
+    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";
 }
 
 //no need for confirmation on these...

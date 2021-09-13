@@ -58,8 +58,9 @@ namespace sbndaq
     //int read(int,uint16_t*);
     int read(int, std::string, struct sockaddr_in&,int,char*);
     int readTCP(int, std::string, struct sockaddr_in&,int,char*);
+    void configure_socket(int, struct sockaddr_in&);
     
-    int send_TTLK_INIT(int);
+    int send_TTLK_INIT(int, int);
     void send_TRIG_VETO();
     void send_TRIG_ALLW();
     
