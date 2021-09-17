@@ -1,88 +1,20 @@
-art_make(NO_PLUGINS # WAnt different link lists for modues
+
+
+cet_make(
+ NO_PLUGINS # WAnt different link lists for modues
  BASENAME_ONLY
- LIBRARY_NAME sbndaq-artdaq_ArtModules_Common
- LIB_LIBRARIES sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
- 	       sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+ LIBRARY_NAME
+   sbndaq-artdaq_ArtModules_Common
+ LIB_LIBRARIES
+   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
-simple_plugin( MultiDump "module"
-	artdaq_core::artdaq-core_Data
-  artdaq_core::artdaq-core_Utilities
-	art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_root_io_tfile_support ${ROOT_CORE}
-  #art_root_io_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
-	)
+build_plugin( MultiDump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( IncompleteEventAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( CAENV1730Dump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( CAENV1730WaveformAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( BernCRTZMQAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( BernCRTAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( BernCRTAnaV2 "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 
-simple_plugin( IncompleteEventAna "module"
-  art_Framework_Services_Registry
-  #${ROOT_BASIC_LIB_LIST}
-  artdaq_core::artdaq-core_Utilities
-  #sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
-)
-
-simple_plugin( CAENV1730Dump "module"
-  art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_root_io_tfile_support ${ROOT_CORE}
-  #art_root_io_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-	artdaq_core::artdaq-core_Utilities
-  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
-)
-
-simple_plugin( CAENV1730WaveformAna "module"
-  art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_root_io_tfile_support ${ROOT_CORE}
-  #art_root_io_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-	artdaq_core::artdaq-core_Utilities
-  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common 
-)
-
-simple_plugin( BernCRTZMQAna "module"
-	artdaq_core::artdaq-core_Data
-  artdaq_core::artdaq-core_Utilities
-  art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_Framework_Services_Optional
-  #art_Framework_Services_Optional_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
-)
-
-simple_plugin( BernCRTAna "module"
-	artdaq_core::artdaq-core_Data
-  artdaq_core::artdaq-core_Utilities
-  art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_Framework_Services_Optional
-  #art_Framework_Services_Optional_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
-)
-
-simple_plugin( BernCRTAnaV2 "module"
-	artdaq_core::artdaq-core_Data
-  artdaq_core::artdaq-core_Utilities
-  art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_Framework_Services_Optional
-  #art_Framework_Services_Optional_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
-)
-
-# Subdirectories.
-#add_subdirectory(DQM)
-# Subdirectories.
-#add_subdirectory(DQM)
