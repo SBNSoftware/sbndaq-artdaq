@@ -96,6 +96,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 void sbndaq::WhiteRabbitReadout::configure()
 {
   TLOG(TLVL_DEBUG) << "hello";
+  TLOG(TLVL_INFO) << " added metric for grafana ";
   openWhiteRabbitSocket(device.c_str());
   eventSeqCounter = 0;
 }
@@ -268,13 +269,58 @@ bool sbndaq::WhiteRabbitReadout::getData()
       return(false);
     }
 
-    TLOG(TLVL_INFO) << "WhiteReadout data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
+    TLOG(TLVL_INFO) << "WhiteReadout: data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
       event.systemTime.tv_nsec;
     for (uint32_t i=0; i<data->nstamp; i++)
     {
-      TLOG(TLVL_INFO) << "WhiteReadout data " << i << " " << data->timeStamp[i].tv_sec << 
+      TLOG(TLVL_INFO) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
 	" " << data->timeStamp[i].tv_nsec; 
-    }
+
+//added in the loop 
+//    std::ostringstream tempStream;
+//    tempStream << "Card: " << fBoardID
+//               << ", Channel: " << ch << " temp.";
+//    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+//                          artdaq::MetricMode::Average, "CAENV1730");
+
+//    std::ostringstream tsStream;
+//    tsStream << "DIO Channel " << data->channel
+//               << ", Data: " << data->timeStamp[i].tv_sec << " ts.";
+
+}
+
+   std::ostringstream tsStream; 
+   tsStream << "DIO Channel " << data->channel << " Rates";
+
+
+//  PPS
+    if(data->channel == 0) 
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_PPS");
+// $1D from MI12
+    if(data->channel == 1) 
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$1D");
+
+// gatedBES from MI12
+    if(data->channel == 4)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_gatedBES");
+
+// $AE from MI60
+    if(data->channel == 2)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$AE");
+
+// $74 from MI60
+    if(data->channel == 3) 
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$74");
+
+
+//Average
+//Rate
+
 
     if ( data->nstamp > 0 )
     {
@@ -283,7 +329,6 @@ bool sbndaq::WhiteRabbitReadout::getData()
       bufferLock.unlock();
     }
   }
-
   return(true);
 }
 
