@@ -27,6 +27,7 @@
 #include <iomanip>
 #include <vector>
 #include <iostream>
+#include <numeric>
 
 namespace sbndaq {
   class CAENV1730WaveformAna;

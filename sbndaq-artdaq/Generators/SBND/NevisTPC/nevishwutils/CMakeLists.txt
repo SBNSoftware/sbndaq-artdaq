@@ -18,28 +18,28 @@ SET_SOURCE_FILES_PROPERTIES(XMITReader.cpp PROPERTIES COMPILE_FLAGS -Wno-error=u
 
 
 cet_make( LIBRARY_NAME sbndaq-artdaq_nevishwutils
-                  SOURCE NevisPCIeCard-generated.cpp
-		         ControlDataPacket.cpp
-			 StatusPacket.cpp
-			 daqExceptions.cpp
-			 NevisPCIeCard.cpp
-			 NevisReadoutPCIeCard.cpp
-			 NevisControllerPCIeCard.cpp
-			 Crate.cpp
-			 ControllerModule.cpp
-			 NevisTPCFEM.cpp			
-			 TriggerModule.cpp
-			 XMITModule.cpp
-			 XMITReader.cpp
-                  LIBRARIES
-                        ${CETLIB}
-                        ${CETLIB_EXCEPT}
-			${WINDRIVERLIB}
-			${TRACE}
-			${FHICLCPP}
-                        ${MF_MESSAGELOGGER}
-                        ${MF_UTILITIES}
-	)
+  SOURCE NevisPCIeCard-generated.cpp
+       ControlDataPacket.cpp
+       StatusPacket.cpp
+       daqExceptions.cpp
+       NevisPCIeCard.cpp
+       NevisReadoutPCIeCard.cpp
+       NevisControllerPCIeCard.cpp
+       Crate.cpp
+       ControllerModule.cpp
+       NevisTPCFEM.cpp
+       TriggerModule.cpp
+       XMITModule.cpp
+       XMITReader.cpp
+  LIBRARIES
+       cetlib
+       cetlib_except
+       ${WINDRIVERLIB}
+
+      fhiclcpp
+      MF_MessageLogger
+      ${MF_UTILITIES}
+  )
 
 
 install_source()

@@ -5,16 +5,20 @@
 #include <chrono>
 
 #include "icarus-base/VetoUDP.h"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include "hiredis/hiredis.h"
+#pragma GCC diagnostic pop
 
 class PhysCrate;
 
-namespace icarus {    
+namespace icarus {
 
   class PhysCrateData : public icarus::PhysCrate_GeneratorBase {
-    
+
   public:
-    
+
     explicit PhysCrateData(fhicl::ParameterSet const & ps);
     ~PhysCrateData();
 
@@ -24,9 +28,9 @@ namespace icarus {
       kInternal_Even = 2,
       kInternal_Odd = 3
     };
-    
+
   private:
-    
+
     void ConfigureStart(); //called in start()
     void ConfigureStop();  //called in stop()
 
@@ -42,13 +46,13 @@ namespace icarus {
     void ForceReset();
 
     std::unique_ptr<PhysCrate> physCr;
-    
+
     std::chrono::high_resolution_clock::time_point _tloop_start;
     std::chrono::high_resolution_clock::time_point _tloop_end;
     std::chrono::duration<double> _tloop_duration;
 
     void UpdateDuration()
-    { 
+    {
       _tloop_duration =
 	std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_end-_tloop_start);
     }
