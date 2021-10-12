@@ -89,17 +89,17 @@ namespace sbndaq
       FP_IO_CONTROL      = 0x811C,
       FP_LVDS_CONTROL    = 0x81A0,
       READOUT_CONTROL    = 0xEF00,
-      // Animesh & Aiwu add registers for the LVDS logic
+      // Animesh add registers for the LVDS logic
       FP_LVDS_Logic_G1   = 0x1084,
-      FP_LVDS_Logic_G2   = 0x1184,
-      FP_LVDS_Logic_G3   = 0x1284,
-      FP_LVDS_Logic_G4   = 0x1384,
-      FP_LVDS_Logic_G5   = 0x1484,
-      FP_LVDS_Logic_G6   = 0x1584,
-      FP_LVDS_Logic_G7   = 0x1684,
-      FP_LVDS_Logic_G8   = 0x1784,
-      // Animesh & Aiwu add end
-      // Animesh & Aiwu add registers for the LVDS output width
+      FP_LVDS_Logic_G2   = 0x1284,
+      FP_LVDS_Logic_G3   = 0x1484,
+      FP_LVDS_Logic_G4   = 0x1684,
+      FP_LVDS_Logic_G5   = 0x1884,
+      FP_LVDS_Logic_G6   = 0x1A84,
+      FP_LVDS_Logic_G7   = 0x1C84,
+      FP_LVDS_Logic_G8   = 0x1E84,
+      // Animesh add end
+      // Animesh add registers for the LVDS output width
       FP_LVDS_OutWidth_Ch1   = 0x1070,
       FP_LVDS_OutWidth_Ch2   = 0x1170,
       FP_LVDS_OutWidth_Ch3   = 0x1270,
@@ -188,6 +188,7 @@ namespace sbndaq
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
     bool     fLockTempCalibration;
+    bool     fWriteCalibration;
     uint32_t fFragmentID;
 
     bool fUseTimeTagForTimeStamp;
@@ -245,6 +246,12 @@ namespace sbndaq
     //uint32_t fSWTriggerValue;
     // Animesh & Aiwu add end
 
+
+   // Animesh add ADC Calibration
+
+
+  //  Animesh ends
+
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
@@ -273,7 +280,8 @@ namespace sbndaq
     void SetLockTempCalibration(bool onOff, uint32_t ch);
     CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
     CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
-
+    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
 
     bool WaitForTrigger();
     bool GetData();

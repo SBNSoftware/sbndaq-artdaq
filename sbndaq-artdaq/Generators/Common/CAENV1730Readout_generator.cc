@@ -244,6 +244,11 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fLockTempCalibration = ps.get<bool>("LockTempCalibration");
   TLOG(TINFO) <<__func__ <<": LockTempCalibration=" << fLockTempCalibration;
 
+  fWriteCalibration = ps.get<bool>("AdcCalibration");
+  TLOG(TINFO) <<__func__ <<": ADCCalibration=" << fWriteCalibration;
+
+
+
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<__func__ <<": fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
@@ -369,6 +374,7 @@ void sbndaq::CAENV1730Readout::Configure()
   fOK = (retcode==CAEN_DGTZ_Success);
 
   retcode = CAEN_DGTZ_Reset(fHandle);
+  
   sleep(2);
 
   ConfigureReadout();
@@ -385,7 +391,9 @@ void sbndaq::CAENV1730Readout::Configure()
   configureInterrupts();
 
   if (fCalibrateOnConfig)     { RunADCCalibration();  }
-  // Does lock bit clear on V1730 reset?   If not, always call this routine
+
+    // Temperature Calibration
+
   if (fLockTempCalibration )  
   { 
     for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
@@ -393,6 +401,27 @@ void sbndaq::CAENV1730Readout::Configure()
       SetLockTempCalibration(true,ch);
     }
   }
+
+// Calibration added by Animesh
+   uint8_t fCalParams;
+  if (fWriteCalibration)  
+  { 
+  
+     TLOG(TINFO)<<__func__ << ": maximum ch is = " <<CAENConfiguration::MAX_CHANNELS<<TLOG_ENDL;
+    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+    {
+
+      TLOG(TINFO)<<__func__ << ": Chnumber is" <<ch<<TLOG_ENDL;
+      Read_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
+    //  Write_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
+    }
+
+
+
+
+  }
+
+
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure() done." << TLOG_ENDL;
 }
@@ -581,6 +610,115 @@ void sbndaq::CAENV1730Readout::SetLockTempCalibration(bool onOff, uint32_t ch)
   sbndaq::CAENDecoder::checkError(retcod,"LockTempCalibration",fBoardID);
 }
 
+
+
+
+// Animesh added here for Calibration
+
+// ---------------------------------------------------------------------------------------------------------
+// Description: Read ADC calibration from ADC chip (via SPI)
+// Inputs: handle = board handle
+// ch = channel
+// Return: 0=OK, negative number = error code
+// ---------------------------------------------------------------------------------------------------------
+
+void sbndaq::CAENV1730Readout::Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams)
+{
+ //int retcod = 0;
+  CAEN_DGTZ_ErrorCode retcod;
+ // read offset
+ retcod = ReadSPIRegister(handle, ch, 0x20, &CalParams[0]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x20",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x21, &CalParams[1]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[1]=" << CalParams[1]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x21",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x26, &CalParams[2]);
+  TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[2]=" << CalParams[2]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x26",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x27, &CalParams[3]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[3]=" << CalParams[3]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x27",handle);
+ 
+// read gain
+ retcod = ReadSPIRegister(handle, ch, 0x22, &CalParams[4]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[4]=" << CalParams[4]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x22",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x23, &CalParams[5]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[5]=" << CalParams[5]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x23",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x24, &CalParams[6]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[6]=" << CalParams[6]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x24",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x28, &CalParams[7]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[7]=" << CalParams[7]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x28",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x29, &CalParams[8]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[8]=" << CalParams[8]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x29",handle);
+ retcod = ReadSPIRegister(handle, ch, 0x2A, &CalParams[9]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[9]=" << CalParams[9]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x2A",handle);
+ // read skew
+ retcod = ReadSPIRegister(handle, ch, 0x70, &CalParams[10]);
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[10]=" << CalParams[10]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x70",handle);
+ //return CAEN_DGTZ_Success;
+}
+
+// ---------------------------------------------------------------------------------------------------------
+// Description: Write ADC calibration to ADC chip (via SPI)
+// Inputs: handle = board handle
+// ch = channel
+// Return: 0=OK, negative number = error code
+// ---------------------------------------------------------------------------------------------------------
+
+void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams)
+{
+ //int retcod = 0;
+ CAEN_DGTZ_ErrorCode retcod;
+// Keep parameters frozen
+ retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
+ TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
+ sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
+ // write offset
+ retcod = WriteSPIRegister(handle, ch, 0x20, CalParams[0]);
+ 
+ retcod = WriteSPIRegister(handle, ch, 0x21, CalParams[1]);
+ 
+ retcod = WriteSPIRegister(handle, ch, 0x26, CalParams[2]);
+
+ retcod = WriteSPIRegister(handle, ch, 0x27, CalParams[3]);
+
+// write gain
+ retcod = WriteSPIRegister(handle, ch, 0x22, CalParams[4]);
+ 
+ retcod = WriteSPIRegister(handle, ch, 0x23, CalParams[5]);
+ 
+ retcod = WriteSPIRegister(handle, ch, 0x24, CalParams[6]);
+ 
+
+ retcod = WriteSPIRegister(handle, ch, 0x28, CalParams[7]);
+ 
+
+ retcod = WriteSPIRegister(handle, ch, 0x29, CalParams[8]);
+
+ retcod = WriteSPIRegister(handle, ch, 0x2A, CalParams[9]);
+ 
+ // write skew
+ retcod = WriteSPIRegister(handle, ch, 0x70, CalParams[10]);
+ 
+ // Update parameters
+ retcod = WriteSPIRegister(handle, ch, 0xFE, 0x01);
+ 
+ retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
+ 
+//return CAEN_DGTZ_Success;
+
+}
+
+// Animesh add ends
+
 void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 {
   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
@@ -668,21 +806,21 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
  // Animesh added 
 
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
-  TLOG(TINFO) << "Register for G1: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Before settting LVDS Register for G1: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
-  TLOG(TINFO) << "Register for G2: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << " Before settting LVDS Register for G2: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
-  TLOG(TINFO) << "Register for G3: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Before settting LVDS Register for G3: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
-  TLOG(TINFO) << "Register for G4: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Before settting LVDS Register for G4: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
-  TLOG(TINFO) << "Register for G5: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Before settting LVDS Register for G5: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
-  TLOG(TINFO) << "Register for G6: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Before settting LVDS Register for G6: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
-  TLOG(TINFO) << "Register for G7: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Before settting LVDS Register for G7: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
-  TLOG(TINFO) << "Register for G8: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Before settting LVDS Register for G8: 0x" << std::hex << readBack << std::dec;
 
 
   //Animesh & Aiwu add - to set/read registers for LVDS logic values setting
@@ -696,21 +834,21 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G8, fLVDSLogicValueG8);
 
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
-  TLOG(TINFO) << "LVDS Logic for G1: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS Logic for G1: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
-  TLOG(TINFO) << "LVDS  Logic for G2: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS  Logic for G2: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
-  TLOG(TINFO) << "LVDS  Logic for G3: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS  Logic for G3: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
-  TLOG(TINFO) << "LVDS  Logic for G4: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS  Logic for G4: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
-  TLOG(TINFO) << "LVDS  Logic for G5: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS  Logic for G5: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
-  TLOG(TINFO) << "LVDS  Logic for G6: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS  Logic for G6: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
-  TLOG(TINFO) << "LVDS  Logic for G7: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS  Logic for G7: 0x" << std::hex << readBack << std::dec;
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
-  TLOG(TINFO) << "LVDS  Logic for G8: 0x" << std::hex << readBack << std::dec;
+  TLOG(TINFO) << "Setting LVDS  Logic for G8: 0x" << std::hex << readBack << std::dec;
   //Animesh & Aiwu add ends
 
   //Animesh & Aiwu add - to set/read registers for LVDS output width values setting
@@ -918,6 +1056,7 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
 
     TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channel " << ch
 				 << " trigger threshold to " << fCAEN.triggerThresholds[ch] << TLOG_ENDL;
+    TLOG(TINFO) << "Trigger threshold for ch " <<ch<<"is "<< fCAEN.triggerThresholds[ch];
     retcode = CAEN_DGTZ_SetChannelTriggerThreshold(fHandle,ch,fCAEN.triggerThresholds[ch]); //0x8000
     sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerThreshold",fBoardID);
     retcode = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readback);
@@ -1095,8 +1234,176 @@ void sbndaq::CAENV1730Readout::start()
     }
 
   fEvCounter=0;
+  CAEN_DGTZ_ErrorCode retcod;
+
+  // Animesh add ADC registers here
+
+  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+     {
+ retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
+ // TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
+ // sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
+ // write offset
+ retcod = WriteSPIRegister(fHandle, ch, 0x20, 114);
+ 
+ retcod = WriteSPIRegister(fHandle, ch, 0x21, 107);
+ 
+ retcod = WriteSPIRegister(fHandle, ch, 0x26, 122);
+
+ retcod = WriteSPIRegister(fHandle, ch, 0x27, 76);
+
+// write gain
+ retcod = WriteSPIRegister(fHandle, ch, 0x22, 14);
+ 
+ retcod = WriteSPIRegister(fHandle, ch, 0x23, 128);
+ 
+ retcod = WriteSPIRegister(fHandle, ch, 0x24, 127);
+ 
+
+ retcod = WriteSPIRegister(fHandle, ch, 0x28, 14);
+ 
+
+ retcod = WriteSPIRegister(fHandle, ch, 0x29, 135);
+
+ retcod = WriteSPIRegister(fHandle, ch, 0x2A, 125);
+ 
+ // write skew
+ retcod = WriteSPIRegister(fHandle, ch, 0x70, 129);
+ 
+ // Update parameters
+ retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x01);
+ 
+ retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
+       
+
+      }
+
+  //  Animesh ends
+
+uint32_t readBack;
+ // Animesh start reading the baseline values 
+ // dc offset or baseline
+ // fBaselineCh1 = ps.get<uint32_t>("BaselineCh1"); // ch1 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh1=" << fBaselineCh1;
+//  fBaselineCh2 = ps.get<uint32_t>("BaselineCh2"); // ch2 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh2=" << fBaselineCh2;
+//  fBaselineCh3 = ps.get<uint32_t>("BaselineCh3"); // ch3 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh3=" << fBaselineCh3;
+//  fBaselineCh4 = ps.get<uint32_t>("BaselineCh4"); // ch4 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh4=" << fBaselineCh4;
+//  fBaselineCh5 = ps.get<uint32_t>("BaselineCh5"); // ch5 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh5=" << fBaselineCh5;
+//  fBaselineCh6 = ps.get<uint32_t>("BaselineCh6"); // ch6 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh6=" << fBaselineCh6;
+//  fBaselineCh7 = ps.get<uint32_t>("BaselineCh7"); // ch7 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh7=" << fBaselineCh7;
+//  fBaselineCh8 = ps.get<uint32_t>("BaselineCh8"); // ch8 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh8=" << fBaselineCh8;
+//  fBaselineCh9 = ps.get<uint32_t>("BaselineCh9"); // ch9 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh9=" << fBaselineCh9;
+//  fBaselineCh10 = ps.get<uint32_t>("BaselineCh10"); // ch10 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh10=" << fBaselineCh10;
+//  fBaselineCh11 = ps.get<uint32_t>("BaselineCh11"); // ch11 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh11=" << fBaselineCh11;
+//  fBaselineCh12 = ps.get<uint32_t>("BaselineCh12"); // ch12 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh12=" << fBaselineCh12;
+//  fBaselineCh13 = ps.get<uint32_t>("BaselineCh13"); // ch13 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh13=" << fBaselineCh13;
+//  fBaselineCh14 = ps.get<uint32_t>("BaselineCh14"); // ch14 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh14=" << fBaselineCh14;
+//  fBaselineCh15 = ps.get<uint32_t>("BaselineCh15"); // ch15 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh15=" << fBaselineCh15;
+//  fBaselineCh16 = ps.get<uint32_t>("BaselineCh16"); // ch16 baseline
+  TLOG(TINFO)<<__func__ << ": Check_BaselineCh16=" << fBaselineCh16;
+
+// Animesh ends here
+
+
+// Animesh Check trigger threshold here
+
+ for(uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  {
+
+    TLOG(TINFO) << "Trigger threshold before run start for ch " <<ch<<"is "<< fCAEN.triggerThresholds[ch];
+
+   
+  }
+
+
+// Animesh end 
+
+//  uint32_t readBack;
+ //Animesh & Aiwu add - to set/read registers for LVDS logic values setting
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G1, fLVDSLogicValueG1);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G2, fLVDSLogicValueG2);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G3, fLVDSLogicValueG3);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G4, fLVDSLogicValueG4);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G5, fLVDSLogicValueG5);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G6, fLVDSLogicValueG6);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G7, fLVDSLogicValueG7);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G8, fLVDSLogicValueG8);
+
+
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
+  TLOG(TINFO) << "After Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
+  TLOG(TINFO) << " After Start Register for G2: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
+  TLOG(TINFO) << " After Start Register for G3: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
+  TLOG(TINFO) << " After Start Register for G4: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
+  TLOG(TINFO) << " After Start Register for G5: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
+  TLOG(TINFO) << " After Start Register for G6: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
+  TLOG(TINFO) << "After Start Register for G7: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
+  TLOG(TINFO) << "After Start Register for G8: 0x" << std::hex << readBack << std::dec;
+
+
+  
+
+
 
   GetData_thread_->start();
+
+// Animesh Check the trigger difference value
+uint32_t Diff_ch1 = fBaselineCh1 - fCAEN.triggerThresholds[0];
+TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch 1 is" << Diff_ch1;
+uint32_t Diff_ch2 = fBaselineCh2 - fCAEN.triggerThresholds[1];
+TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 2 is" << Diff_ch2;
+uint32_t Diff_ch3 = fBaselineCh3 - fCAEN.triggerThresholds[2];
+TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 3 is" << Diff_ch3;
+uint32_t Diff_ch4 = fBaselineCh4 - fCAEN.triggerThresholds[3];
+TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch 4 is" << Diff_ch4;
+uint32_t Diff_ch5 = fBaselineCh5 - fCAEN.triggerThresholds[4];
+TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 5 is" << Diff_ch5;
+uint32_t Diff_ch6 = fBaselineCh6 - fCAEN.triggerThresholds[5];
+TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 6 is" << Diff_ch6;
+uint32_t Diff_ch7 = fBaselineCh7 - fCAEN.triggerThresholds[6];
+TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 7 is" << Diff_ch7;
+// Animesh
+   
+
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
+  TLOG(TINFO) << "After0 Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
+  TLOG(TINFO) << " After0 Start Register for G2: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
+  TLOG(TINFO) << " After0 Start Register for G3: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
+  TLOG(TINFO) << " After0 Start Register for G4: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
+  TLOG(TINFO) << " After0 Start Register for G5: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
+  TLOG(TINFO) << " After0 Start Register for G6: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
+  TLOG(TINFO) << "After0 Start Register for G7: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
+  TLOG(TINFO) << "After0 Start Register for G8: 0x" << std::hex << readBack << std::dec;
+
+
 
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
 }
@@ -1106,6 +1413,30 @@ void sbndaq::CAENV1730Readout::stop()
   if(fVerbosity>0)
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
+
+ // Animesh add
+  CAEN_DGTZ_ErrorCode retcod;
+  uint32_t readBack;
+
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
+  TLOG(TINFO) << "After Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
+  TLOG(TINFO) << " After Start Register for G2: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
+  TLOG(TINFO) << " After Start Register for G3: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
+  TLOG(TINFO) << " After Start Register for G4: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
+  TLOG(TINFO) << " After Start Register for G5: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
+  TLOG(TINFO) << " After Start Register for G6: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
+  TLOG(TINFO) << "After Start Register for G7: 0x" << std::hex << readBack << std::dec;
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
+  TLOG(TINFO) << "After Start Register for G8: 0x" << std::hex << readBack << std::dec;
+
+// Animesh ends
+
 
   GetData_thread_->stop();
 
