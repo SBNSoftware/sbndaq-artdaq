@@ -190,6 +190,7 @@ namespace sbndaq
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
     bool     fLockTempCalibration;
+    bool     fWriteCalibration;
     uint32_t fFragmentID;
 
     bool fUseTimeTagForTimeStamp;
@@ -278,6 +279,8 @@ namespace sbndaq
     void SetLockTempCalibration(bool onOff, uint32_t ch);
     CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
     CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
     void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
 
 
