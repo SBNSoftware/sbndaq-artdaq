@@ -180,7 +180,12 @@ void sbndaq::MultiDump::analyze(const art::Event& evt)
   uint32_t TTT_ns=0;  // will be set to value in CAEN fragement header
 
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
-  evt.getManyByType(fragmentHandles);
+
+#if ART_HEX_VERSION < 0x30900
+        evt.getManyByType(fragmentHandles);
+#else
+        fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
+#endif
 
   /************************************************************************************************/
   if (finclude_caen) { 

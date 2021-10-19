@@ -29,6 +29,7 @@
 #include <iomanip>
 #include <vector>
 #include <iostream>
+#include <numeric>
 
 namespace sbndaq {
   class BernCRTZMQAna;
@@ -158,8 +159,14 @@ void sbndaq::BernCRTZMQAna::analyze(art::Event const & evt)
 //  TLOG(TLVL_INFO)<<" Processing event "<<eventNumber;
 
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
-  evt.getManyByType(fragmentHandles);
-  for (auto handle : fragmentHandles) {
+
+#if ART_HEX_VERSION < 0x30900
+        evt.getManyByType(fragmentHandles);
+#else
+        fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
+#endif
+
+	for (auto handle : fragmentHandles) {
     if (!handle.isValid() || handle->size() == 0)
       continue;
     
