@@ -1018,6 +1018,7 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
   fPoolBuffer.allocate(fBufferSize,fCircularBufferSize,true);
   fPoolBuffer.debugInfo();
 
+  std::lock_guard<std::mutex> lock(fTimestampMapMutex);
   fTimestampMap.clear();
 }
 
@@ -1674,7 +1675,12 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     else{
       fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
     }
-    fTimestampMap[uint32_t{header->eventCounter}] = fTS;
+
+    //put lock in local scope
+    {
+      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
+      fTimestampMap[uint32_t{header->eventCounter}] = fTS;
+    }
 
     //print out timestamping info
     TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
@@ -1847,7 +1853,11 @@ bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
     else{
       fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
     }
-    fTimestampMap[uint32_t{header->eventCounter}] = fTS;
+
+    {
+      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
+      fTimestampMap[uint32_t{header->eventCounter}] = fTS;
+    }
 
     TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
 		   << __func__ 
@@ -1941,15 +1951,22 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
     fragment_uptr->setSequenceID(readoutwindow_event_counter);
 
-    auto ts_count = fTimestampMap.count(readoutwindow_event_counter);
-
+    size_t ts_count;
+    {
+      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
+      ts_count = fTimestampMap.count(readoutwindow_event_counter);
+    }
     int ts_loop=0;
 
-    while(ts_loop<5 && fTimestampMap.count(readoutwindow_event_counter)==0){
+    while(ts_loop<3 && ts_count==0){
       TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
 			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
       ts_loop++;
+      {
+	std::lock_guard<std::mutex> lock(fTimestampMapMutex);
+	ts_count = fTimestampMap.count(readoutwindow_event_counter);
+      }
     }
 
     //check where we are now in time
@@ -1965,9 +1982,16 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       ts_now = diff.total_nanoseconds();
     }
 
-    if(fTimestampMap.count(readoutwindow_event_counter)>0){
+    ts_count=0;
+    {
+      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
+      ts_count = fTimestampMap.count(readoutwindow_event_counter);
+    }
+
+    if(ts_count>0){
+      std::lock_guard<std::mutex> lock(fTimestampMapMutex);      
       ts_frag = fTimestampMap.at(readoutwindow_event_counter);
-      //fTimestampMap.erase(readoutwindow_event_counter);
+      fTimestampMap.erase(readoutwindow_event_counter);
     }
     else{
       TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
