@@ -22,6 +22,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <mutex>
 
 namespace sbndaq
 {
@@ -292,6 +293,7 @@ namespace sbndaq
     std::unique_ptr<uint16_t[]> fBuffer;
 
     std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
+    mutable std::mutex fTimestampMapMutex;
 
     //internals in getting the data
     boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
