@@ -4,6 +4,7 @@
 #include "artdaq/DAQdata/Globals.hh"
 
 #include "sbndaq-artdaq/Generators/ICARUS/ICARUSTriggerUDP.hh"
+#include "canvas/Utilities/Exception.h"
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "cetlib_except/exception.h"
 #include "fhiclcpp/ParameterSet.h"
@@ -38,21 +39,21 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
-
-  configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  
+  configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (configsocket_ < 0)
     {
-      throw cet::exception("ICARUSTriggerUDP") << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
+      throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
       exit(1);
     }
-
+  
   struct sockaddr_in si_me_config;
   si_me_config.sin_family = AF_INET;
   si_me_config.sin_port = htons(configport_);
   si_me_config.sin_addr.s_addr = htonl(INADDR_ANY);
   if (bind(configsocket_, (struct sockaddr *)&si_me_config, sizeof(si_me_config)) == -1)
     {
-      throw cet::exception("ICARUSTriggerUDP")  <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Cannot bind config socket to port " << configport_ << std::endl;
       exit(1);
     }
@@ -60,15 +61,15 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   si_config_.sin_port = htons(configport_);
   if (inet_aton(ip_config_.c_str(), &si_config_.sin_addr) == 0)
     {
-      throw cet::exception("ICARUSTriggerUDP")  <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_config_ << "\n";
       exit(1);
     }
-
-  datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  
+  datasocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (datasocket_ < 0)
     {
-       throw cet::exception("ICARUSTriggerUDP") << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
+      throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
       exit(1);
     }
   struct sockaddr_in si_me_data;
@@ -77,7 +78,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   si_me_data.sin_addr.s_addr = htonl(INADDR_ANY);
   if (bind(datasocket_, (struct sockaddr *)&si_me_data, sizeof(si_me_data)) == -1)
     {
-       throw cet::exception("ICARUSTriggerUDP") <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Cannot bind data socket to port " << dataport_ << std::endl;
       exit(1);
     }
@@ -85,7 +86,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   si_data_.sin_port = htons(dataport_);
   if (inet_aton(ip_data_.c_str(), &si_data_.sin_addr) == 0)
     {
-      throw cet::exception("ICARUSTriggerUDP")  <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
@@ -117,13 +118,15 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //do something in here to get data...
    */
 
-  int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
+  //int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
+  int size_bytes = poll_with_timeout(dataconnfd_,ip_data_, si_data_,500);  
   std::string data_input = "";
   buffer[0] = '\0';
   if(size_bytes>0){
     //Not currently using peek buffer result, just using buffer
     //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
-    int x = read(datasocket_,ip_data_,si_data_,sizeof(buffer)-1,buffer);
+    //int x = read(datasocket_,ip_data_,si_data_,sizeof(buffer)-1,buffer);
+    int x = readTCP(dataconnfd_,ip_data_,si_data_,sizeof(buffer)-1,buffer);  
     TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
     data_input = buffer;
   }
@@ -159,7 +162,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     ++fEventCounter;
     return true;
   }
-
+  
   icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerString(buffer);
 
   uint64_t event_no = fEventCounter;
@@ -177,7 +180,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   {
     TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
   }
-    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger
+    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    
   //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly
     //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
   if(fLastEvent < event_no)
@@ -192,7 +195,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
     metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-
+    
     if(fDeltaGates <= 0)
       TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
 
@@ -235,13 +238,13 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     TLOG(TLVL_DEBUG) << "The artdaq timestamp value is: " << ts << ". Diff from last timestamp is " << ts-fLastTimestamp;
 
     long tdiff = (long)wr_ts - (long)fNTP_time;
-
+    
     TLOG(TLVL_DEBUG) << "(WR TIME - NTP TIME) is (" << wr_ts << " - " << fNTP_time << ") = " << tdiff << " nanoseconds."
 		     << " (" << tdiff/1e6 << " ms)";
-
+    
     if(wr_ts>0 && std::abs(tdiff) > 20e6)
       TLOG(TLVL_WARNING) << "abs(WR TIME - NTP TIME) is " << tdiff << " nanoseconds, which is greater than 20e6 threshold!!";
-
+    
 
     fLastTimestamp = ts;
     fLastGatesNum = datastream_info.gate_id;
@@ -264,7 +267,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   }
 
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
-  //std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl;
+  //std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
   return true;
 
 }
@@ -272,8 +275,21 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_); //comment out for fake trigger tests
+  if(send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
+     TLOG(TLVL_ERROR) << "Did not receive response from SPEXI! -- Initialization" << "\n";
   //send_TRIG_ALLW();
+  close(datafd_);
+  socklen_t datalen = sizeof((struct sockaddr_in&) si_data_);
+  bind(datasocket_, (struct sockaddr *) &si_data_, datalen);                     
+  if(listen(datasocket_, 1) >= 0)            
+  {               
+    TLOG(TLVL_INFO) << "Moving to accept function -- data transfer" << "\n";
+    dataconnfd_ = accept(datasocket_, (struct sockaddr *) &si_data_, &datalen);
+  }                                                                                   
+  else                                                                                
+    {                               
+    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI -- data transfer" << "\n";
+  }                                                                            
 }
 void sbndaq::ICARUSTriggerUDP::stop()
 {
@@ -289,8 +305,8 @@ void sbndaq::ICARUSTriggerUDP::resume()
 }
 
 //send a command
-void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
-{
+void sbndaq::ICARUSTriggerUDP::sendUDP(const Command_t cmd)
+{  
   TLOG(TLVL_DEBUG + 10) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
 
   sendto(configsocket_,&cmd,sizeof(Command_t), 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
@@ -315,16 +331,15 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
     //have something good
     if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
       //do something to get data size here?
-
-
+      
+      
       peekBuffer[1] = {0};
       //recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
       //(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
       socklen_t slen = sizeof(si);
-      //int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
-      //(struct sockaddr *) &si, (socklen_t*)sizeof(si));
-      int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
-			 (struct sockaddr *) &si, &slen);
+      //int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                             //(struct sockaddr *) &si, (socklen_t*)sizeof(si));
+      int ret = recv(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK);
+			 //(struct sockaddr *) &si, &slen);    
       //std::cout << msg_size << std::endl;
       TLOG(TLVL_DEBUG) << "peek recvfrom:: " << ret << " " << errno << " size: " << (int)(peekBuffer[1]);
       //return (int)(peekBuffer[1]);
@@ -355,6 +370,19 @@ int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_i
   socklen_t slen = sizeof(si);
   //int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
   int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, &slen);
+  
+  if(size_rcv<0)
+    TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
+  else
+    TLOG(TLVL_DEBUG) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
+
+  return size_rcv;
+}
+
+int sbndaq::ICARUSTriggerUDP::readTCP(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
+  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  socklen_t slen = sizeof(si); 
+  int size_rcv = recv(socket, buffer, size, 0); //for TCP/IP stuff
 
   if(size_rcv<0)
     TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
@@ -367,42 +395,64 @@ int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_i
 
 int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
 {
+  socklen_t configlen = sizeof((struct sockaddr_in&) si_config_);
+  bind(configsocket_, (struct sockaddr *) &si_config_, configlen);         
+  if(listen(configsocket_, 1) >= 0)           
+  {                              
+    TLOG(TLVL_INFO) << "Moving to accept function" << "\n";
+    datafd_ = accept(configsocket_, (struct sockaddr *) &si_config_, &configlen); 
+  }    
+  else
+  {
+    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";       
+    return -1;
+  }
   while(retries>-1){
-
-  char cmd[16];
-  sprintf(cmd,"%s","TTLK_CMD_INIT");
-
-  TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
-  sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
-
-  TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
-  //send(TTLK_INIT);
-  int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
-  if(size_bytes>0){
-    //uint16_t buffer[size_bytes/2+1];
-    //char bufferinit[size_bytes];
-    buffer[size_bytes+1] = {'\0'};
-    read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
-    TLOG(TLVL_DEBUG) << "received:: " << buffer;
-    return retries;
+    char cmd[16];
+    sprintf(cmd,"%s","TTLK_CMD_INIT");
+    
+    TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
+    //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+    int sendcode = send(datafd_,&cmd,16, 0); //datafd
+    TLOG(TLVL_INFO) << "retcode from send call is: " << sendcode;
+    TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    //send(TTLK_INIT);
+    //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
+    int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, sleep_time_ms);  
+    if(size_bytes>0){
+      //uint16_t buffer[size_bytes/2+1];
+      //char bufferinit[size_bytes];
+      buffer[size_bytes+1] = {'\0'};
+      readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
+      TLOG(TLVL_DEBUG) << "received:: " << buffer;
+      return 0;
+    }
+  
+    retries--;
   }
+  
+  return -1;
+  
+}
 
-  retries--;
-  }
-
-  return retries;
-
+void sbndaq::ICARUSTriggerUDP::configure_socket(int socket, struct sockaddr_in& si)
+{
+  socklen_t socketlen = sizeof((struct sockaddr_in&) si);
+  if(listen(socket, 1) >= 0)
+    accept(socket, (struct sockaddr *) &si, &socketlen);
+  else
+    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";
 }
 
 //no need for confirmation on these...
 void sbndaq::ICARUSTriggerUDP::send_TRIG_VETO()
 {
-  send(TRIG_VETO);
+  sendUDP(TRIG_VETO);
 }
 
 void sbndaq::ICARUSTriggerUDP::send_TRIG_ALLW()
 {
-  send(TRIG_ALLW);
+  sendUDP(TRIG_ALLW);
 }
 
 // The following macro is defined in artdaq's GeneratorMacros.hh header
