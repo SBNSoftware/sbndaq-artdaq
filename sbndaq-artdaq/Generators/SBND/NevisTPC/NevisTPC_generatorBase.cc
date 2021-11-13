@@ -58,7 +58,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   GetData_thread_.swap(GetData_worker);
 }
 
-void sbndaq::NevisTPC_generatorBase::start(){
+void sbndaq::NevisTPC_generatorBase::start(){ //configure(){
   
   current_subrun_ = 0;
   events_seen_ = 0;
@@ -73,9 +73,15 @@ void sbndaq::NevisTPC_generatorBase::start(){
   CircularBuffer_.Init();	
   
   // Magically start getdata thread
-  GetData_thread_->start();
+   GetData_thread_->start();
 }
 
+/*
+void sbndaq::NevisTPC_generatorBase::start(){
+  // Magically start getdata thread                                                                                 
+   GetData_thread_->start();
+}
+*/
 void sbndaq::NevisTPC_generatorBase::stopAll(){
   
   GetData_thread_->stop();
