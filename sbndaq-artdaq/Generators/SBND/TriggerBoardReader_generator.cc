@@ -99,13 +99,14 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   std::string receiver_address = boost::asio::ip::host_name() ;
 
   // require the private hostname
-  std::string priv ("-priv");
-
+  //  std::string priv ("-priv");
+  std::string priv ("-daq");    // Move the receiver address to config file 
+  //std::string priv ("-ptb01");
   if (receiver_address.find(priv) == std::string::npos) { //not a private connection
 
     TLOG_INFO(TNAME) << "Requesting a private connection for host: " << receiver_address << TLOG_ENDL;
     std::string domain (".fnal.gov");
-    std::string FQPDN = priv + domain; // "-priv.fnal.gov"
+    std::string FQPDN =  priv + domain; // "-priv.fnal.gov"
     TLOG_INFO(TNAME) << "Fully Qualified Private Domain Name : " << FQPDN << TLOG_ENDL;
 
     //check for domain name
