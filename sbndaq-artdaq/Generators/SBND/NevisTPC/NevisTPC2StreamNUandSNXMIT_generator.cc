@@ -8,6 +8,14 @@
 #include <ctime>
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
+
+  if (poweroff) {
+    TLOG(TLVL_ERROR) << "Error: Crate power is off";
+  }
+  if (poweron){
+    TLOG(TLVL_INFO) << "Crate Power is on: Good to go!";
+  }
+
   TLOG(TLVL_INFO) << "ConfigureStart";
 
   fChunkSize = ps_.get<int>("ChunkSize", 4096);
