@@ -14,6 +14,7 @@
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/ControllerModule.h"
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/Crate.h"
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/NevisTPCEnums.h"
 
 #include <fstream> // temp
 
