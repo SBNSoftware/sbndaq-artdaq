@@ -25,6 +25,7 @@ namespace nevistpc{
     TriggerModuleSPtr getTriggerModule();
     
     bool hasTrigger;
+    bool hasTriggerSlot;
     
     void linkSetup();
     // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU stream with external triggers
