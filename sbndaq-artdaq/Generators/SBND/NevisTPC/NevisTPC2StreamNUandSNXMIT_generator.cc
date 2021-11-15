@@ -9,6 +9,7 @@
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
+  //Throw error if any of the crate is off
   if (poweroff) {
     TLOG(TLVL_ERROR) << "Error: Crate power is off";
   }
