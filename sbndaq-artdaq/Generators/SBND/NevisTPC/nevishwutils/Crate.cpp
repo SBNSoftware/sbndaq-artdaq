@@ -28,9 +28,9 @@ namespace nevistpc{
     // Setup trigger module
 
     hasTrigger = ( crateconfig.get<uint8_t>( "trigger_slot", -1 ) != (uint8_t)(-1) );
-    //hasTriggerSlot = crateconfig.get<bool>("check_trigger_slot",false);
+    hasTriggerSlot = crateconfig.get<bool>("check_trigger_slot",false);
 
-    if (hasTrigger){ // and !(hasTriggerSlot)){
+    if (hasTrigger and !(hasTriggerSlot)){
       _trigger_module = std::make_shared<nevistpc::TriggerModule>( crateconfig.get<uint8_t>( "trigger_slot", -1 ) );
       _trigger_module->useController(ctr);
       TLOG(TLVL_INFO) << "Crate: TriggerModule initialized";
