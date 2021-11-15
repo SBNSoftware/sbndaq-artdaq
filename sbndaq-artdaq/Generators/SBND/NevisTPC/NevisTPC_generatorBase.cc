@@ -58,8 +58,9 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   GetData_thread_.swap(GetData_worker);
 }
 
-void sbndaq::NevisTPC_generatorBase::start(){ //configure(){
-  
+//changing name from start to configure: to do configuration at this step. 
+void sbndaq::NevisTPC_generatorBase::configure(){
+  TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::configure() going to configure");
   current_subrun_ = 0;
   events_seen_ = 0;
 
@@ -71,26 +72,33 @@ void sbndaq::NevisTPC_generatorBase::start(){ //configure(){
   
   // Initialize our buffer
   CircularBuffer_.Init();	
-  
+  TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::configure() called!!! ");
+
+  //moving to a separate function
   // Magically start getdata thread
-   GetData_thread_->start();
+  //   GetData_thread_->start();
 }
 
-/*
 void sbndaq::NevisTPC_generatorBase::start(){
-  // Magically start getdata thread                                                                                 
+  // Magically start getdata thread                         
+  TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::start() going to start!!!!");
    GetData_thread_->start();
+   TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::start() called!!!");
 }
-*/
+
 void sbndaq::NevisTPC_generatorBase::stopAll(){
   
   GetData_thread_->stop();
 }
 
 void sbndaq::NevisTPC_generatorBase::stop(){
-  ConfigureStop();  
+  TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::stop() called!!!");
+    ConfigureStop(); 
+    TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::stop() CONFIGURESTOP  called!!!");
   stopAll();
+  TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::stop() STOPALL  called!!!");
 }
+
 
 void sbndaq::NevisTPC_generatorBase::stopNoMutex(){
   
