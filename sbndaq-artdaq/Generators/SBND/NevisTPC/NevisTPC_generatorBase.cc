@@ -19,6 +19,8 @@
 sbndaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
 	
 	Initialize();
+	///configureReadoutElectronics(); 
+
 }
 
 sbndaq::NevisTPC_generatorBase::~NevisTPC_generatorBase(){
@@ -45,11 +47,23 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
 
   desyncCrash = ps_.get<bool>("desyncCrash",false);
+
+  current_subrun_ = 0;
+  events_seen_ = 0;
+
+  // intialize event counting                                                                                                                                                  
+  _subrun_event_0 = -1;
+  _this_event = -1;
+
   
+
   // Build our buffer
   if( CircularBufferSizeBytes_%sizeof(uint16_t)!=0)
     TRACE(TWARNING,"NevisTPC::Initialize() : CircularBufferSize_ not multiple of size uint16_t. Rounding down.");
   CircularBuffer_ = CircularBuffer(CircularBufferSizeBytes_/sizeof(uint16_t));
+
+  // Initialize our buffer                                                                                                                                                     
+  CircularBuffer_.Init();
   
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&NevisTPC_generatorBase::GetData,this);
@@ -59,8 +73,8 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 }
 
 //changing name from start to configure: to do configuration at this step. 
-void sbndaq::NevisTPC_generatorBase::configure(){
-  TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::configure() going to configure");
+/*void sbndaq::NevisTPC_generatorBase::configureReadoutElectronics(){
+  TRACE(TLVL_INFO, "configure readout electronics");
   current_subrun_ = 0;
   events_seen_ = 0;
 
@@ -78,7 +92,7 @@ void sbndaq::NevisTPC_generatorBase::configure(){
   // Magically start getdata thread
   //   GetData_thread_->start();
 }
-
+*/
 void sbndaq::NevisTPC_generatorBase::start(){
   // Magically start getdata thread                         
   TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::start() going to start!!!!");
