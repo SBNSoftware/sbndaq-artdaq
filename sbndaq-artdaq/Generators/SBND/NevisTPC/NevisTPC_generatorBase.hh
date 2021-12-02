@@ -33,7 +33,6 @@ namespace sbndaq
   protected:
     
     bool getNext_(artdaq::FragmentPtrs & output) override;
-    void configure();
     void start() override;
     void stop() override;
     void stopNoMutex() override;
