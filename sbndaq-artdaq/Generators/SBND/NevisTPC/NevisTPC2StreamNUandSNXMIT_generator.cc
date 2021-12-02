@@ -7,6 +7,15 @@
 #include <chrono>
 #include <ctime>
 
+
+
+//sbndaq::NevisTPC2StreamNUandSNXMIT::NevisTPC2StreamNUandSNXMIT(fhicl::ParameterSet const & ps):NevisTPC_generatorBase(ps){
+//ConfigureStart();
+
+
+//}
+
+
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
   //Throw error if any of the crate is off
