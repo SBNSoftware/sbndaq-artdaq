@@ -36,6 +36,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fDumpBinaryDir = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout = ps_.get<bool>("DoSNReadout", true);
   fSNChunkSize = ps_.get<int>("SNChunkSize", 100000);
+  fGPSTimeFreq = ps_.get<double>("GPSTimeFrequency", -1);
 
   SNDMABuffer_.reset(new uint16_t[fSNChunkSize]);
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
@@ -131,6 +132,17 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ; 
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
+
+
+//set up thread GPS time                                                                                                                                                                           
+share::ThreadFunctor GPSTime_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::GPSTime, this );
+auto GPSTime_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( GPSTime_functor, "GPSTimeWorkerThread" ) );
+auto GPSTime_worker = share::WorkerThread::createWorkerThread( GPSTime_worker_functor );
+GPSTime_thread_.swap(GPSTime_worker);
+if( fGPSTimeFreq > 0 ) GPSTime_thread_->start();
+
+TLOG(TLVL_INFO)<< "Successful " << __func__ ;
+mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
 }
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
@@ -184,6 +196,65 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::FireController() {
 
   return true;
 }
+
+bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
+  static int fGPSTimePeriod_us = 1./fGPSTimeFreq * 1e6; //convert frequency to period in us                                                                                                      
+  static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fGPSTimePeriod_us)}; //create time point                            
+  static nevistpc::TriggerModuleGPSStamp lastGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister(); //get most recent GPS stamp   
+  //return if not enough time has elapsed or if invalid frequency                                                                                                                                 
+  if(fGPSTimeFreq < 0 || next_check_time > std::chrono::steady_clock::now() ) return false;
+
+  //otherwise get the current gps stamp                                                                                                                                                           
+  nevistpc::TriggerModuleGPSStamp nowGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister();
+  //get NTP time of DAQ server
+  struct timespec unixtime;
+  clock_gettime(CLOCK_REALTIME, &unixtime);
+  time_t ntp_time = unixtime.tv_sec + (unixtime.tv_nsec*1e-9);
+  // Check if the new gps time/frame is different from the old one                                                                                                                                 
+  if( (nowGPSStamp.gps_frame != lastGPSStamp.gps_frame) ||
+      (nowGPSStamp.gps_sample != lastGPSStamp.gps_sample) ||
+      (nowGPSStamp.gps_sample_div != lastGPSStamp.gps_sample_div) ){
+
+    double diff_time = nowGPSStamp.gps_frame -  lastGPSStamp.gps_frame;
+    std::map<int32_t, unsigned long> timeMap;
+    timeMap.insert(std::pair<int32_t, unsigned long>(nowGPSStamp.gps_frame*0.00128, ntp_time));
+
+    for (const auto& tm : timeMap ) {
+      mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "TIME MAP!!!!!!!!!!!!!!: " << tm.first << '\t' << tm.second << '\n';
+    }
+    FILE* fout = fopen("time.txt","a");
+    fprintf(fout, "%u %f %f %lu \n", lastGPSStamp.gps_frame, lastGPSStamp.gps_frame*0.00128, diff_time*0.00128, ntp_time);
+    fclose(fout);
+    mf::LogInfo("timefile")  <<  (nowGPSStamp.gps_frame-lastGPSStamp.gps_frame)*1.28 << "\t " << nowGPSStamp.gps_frame*1.28  << "\t" << ntp_time ;
+
+
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "\n\n***** Checking GPS time  *****\n\n";
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Last GPS timestamp frame " <<lastGPSStamp.gps_frame;
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << " sample "                  << lastGPSStamp.gps_sample ;
+
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") <<" div "                     << lastGPSStamp.gps_sample_div;
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") <<"Now GPS timestamp frame "  << nowGPSStamp.gps_frame;
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") <<" sample "                  << nowGPSStamp.gps_sample;
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") <<" div "                     << nowGPSStamp.gps_sample_div;
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") <<"Diff current - last GPS frame = "<< (nowGPSStamp.gps_frame -  lastGPSStamp.gps_frame);
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") <<"Diff current - last GPS sample = "<< (nowGPSStamp.gps_sample -  lastGPSStamp.gps_sample);
+    mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << " NTP time:  " << unixtime.tv_sec << " , " << unixtime.tv_nsec  << " , " << ntp_time ;
+
+
+    //update stamps                                                                                                                                                                                   
+    lastGPSStamp = nowGPSStamp;
+
+  }
+  //update check time                                                                                                                                                                                
+  next_check_time = std::chrono::steady_clock::now() + std::chrono::microseconds( fGPSTimePeriod_us );
+  return true;
+}
+
+
+
+
+
+
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::MonitorCrate() {
   static std::chrono::steady_clock::time_point next_monitor_cycle_time{ std::chrono::steady_clock::now() };
