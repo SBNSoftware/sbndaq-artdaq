@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
+//FragmentGenerators are constructed when BR receives an init command.
+//Initialize: FG object is created that is its constructor is called. The constructor should take as an argument a FHiCL parameter set which will be used to set member values in FG itself as well as commandable FG.      
+
 sbndaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
 	
 	Initialize();
@@ -28,6 +31,7 @@ sbndaq::NevisTPC_generatorBase::~NevisTPC_generatorBase(){
 	stopAll();
 }
 
+//Initialize: FG object is created that is its constructor is called. 
 void sbndaq::NevisTPC_generatorBase::Initialize(){
   use_xmit_ = true;
   look_for_xmit_header_ = true;
@@ -93,6 +97,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   //   GetData_thread_->start();
 }
 */
+//Start means DAQ is in running state.... at which point the getNext_() function is called repeatedly.
 void sbndaq::NevisTPC_generatorBase::start(){
   // Magically start getdata thread                         
   TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::start() going to start!!!!");
@@ -100,10 +105,12 @@ void sbndaq::NevisTPC_generatorBase::start(){
    TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::start() called!!!");
 }
 
+//StopNoMutex can be used to send end-of-run commands to hardware that are asynchronous with the readout of data. The stop command is never sent while the getNext method is active.
 void sbndaq::NevisTPC_generatorBase::stopAll(){
   
   GetData_thread_->stop();
 }
+//FG object is destroyed that is destructor is called
 
 void sbndaq::NevisTPC_generatorBase::stop(){
   TRACE(TLVL_INFO, "sbndaq::NevisTPC_generatorBase::stop() called!!!");
