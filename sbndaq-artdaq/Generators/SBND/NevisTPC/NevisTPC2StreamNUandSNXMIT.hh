@@ -54,6 +54,11 @@ namespace sbndaq {
     share::WorkerThreadUPtr FireController_thread_;
     double fControllerTriggerFreq;  //!< Frequency in Hz of the Controller trigger
 
+    bool GPSTime(); //                                                                                                                                                                           
+    share::WorkerThreadUPtr GPSTime_thread_;
+    int fGPSTimeFreq;  //    
+
+
     bool MonitorCrate(); //! Check status of the boards in the crate
     share::WorkerThreadUPtr MonitorCrate_thread_;
     int fMonitorPeriod;  //!< Period in seconds to read electronics status
