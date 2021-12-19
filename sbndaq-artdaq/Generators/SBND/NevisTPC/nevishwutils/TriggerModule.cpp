@@ -413,9 +413,20 @@ namespace nevistpc
     controller()->query(ControlDataPacket(_slot_number, device::gps, GPS::GPS_TB_FRAME_SAMPLE), status, 10);
     ControlDataPacket::iterator dataIterator{status.dataBegin()};
     
+    unsigned int frame = *dataIterator;
+    unsigned int sample = *++dataIterator;
+
+    frame = uint32_t(frame & 0xffffff);
+    sample =  uint16_t(sample & 0xfff);
+
+    /*
     TriggerModuleGPSStamp lastStamp( uint32_t(*dataIterator & 0xffffff), 
 				     uint16_t(*++dataIterator & 0xfff), 
 				     uint16_t((*dataIterator & 0x70000) >> 16) );
+    */
+    TriggerModuleGPSStamp lastStamp(frame,
+				    sample,
+				    uint16_t((*dataIterator & 0x70000) >> 16) );
 
     TLOG(TLVL_INFO) << "TriggerModule: called " <<  __func__ ;
     TLOG(TLVL_INFO) << "TriggerModule: last GPS timestamp frame " << lastStamp.gps_frame 
