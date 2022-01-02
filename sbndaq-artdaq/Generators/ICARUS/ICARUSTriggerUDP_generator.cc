@@ -96,14 +96,20 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   fLastTimestampBNB = 0;
   fLastTimestampNuMI = 0;
   fLastTimestampOther = 0;
+  fLastTimestampBNBOff = 0;
+  fLastTimestampNuMIOff = 0;
   fLastGatesNum = 0;
   fLastGatesNumBNB = 0;
   fLastGatesNumNuMI = 0;
   fLastGatesNumOther = 0;
+  fLastGatesNumBNBOff = 0;
+  fLastGatesNumNuMIOff = 0;
   fDeltaGates = 0;
   fDeltaGatesBNB = 0;
   fDeltaGatesNuMI = 0;
   fDeltaGatesOther = 0;
+  fDeltaGatesBNBOff = 0;
+  fDeltaGatesNuMIOff = 0;
   fStartOfRun = 0;
   fInitialStep = 0;
 }
@@ -173,7 +179,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   if(datastream_info.event_no > -1)
     event_no = datastream_info.event_no;
 
-  if(datastream_info.wr_name != " WR_TS1" || datastream_info.wr_seconds == -3 || datastream_info.wr_nanoseconds == -4)
+  if(datastream_info.wr_name != " WR_TS1 " || datastream_info.wr_seconds == -3 || datastream_info.wr_nanoseconds == -4)
   {
     TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
   }
@@ -188,6 +194,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       fLastTimestampBNB = fStartOfRun;
       fLastTimestampNuMI = fStartOfRun;
       fLastTimestampOther = fStartOfRun;
+      fLastTimestampBNBOff = fStartOfRun;
+      fLastTimestampNuMIOff = fStartOfRun;
     }
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
@@ -198,17 +206,31 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
     if(datastream_info.gate_type == 1)
     {
-      fDeltaGatesBNB = datastream_info.gate_id - fLastGatesNumBNB;
+      fDeltaGatesBNB = datastream_info.gate_id_BNB - fLastGatesNumBNB;
       metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
       if(fDeltaGatesBNB <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
     }
     else if(datastream_info.gate_type == 2)
     {
-      fDeltaGatesNuMI = datastream_info.gate_id - fLastGatesNumNuMI;
+      fDeltaGatesNuMI = datastream_info.gate_id_NuMI - fLastGatesNumNuMI;
       metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
       if(fDeltaGatesNuMI <= 0)
         TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
+    }
+    else if(datastream_info.gate_type == 3)
+    {
+      fDeltaGatesBNBOff = datastream_info.gate_id_BNBOff - fLastGatesNumBNBOff;
+      metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
+      if(fDeltaGatesBNBOff <= 0)
+	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB Offbeam <= 0!";
+    }
+    else if(datastream_info.gate_type == 4)
+    {
+      fDeltaGatesNuMIOff = datastream_info.gate_id_NuMIOff - fLastGatesNumNuMIOff;
+      metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
+      if(fDeltaGatesNuMIOff <= 0)
+	TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI Offbeam <= 0!";
     }
     else {
       fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
@@ -219,9 +241,11 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
     auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time,
 							     fLastTimestamp,
-							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampOther,
+							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampBNBOff, 
+							     fLastTimestampNuMIOff,fLastTimestampOther,
 							     fDeltaGates,
-							     fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesOther);
+							     fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesBNBOff,
+							     fDeltaGatesNuMIOff, fDeltaGatesOther);
 
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
@@ -249,12 +273,22 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     if(datastream_info.gate_type == 1)
     {
       fLastTimestampBNB = ts;
-      fLastGatesNumBNB = datastream_info.gate_id;
+      fLastGatesNumBNB = datastream_info.gate_id_BNB;
     }
     else if(datastream_info.gate_type == 2)
     {
       fLastTimestampNuMI = ts;
-      fLastGatesNumNuMI = datastream_info.gate_id;
+      fLastGatesNumNuMI = datastream_info.gate_id_NuMI;
+    }
+    else if(datastream_info.gate_type == 3)
+    {
+      fLastTimestampBNBOff = ts;
+      fLastGatesNumBNBOff = datastream_info.gate_id_BNBOff;
+    }
+    else if(datastream_info.gate_type == 4)
+    {
+      fLastTimestampNuMIOff = ts;
+      fLastGatesNumNuMIOff = datastream_info.gate_id_NuMIOff;
     }
     else{
       fLastTimestampOther = ts;
@@ -318,19 +352,11 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
 
       peekBuffer[1] = {0};
-      //recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
-      //(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
       socklen_t slen = sizeof(si);
-      //int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
-      //(struct sockaddr *) &si, (socklen_t*)sizeof(si));
       int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
 			 (struct sockaddr *) &si, &slen);
       //std::cout << msg_size << std::endl;
       TLOG(TLVL_DEBUG) << "peek recvfrom:: " << ret << " " << errno << " size: " << (int)(peekBuffer[1]);
-      //return (int)(peekBuffer[1]);
-      //return sizeof(peekBuffer);
-      //return sizeof(peekBuffer[1]);
-      //return 1400;
       return 1;
     }
   }
