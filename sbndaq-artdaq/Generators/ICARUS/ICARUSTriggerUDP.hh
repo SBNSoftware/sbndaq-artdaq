@@ -58,9 +58,11 @@ namespace sbndaq
     //int read(int,uint16_t*);
     int read(int, std::string, struct sockaddr_in&,int,char*);
     int readTCP(int, std::string, struct sockaddr_in&,int,char*);
+    int send_init_params();
     void configure_socket(int, struct sockaddr_in&);
     
-    int send_TTLK_INIT(int, int);
+    //int send_TTLK_INIT(int, int);
+    int initialization(int, int);
     void send_TRIG_VETO();
     void send_TRIG_ALLW();
     
@@ -127,6 +129,8 @@ namespace sbndaq
     int generated_fragments_per_event_;
     char buffer[500] = {'\0'};
     uint8_t peekBuffer[2] = {0,0};
+
+    std::vector<std::string> initialization_data_;
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */

@@ -38,6 +38,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
+  , initialization_data_(ps.get<std::vector<std::string> >("trigger_init_params"))
 {
   
   configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -309,7 +310,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerUDP::start()
 {
-  if(send_TTLK_INIT(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
+  if(initialization(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
      TLOG(TLVL_ERROR) << "Did not receive response from SPEXI! -- Initialization" << "\n";
   //send_TRIG_ALLW();
   close(datafd_);
@@ -421,7 +422,8 @@ int sbndaq::ICARUSTriggerUDP::readTCP(int socket, std::string ip, struct sockadd
 }
 
 
-int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
+//int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
+int sbndaq::ICARUSTriggerUDP::initialization(int retries, int sleep_time_ms)
 {
   socklen_t configlen = sizeof((struct sockaddr_in&) si_config_);
   bind(configsocket_, (struct sockaddr *) &si_config_, configlen);         
@@ -434,6 +436,11 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
   {
     TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";       
     return -1;
+  }
+  while(retries >-1) {
+    int setup = send_init_params();
+    if(setup == 1)
+      break;
   }
   while(retries>-1){
     char cmd[16];
@@ -452,7 +459,7 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
       //char bufferinit[size_bytes];
       buffer[size_bytes+1] = {'\0'};
       readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
-      TLOG(TLVL_DEBUG) << "received:: " << buffer;
+      TLOG(TLVL_DEBUG) << "TTLK_INIT step - received:: " << buffer;
       return 0;
     }
   
@@ -470,6 +477,32 @@ void sbndaq::ICARUSTriggerUDP::configure_socket(int socket, struct sockaddr_in& 
     accept(socket, (struct sockaddr *) &si, &socketlen);
   else
     TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";
+}
+
+int sbndaq::ICARUSTriggerUDP::send_init_params()
+{
+  std::string init_send;
+  for(unsigned int i = 0; i < initialization_data_.size(); i = i + 2)
+  {
+    std::string data_key = initialization_data_[i];
+    std::string data_value = initialization_data_[i+1];
+    init_send += data_key + " = \"" + data_value + "\" , ";
+  }
+  int sendcode = send(datafd_,&init_send,init_send.size(),0);
+  int size_bytes = 0;
+  while(size_bytes <= 0)
+  {
+    size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
+    if(size_bytes>0){
+      buffer[size_bytes+1] = {'\0'};
+      readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
+      TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
+    }
+    //conditional on return depending on what is sent by trigger board
+    return 1;
+  }
+  //for safety if somehow get here
+  return 0;
 }
 
 //no need for confirmation on these...
