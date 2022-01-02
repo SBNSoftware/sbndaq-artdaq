@@ -53,12 +53,14 @@ namespace sbndaq
     void pause() override;
     void resume() override;
     
-    void send(const Command_t);
+    void sendUDP(const Command_t);
     int poll_with_timeout(int,std::string,struct sockaddr_in&, int);
     //int read(int,uint16_t*);
     int read(int, std::string, struct sockaddr_in&,int,char*);
+    int readTCP(int, std::string, struct sockaddr_in&,int,char*);
+    void configure_socket(int, struct sockaddr_in&);
     
-    int send_TTLK_INIT(int,int);
+    int send_TTLK_INIT(int, int);
     void send_TRIG_VETO();
     void send_TRIG_ALLW();
     
@@ -82,6 +84,10 @@ namespace sbndaq
 
     struct sockaddr_in si_data_;
     int datasocket_;
+
+    int datafd_;
+
+    int dataconnfd_;
 
     int pmtdataport_;
     std::string ip_data_pmt_;
