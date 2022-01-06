@@ -27,7 +27,7 @@
 #include <list>
 #include <queue>
 #include <atomic>
-
+#include <vector>
 
 namespace sbndaq
 {
@@ -58,7 +58,7 @@ namespace sbndaq
     //int read(int,uint16_t*);
     int read(int, std::string, struct sockaddr_in&,int,char*);
     int readTCP(int, std::string, struct sockaddr_in&,int,char*);
-    int send_init_params();
+    int send_init_params(std::vector<std::string>, fhicl::ParameterSet);
     void configure_socket(int, struct sockaddr_in&);
     
     //int send_TTLK_INIT(int, int);
@@ -130,7 +130,8 @@ namespace sbndaq
     char buffer[500] = {'\0'};
     uint8_t peekBuffer[2] = {0,0};
 
-    std::vector<std::string> initialization_data_;
+    fhicl::ParameterSet initialization_data_fpga_;
+    fhicl::ParameterSet initialization_data_spexi_;
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */

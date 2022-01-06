@@ -38,7 +38,8 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
-  , initialization_data_(ps.get<std::vector<std::string> >("trigger_init_params"))
+  , initialization_data_fpga_(ps.get<fhicl::ParameterSet>("fpga_init_params"))
+  , initialization_data_spexi_(ps.get<fhicl::ParameterSet>("spexi_init_params"))
 {
   
   configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -311,7 +312,11 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 void sbndaq::ICARUSTriggerUDP::start()
 {
   if(initialization(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
-     TLOG(TLVL_ERROR) << "Did not receive response from SPEXI! -- Initialization" << "\n";
+  {
+     TLOG(TLVL_ERROR) << "Was not able to initialize SPEXI" << "\n";
+     abort();
+
+  }
   //send_TRIG_ALLW();
   close(datafd_);
   socklen_t datalen = sizeof((struct sockaddr_in&) si_data_);
@@ -324,6 +329,7 @@ void sbndaq::ICARUSTriggerUDP::start()
   else                                                                                
     {                               
     TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI -- data transfer" << "\n";
+    abort();
   }                                                                            
 }
 void sbndaq::ICARUSTriggerUDP::stop()
@@ -438,10 +444,35 @@ int sbndaq::ICARUSTriggerUDP::initialization(int retries, int sleep_time_ms)
     return -1;
   }
   while(retries >-1) {
-    int setup = send_init_params();
+    TLOG(TLVL_INFO) << "Sending Initialization Parameters for FPGA";
+    std::vector<std::string> fpga_init_keys = initialization_data_fpga_.get_pset_names();
+    int setup = send_init_params(fpga_init_keys, initialization_data_fpga_);
     if(setup == 1)
       break;
+    if(setup == 0)
+    {
+      TLOG(TLVL_ERROR) <<
+        "ICARUSTriggerUDP: Did not successfully communicate FPGA parameters to SPEXI ";
+      return -1;
+    }
   }
+  TLOG(TLVL_INFO) << "Initialization Parameters for FPGA successfully communicated to SPEXI";
+  TLOG(TLVL_INFO) << "Sending Initialization Parameters for SPEXI";
+  while(retries > -1) {
+    std::vector<std::string> spexi_init_keys = initialization_data_spexi_.get_pset_names();
+    int setup = send_init_params(spexi_init_keys, initialization_data_spexi_);
+    if(setup == 1)
+      break;
+    if(setup == 0)
+    { 
+      TLOG(TLVL_ERROR) <<
+	"ICARUSTriggerUDP: Did not successfully communicate SPEXI parameters to SPEXI ";
+      return -1;
+    }
+
+  }
+  TLOG(TLVL_INFO) << "Initialization Parameters for SPEXI successfully communicated to SPEXI";
+  TLOG(TLVL_INFO) << "Sending Start of Run Command"; 
   while(retries>-1){
     char cmd[16];
     sprintf(cmd,"%s","TTLK_CMD_INIT");
@@ -479,18 +510,21 @@ void sbndaq::ICARUSTriggerUDP::configure_socket(int socket, struct sockaddr_in& 
     TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";
 }
 
-int sbndaq::ICARUSTriggerUDP::send_init_params()
+int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_key_list, fhicl::ParameterSet pset)
 {
   std::string init_send;
-  for(unsigned int i = 0; i < initialization_data_.size(); i = i + 2)
+  for(auto const& key: param_key_list)
   {
-    std::string data_key = initialization_data_[i];
-    std::string data_value = initialization_data_[i+1];
-    init_send += data_key + " = \"" + data_value + "\" , ";
+    fhicl::ParameterSet key_pset = pset.get<fhicl::ParameterSet>(key);
+    std::string data_name = key_pset.get<std::string>("name", "");
+    std::string data_value = key_pset.get<std::string>("value", "");
+    init_send += data_name + " = \"" + data_value + "\", ";
   }
+  TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
   int sendcode = send(datafd_,&init_send,init_send.size(),0);
   int size_bytes = 0;
-  while(size_bytes <= 0)
+  int attempts = 0;
+  while(size_bytes <= 0 && attempts < 3)
   {
     size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
     if(size_bytes>0){
@@ -499,7 +533,13 @@ int sbndaq::ICARUSTriggerUDP::send_init_params()
       TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
     }
     //conditional on return depending on what is sent by trigger board
+    //if(return_string == okay)
+    //TLOG(TLVL_INFO) << "Parameters communicated successfully, moving to next step";
     return 1;
+    //if(return_string == notokay && attempts < 2)
+    //TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, trying again";
+    ++attempts; //try three times before sending error and exiting 
+    usleep(500000);
   }
   //for safety if somehow get here
   return 0;
