@@ -511,29 +511,34 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
     std::string data_value = key_pset.get<std::string>("value", "");
     init_send += data_name + " = \"" + data_value + "\", ";
   }
-  TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
-  int sendcode = send(datafd_,&init_send,init_send.size(),0);
-  int size_bytes = 0;
-  int attempts = 0;
-  while(size_bytes <= 0 && attempts < 3)
+  int send_retries = 3;
+  while(send_retries > -1)
   {
-    size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
-    if(size_bytes>0){
-      buffer[size_bytes+1] = {'\0'};
-      readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
-      TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
+    TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
+    int sendcode = send(datafd_,&init_send,init_send.size(),0);
+    int size_bytes = 0;
+    int attempts = 0;
+    while(size_bytes <= 0 && attempts < n_init_retries_)
+    {
+      size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
+      if(size_bytes>0){
+	buffer[size_bytes+1] = {'\0'};
+	readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
+	TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
+      }
+      ++attempts;
     }
     //conditional on return depending on what is sent by trigger board
     //if(return_string == okay)
     //TLOG(TLVL_INFO) << "Parameters communicated successfully, moving to next step";
     return 1;
-    //if(return_string == notokay && attempts < 2)
+    //if(return_string == notokay)
     //TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, trying again";
-    ++attempts; //try three times before sending error and exiting 
-    usleep(5000000);
+    --send_retries;
+    usleep(1000000);
   }
-  //for safety if somehow get here
-  return 0;
+    //too many attempts 
+    return 0;
 }
 
 //no need for confirmation on these...
