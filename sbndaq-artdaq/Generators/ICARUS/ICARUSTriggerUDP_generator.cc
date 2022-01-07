@@ -443,33 +443,24 @@ int sbndaq::ICARUSTriggerUDP::initialization(int retries, int sleep_time_ms)
     TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI" << "\n";       
     return -1;
   }
-  while(retries >-1) {
-    TLOG(TLVL_INFO) << "Sending Initialization Parameters for FPGA";
-    std::vector<std::string> fpga_init_keys = initialization_data_fpga_.get_pset_names();
-    int setup = send_init_params(fpga_init_keys, initialization_data_fpga_);
-    if(setup == 1)
-      break;
-    if(setup == 0)
-    {
-      TLOG(TLVL_ERROR) <<
-        "ICARUSTriggerUDP: Did not successfully communicate FPGA parameters to SPEXI ";
-      return -1;
-    }
+  TLOG(TLVL_INFO) << "Sending Initialization Parameters for FPGA";
+  std::vector<std::string> fpga_init_keys = initialization_data_fpga_.get_pset_names();
+  int setup_fpga = send_init_params(fpga_init_keys, initialization_data_fpga_);
+  if(setup_fpga == 0)
+  {
+    TLOG(TLVL_ERROR) <<
+      "ICARUSTriggerUDP: Did not successfully communicate FPGA parameters to SPEXI ";
+    return -1;
   }
   TLOG(TLVL_INFO) << "Initialization Parameters for FPGA successfully communicated to SPEXI";
   TLOG(TLVL_INFO) << "Sending Initialization Parameters for SPEXI";
-  while(retries > -1) {
-    std::vector<std::string> spexi_init_keys = initialization_data_spexi_.get_pset_names();
-    int setup = send_init_params(spexi_init_keys, initialization_data_spexi_);
-    if(setup == 1)
-      break;
-    if(setup == 0)
-    { 
-      TLOG(TLVL_ERROR) <<
-	"ICARUSTriggerUDP: Did not successfully communicate SPEXI parameters to SPEXI ";
-      return -1;
-    }
-
+  std::vector<std::string> spexi_init_keys = initialization_data_spexi_.get_pset_names();
+  int setup_spexi = send_init_params(spexi_init_keys, initialization_data_spexi_);
+  if(setup_spexi == 0)
+  {
+    TLOG(TLVL_ERROR) <<
+      "ICARUSTriggerUDP: Did not successfully communicate SPEXI Initialize parameters to SPEXI ";
+    return -1;
   }
   TLOG(TLVL_INFO) << "Initialization Parameters for SPEXI successfully communicated to SPEXI";
   TLOG(TLVL_INFO) << "Sending Start of Run Command"; 
@@ -539,7 +530,7 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
     //if(return_string == notokay && attempts < 2)
     //TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, trying again";
     ++attempts; //try three times before sending error and exiting 
-    usleep(500000);
+    usleep(5000000);
   }
   //for safety if somehow get here
   return 0;
