@@ -548,9 +548,9 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit) {
     jj += 2;
   }
   
-  auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  hit.coinc = *coinc_ptr;
-  jj += 4;
+//  auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
+//  hit.coinc = *coinc_ptr;
+//  jj += 4;
 }
 
 int sbndaq::FEBDRV::GetData() {
@@ -576,7 +576,7 @@ int sbndaq::FEBDRV::GetData() {
     return -1;
   }
   
-  const int hit_size = 80; //size of data received from FEB
+  const int hit_size = 76; //size of data received from FEB
   if(numbytes % hit_size != 18) {
     TLOG(TLVL_ERROR)<<__func__<<"() Size of data: "<<(numbytes - 18)<<" received from FEB is not a multiple of "<<std::to_string(hit_size);
   }

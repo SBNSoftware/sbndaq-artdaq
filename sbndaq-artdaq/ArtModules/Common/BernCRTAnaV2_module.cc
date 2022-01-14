@@ -52,7 +52,7 @@ private:
   uint32_t ts0;
   uint32_t ts1;
   uint16_t adc[32];
-  uint32_t coinc;
+//  uint32_t coinc;
 
   uint64_t  feb_hit_number          = 0; //hit counter for individual FEB, including hits lost in FEB or fragment generator        
   uint64_t  timestamp               = 0; //absolute timestamp
@@ -94,7 +94,7 @@ sbndaq::BernCRTAnaV2::BernCRTAnaV2(fhicl::ParameterSet const & pset)
   hits->Branch("ts0",           &ts0,           "ts0/i");
   hits->Branch("ts1",           &ts1,           "ts1/i");
   hits->Branch("adc",           &adc,           "adc[32]/s");
-  hits->Branch("coinc",         &coinc,         "coinc/i");
+//  hits->Branch("coinc",         &coinc,         "coinc/i");
   hits->Branch("feb_hit_number",&feb_hit_number,"feb_hit_number/l");
   hits->Branch("timestamp",     &timestamp,     "timestamp/l");
   hits->Branch("last_accepted_timestamp",&last_accepted_timestamp, "last_accepted_timestamp/l");
@@ -148,7 +148,7 @@ void sbndaq::BernCRTAnaV2::analyze_fragment(artdaq::Fragment & frag) {
     lostfpga                = bevt->lostfpga;
     ts0                     = bevt->ts0;
     ts1                     = bevt->ts1;
-    coinc                   = bevt->coinc;
+//    coinc                   = bevt->coinc;
     
     feb_hit_number          = bevt->feb_hit_number;
     timestamp               = bevt->timestamp;
