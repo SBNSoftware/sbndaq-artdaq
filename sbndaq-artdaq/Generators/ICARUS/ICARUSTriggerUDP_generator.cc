@@ -140,15 +140,18 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   int tries = n_init_retries_;
   while(tries>-1){
     int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
-    if(size_bytes <= 0)
-    {
       if(size_bytes>0){
         buffer[size_bytes+1] = {'\0'};
         readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
         TLOG(TLVL_DEBUG) << "Initialization final step - received:: " << buffer;
       }
+      if(tries == 0)
+      {
+	throw art::Exception(art::errors::Configuration) <<
+	  "ICARUSTriggerUDP: Did not successfully communicate ability to go to start of run communication to SPEXI";
+	exit(1);
+      }
       --tries;
-    }
   }
 
   fEventCounter = 1;
@@ -499,12 +502,9 @@ int sbndaq::ICARUSTriggerUDP::initialization(int retries, int sleep_time_ms)
     int sendcode = send(datafd_,&cmd,16, 0); //datafd
     TLOG(TLVL_INFO) << "retcode from send call is: " << sendcode;
     TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
-    //send(TTLK_INIT);
     //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
     int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, sleep_time_ms);  
     if(size_bytes>0){
-      //uint16_t buffer[size_bytes/2+1];
-      //char bufferinit[size_bytes];
       buffer[size_bytes+1] = {'\0'};
       readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
       TLOG(TLVL_DEBUG) << "TTLK_INIT step - received:: " << buffer;
@@ -537,6 +537,7 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
     std::string data_value = key_pset.get<std::string>("value", "");
     init_send += data_name + " = \"" + data_value + "\", ";
   }
+  init_send += "\r \n";
   int send_retries = 3;
   while(send_retries > -1)
   {
@@ -551,15 +552,18 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
 	buffer[size_bytes+1] = {'\0'};
 	readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
 	TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
+	if(buffer[0] == '1')
+	{
+	  TLOG(TLVL_INFO) << "Parameters accepted, continuing";
+	  return 1;
+	}
+	else if(buffer[0] == '0')
+	  TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, trying again";
+	else
+	  TLOG(TLVL_WARNING) << "Received string from LabVIEW not as expected! Trying again";
       }
-      //conditional on return depending on what is sent by trigger board   
-      //if(return_string == okay)
-      //TLOG(TLVL_INFO) << "Parameters communicated successfully, moving to next step";
-      return 1;
       ++attempts;
     }
-    //if(return_string == notokay)
-    //TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, trying again";
     --send_retries;
     usleep(1000000);
   }
