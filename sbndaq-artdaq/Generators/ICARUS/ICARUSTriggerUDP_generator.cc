@@ -137,6 +137,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
     TLOG(TLVL_WARNING) << "No keys detected for SPEXI parameter initialization, continuing";
 
   TLOG(TLVL_INFO) << "Waiting for response from board to finish initialization";
+  /*
   int tries = n_init_retries_;
   while(tries>-1){
     int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
@@ -153,6 +154,9 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
       }
       --tries;
   }
+  */
+  usleep(30000000); //30s
+  TLOG(TLVL_INFO) << "YES! TRIGER SAYS GO GO GO GO GO GO GO GO GO!!!";
 
   fEventCounter = 1;
   fLastEvent = 0;
@@ -442,7 +446,7 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 			 //(struct sockaddr *) &si, &slen);
       //std::cout << msg_size << std::endl;
       TLOG(TLVL_DEBUG) << "peek recvfrom:: " << ret << " " << errno << " size: " << (int)(peekBuffer[1]);
-      return 1;
+      return (int)(peekBuffer[1]);
     }
   }
   //timeout
@@ -537,12 +541,12 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
     std::string data_value = key_pset.get<std::string>("value", "");
     init_send += data_name + " = \"" + data_value + "\", ";
   }
-  init_send += "\r \n";
+  init_send += "\r\n";
   int send_retries = 3;
   while(send_retries > -1)
   {
     TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
-    int sendcode = send(datafd_,&init_send,init_send.size(),0);
+    int sendcode = send(datafd_,&init_send[0],init_send.size(),0);
     int size_bytes = 0;
     int attempts = 0;
     while(size_bytes <= 0 && attempts < n_init_retries_)
