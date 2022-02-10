@@ -137,14 +137,17 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
     TLOG(TLVL_WARNING) << "No keys detected for SPEXI parameter initialization, continuing";
 
   TLOG(TLVL_INFO) << "Waiting for response from board to finish initialization";
-  /*
+
+  usleep(30000000); /*30s*/  TLOG(TLVL_DEBUG+1) << "Continuing after init (debugging) inserted 30s sleep";
+
   int tries = n_init_retries_;
   while(tries>-1){
-    int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
+    int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_*2);
       if(size_bytes>0){
         buffer[size_bytes+1] = {'\0'};
         readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
         TLOG(TLVL_DEBUG) << "Initialization final step - received:: " << buffer;
+	break;
       }
       if(tries == 0)
       {
@@ -154,8 +157,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
       }
       --tries;
   }
-  */
-  usleep(30000000); //30s
+
   TLOG(TLVL_INFO) << "YES! TRIGER SAYS GO GO GO GO GO GO GO GO GO!!!";
 
   fEventCounter = 1;
