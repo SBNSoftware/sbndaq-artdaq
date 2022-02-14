@@ -223,7 +223,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
       mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "TIME MAP!!!!!!!!!!!!!!: " << tm.first << '\t' << tm.second << '\n';
     }
     FILE* fout = fopen("time.txt","a");
-    fprintf(fout, "%u %f %f %lu \n", lastGPSStamp.gps_frame, lastGPSStamp.gps_frame*0.00128, diff_time*0.00128, ntp_time);
+    fprintf(fout, "%u %u %f %f %lu \n", lastGPSStamp.gps_frame, lastGPSStamp.gps_sample, lastGPSStamp.gps_frame*0.00128, diff_time*0.00128, ntp_time);
     fclose(fout);
     mf::LogInfo("timefile")  <<  (nowGPSStamp.gps_frame-lastGPSStamp.gps_frame)*1.28 << "\t " << nowGPSStamp.gps_frame*1.28  << "\t" << ntp_time ;
 

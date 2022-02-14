@@ -675,5 +675,8 @@ namespace nevistpc {
 	  if( use_fake_data ){
 	    loadFEMFakeData( crateConfig.get<std::string>( "fem_fake_data_pattern", "channel" ) );
 	  }
+
+	  readStatus();
 	}
+
 }
