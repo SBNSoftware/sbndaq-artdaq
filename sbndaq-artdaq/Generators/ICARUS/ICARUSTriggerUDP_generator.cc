@@ -544,15 +544,12 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
     init_send += data_name + " = \"" + data_value + "\", ";
   }
   init_send += "\r\n";
-  int send_retries = 3;
-  while(send_retries > -1)
+  TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
+  int sendcode = send(datafd_,&init_send[0],init_send.size(),0);
+  int size_bytes = 0;
+  int attempts = 0;
+  while(size_bytes <= 0 && attempts < n_init_retries_)
   {
-    TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
-    int sendcode = send(datafd_,&init_send[0],init_send.size(),0);
-    int size_bytes = 0;
-    int attempts = 0;
-    while(size_bytes <= 0 && attempts < n_init_retries_)
-    {
       size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
       if(size_bytes>0){
 	buffer[size_bytes+1] = {'\0'};
@@ -564,17 +561,20 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
 	  return 1;
 	}
 	else if(buffer[0] == '0')
-	  TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, trying again";
+	{
+	  TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, failing";
+	  return 0;
+	}
 	else
-	  TLOG(TLVL_WARNING) << "Received string from LabVIEW not as expected! Trying again";
+	{
+	  TLOG(TLVL_WARNING) << "Received string from LabVIEW not as expected! Failing";
+	  return 0;
+	}
       }
       ++attempts;
-    }
-    --send_retries;
-    usleep(1000000);
+      TLOG(TLVL_WARNING) << "Receive timeout. attempts = " << attempts << " of " << n_init_retries_;
   }
-    //too many attempts 
-    return 0;
+  return 0;
 }
 
 //no need for confirmation on these...
