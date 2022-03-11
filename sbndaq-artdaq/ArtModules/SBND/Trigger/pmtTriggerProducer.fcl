@@ -1,9 +1,0 @@
-BEGIN_PROLOG
- 
-pmtTriggerProducer:
-{
-  module_type: "pmtTriggerProducer"
-  verbose: true
-}
-
-END_PROLOG

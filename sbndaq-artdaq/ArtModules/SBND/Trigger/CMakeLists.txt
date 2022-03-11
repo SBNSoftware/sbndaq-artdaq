@@ -11,4 +11,3 @@ cet_make(
 
 build_plugin( CoincidenceFilter "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( testStandTriggerProducer "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
-build_plugin( pmtTriggerProducer "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
