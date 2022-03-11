@@ -40,7 +40,6 @@ private:
   // fhicl paramters
   std::string fInputModuleName;
   int fNCoincidence;
-  int fCoincidenceWindow;
   bool fExclusive;
   bool fVerbose;
 		    
@@ -51,7 +50,6 @@ private:
 sbndaq::CoincidenceFilter::CoincidenceFilter(fhicl::ParameterSet const & pset) : art::EDFilter(pset),
 fInputModuleName(pset.get<std::string>("InputModule")),
 fNCoincidence(pset.get<int>("nCoincidence")),
-fCoincidenceWindow(pset.get<int>("coincidenceWindow")),
 fExclusive(pset.get<bool>("exclusive")),
 fVerbose(pset.get<bool>("verbose"))
 // Initialize member data here.
