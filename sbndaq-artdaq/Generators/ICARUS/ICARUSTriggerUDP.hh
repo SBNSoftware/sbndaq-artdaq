@@ -127,7 +127,7 @@ namespace sbndaq
     long wr_time_offset_ns_;
     //expected fragments
     int generated_fragments_per_event_;
-    char buffer[500] = {'\0'};
+    char buffer[1000] = {'\0'};
     uint8_t peekBuffer[2] = {0,0};
 
     fhicl::ParameterSet initialization_data_fpga_;

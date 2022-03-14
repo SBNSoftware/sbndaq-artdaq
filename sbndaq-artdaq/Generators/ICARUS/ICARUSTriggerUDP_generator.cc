@@ -158,7 +158,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
       --tries;
   }
 
-  TLOG(TLVL_INFO) << "YES! TRIGER SAYS GO GO GO GO GO GO GO GO GO!!!";
+  TLOG(TLVL_INFO) << "Proceeding to start of run";
 
   fEventCounter = 1;
   fLastEvent = 0;
@@ -322,7 +322,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
     size_t fragment_size = max_fragment_size_bytes_;
-    TLOG(TLVL_DEBUG + 10) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
+    TLOG(TLVL_DEBUG + 10) << "Created ICARUSTriggerUDP Fragment with size of " << max_fragment_size_bytes_ << " bytes";
     frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, event_no, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
     std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
     icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
