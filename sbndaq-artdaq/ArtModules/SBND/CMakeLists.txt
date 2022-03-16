@@ -18,4 +18,4 @@ build_plugin(SBNDArtdaqBuildInfo "module" LIBRARIES REG ${BUILD_PLUGIN_BUILDINFO
 
 basic_plugin(SBND "fragmentNameHelper" LIBRARIES REG ${BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST})
 
-add_subdirectory(Trigger)
+add_subdirectory(testStandTrigger)

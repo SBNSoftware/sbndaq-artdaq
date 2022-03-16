@@ -13,20 +13,20 @@
 #include <string>
 
 namespace sbndaq {
-  class CoincidenceFilter;
+  class testStandCoincidenceFilter;
 }
 
-class sbndaq::CoincidenceFilter : public art::EDFilter {
+class sbndaq::testStandCoincidenceFilter : public art::EDFilter {
 public:
-  explicit CoincidenceFilter(fhicl::ParameterSet const & p);
+  explicit testStandCoincidenceFilter(fhicl::ParameterSet const & p);
   // The compiler-generated destructor is fine for non-base
   // classes without bare pointers or other resource use.
 
   // Plugins should not be copied or assigned.
-  CoincidenceFilter(CoincidenceFilter const &) = delete;
-  CoincidenceFilter(CoincidenceFilter &&) = delete;
-  CoincidenceFilter & operator = (CoincidenceFilter const &) = delete;
-  CoincidenceFilter & operator = (CoincidenceFilter &&) = delete;
+  testStandCoincidenceFilter(testStandCoincidenceFilter const &) = delete;
+  testStandCoincidenceFilter(testStandCoincidenceFilter &&) = delete;
+  testStandCoincidenceFilter & operator = (testStandCoincidenceFilter const &) = delete;
+  testStandCoincidenceFilter & operator = (testStandCoincidenceFilter &&) = delete;
 
   // Required functions.
   bool filter(art::Event & e) override;
@@ -42,12 +42,12 @@ private:
   int fNCoincidence;
   bool fExclusive;
   bool fVerbose;
-		    
+
 };
 
 // ------------------------------------------------- 
 
-sbndaq::CoincidenceFilter::CoincidenceFilter(fhicl::ParameterSet const & pset) : art::EDFilter(pset),
+sbndaq::testStandCoincidenceFilter::testStandCoincidenceFilter(fhicl::ParameterSet const & pset) : art::EDFilter(pset),
 fInputModuleName(pset.get<std::string>("InputModule")),
 fNCoincidence(pset.get<int>("nCoincidence")),
 fExclusive(pset.get<bool>("exclusive")),
@@ -59,7 +59,7 @@ fVerbose(pset.get<bool>("verbose"))
 
 // ------------------------------------------------- 
 
-bool sbndaq::CoincidenceFilter::filter(art::Event & evt)
+bool sbndaq::testStandCoincidenceFilter::filter(art::Event & evt)
 {
 
   int fRun = evt.run();
@@ -71,7 +71,7 @@ bool sbndaq::CoincidenceFilter::filter(art::Event & evt)
   art::Handle< sbndaq::testStandTrigger > triggerHandle;
   evt.getByLabel(fInputModuleName, triggerHandle);
   if(!triggerHandle.isValid()) {
-    throw art::Exception(art::errors::Configuration) << "testStandCoincidenceFilter: could not find trigger information from producer, check input module name specified is correct." << std::endl;
+    throw art::Exception(art::errors::Configuration) << "testStandtestStandCoincidenceFilter: could not find trigger information from producer, check input module name specified is correct." << std::endl;
   }
 
   int n = triggerHandle->nAboveThreshold;
@@ -88,18 +88,18 @@ bool sbndaq::CoincidenceFilter::filter(art::Event & evt)
 
 // ------------------------------------------------- 
 
-void sbndaq::CoincidenceFilter::beginJob()
+void sbndaq::testStandCoincidenceFilter::beginJob()
 {
   // Implementation of optional member function here.
 } // beginJob
 
 // ------------------------------------------------- 
 
-void sbndaq::CoincidenceFilter::endJob()
+void sbndaq::testStandCoincidenceFilter::endJob()
 {
   // Implementation of optional member function here.
 } // endJob
 
 // -------------------------------------------------
 
-DEFINE_ART_MODULE(sbndaq::CoincidenceFilter)
+DEFINE_ART_MODULE(sbndaq::testStandCoincidenceFilter)

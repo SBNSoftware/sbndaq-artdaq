@@ -1,12 +1,11 @@
 BEGIN_PROLOG
 
-coincidencefilter:
+teststandcoincidencefilter:
 {
 
-  module_type: "CoincidenceFilter"
+  module_type: "testStandCoincidenceFilter"
   threshold: 7800
   nCoincidence: 2
-  coincidenceWindow: 100
   shift_fragment_id: 1  # caen fragments
   verbose: true
 
