@@ -136,7 +136,7 @@ void sbndaq::BernCRTFEBConfiguration::InitializeParameters() {
     numerical_channel_parameters[ch+"HG_gain"]                     = {0, 63, uint16_t(619 + channel*15), uint16_t(624 + channel*15), ""};  
     numerical_channel_parameters[ch+"LG_gain"]                     = {0, 63, uint16_t(625 + channel*15), uint16_t(630 + channel*15), ""};
     boolean_channel_parameters  [ch+"activate_discriminator"] = {false, uint16_t(265 + channel* 1), false, ""};
-    boolean_channel_parameters  [ch+"high_high_bias"]         = {false, uint16_t(339 + channel* 9), false, ""};
+    boolean_channel_parameters  [ch+"high_high_bias"]         = {false, uint16_t(339 + channel* 9), false, ""}; //DAC ON
     boolean_channel_parameters  [ch+"test_HG"]                = {false, uint16_t(631 + channel*15), false, ""};
     boolean_channel_parameters  [ch+"test_LG"]                = {false, uint16_t(632 + channel*15), false, ""};
     boolean_channel_parameters  [ch+"enable_preamp"]          = {false, uint16_t(633 + channel*15), true,  ""};
