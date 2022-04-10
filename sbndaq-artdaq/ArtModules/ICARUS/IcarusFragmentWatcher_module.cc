@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////
-// Class:       FragmentWatcher
+// Class:       IcarusFragmentWatcher
 // Module Type: analyzer
-// File:        FragmentWatcher_module.cc
+// File:        IcarusFragmentWatcher_module.cc
 // Description: Collects and reports statistics on missing and empty fragments
 //
 // The model that is followed here is to publish to the metrics system
@@ -10,12 +10,14 @@
 // empty fragments will contain the total number of events in which each
 // fragment ID was missing or empty.
 //
+// This module is icarus-specific implementation of the artdaq FragmentWatcher_module.cc 
+//
 // TRACE messages, though, contain a mix of per-event and overall results.
 // To enable TLVL_TRACE messages that have overall resuts (for debugging),
-// use 'tonM -n <appname>_FragmentWatcher 4'.
+// use 'tonM -n <appname>_IcarusFragmentWatcher 4'.
 ////////////////////////////////////////////////////////////////////////
 
-#define TRACE_NAME (app_name + "_FragmentWatcher").c_str()
+#define TRACE_NAME (app_name + "_IcarusFragmentWatcher").c_str()
 #include "artdaq/DAQdata/Globals.hh"
 
 #include "art/Framework/Core/EDAnalyzer.h"
@@ -73,6 +75,8 @@ private:
 	IcarusFragmentWatcher& operator=(IcarusFragmentWatcher const&) = delete;
 	IcarusFragmentWatcher& operator=(IcarusFragmentWatcher&&) = delete;
 
+  std::string getNameFromKey(const int key);
+
 	std::bitset<3> mode_bitset_;
 	int metrics_reporting_level_;
 
@@ -81,6 +85,8 @@ private:
 
 	int events_with_missing_fragments_;
 	int events_with_empty_fragments_;
+  std::map<int, int> events_with_missing_fragments_by_subsystem_;
+  std::map<int, int> events_with_empty_fragments_by_subsystem_;
 
 	int events_with_10pct_missing_fragments_;
 	int events_with_10pct_empty_fragments_;
@@ -89,11 +95,18 @@ private:
 
 	std::map<int, int> missing_fragments_by_fragmentID_;
 	std::map<int, int> empty_fragments_by_fragmentID_;
+  std::map<int, int> missing_fragments_by_subsystem_; // Gropu togheter missing fragments from the same subsystem 
   std::map<int, int> empty_fragments_by_subsystem_; // Group togheter empty fragments from the same subsystem 
 
 	const int BASIC_COUNTS_MODE = 0;
 	const int FRACTIONAL_COUNTS_MODE = 1;
 	const int DETAILED_COUNTS_MODE = 2;
+  
+  enum Subsystems {
+    kTPC = 0x1000,
+    kPMT = 0x2000,
+    kCRT = 0x3000 
+  };
 };
 
 icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& pset)
@@ -104,17 +117,32 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
     , expected_fragmentID_list_()
     , events_with_missing_fragments_(0)
     , events_with_empty_fragments_(0)
+    , events_with_missing_fragments_by_subsystem_()
+    , events_with_empty_fragments_by_subsystem_()
     , events_with_10pct_missing_fragments_(0)
     , events_with_10pct_empty_fragments_(0)
     , events_with_50pct_missing_fragments_(0)
     , events_with_50pct_empty_fragments_(0)
     , missing_fragments_by_fragmentID_()
     , empty_fragments_by_fragmentID_()
+    , missing_fragments_by_subsystem_()
+    , empty_fragments_by_subsystem_()
 {
 }
 
 icarus::IcarusFragmentWatcher::~IcarusFragmentWatcher()
 {
+}
+
+std::string icarus::IcarusFragmentWatcher::getNameFromKey( const int key ){
+  
+  switch(key){
+    case kTPC : return "TPC";
+    case kPMT : return "PMT";
+    case kCRT : return "CRT";
+    default : return "Unknown";
+  }
+
 }
 
 void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
@@ -148,10 +176,12 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 		if (missing_fragments_by_fragmentID_.count(fragID) == 0)
 		{
 			missing_fragments_by_fragmentID_[fragID] = 1;
-		}
+      events_with_missing_fragments_by_subsystem_[ fragID & 0xF000 ] = 1;  // the MSB of the fragID encoding holds information on the subsystem
+    }
 		else
 		{
 			missing_fragments_by_fragmentID_[fragID] += 1;
+      missing_fragments_by_subsystem_[ fragID & 0xF000 ] +=1;
 		}
 	}
 
@@ -173,10 +203,12 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 				if (empty_fragments_by_fragmentID_.count(fragID) == 0)
 				{
 					empty_fragments_by_fragmentID_[fragID] = 1;
+          empty_fragments_by_subsystem_[ fragID & 0xF000 ] = 1;
 				}
 				else
 				{
 					empty_fragments_by_fragmentID_[fragID] += 1;
+          empty_fragments_by_subsystem_[fragID & 0xF000 ] += 1;
 				}
 				empty_fragmentID_list_this_event.insert(fragID);
 			}
@@ -234,6 +266,29 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 		                      metrics_reporting_level_, artdaq::MetricMode::LastPoint);
 		metricMan->sendMetric("EventsWithEmptyFragments", events_with_empty_fragments_, "events",
 		                      metrics_reporting_level_, artdaq::MetricMode::LastPoint);
+
+
+    // we report also the missing and empy fragments divided by subsystem
+    for( auto const &mapIter : missing_fragments_by_subsystem_ ){
+      
+      if ( mapIter.second > 0 && missing_fragment_count_this_event >0 )
+        events_with_missing_fragments_by_subsystem_[mapIter.first]++;
+
+      std::string MetricName = "EventsWithMissingFragmentsOn"+getNameFromKey(mapIter.first);
+      metricMan->sendMetric( MetricName, events_with_missing_fragments_by_subsystem_[mapIter.first], 
+                                    "events", metrics_reporting_level_, artdaq::MetricMode::LastPoint );
+    } 
+
+    for ( auto const &mapIter : empty_fragments_by_subsystem_ ){
+      
+      if ( mapIter.second > 0 && empty_fragment_count_this_event >0 )
+        events_with_empty_fragments_by_subsystem_[mapIter.first]++;
+
+      std::string MetricName = "EventsWithEmptyFragmentsOn"+getNameFromKey(mapIter.first);
+      metricMan->sendMetric( MetricName, events_with_empty_fragments_by_subsystem_[mapIter.first], 
+                                                "events", metrics_reporting_level_, artdaq::MetricMode::LastPoint );
+    }
+
 
 		TLOG(TLVL_BASIC_MODE) << "Event " << evt.event() << ": events_with_missing_fragments=" << events_with_missing_fragments_
 		                      << ", events_with_empty_fragments=" << events_with_empty_fragments_;
@@ -353,4 +408,4 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 #endif
 }
 
-DEFINE_ART_MODULE(artdaq::FragmentWatcher)  // NOLINT(performance-unnecessary-value-param)
+DEFINE_ART_MODULE(icarus::IcarusFragmentWatcher)  // NOLINT(performance-unnecessary-value-param)
