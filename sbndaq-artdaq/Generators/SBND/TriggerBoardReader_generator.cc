@@ -99,7 +99,7 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   std::string receiver_address = boost::asio::ip::host_name() ;
 
   // require the private hostname
-  std::string priv ("-priv");
+  std::string priv ("-daq");
 
   if (receiver_address.find(priv) == std::string::npos) { //not a private connection
 
@@ -417,6 +417,12 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
     else if ( PTB_Receiver::IsFeedbackWord( temp_word ) ) {
       TLOG_ERROR(TNAME) << "PTB issued a feedback word" << TLOG_ENDL;
+      const ptb::content::word::feedback_t * f = reinterpret_cast<const ptb::content::word::feedback_t *>( & temp_word  ) ;
+      TLOG_ERROR(TNAME) << "PTB issued a feedback word!"<< TLOG_ENDL;
+      TLOG_ERROR(TNAME) << "Feedback word Code: "       << f -> code      << TLOG_ENDL;
+      TLOG_ERROR(TNAME) << "Feedback word Source: "     << f -> source    << TLOG_ENDL;
+      TLOG_ERROR(TNAME) << "Feedback word Payload: "    << f -> payload   << TLOG_ENDL;
+      TLOG_ERROR(TNAME) << "Feedback word Timestamp: "  << f -> timestamp << TLOG_ENDL;
       _error_state.store( true ) ;
     }
 
