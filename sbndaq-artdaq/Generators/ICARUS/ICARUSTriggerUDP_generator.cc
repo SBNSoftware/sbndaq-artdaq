@@ -168,18 +168,21 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   fLastTimestampOther = 0;
   fLastTimestampBNBOff = 0;
   fLastTimestampNuMIOff = 0;
+  fLastTimestampCalib = 0;
   fLastGatesNum = 0;
   fLastGatesNumBNB = 0;
   fLastGatesNumNuMI = 0;
   fLastGatesNumOther = 0;
   fLastGatesNumBNBOff = 0;
   fLastGatesNumNuMIOff = 0;
+  fLastGatesNumCalib = 0;
   fDeltaGates = 0;
   fDeltaGatesBNB = 0;
   fDeltaGatesNuMI = 0;
   fDeltaGatesOther = 0;
   fDeltaGatesBNBOff = 0;
   fDeltaGatesNuMIOff = 0;
+  fDeltaGatesCalib = 0;
   fStartOfRun = 0;
   fInitialStep = 0;
 }
@@ -192,7 +195,6 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   /*
     //do something in here to get data...
    */
-
   //int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
   int size_bytes = poll_with_timeout(dataconnfd_,ip_data_, si_data_,500);  
   std::string data_input = "";
@@ -268,6 +270,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       fLastTimestampOther = fStartOfRun;
       fLastTimestampBNBOff = fStartOfRun;
       fLastTimestampNuMIOff = fStartOfRun;
+      fLastTimestampCalib = fStartOfRun;
     }
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
@@ -304,6 +307,11 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       if(fDeltaGatesNuMIOff <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI Offbeam <= 0!";
     }
+    else if(datastream_info.gate_type == 5)
+    {
+      fDeltaGatesCalib = datastream_info.gate_id - fLastGatesNumCalib;
+      metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
+    }
     else {
       fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
       metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
@@ -314,10 +322,10 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time,
 							     fLastTimestamp,
 							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampBNBOff, 
-							     fLastTimestampNuMIOff,fLastTimestampOther,
+							     fLastTimestampNuMIOff,fLastTimestampCalib,fLastTimestampOther,
 							     fDeltaGates,
 							     fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesBNBOff,
-							     fDeltaGatesNuMIOff, fDeltaGatesOther);
+							     fDeltaGatesNuMIOff, fDeltaGatesCalib, fDeltaGatesOther);
 
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
@@ -338,7 +346,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     if(wr_ts>0 && std::abs(tdiff) > 20e6)
       TLOG(TLVL_WARNING) << "abs(WR TIME - NTP TIME) is " << tdiff << " nanoseconds, which is greater than 20e6 threshold!!";
     
-
+ 
     fLastTimestamp = ts;
     fLastGatesNum = datastream_info.gate_id;
 
@@ -361,6 +369,11 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     {
       fLastTimestampNuMIOff = ts;
       fLastGatesNumNuMIOff = datastream_info.gate_id_NuMIOff;
+    }
+    else if(datastream_info.gate_type == 5)
+    {
+      fLastTimestampCalib = ts;
+      fLastGatesNumCalib = datastream_info.gate_id;
     }
     else{
       fLastTimestampOther = ts;
