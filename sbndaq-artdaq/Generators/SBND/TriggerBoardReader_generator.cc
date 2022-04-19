@@ -98,9 +98,8 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   boost::asio::ip::tcp::resolver resolver(io_service);
   std::string receiver_address = boost::asio::ip::host_name() ;
 
-  // require the private hostname
-  const std::string priv = ps.get<std::string>( "network_group", "-daq" );
-  //std::string priv ("-daq");
+  // Grab hostname suffix from config
+  const std::string priv = ps.get<std::string>("network_group");
 
   if (receiver_address.find(priv) == std::string::npos) { //not a private connection
 
