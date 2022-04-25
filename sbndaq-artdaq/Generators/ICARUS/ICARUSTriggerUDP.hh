@@ -124,6 +124,16 @@ namespace sbndaq
     long fDeltaGatesBNBOff;
     long fDeltaGatesNuMIOff;
     long fDeltaGatesCalib;
+    long fLastTriggerBNB;
+    long fLastTriggerNuMI;
+    long fLastTriggerBNBOff;
+    long fLastTriggerNuMIOff;
+    long fLastTriggerCalib;
+    long fTotalTriggerBNB;
+    long fTotalTriggerNuMI;
+    long fTotalTriggerBNBOff;
+    long fTotalTriggerNuMIOff;
+    long fTotalTriggerCalib;
     uint64_t fStartOfRun;
     int fInitialStep;
     bool use_wr_time_;

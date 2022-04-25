@@ -183,6 +183,16 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   fDeltaGatesBNBOff = 0;
   fDeltaGatesNuMIOff = 0;
   fDeltaGatesCalib = 0;
+  fLastTriggerBNB = 0;
+  fLastTriggerNuMI = 0;
+  fLastTriggerBNBOff = 0;
+  fLastTriggerNuMIOff = 0;
+  fLastTriggerCalib = 0;
+  fTotalTriggerBNB = 0;
+  fTotalTriggerNuMI = 0;
+  fTotalTriggerBNBOff = 0;
+  fTotalTriggerNuMIOff = 0;
+  fTotalTriggerCalib = 0;
   fStartOfRun = 0;
   fInitialStep = 0;
 }
@@ -282,6 +292,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     if(datastream_info.gate_type == 1)
     {
       fDeltaGatesBNB = datastream_info.gate_id_BNB - fLastGatesNumBNB;
+      ++fTotalTriggerBNB;
       metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
       if(fDeltaGatesBNB <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
@@ -289,6 +300,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     else if(datastream_info.gate_type == 2)
     {
       fDeltaGatesNuMI = datastream_info.gate_id_NuMI - fLastGatesNumNuMI;
+      ++fTotalTriggerNuMI;
       metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
       if(fDeltaGatesNuMI <= 0)
         TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
@@ -296,6 +308,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     else if(datastream_info.gate_type == 3)
     {
       fDeltaGatesBNBOff = datastream_info.gate_id_BNBOff - fLastGatesNumBNBOff;
+      ++fTotalTriggerBNBOff;
       metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
       if(fDeltaGatesBNBOff <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB Offbeam <= 0!";
@@ -303,6 +316,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     else if(datastream_info.gate_type == 4)
     {
       fDeltaGatesNuMIOff = datastream_info.gate_id_NuMIOff - fLastGatesNumNuMIOff;
+      ++fTotalTriggerNuMIOff;
       metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
       if(fDeltaGatesNuMIOff <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI Offbeam <= 0!";
@@ -310,6 +324,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     else if(datastream_info.gate_type == 5)
     {
       fDeltaGatesCalib = datastream_info.gate_id - fLastGatesNumCalib;
+      ++fTotalTriggerCalib;
       metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
     }
     else {
@@ -323,6 +338,10 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 							     fLastTimestamp,
 							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampBNBOff, 
 							     fLastTimestampNuMIOff,fLastTimestampCalib,fLastTimestampOther,
+							     fLastTriggerBNB, fLastTriggerNuMI, fLastTriggerBNBOff,
+							     fLastTriggerNuMIOff, fLastTriggerCalib,
+							     fTotalTriggerBNB, fTotalTriggerNuMI, fTotalTriggerBNBOff,
+							     fTotalTriggerNuMIOff, fTotalTriggerCalib,
 							     fDeltaGates,
 							     fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesBNBOff,
 							     fDeltaGatesNuMIOff, fDeltaGatesCalib, fDeltaGatesOther);
@@ -354,26 +373,31 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     {
       fLastTimestampBNB = ts;
       fLastGatesNumBNB = datastream_info.gate_id_BNB;
+      fLastTriggerBNB = datastream_info.wr_event_no;
     }
     else if(datastream_info.gate_type == 2)
     {
       fLastTimestampNuMI = ts;
       fLastGatesNumNuMI = datastream_info.gate_id_NuMI;
+      fLastTriggerNuMI = datastream_info.wr_event_no;
     }
     else if(datastream_info.gate_type == 3)
     {
       fLastTimestampBNBOff = ts;
       fLastGatesNumBNBOff = datastream_info.gate_id_BNBOff;
+      fLastTriggerBNBOff = datastream_info.wr_event_no;
     }
     else if(datastream_info.gate_type == 4)
     {
       fLastTimestampNuMIOff = ts;
       fLastGatesNumNuMIOff = datastream_info.gate_id_NuMIOff;
+      fLastTriggerNuMIOff = datastream_info.wr_event_no;
     }
     else if(datastream_info.gate_type == 5)
     {
       fLastTimestampCalib = ts;
       fLastGatesNumCalib = datastream_info.gate_id;
+      fLastTriggerCalib = datastream_info.wr_event_no;
     }
     else{
       fLastTimestampOther = ts;
