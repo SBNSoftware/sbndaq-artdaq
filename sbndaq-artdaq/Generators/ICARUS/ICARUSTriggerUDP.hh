@@ -134,6 +134,7 @@ namespace sbndaq
     long fTotalTriggerBNBOff;
     long fTotalTriggerNuMIOff;
     long fTotalTriggerCalib;
+    int fLastTriggerType;
     uint64_t fStartOfRun;
     int fInitialStep;
     bool use_wr_time_;

@@ -183,6 +183,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   fDeltaGatesBNBOff = 0;
   fDeltaGatesNuMIOff = 0;
   fDeltaGatesCalib = 0;
+  fLastTriggerType = 0;
   fLastTriggerBNB = 0;
   fLastTriggerNuMI = 0;
   fLastTriggerBNBOff = 0;
@@ -338,8 +339,8 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 							     fLastTimestamp,
 							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampBNBOff, 
 							     fLastTimestampNuMIOff,fLastTimestampCalib,fLastTimestampOther,
-							     fLastTriggerBNB, fLastTriggerNuMI, fLastTriggerBNBOff,
-							     fLastTriggerNuMIOff, fLastTriggerCalib,
+							     fLastTriggerType, fLastTriggerBNB, fLastTriggerNuMI, 
+							     fLastTriggerBNBOff,fLastTriggerNuMIOff, fLastTriggerCalib,
 							     fTotalTriggerBNB, fTotalTriggerNuMI, fTotalTriggerBNBOff,
 							     fTotalTriggerNuMIOff, fTotalTriggerCalib,
 							     fDeltaGates,
@@ -380,6 +381,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       fLastTimestampNuMI = ts;
       fLastGatesNumNuMI = datastream_info.gate_id_NuMI;
       fLastTriggerNuMI = datastream_info.wr_event_no;
+      
     }
     else if(datastream_info.gate_type == 3)
     {
@@ -403,6 +405,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       fLastTimestampOther = ts;
       fLastGatesNumOther = datastream_info.gate_id;
     }
+    fLastTriggerType = datastream_info.gate_type;
     ++fEventCounter;
   }
 
