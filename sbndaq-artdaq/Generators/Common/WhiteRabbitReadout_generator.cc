@@ -319,6 +319,31 @@ bool sbndaq::WhiteRabbitReadout::getData()
                           artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$74");
 
 
+
+//  PPS
+    if(data->channel == 0)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Average, "WR_CLK02_SPEC_DIO_PPS_AVG");
+// $1D from MI12
+    if(data->channel == 1)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Average, "WR_CLK02_SPEC_DIO_$1D_AVG");
+
+// gatedBES from MI12
+    if(data->channel == 4)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Average, "WR_CLK02_SPEC_DIO_gatedBES_AVG");
+
+// $AE from MI60
+    if(data->channel == 2)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Average, "WR_CLK02_SPEC_DIO_$AE_AVG");
+
+// $74 from MI60
+    if(data->channel == 3)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Average, "WR_CLK02_SPEC_DIO_$74_AVG");
+
 //Average
 //Rate
 
