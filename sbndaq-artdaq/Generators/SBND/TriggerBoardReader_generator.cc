@@ -29,7 +29,8 @@
 
 #include <unistd.h>
 
-
+#include "boost/date_time/microsec_time_clock.hpp"
+#include "boost/date_time/posix_time/posix_time.hpp"
 
 sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   :
@@ -46,6 +47,12 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   // get options for fragment creation
   _group_size = ps.get<unsigned int>( "group_size", 1 ) ;
   TLOG_INFO(TNAME) << "Creating fragments with " << _group_size << TLOG_ENDL;
+
+  // Set the fragment timestamp source, either hardware or NTP
+  _use_server_timestamp = ps.get<bool>( "use_server_timestamp" ) ;
+
+  // Optional timestamp offset, should be 0 by default
+  _ts_offset_nano_sec = ps.get<unsigned int>( "ts_offset_nano_sec", 0 ) ;
 
   unsigned int word_buffer_size = ps.get<unsigned int>( "word_buffer_size", 5000 ) ;
   _max_words_per_frag = word_buffer_size / 5 * 4 ;  // 80 % of the buffer size
@@ -403,11 +410,19 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
   }
 
-
   fragptr -> resizeBytes( word_counter * word_bytes ) ;
   fragptr -> setUserType( detail::FragmentType::PTB ) ;
   fragptr -> setSequenceID( ev_counter_inc() ) ;
   fragptr -> setFragmentID( fragment_id() ) ;
+
+  // This will use the server NTP time for fragment timestamp
+  if ( _use_server_timestamp ) {
+    boost::posix_time::ptime t_now(boost::posix_time::microsec_clock::universal_time());
+    boost::posix_time::ptime time_t_epoch(boost::gregorian::date(1970,1,1));
+    boost::posix_time::time_duration diff = t_now - time_t_epoch;
+    // Default the offset to 0ns
+    timestamp = diff.total_nanoseconds() - _ts_offset_nano_sec;
+  }
 
   fragptr -> setTimestamp( timestamp ) ;
   TLOG( 20, "TriggerBoardReader") << "fragment created with TS " << timestamp << " containing " << word_counter << " words" << std::endl ;

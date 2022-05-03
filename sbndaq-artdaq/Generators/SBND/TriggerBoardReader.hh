@@ -74,6 +74,8 @@ namespace sbndaq {
     // fragment creation parameters
     unsigned int _group_size ;
     unsigned int _max_words_per_frag ;    
+    unsigned int _ts_offset_nano_sec ;
+    bool         _use_server_timestamp ;
 
     bool _has_last_TS = false ;
     artdaq::Fragment::timestamp_t _last_timestamp = artdaq::Fragment::InvalidTimestamp ;
