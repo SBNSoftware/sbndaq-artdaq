@@ -21,9 +21,9 @@ fcldir      -
 product               version      optional
 artdaq                v3_11_01
 sbndaq_artdaq_core    v1_01_00
-caencomm              v1_2a
-caenvme               v2_50
-caendigitizer         v2_12_0
+caencomm              v1_5_0
+caenvme               v3_3_0
+caendigitizer         v2_17_0
 pqxx                  v6_2_5d     s110
 pqxx                  v6_2_5e     s112
 epics                 v3_16_2a
