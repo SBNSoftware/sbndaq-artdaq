@@ -260,7 +260,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
     data->command       = WR_DIO_CMD_STAMP;
     data->value         = 0;
     agentDevice.ifr_data = (char *)data;
-    TLOG(TLVL_INFO) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
+    TLOG(TLVL_DEBUG+1) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
     clock_gettime(CLOCK_REALTIME,&event.systemTime);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
@@ -274,7 +274,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
       event.systemTime.tv_nsec;
     for (uint32_t i=0; i<data->nstamp; i++)
     {
-      TLOG(TLVL_INFO) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
+      TLOG(TLVL_DEBUG+1) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
 	" " << data->timeStamp[i].tv_nsec; 
 
 //added in the loop 
