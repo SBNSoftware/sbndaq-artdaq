@@ -1,0 +1,14 @@
+BEGIN_PROLOG
+
+teststandcoincidencefilter:
+{
+
+  module_type: "testStandCoincidenceFilter"
+  threshold: 7800
+  nCoincidence: 2
+  shift_fragment_id: 1  # caen fragments
+  verbose: true
+
+}
+
+END_PROLOG
