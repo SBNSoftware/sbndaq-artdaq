@@ -27,7 +27,7 @@
 #include <list>
 #include <queue>
 #include <atomic>
-
+#include <vector>
 
 namespace sbndaq
 {
@@ -53,12 +53,16 @@ namespace sbndaq
     void pause() override;
     void resume() override;
     
-    void send(const Command_t);
+    void sendUDP(const Command_t);
     int poll_with_timeout(int,std::string,struct sockaddr_in&, int);
     //int read(int,uint16_t*);
     int read(int, std::string, struct sockaddr_in&,int,char*);
+    int readTCP(int, std::string, struct sockaddr_in&,int,char*);
+    int send_init_params(std::vector<std::string>, fhicl::ParameterSet);
+    void configure_socket(int, struct sockaddr_in&);
     
-    int send_TTLK_INIT(int,int);
+    //int send_TTLK_INIT(int, int);
+    int initialization(int, int);
     void send_TRIG_VETO();
     void send_TRIG_ALLW();
     
@@ -83,6 +87,10 @@ namespace sbndaq
     struct sockaddr_in si_data_;
     int datasocket_;
 
+    int datafd_;
+
+    int dataconnfd_;
+
     int pmtdataport_;
     std::string ip_data_pmt_;
 
@@ -99,22 +107,34 @@ namespace sbndaq
     uint64_t fLastTimestampBNB;
     uint64_t fLastTimestampNuMI;
     uint64_t fLastTimestampOther;
+    uint64_t fLastTimestampBNBOff;
+    uint64_t fLastTimestampNuMIOff;
     long fLastGatesNum;
     long fLastGatesNumBNB;
     long fLastGatesNumNuMI;
     long fLastGatesNumOther;
+    long fLastGatesNumBNBOff;
+    long fLastGatesNumNuMIOff;
     long fDeltaGates;
     long fDeltaGatesBNB;
     long fDeltaGatesNuMI;
     long fDeltaGatesOther;
+    long fDeltaGatesBNBOff;
+    long fDeltaGatesNuMIOff;
     uint64_t fStartOfRun;
     int fInitialStep;
     bool use_wr_time_;
     long wr_time_offset_ns_;
     //expected fragments
     int generated_fragments_per_event_;
-    char buffer[500] = {'\0'};
+    
+    static constexpr std::size_t BufferSize = 1500;
+    char buffer[BufferSize] = {'\0'};
+    // char buffer[1000] = {'\0'};
     uint8_t peekBuffer[2] = {0,0};
+
+    fhicl::ParameterSet initialization_data_fpga_;
+    fhicl::ParameterSet initialization_data_spexi_;
   };
 }
 #endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */

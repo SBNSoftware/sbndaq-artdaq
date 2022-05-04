@@ -1495,6 +1495,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
       */
     }
 
+
   }
 
   return true;
@@ -2030,6 +2031,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     if( ts_frag>ts_now )
       TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Causality problem!!"
+			 << "ts_frag - ts_now = " << ts_frag - ts_now << " ns!"
 			 << TLOG_ENDL;
 
     else if( (ts_now-ts_frag)>5e9 ){

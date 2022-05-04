@@ -141,8 +141,8 @@ ENDIF()
 
 
 link_directories("$ENV{ROOTSYS}/lib")
-include_directories("$ENV{ARTDAQ_INC}")
-link_directories("$ENV{ARTDAQ_LIB}")
+#include_directories("$ENV{ARTDAQ_INC}")
+#link_directories("$ENV{ARTDAQ_LIB}")
 link_directories("$ENV{ARTDAQ_UTILITIES_LIB}")
 
 string(REGEX MATCHALL "[0-9][0-9]?[0-9]?" ART_VERSION_LIST "$ENV{ART_VERSION}")
