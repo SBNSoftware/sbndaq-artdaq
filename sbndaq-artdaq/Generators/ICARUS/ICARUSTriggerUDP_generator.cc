@@ -168,18 +168,32 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   fLastTimestampOther = 0;
   fLastTimestampBNBOff = 0;
   fLastTimestampNuMIOff = 0;
+  fLastTimestampCalib = 0;
   fLastGatesNum = 0;
   fLastGatesNumBNB = 0;
   fLastGatesNumNuMI = 0;
   fLastGatesNumOther = 0;
   fLastGatesNumBNBOff = 0;
   fLastGatesNumNuMIOff = 0;
+  fLastGatesNumCalib = 0;
   fDeltaGates = 0;
   fDeltaGatesBNB = 0;
   fDeltaGatesNuMI = 0;
   fDeltaGatesOther = 0;
   fDeltaGatesBNBOff = 0;
   fDeltaGatesNuMIOff = 0;
+  fDeltaGatesCalib = 0;
+  fLastTriggerType = 0;
+  fLastTriggerBNB = 0;
+  fLastTriggerNuMI = 0;
+  fLastTriggerBNBOff = 0;
+  fLastTriggerNuMIOff = 0;
+  fLastTriggerCalib = 0;
+  fTotalTriggerBNB = 0;
+  fTotalTriggerNuMI = 0;
+  fTotalTriggerBNBOff = 0;
+  fTotalTriggerNuMIOff = 0;
+  fTotalTriggerCalib = 0;
   fStartOfRun = 0;
   fInitialStep = 0;
 }
@@ -192,7 +206,6 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   /*
     //do something in here to get data...
    */
-
   //int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
   int size_bytes = poll_with_timeout(dataconnfd_,ip_data_, si_data_,500);  
   std::string data_input = "";
@@ -270,6 +283,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       fLastTimestampOther = fStartOfRun;
       fLastTimestampBNBOff = fStartOfRun;
       fLastTimestampNuMIOff = fStartOfRun;
+      fLastTimestampCalib = fStartOfRun;
     }
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
@@ -281,6 +295,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     if(datastream_info.gate_type == 1)
     {
       fDeltaGatesBNB = datastream_info.gate_id_BNB - fLastGatesNumBNB;
+      ++fTotalTriggerBNB;
       metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
       if(fDeltaGatesBNB <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
@@ -288,6 +303,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     else if(datastream_info.gate_type == 2)
     {
       fDeltaGatesNuMI = datastream_info.gate_id_NuMI - fLastGatesNumNuMI;
+      ++fTotalTriggerNuMI;
       metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
       if(fDeltaGatesNuMI <= 0)
         TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
@@ -295,6 +311,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     else if(datastream_info.gate_type == 3)
     {
       fDeltaGatesBNBOff = datastream_info.gate_id_BNBOff - fLastGatesNumBNBOff;
+      ++fTotalTriggerBNBOff;
       metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
       if(fDeltaGatesBNBOff <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB Offbeam <= 0!";
@@ -302,9 +319,16 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     else if(datastream_info.gate_type == 4)
     {
       fDeltaGatesNuMIOff = datastream_info.gate_id_NuMIOff - fLastGatesNumNuMIOff;
+      ++fTotalTriggerNuMIOff;
       metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
       if(fDeltaGatesNuMIOff <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI Offbeam <= 0!";
+    }
+    else if(datastream_info.gate_type == 5)
+    {
+      fDeltaGatesCalib = datastream_info.gate_id - fLastGatesNumCalib;
+      ++fTotalTriggerCalib;
+      metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
     }
     else {
       fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
@@ -316,10 +340,14 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time,
 							     fLastTimestamp,
 							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampBNBOff, 
-							     fLastTimestampNuMIOff,fLastTimestampOther,
+							     fLastTimestampNuMIOff,fLastTimestampCalib,fLastTimestampOther,
+							     fLastTriggerType, fLastTriggerBNB, fLastTriggerNuMI, 
+							     fLastTriggerBNBOff,fLastTriggerNuMIOff, fLastTriggerCalib,
+							     fTotalTriggerBNB, fTotalTriggerNuMI, fTotalTriggerBNBOff,
+							     fTotalTriggerNuMIOff, fTotalTriggerCalib,
 							     fDeltaGates,
 							     fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesBNBOff,
-							     fDeltaGatesNuMIOff, fDeltaGatesOther);
+							     fDeltaGatesNuMIOff, fDeltaGatesCalib, fDeltaGatesOther);
 
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
@@ -340,7 +368,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     if(wr_ts>0 && std::abs(tdiff) > 20e6)
       TLOG(TLVL_WARNING) << "abs(WR TIME - NTP TIME) is " << tdiff << " nanoseconds, which is greater than 20e6 threshold!!";
     
-
+ 
     fLastTimestamp = ts;
     fLastGatesNum = datastream_info.gate_id;
 
@@ -348,26 +376,38 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     {
       fLastTimestampBNB = ts;
       fLastGatesNumBNB = datastream_info.gate_id_BNB;
+      fLastTriggerBNB = datastream_info.wr_event_no;
     }
     else if(datastream_info.gate_type == 2)
     {
       fLastTimestampNuMI = ts;
       fLastGatesNumNuMI = datastream_info.gate_id_NuMI;
+      fLastTriggerNuMI = datastream_info.wr_event_no;
+      
     }
     else if(datastream_info.gate_type == 3)
     {
       fLastTimestampBNBOff = ts;
       fLastGatesNumBNBOff = datastream_info.gate_id_BNBOff;
+      fLastTriggerBNBOff = datastream_info.wr_event_no;
     }
     else if(datastream_info.gate_type == 4)
     {
       fLastTimestampNuMIOff = ts;
       fLastGatesNumNuMIOff = datastream_info.gate_id_NuMIOff;
+      fLastTriggerNuMIOff = datastream_info.wr_event_no;
+    }
+    else if(datastream_info.gate_type == 5)
+    {
+      fLastTimestampCalib = ts;
+      fLastGatesNumCalib = datastream_info.gate_id;
+      fLastTriggerCalib = datastream_info.wr_event_no;
     }
     else{
       fLastTimestampOther = ts;
       fLastGatesNumOther = datastream_info.gate_id;
     }
+    fLastTriggerType = datastream_info.gate_type;
     ++fEventCounter;
   }
 
