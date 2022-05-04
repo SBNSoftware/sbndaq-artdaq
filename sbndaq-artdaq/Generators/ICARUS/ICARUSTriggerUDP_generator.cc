@@ -546,7 +546,7 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
     init_send += data_name + " = \"" + data_value + "\", ";
   }
   init_send += "\r\n";
-  TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
+  TLOG(TLVL_INFO) << "Initialization step - sending:: " << init_send;
   int sendcode = send(datafd_,&init_send[0],init_send.size(),0);
   int size_bytes = 0;
   int attempts = 0;
@@ -556,7 +556,7 @@ int sbndaq::ICARUSTriggerUDP::send_init_params(std::vector<std::string> param_ke
       if(size_bytes>0){
 	buffer[size_bytes+1] = {'\0'};
 	readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
-	TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
+	TLOG(TLVL_INFO) << "Initialization step - received:: " << buffer;
 	if(buffer[0] == '1')
 	{
 	  TLOG(TLVL_INFO) << "Parameters accepted, continuing";
