@@ -335,6 +335,14 @@ bool sbndaq::WhiteRabbitReadout::getData()
 
 bool sbndaq::WhiteRabbitReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
+
+  //copied from TriggerUDP code: if shouldn't send fragments, then don't create fragment/send
+  if(generated_fragments_per_event_== 0){
+    fLastEvent = fEventCounter;
+    ++fEventCounter;
+    return true;
+  }
+
   FillFragment(frags,true);
 
   for (auto const& frag : frags) {
