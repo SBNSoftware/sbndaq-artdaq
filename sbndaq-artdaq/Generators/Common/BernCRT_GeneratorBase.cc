@@ -51,6 +51,10 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
   feb_poll_period_            = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
 
 
+  // new fcl parameter for using older firmware versions.  if firmware_flag==0, default firmware is used.  If different from 0,
+  // older firmware for which the coinc word is not in the FEB hit structure is used
+  firmware_flag_ = ps_.get<int>("firmware_flag",0);
+
 
   //Initialize buffers and calculate MAC5 addresses (last 8 bits)
   for( auto id : fragment_ids ) {

@@ -101,6 +101,7 @@ namespace sbndaq {
     uint64_t feb_restart_period_;
     uint32_t feb_poll_period_;
     int32_t fragment_period_;
+    int firmware_flag_;       //flag to use older version of firmware
     
   private:
 

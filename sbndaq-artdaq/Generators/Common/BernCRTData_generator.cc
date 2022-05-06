@@ -27,7 +27,7 @@ sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
     TLOG(TLVL_ERROR) <<  __func__ << "() Failed to initialise febdrv on interface \"" << ethernet_port << "\"!";
     throw cet::exception( std::string(TRACE_NAME) +"::" + __func__ + "() Failed to initialise febdrv on interface \"" + ethernet_port + "\"!");
   }
-  
+
   //compare detected list of FEBs with that declared in FHiCL file
   auto hardware_macs = febdrv.GetMACs();
   VerifyMACConfiguration(hardware_macs);
@@ -226,7 +226,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       for(int jj = 0; jj < datalen; ) { // jj is incremented in processSingleHit
         BernCRTHitV2 hit;
 
-        febdrv.processSingleHit(jj, hit); //read next hit
+	febdrv.processSingleHit(jj, hit, firmware_flag_); //read next hit
         feb.hits.push_back(hit);
       }
     }

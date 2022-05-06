@@ -500,63 +500,17 @@ uint32_t sbndaq::FEBDRV::GrayToBin(uint32_t n) {
 }
 
 void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit) {
-  auto ovrwr_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-  hit.lostcpu = *ovrwr_ptr;
-  jj=jj+2;
-  
-  auto lif_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-  hit.lostfpga = *lif_ptr;
-  jj=jj+2;
-  
-  auto ts0_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  uint32_t ts0=*ts0_ptr; jj += 4;
-  auto ts1_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  uint32_t ts1=*ts1_ptr; jj += 4;
-  
-  //AA: The CAEN manual says all 30 bits of the timestamp are
-  //    encoded in Gray Code. This is apparently not true.
-  //IK: Two LSBs of the time stamp are indeed coded normal binary, not Gray
-  
-  uint8_t ls2b0=ts0 & 0x00000003;
-  uint8_t ls2b1=ts1 & 0x00000003;
-  uint32_t tt0=(ts0 & 0x3fffffff) >> 2;
-  uint32_t tt1=(ts1 & 0x3fffffff) >> 2;
-  tt0=(GrayToBin(tt0) << 2) | ls2b0;
-  tt1=(GrayToBin(tt1) << 2) | ls2b1;
-  /*
-  tt0=tt0+5; //IK: correction based on phase drift w.r.t GPS
-  tt1=tt1+5; //IK: correction based on phase drift w.r.t GPS
-  */
-  bool NOts0=ts0 & 0x40000000; // check overflow bit
-  bool NOts1=ts1 & 0x40000000;
-  
-  bool REFEVTts0 = ts0 & 0x80000000;
-  bool REFEVTts1 = ts1 & 0x80000000;
-  ts0=tt0;
-  ts1=tt1;
-  
-  hit.ts0 = ts0;
-  hit.ts1 = ts1;
 
-  hit.flags = 0;
-  if(!NOts0)    hit.flags |= 1; //opposite logic! 1 if TS is present, 0 if not!
-  if(!NOts1)    hit.flags |= 2;
-  if(REFEVTts0) hit.flags |= 4; //bit indicating TS0 reference hit
-  if(REFEVTts1) hit.flags |= 8; //bit indicating TS1 reference hit
-  
-  for(int kk=0; kk<32; kk++) {
-    auto adc_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
-    hit.adc[kk] = *adc_ptr;
-    jj += 2;
-  }
-  
-  // auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  // hit.coinc = *coinc_ptr;
-  // jj += 4;
+  //for backward compatibility
+  // if third argument is not there, this is the default version of the firmware, ifirmwareFLAG==0
+
+  sbndaq::FEBDRV::processSingleHit(jj, hit, 0);
+
 }
 
-/*
-void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV1 & hit) {
+ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, int ifirmwareFLAG) {
+
+
   auto ovrwr_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
   hit.lostcpu = *ovrwr_ptr;
   jj=jj+2;
@@ -604,13 +558,15 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV1 & hit) {
     hit.adc[kk] = *adc_ptr;
     jj += 2;
   }
-  
-  // auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  // hit.coinc = *coinc_ptr;
-  // jj += 4;
-}
 
-*/
+  if (ifirmwareFLAG==0) {
+  auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
+  hit.coinc = *coinc_ptr;
+  jj += 4;
+  }
+  else hit.coinc = 0;
+
+}
 
 int sbndaq::FEBDRV::GetData() {
   /**
@@ -635,8 +591,7 @@ int sbndaq::FEBDRV::GetData() {
     return -1;
   }
   
-  //  const int hit_size = 80; //size of data received from FEB
-  const int hit_size = 76; //size of data received from FEB
+  const int hit_size = 80; //size of data received from FEB
   if(numbytes % hit_size != 18) {
     TLOG(TLVL_ERROR)<<__func__<<"() Size of data: "<<(numbytes - 18)<<" received from FEB is not a multiple of "<<std::to_string(hit_size);
   }
