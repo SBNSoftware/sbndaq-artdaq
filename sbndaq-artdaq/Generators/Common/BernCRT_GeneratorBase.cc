@@ -51,9 +51,19 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
   feb_poll_period_            = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
 
 
-  // new fcl parameter for using older firmware versions.  if firmware_flag==0, default firmware is used.  If different from 0,
+  // new fcl parameter for using older firmware versions.
   // older firmware for which the coinc word is not in the FEB hit structure is used
-  firmware_flag_ = ps_.get<int>("firmware_flag",0);
+  const std::string flagString = ps_.get<std::string>("firmware_flag", "ICARUS");
+  if(flagString == "ICARUS") {
+    FirmwareFlag = ICARUS;
+  }
+  else if(flagString == "SBND") {
+    FirmwareFlag = SBND;
+  }
+  else {
+    throw cet::exception(std::string(TRACE_NAME)+"::"+__func__+" \""+flagString+"\" isn't a valid value for firmware_flag fhicl parameter");
+  }
+
 
 
   //Initialize buffers and calculate MAC5 addresses (last 8 bits)

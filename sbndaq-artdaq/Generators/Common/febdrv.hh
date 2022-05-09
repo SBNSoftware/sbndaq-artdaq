@@ -12,6 +12,8 @@
 // #include <mutex>
 // #include <boost/circular_buffer.hpp>
 
+enum FirmwareVersion {ICARUS, SBND};
+
 // Ethernet switch register r/w
 #define FEB_RD_SR 0x0001
 #define FEB_WR_SR 0x0002
@@ -102,8 +104,7 @@ namespace sbndaq {
 
     bool sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR, uint8_t * bufPMR, uint16_t lenPMR);
 
-    void processSingleHit(int & jj, sbndaq::BernCRTHitV2& hit);
-    void processSingleHit(int & jj, sbndaq::BernCRTHitV2& hit, int ifirmwareFLAG);
+    void processSingleHit(int & jj, sbndaq::BernCRTHitV2& hit, FirmwareVersion firmwareFlag);
     int GetData();
 
     void pollfeb(uint8_t mac);

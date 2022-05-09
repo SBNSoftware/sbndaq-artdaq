@@ -499,17 +499,7 @@ uint32_t sbndaq::FEBDRV::GrayToBin(uint32_t n) {
   return res;
 }
 
-void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit) {
-
-  //for backward compatibility
-  // if third argument is not there, this is the default version of the firmware, ifirmwareFLAG==0
-
-  sbndaq::FEBDRV::processSingleHit(jj, hit, 0);
-
-}
-
- void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, int ifirmwareFLAG) {
-
+void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, FirmwareVersion firmwareFlag = ICARUS) {
 
   auto ovrwr_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
   hit.lostcpu = *ovrwr_ptr;
@@ -559,10 +549,10 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit) {
     jj += 2;
   }
 
-  if (ifirmwareFLAG==0) {
-  auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  hit.coinc = *coinc_ptr;
-  jj += 4;
+  if (firmwareFlag == ICARUS) {
+    auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
+    hit.coinc = *coinc_ptr;
+    jj += 4;
   }
   else hit.coinc = 0;
 
