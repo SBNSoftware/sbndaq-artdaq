@@ -85,8 +85,10 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
     //Trigger Type: 0 = Majority, 1 = Minbias
     //Trigger Source (Location): 1 = East, 2 = West, 7 = Both, 0 = Unknown
 
-    if(trigfrag.getGateType()==gate_type_ && trigfrag.getTriggerType()==trigger_type_ && trigfrag.getTriggerSource()==trig_location_){
-      TLOG(TLVL_DEBUG) << "Event " << eventNumber << " has gate type " 
+    if((trigfrag.getGateType()==gate_type_ || gate_type_==-1) 
+       && (trigfrag.getTriggerType()==trigger_type_ || trigger_type_==-1) 
+       && (trigfrag.getTriggerSource()==trig_location_ || trig_location_==-1)){
+      TLOG(TLVL_INFO) << "Event " << eventNumber << " has gate type " 
 		       << trigfrag.getGateType() << "==" << gate_type_  
 	               << " and trigger type " << trigfrag.getTriggerType() << "==" << trigger_type_ 
 		       << " and trigger source " << trigfrag.getTriggerSource() << "==" << trig_location_ 
@@ -94,7 +96,7 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
       return true;
     }
     else{
-      TLOG(TLVL_DEBUG) << "Event " << eventNumber << " has gate type " 
+      TLOG(TLVL_INFO) << "Event " << eventNumber << " has gate type " 
 		       << trigfrag.getGateType() << "!=" << gate_type_
 		       << " or trigger type " << trigfrag.getTriggerType() << "!=" << trigger_type_
                        << " or trigger source " << trigfrag.getTriggerSource() << "!=" << trig_location_
