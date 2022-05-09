@@ -1058,7 +1058,7 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
     if(ch%2==0)
     {
       TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
-				   << " trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+				   << " trigger pulse width to " << (int)(fCAEN.triggerPulseWidth) << TLOG_ENDL;
       retcode = CAEN_DGTZ_WriteRegister(fHandle,0x1070+(ch<<8),fCAEN.triggerPulseWidth);
       sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
       retcode = CAEN_DGTZ_ReadRegister(fHandle,0x1070+(ch<<8),&readback);
@@ -1494,6 +1494,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 			    artdaq::MetricMode::LastPoint,tempStream.str());
       */
     }
+
 
   }
 
@@ -2030,6 +2031,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     if( ts_frag>ts_now )
       TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Causality problem!!"
+			 << "ts_frag - ts_now = " << ts_frag - ts_now << " ns!"
 			 << TLOG_ENDL;
 
     else if( (ts_now-ts_frag)>5e9 ){

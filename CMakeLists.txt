@@ -15,7 +15,7 @@ set(CET_CETBUILDTOOLS_COMPAT TRUE)
 include(Compatibility)
 set(CET_WARN_DEPRECATED)
 
-project(sbndaq_artdaq VERSION 1.00.01)
+project(sbndaq_artdaq VERSION 1.01.00)
 
 set(CMAKE_MODULE_PATH
   $ENV{ARTDAQ_UTILITIES_DIR}/Modules
@@ -141,8 +141,8 @@ ENDIF()
 
 
 link_directories("$ENV{ROOTSYS}/lib")
-include_directories("$ENV{ARTDAQ_INC}")
-link_directories("$ENV{ARTDAQ_LIB}")
+#include_directories("$ENV{ARTDAQ_INC}")
+#link_directories("$ENV{ARTDAQ_LIB}")
 link_directories("$ENV{ARTDAQ_UTILITIES_LIB}")
 
 string(REGEX MATCHALL "[0-9][0-9]?[0-9]?" ART_VERSION_LIST "$ENV{ART_VERSION}")
