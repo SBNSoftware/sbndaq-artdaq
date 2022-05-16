@@ -20,6 +20,7 @@
 // Constructor
 sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
+  generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0)),
   ps_(ps)
 {
   fragmentId  = ps.get<uint32_t>("fragmentId");
