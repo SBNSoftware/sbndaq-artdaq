@@ -6,7 +6,7 @@ PROJECT_NAME=sbndaq-artdaq
 PROJECT_SOURCE_GIT_PREFIX=${PROJECT_SOURCE_GIT_PREFIX:-'https://github.com/sbnsoftware'}
 PRODUCTS=${PRODUCTS:-'/cvmfs/fermilab.opensciencegrid.org/products/artdaq:/cvmfs/fermilab.opensciencegrid.org/products/larsoft'}
 
-ARTDAQ_VERSION=${ARTDAQ_VERSION:-"v3_11_00"}
+ARTDAQ_VERSION=${ARTDAQ_VERSION:-"v3_11_02"}
 
 #main script
 PRODUCTS=$(for d in $(echo $PRODUCTS | tr ":" " "); do [[ -d $d ]] && echo -n "$d:"; done)
