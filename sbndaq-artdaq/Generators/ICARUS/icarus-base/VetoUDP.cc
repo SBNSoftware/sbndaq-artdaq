@@ -1,5 +1,6 @@
 #include "VetoUDP.h"
-#include "common.h"
+
+#include "artdaq/DAQdata/Globals.hh"
 
 VetoUDP::VetoUDP(const char* input_host, int p):
   port(p),

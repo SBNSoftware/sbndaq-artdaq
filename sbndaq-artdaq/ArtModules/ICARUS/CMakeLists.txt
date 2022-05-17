@@ -11,8 +11,12 @@ cet_make(
     Icarus_fragmentNameHelper.cc
     IcarusFragmentWatcher_module.cc
 )
-
+#      artdaq_DAQdata
+#      artdaq_Generators
+#      artdaq-utilities_Plugins
+#      artdaq_core::artdaq-core_Utilities
 list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS)
+list(APPEND BUILD_PLUGIN_CORE_LIB_LIST artdaq_DAQdata)
 list(APPEND BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS)
 
 build_plugin(IcarusArtdaqBuildInfo "module" LIBRARIES REG ${BUILD_PLUGIN_BUILDINFO_LIB_LIST})

@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include "CAENComm.h"
 
-#include "common.h"
+#include "artdaq/DAQdata/Globals.hh"
 
 #define WRITE 1
 #define READ 0

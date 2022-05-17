@@ -14,7 +14,6 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerV2Fragment.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSPMTGateFragment.hh"
 
-#include "sbndaq-artdaq/Generators/ICARUS/icarus-base/common.h"
 
 #include "artdaq-core/Data/Fragment.hh"
 
@@ -55,8 +54,8 @@ icarus::ICARUSGateFilter::ICARUSGateFilter(fhicl::ParameterSet const & pset)
   : EDFilter(pset),
     raw_data_label_(pset.get<std::string>("raw_data_label")),
     gate_type_(pset.get<int>("gate_type")),
-    trigger_type_(pset.get<int>("trigger_type")),
-    trig_location_(pset.get<int>("trigger_location"))
+    trigger_type_(pset.get<int>("trigger_type",-1)),
+    trig_location_(pset.get<int>("trigger_location",-1))
 {
 }
 

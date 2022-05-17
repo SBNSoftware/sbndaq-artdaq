@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdio.h>
-#include "common.h"
 
+#include "artdaq/DAQdata/Globals.hh"
 #include "Cudpux.h"
 
 Cudp mytrig(9888);
