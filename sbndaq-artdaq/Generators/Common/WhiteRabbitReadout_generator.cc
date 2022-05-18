@@ -271,7 +271,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
       return(false);
     }
 
-    TLOG(TLVL_INFO) << "WhiteReadout: data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
+    TLOG(TLVL_DEBUG) << "WhiteReadout: data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
       event.systemTime.tv_nsec;
     for (uint32_t i=0; i<data->nstamp; i++)
     {
