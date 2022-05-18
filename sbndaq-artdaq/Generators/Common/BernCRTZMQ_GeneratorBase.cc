@@ -23,10 +23,6 @@
 
 #define TRACE_NAME "BernCRTZMQ_GeneratorBase"
 
-//TRACE level for messages sent once per event
-#define TLVL_SPECIAL 11
-
-
 sbndaq::BernCRTZMQ_GeneratorBase::BernCRTZMQ_GeneratorBase(fhicl::ParameterSet const & ps)
   :
   CommandableFragmentGenerator(ps),
@@ -216,11 +212,11 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::InsertIntoFEBBuffer(FEBBuffer_t & buffe
 
 size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & buffer, size_t const& nevents){
 
-  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size before erasing the events: " << std::setw(3) << buffer.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+1) <<__func__<< "Buffer size before erasing the events: " << std::setw(3) << buffer.buffer.size() << " events";
 
   std::unique_lock<std::mutex> lock(*(buffer.mutexptr));
   buffer.buffer.erase_begin(nevents);
-  TLOG(TLVL_DEBUG) <<__func__<< "Buffer size after erasing the events: " << std::setw(4) << buffer.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+1) <<__func__<< "Buffer size after erasing the events: " << std::setw(4) << buffer.buffer.size() << " events";
   return buffer.buffer.size();
 } //EraseFromFEBBuffer
 
@@ -228,7 +224,7 @@ size_t sbndaq::BernCRTZMQ_GeneratorBase::EraseFromFEBBuffer(FEBBuffer_t & buffer
 
 bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
-  TLOG(TLVL_DEBUG) <<__func__<< "() called";
+  TLOG(TLVL_DEBUG+2) <<__func__<< "() called";
 
   //workaround for spike issue: periodically restart febdrv
   if(febdrv_restart_period) {
@@ -251,7 +247,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
   }
 
   size_t total_events = data_size/sizeof(BernCRTZMQEvent); //number of events in all FEBs, including the last event containing the timing information
-  TLOG(TLVL_DEBUG)<<__func__<<": "<<(total_events-1)<<"+1 events ";
+  TLOG(TLVL_DEBUG+2)<<__func__<<": "<<(total_events-1)<<"+1 events ";
 
   size_t this_n_events=0; //number of events in given FEB
 
@@ -261,7 +257,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 
   //Get the special last event and read the time information from it
   //TODO: Test it at short poll times, and allow for several polls in a zmq packet
-  TLOG(TLVL_DEBUG)<<"Reading information from the last zeromq event";
+  TLOG(TLVL_DEBUG+2)<<"Reading information from the last zeromq event";
   sbndaq::BernCRTZMQEventUnion last_event;
   last_event.event = ZMQBufferUPtr[total_events-1];
   
@@ -299,14 +295,14 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
     last_poll_end   = this_poll_end   - 300*1000*1000;
   }
 
-  TLOG(TLVL_DEBUG)<<"Number of events is "<<n_events;
-  TLOG(TLVL_DEBUG)<<"this_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_start) <<" (deviation from steady clock "<<poll_start_deviation<<" ns)";
-  TLOG(TLVL_DEBUG)<<"this_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_end) <<" (deviation from steady clock "<<poll_end_deviation<<" ns)";
-  TLOG(TLVL_DEBUG)<<"last_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_start);
-  TLOG(TLVL_DEBUG)<<"last_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_end);
+  TLOG(TLVL_DEBUG+2)<<"Number of events is "<<n_events;
+  TLOG(TLVL_DEBUG+2)<<"this_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_start) <<" (deviation from steady clock "<<poll_start_deviation<<" ns)";
+  TLOG(TLVL_DEBUG+2)<<"this_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(this_poll_end) <<" (deviation from steady clock "<<poll_end_deviation<<" ns)";
+  TLOG(TLVL_DEBUG+2)<<"last_poll_start  " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_start);
+  TLOG(TLVL_DEBUG+2)<<"last_poll_end    " << sbndaq::BernCRTZMQFragment::print_timestamp(last_poll_end);
 
   if(n_events != total_events -1) {
-    TLOG(TLVL_DEBUG)<<"BernCRTZMQ::"<<__func__<<" Data corruption! Number of events reported in the last zmq event: "<<n_events<<" differs from what you expect from the packet size: "<<(total_events-1);
+    TLOG(TLVL_DEBUG+2)<<"BernCRTZMQ::"<<__func__<<" Data corruption! Number of events reported in the last zmq event: "<<n_events<<" differs from what you expect from the packet size: "<<(total_events-1);
     throw cet::exception("BernCRTZMQ::GetData() Data corruption! Number of events reported in the last zmq event differs from what you expect from the packet size ");
   }
 
@@ -375,13 +371,13 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::GetData() {
 bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
 						    artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) << __func__<<" (feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
+  TLOG(TLVL_DEBUG+1) << __func__<<" (feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
   FEBBuffer_t & buffer = FEBBuffers_[feb_id];
 
   size_t buffer_end = buffer.buffer.size(); 
 
-  TLOG(TLVL_DEBUG) <<__func__ << " Current size of the FEB buffer: " << buffer_end << " events";
+  TLOG(TLVL_DEBUG+1) <<__func__ << " Current size of the FEB buffer: " << buffer_end << " events";
   if(metricMan != nullptr) metricMan->sendMetric("feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Average);
 
   //loop over all the CRTHit events in our buffer (for this FEB)
@@ -438,8 +434,9 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
        }
     }
 
-    TLOG(TLVL_SPECIAL)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
-    TLOG(TLVL_SPECIAL)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
+//note, this prints information for every CRT hit, can be very spammy!
+    TLOG(TLVL_DEBUG+5)<<__func__ << " Event: " << i_e<<"\n"<< metadata;
+    TLOG(TLVL_DEBUG+5)<<__func__ << " Timestamp:       "<<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp);
 
     metadata.set_omitted_events(metadata.feb_event_number() - buffer.last_accepted_feb_event_number - 1);
     metadata.set_last_accepted_timestamp(buffer.last_accepted_timestamp); //set timestamp in metadata only if some events are lost
@@ -470,7 +467,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::FillFragment(uint64_t const& feb_id,
   metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
-  TLOG(TLVL_DEBUG) <<__func__<< " ENDING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<__func__<< " ENDING SIZE OF FRAGS IN FILLFRAGMENT IS " << frags.size();
 
   return false;
 } //FillFragment
@@ -500,7 +497,7 @@ void sbndaq::BernCRTZMQ_GeneratorBase::SendMetadataMetrics(BernCRTZMQFragmentMet
 
 bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) <<__func__<< " called with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<__func__<< " called with frags.size = " << frags.size();
   
   //throttling...
   if (throttle_usecs_ > 0) {
@@ -525,7 +522,7 @@ bool sbndaq::BernCRTZMQ_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     }
   }
 
-  TLOG(TLVL_DEBUG) <<__func__<< ": completed with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<__func__<< ": completed with frags.size = " << frags.size();
 
   return true;
 } //getNext_

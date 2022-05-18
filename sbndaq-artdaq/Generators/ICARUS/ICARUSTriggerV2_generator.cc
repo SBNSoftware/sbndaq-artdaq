@@ -584,7 +584,7 @@ int sbndaq::ICARUSTriggerV2::send_init_params(std::vector<std::string> param_key
     init_send += data_name + " = \"" + data_value + "\", ";
   }
   init_send += "\r\n";
-  TLOG(TLVL_DEBUG) << "Initialization step - sending:: " << init_send;
+  TLOG(TLVL_INFO) << "Initialization step - sending:: " << init_send;
   int sendcode = send(datafd_,&init_send[0],init_send.size(),0);
   int size_bytes = 0;
   int attempts = 0;

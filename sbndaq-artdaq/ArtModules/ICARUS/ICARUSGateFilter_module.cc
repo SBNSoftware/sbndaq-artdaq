@@ -15,6 +15,7 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSPMTGateFragment.hh"
 
 
+#include "artdaq/DAQdata/Globals.hh"
 #include "artdaq-core/Data/Fragment.hh"
 
 #include <algorithm>
@@ -73,7 +74,7 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
   evt.getByLabel(raw_data_label_, "ICARUSTriggerV2", raw_data);
   
   if(!raw_data.isValid()) {
-    TLOG(TLVL_INFO) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerV2 Fragments in module ";
+    TLOG(TLVL_WARN) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerV2 Fragments in module ";
     return false;
   }
 
@@ -87,7 +88,7 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
     if((trigfrag.getGateType()==gate_type_ || gate_type_==-1) 
        && (trigfrag.getTriggerType()==trigger_type_ || trigger_type_==-1) 
        && (trigfrag.getTriggerSource()==trig_location_ || trig_location_==-1)){
-      TLOG(TLVL_INFO) << "Event " << eventNumber << " has gate type " 
+      TLOG(TLVL_DEBUG) << "Event " << eventNumber << " has gate type " 
 		       << trigfrag.getGateType() << "==" << gate_type_  
 	               << " and trigger type " << trigfrag.getTriggerType() << "==" << trigger_type_ 
 		       << " and trigger source " << trigfrag.getTriggerSource() << "==" << trig_location_ 
@@ -95,7 +96,7 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
       return true;
     }
     else{
-      TLOG(TLVL_INFO) << "Event " << eventNumber << " has gate type " 
+      TLOG(TLVL_DEBUG) << "Event " << eventNumber << " has gate type " 
 		       << trigfrag.getGateType() << "!=" << gate_type_
 		       << " or trigger type " << trigfrag.getTriggerType() << "!=" << trigger_type_
                        << " or trigger source " << trigfrag.getTriggerSource() << "!=" << trig_location_

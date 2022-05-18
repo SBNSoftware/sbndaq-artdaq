@@ -29,11 +29,11 @@ int VetoUDP::VetoOff()
 int VetoUDP::TestRun(unsigned int sleep_us)
 {
   VetoOn();
-  TRACEN("VetoUDP.cc",TLVL_INFO, "Sent VETO ON packet");
+  TRACEN("VetoUDP.cc",TLVL_DEBUG+1, "Sent VETO ON packet");
   usleep(sleep_us);
 
   VetoOff();
-  TRACEN("VetoUDP.cc",TLVL_INFO, "Sent VETO OFF packet");
+  TRACEN("VetoUDP.cc",TLVL_DEBUG+1, "Sent VETO OFF packet");
 
   usleep(sleep_us);
 

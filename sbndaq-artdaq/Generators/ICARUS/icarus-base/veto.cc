@@ -28,7 +28,7 @@ int vetoOn()
 //    retval = mysock.Receive(myrec,2,1); 
     //retval = mysock.Receive(myrec,2); 
 //    printf("sent received %s %s\n",buf, myrec);
-    if (retval<0) {TRACEN("veto.cc",TLVL_INFO, "Lost udp packet");}
+    if (retval<0) {TRACEN("veto.cc",TLVL_ERROR, "Lost udp packet");}
   } while (retval<0);
    
    TRACEN("veto.cc",TLVL_INFO, "veto ON");
@@ -52,7 +52,7 @@ int vetoOff()
     mytrig.SendTo(mhost,10000,buf,14);  
    // retval = mysock.Receive(myrec,2,1); 
     //retval = mysock.Receive(myrec,2); 
-    if (retval<0) {TRACEN("veto.cc",TLVL_INFO, "Lost udp packet");}
+    if (retval<0) {TRACEN("veto.cc",TLVL_ERROR, "Lost udp packet");}
   } while (retval<0);
 
     TRACEN("veto.cc",TLVL_INFO, "veto OFF");

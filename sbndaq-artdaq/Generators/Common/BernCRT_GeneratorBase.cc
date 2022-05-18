@@ -17,10 +17,6 @@
 
 #define TRACE_NAME "BernCRT_GeneratorBase"
 
-//TRACE level for messages sent once per event
-#define TLVL_SPECIAL 11
-
-
 sbndaq::BernCRT_GeneratorBase::BernCRT_GeneratorBase(fhicl::ParameterSet const & ps)
   :
   CommandableFragmentGenerator(ps),
@@ -142,7 +138,7 @@ std::string sbndaq::BernCRT_GeneratorBase::GetFEBIDString(uint64_t const& id) co
 void sbndaq::BernCRT_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const& /*id*/,
                                                                     size_t const& ) const { //buffer_size) const {
 
-  TLOG(TLVL_DEBUG)<<__func__<<"() called";
+  TLOG(TLVL_DEBUG+1)<<__func__<<"() called";
 
   //std::string id_str = GetFEBIDString(id);
   //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTGenerator");
@@ -156,7 +152,7 @@ void sbndaq::BernCRT_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const&
 
 bool sbndaq::BernCRT_GeneratorBase::GetData() {
 
-  TLOG(TLVL_DEBUG) <<__func__<< "() called";
+  TLOG(TLVL_DEBUG+2) <<__func__<< "() called";
 
   unsigned long total_hits = GetFEBData(); //read data FEB and fill circular buffer
   
@@ -171,13 +167,13 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
                                                     artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) << __func__<<"(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
+  TLOG(TLVL_DEBUG+1) << __func__<<"(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
   FEB_t & feb = FEBs_[feb_id];
 
   size_t buffer_end = feb.buffer.size();
 
-  TLOG(TLVL_DEBUG+30) << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " fragments";
+  TLOG(TLVL_DEBUG+5) << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " fragments";
   if(metricMan != nullptr) metricMan->sendMetric("max_feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Maximum);
 
   //workaround: avoid processing hits at the beginning of the run, to prevent CRT from accumulating lot's of data before TPCs are ready
@@ -238,17 +234,17 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
-  TLOG(TLVL_DEBUG) <<__func__<< "(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<__func__<< "(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
 } //FillFragment
 
 /*-----------------------------------------------------------------------*/
 
 size_t sbndaq::BernCRT_GeneratorBase::EraseFromFEBBuffer(FEB_t & feb, size_t const& nevents) {
-  TLOG(TLVL_DEBUG) <<__func__<< "() called";
+  TLOG(TLVL_DEBUG+1) <<__func__<< "() called";
   std::unique_lock<std::mutex> lock(*(feb.mutexptr));
-  TLOG(TLVL_DEBUG) <<__func__<< "() Buffer size before erasing the events: " << std::setw(3) << feb.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+1) <<__func__<< "() Buffer size before erasing the events: " << std::setw(3) << feb.buffer.size() << " events";
   feb.buffer.erase_begin(nevents);
-  TLOG(TLVL_DEBUG) <<__func__<< "() Buffer size after erasing the events: " << std::setw(4) << feb.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+1) <<__func__<< "() Buffer size after erasing the events: " << std::setw(4) << feb.buffer.size() << " events";
   return feb.buffer.size();
 } //EraseFromFEBBuffer
 
@@ -277,7 +273,7 @@ void sbndaq::BernCRT_GeneratorBase::SendMetadataMetrics(BernCRTFragmentMetadataV
 
 bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG) <<__func__<< " called with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<__func__<< " called with frags.size = " << frags.size();
 
   //initialise variables
   static auto t_start = std::chrono::steady_clock::now();
@@ -296,7 +292,7 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     FillFragment(MAC5, frags);
   }
 
-  TLOG(TLVL_DEBUG) <<__func__<< ": completed with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<__func__<< ": completed with frags.size = " << frags.size();
   t_end = std::chrono::steady_clock::now();
 
   if(metricMan != nullptr) metricMan->sendMetric("getNext_execution_time_ms",
@@ -305,8 +301,8 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
 
   if(frags.size()>0)
-    TLOG(TLVL_DEBUG) << __func__ 
-		     << " : Send fragment with type " << frags.back()->type() 
+    TLOG(TLVL_DEBUG+1) << __func__ 
+		     << " : Send fragment with type " << (int)(frags.back()->type())
 		     << " (" << frags.back()->typeString() << "):  "
 		     << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
   
