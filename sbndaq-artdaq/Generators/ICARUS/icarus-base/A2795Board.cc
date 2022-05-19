@@ -20,30 +20,32 @@ A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr)
 {
 
 #ifndef _simulate_
+
 // Acqrs_getInstrumentData(boardId, boardname, &serialNbr, &busNbr, &slotNbr);
   int ret;
   bdhandle=0;
-      TRACEN("A2795Board.cc",TLVL_DEBUG+1, "calling CAENComm_OpenDevice for boardNbr %d boardId %d",boardNbr,boardId);
   
-      ret=CAENComm_OpenDevice(CAENComm_OpticalLink, bus, nbr, 0, &bdhandle);
-     
-      TRACEN("A2795Board.cc",TLVL_DEBUG+2, "CAENComm_OpenDevice returned status %d",ret);
-
-      if (ret != CAENComm_Success) boardId=-1;
-      else 
-      {
-         int status;
-         //CAENComm_Write32(bdhandle, A_Signals, SIGNALS_SWRESET);
-         CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*) &status);
-	 TRACEN("A2795Board.cc",TLVL_ERROR, "board %d status %d",boardId,status);
-
-         boardId=status&STATUS_SLOT_ID;
-         
-        //CAENComm_Write32(bdhandle, A_ControlReg_Clear, CTRL_TTLINK_MODE);
-//    CAENComm_Write32(bdhandle, A_ControlReg_Set, CTRL_ACQRUN);
-      }
+  TRACEN("A2795Board.cc",TLVL_DEBUG+1, "calling CAENComm_OpenDevice for boardNbr %d boardId %d",boardNbr,boardId);
+  
+  ret=CAENComm_OpenDevice(CAENComm_OpticalLink, bus, nbr, 0, &bdhandle);
+  
+  TRACEN("A2795Board.cc",TLVL_DEBUG+2, "CAENComm_OpenDevice returned status %d",ret);
+  
+  if (ret != CAENComm_Success) boardId=-1;
+  else 
+    {
+      int status;
+      //CAENComm_Write32(bdhandle, A_Signals, SIGNALS_SWRESET);
+      CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*) &status);
+      TRACEN("A2795Board.cc",TLVL_DEBUG+2, "board %d status %d",boardId,status);
+      
+      boardId=status&STATUS_SLOT_ID;
+      
+      //CAENComm_Write32(bdhandle, A_ControlReg_Clear, CTRL_TTLINK_MODE);
+      //    CAENComm_Write32(bdhandle, A_ControlReg_Set, CTRL_ACQRUN);
+    }
 #endif
-
+  
 serialNbr=boardNbr;
  if (boardId!=-1) {
    	 TRACEN("A2795Board.cc",TLVL_DEBUG+3, "BoardId %d serial %d bus %d slot %d",boardId,serialNbr, busNbr, slotNbr);
