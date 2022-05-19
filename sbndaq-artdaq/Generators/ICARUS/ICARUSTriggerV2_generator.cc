@@ -209,7 +209,7 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
   //int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
   int size_bytes = poll_with_timeout(dataconnfd_,ip_data_, si_data_,500);  
   std::string data_input = "";
-  buffer[0] = '\0';
+  std::fill( buffer, buffer + sizeof(buffer), '\0' ); 
   if(size_bytes>0){
     //Not currently using peek buffer result, just using buffer
     //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
