@@ -3,7 +3,7 @@ import numpy as np
 from io import StringIO
 import re,sys,getopt
 
-sl7_only_packages=('caendigitizer','pqxx','epics','jsoncpp','redis','zmq')
+sl7_only_packages=('caendigitizer','pqxx','epics','jsoncpp','redis','zmq','caencomm','caendigitizer','caenvme')
 
 class ProductDepsReader:
     def __init__(self, name):
