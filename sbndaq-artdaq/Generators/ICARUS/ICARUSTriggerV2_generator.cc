@@ -248,6 +248,8 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
   if(generated_fragments_per_event_==0){
     fLastEvent = fEventCounter;
     ++fEventCounter;
+    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+    metricMan->sendMetric("EventCounter",uint64_t{fEventCounter}, "Triggers", 1,artdaq::MetricMode::LastPoint);
     return true;
   }
   
@@ -271,6 +273,8 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
     //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    
   //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly
     //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
+  if(fLastEvent >= event_no) TLOG(TLVL_WARNING)<< "fLastEvent="<<fLastEvent << ", event_no="<<event_no;
+
   if(fLastEvent < event_no)
   {
     if(fLastEvent == 0)
@@ -286,6 +290,7 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
     metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+    metricMan->sendMetric("EventCounter", uint64_t(fEventCounter), "Triggers", 1,artdaq::MetricMode::LastPoint);
     
     if(fDeltaGates <= 0)
       TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
@@ -295,6 +300,7 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
       fDeltaGatesBNB = datastream_info.gate_id_BNB - fLastGatesNumBNB;
       ++fTotalTriggerBNB;
       metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("BNBEventTotal",uint64_t(fTotalTriggerBNB), "Triggers", 1,artdaq::MetricMode::LastPoint);
       if(fDeltaGatesBNB <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
     }
@@ -303,6 +309,7 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
       fDeltaGatesNuMI = datastream_info.gate_id_NuMI - fLastGatesNumNuMI;
       ++fTotalTriggerNuMI;
       metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("NuMIEventTotal",uint64_t(fTotalTriggerNuMI), "Triggers", 1,artdaq::MetricMode::LastPoint);
       if(fDeltaGatesNuMI <= 0)
         TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
     }
@@ -311,6 +318,7 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
       fDeltaGatesBNBOff = datastream_info.gate_id_BNBOff - fLastGatesNumBNBOff;
       ++fTotalTriggerBNBOff;
       metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("BNBOffbeamEventTotal",uint64_t(fTotalTriggerBNBOff), "Triggers", 1,artdaq::MetricMode::LastPoint);
       if(fDeltaGatesBNBOff <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB Offbeam <= 0!";
     }
@@ -319,6 +327,7 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
       fDeltaGatesNuMIOff = datastream_info.gate_id_NuMIOff - fLastGatesNumNuMIOff;
       ++fTotalTriggerNuMIOff;
       metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("NuMIOffbeamEventTotal",uint64_t(fTotalTriggerNuMIOff), "Triggers", 1,artdaq::MetricMode::LastPoint);
       if(fDeltaGatesNuMIOff <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI Offbeam <= 0!";
     }
@@ -327,6 +336,7 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
       fDeltaGatesCalib = datastream_info.gate_id - fLastGatesNumCalib;
       ++fTotalTriggerCalib;
       metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("CalibrationTotal",uint64_t(fTotalTriggerCalib), "Triggers", 1,artdaq::MetricMode::LastPoint);
     }
     else {
       fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
