@@ -499,7 +499,8 @@ uint32_t sbndaq::FEBDRV::GrayToBin(uint32_t n) {
   return res;
 }
 
-void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit) {
+void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, FirmwareVersion firmwareFlag = ICARUS) {
+
   auto ovrwr_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
   hit.lostcpu = *ovrwr_ptr;
   jj=jj+2;
@@ -547,10 +548,14 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit) {
     hit.adc[kk] = *adc_ptr;
     jj += 2;
   }
-  
-  auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
-  hit.coinc = *coinc_ptr;
-  jj += 4;
+
+  if (firmwareFlag == ICARUS) {
+    auto coinc_ptr = reinterpret_cast<uint32_t*>(&(rpkt).Data[jj]);
+    hit.coinc = *coinc_ptr;
+    jj += 4;
+  }
+  else hit.coinc = 0;
+
 }
 
 int sbndaq::FEBDRV::GetData() {
