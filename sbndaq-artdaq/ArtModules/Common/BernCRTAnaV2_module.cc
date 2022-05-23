@@ -159,7 +159,7 @@ void sbndaq::BernCRTAnaV2::analyze_fragment(artdaq::Fragment & frag) {
     lostfpga                = bevt->lostfpga;
     ts0                     = bevt->ts0;
     ts1                     = bevt->ts1;
-    //    coinc                   = bevt->coinc;
+    coinc                   = bevt->coinc;
     
     feb_hit_number          = bevt->feb_hit_number;
     timestamp               = bevt->timestamp;
@@ -172,7 +172,7 @@ void sbndaq::BernCRTAnaV2::analyze_fragment(artdaq::Fragment & frag) {
       std::cout <<     "lostfpga    "<<     lostfpga     << std::endl;
       std::cout <<     "ts0         "<<     ts0          << std::endl;
       std::cout <<     "ts1                    "<<     ts1             << std::endl;        
-      //     std::cout <<     "coinc                  "<<     coinc                   << std::endl;
+      std::cout <<     "coinc                  "<<     coinc                   << std::endl;
       std::cout <<     "feb_hit_number         "<<     feb_hit_number          << std::endl;
       std::cout <<     "timestamp              "<<     timestamp               << std::endl;
       std::cout <<     "last_accepted_timestamp"<<     last_accepted_timestamp << std::endl;

@@ -118,6 +118,8 @@ void sbndaq::BernCRTDumpV2::analyze_fragment(artdaq::Fragment & frag) {
 
   for(unsigned int iHit = 0; iHit < feb_hits_in_fragment; iHit++) {
 
+    std::cout << iHit << " hit in fragment " << std::endl;
+
     BernCRTHitV2 const* bevt = bern_fragment.eventdata(iHit);
 
     //  TLOG(TLVL_INFO)<<*bevt;
@@ -127,23 +129,23 @@ void sbndaq::BernCRTDumpV2::analyze_fragment(artdaq::Fragment & frag) {
     lostfpga                = bevt->lostfpga;
     ts0                     = bevt->ts0;
     ts1                     = bevt->ts1;
-    //    coinc                   = bevt->coinc;
+    coinc                   = bevt->coinc;
     
     feb_hit_number          = bevt->feb_hit_number;
     timestamp               = bevt->timestamp;
     last_accepted_timestamp = bevt->last_accepted_timestamp;
     lost_hits               = bevt->lost_hits;
 
-      std::cout << "  flags  "                << flags                   << std::endl;
-      std::cout << "lostcpu         "        << lostcpu                 << std::endl;
-      std::cout <<     "lostfpga    "<<     lostfpga     << std::endl;
-      std::cout <<     "ts0         "<<     ts0          << std::endl;
-      std::cout <<     "ts1                    "<<     ts1             << std::endl;        
-      //     std::cout <<     "coinc                  "<<     coinc                   << std::endl;
-      std::cout <<     "feb_hit_number         "<<     feb_hit_number          << std::endl;
-      std::cout <<     "timestamp              "<<     timestamp               << std::endl;
-      std::cout <<     "last_accepted_timestamp"<<     last_accepted_timestamp << std::endl;
-      std::cout <<     "lost_hits              "<<     lost_hits               << std::endl;
+      std::cout <<     "flags                   "                << flags                   << std::endl;
+      std::cout <<     "lostcpu                 "        << lostcpu                 << std::endl;
+      std::cout <<     "lostfpga                "<<     lostfpga     << std::endl;
+      std::cout <<     "ts0                     "<<     ts0          << std::endl;
+      std::cout <<     "ts1                     "<<     ts1             << std::endl;        
+      std::cout <<     "coinc                   "<<     coinc                   << std::endl;
+      std::cout <<     "feb_hit_number          "<<     feb_hit_number          << std::endl;
+      std::cout <<     "timestamp               "<<     timestamp               << std::endl;
+      std::cout <<     "last_accepted_timestamp "<<     last_accepted_timestamp << std::endl;
+      std::cout <<     "lost_hits               "<<     lost_hits               << std::endl;
 
     // for(int ch=0; ch<32; ch++) adc[ch] = bevt->adc[ch];
     for(int ch=0; ch<32; ch++) {

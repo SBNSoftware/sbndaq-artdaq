@@ -10,6 +10,7 @@ cet_make(
    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
+build_plugin( EventAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( MultiDump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( IncompleteEventAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( CAENV1730Dump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
