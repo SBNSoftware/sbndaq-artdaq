@@ -1,21 +1,21 @@
-#ifndef sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh
-#define sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh
+#ifndef sbndaq_artdaq_Generators_ICARUSTriggerV2_hh
+#define sbndaq_artdaq_Generators_ICARUSTriggerV2_hh
 
-// The UDP Receiver class recieves UDP data from an OtSDAQ applicance and
-// puts that data into UDPFragments for further ARTDAQ analysis.
+// The V2 Receiver class recieves V2 data from an OtSDAQ applicance and
+// puts that data into V2Fragments for further ARTDAQ analysis.
 //
 // It currently assumes two things to be true:
-// 1. The first word of the UDP packet is an 8-bit flag with information
+// 1. The first word of the V2 packet is an 8-bit flag with information
 // about the status of the sender
 // 2. The second word is an 8-bit sequence ID, used for detecting
-// dropped UDP datagrams
+// dropped V2 datagrams
 // Some C++ conventions used:
 // -Append a "_" to every private member function and variable
 
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
-#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerUDPFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerV2Fragment.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSPMTGateFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include <arpa/inet.h>
@@ -38,11 +38,11 @@ namespace sbndaq
   const Command_t TRIG_VETO="TRIG_CMD_VETO";
   const Command_t TRIG_ALLW="TRIG_CMD_ALLW";
 
-  class ICARUSTriggerUDP : public artdaq::CommandableFragmentGenerator
+  class ICARUSTriggerV2 : public artdaq::CommandableFragmentGenerator
   {
   public:
     
-    explicit ICARUSTriggerUDP(fhicl::ParameterSet const& ps);
+    explicit ICARUSTriggerV2(fhicl::ParameterSet const& ps);
     
   private:
     
@@ -53,12 +53,16 @@ namespace sbndaq
     void pause() override;
     void resume() override;
     
-    void send(const Command_t);
+    void sendUDP(const Command_t);
     int poll_with_timeout(int,std::string,struct sockaddr_in&, int);
     //int read(int,uint16_t*);
     int read(int, std::string, struct sockaddr_in&,int,char*);
+    int readTCP(int, std::string, struct sockaddr_in&,int,char*);
+    int send_init_params(std::vector<std::string>, fhicl::ParameterSet);
+    void configure_socket(int, struct sockaddr_in&);
     
-    int send_TTLK_INIT(int,int);
+    //int send_TTLK_INIT(int, int);
+    int initialization(int, int);
     void send_TRIG_VETO();
     void send_TRIG_ALLW();
     
@@ -83,6 +87,10 @@ namespace sbndaq
     struct sockaddr_in si_data_;
     int datasocket_;
 
+    int datafd_;
+
+    int dataconnfd_;
+
     int pmtdataport_;
     std::string ip_data_pmt_;
 
@@ -99,24 +107,45 @@ namespace sbndaq
     uint64_t fLastTimestampBNB;
     uint64_t fLastTimestampNuMI;
     uint64_t fLastTimestampOther;
+    uint64_t fLastTimestampBNBOff;
+    uint64_t fLastTimestampNuMIOff;
+    uint64_t fLastTimestampCalib;
     long fLastGatesNum;
     long fLastGatesNumBNB;
     long fLastGatesNumNuMI;
     long fLastGatesNumOther;
+    long fLastGatesNumBNBOff;
+    long fLastGatesNumNuMIOff;
+    long fLastGatesNumCalib;
     long fDeltaGates;
     long fDeltaGatesBNB;
     long fDeltaGatesNuMI;
     long fDeltaGatesOther;
+    long fDeltaGatesBNBOff;
+    long fDeltaGatesNuMIOff;
+    long fDeltaGatesCalib;
+    long fLastTriggerBNB;
+    long fLastTriggerNuMI;
+    long fLastTriggerBNBOff;
+    long fLastTriggerNuMIOff;
+    long fLastTriggerCalib;
+    long fTotalTriggerBNB;
+    long fTotalTriggerNuMI;
+    long fTotalTriggerBNBOff;
+    long fTotalTriggerNuMIOff;
+    long fTotalTriggerCalib;
+    int fLastTriggerType;
     uint64_t fStartOfRun;
     int fInitialStep;
     bool use_wr_time_;
     long wr_time_offset_ns_;
     //expected fragments
     int generated_fragments_per_event_;
-    static constexpr std::size_t BufferSize = 1500;
-    char buffer[BufferSize] = {'\0'};
-    // char buffer[1000] = {'\0'};
+    char buffer[1000] = {'\0'};
     uint8_t peekBuffer[2] = {0,0};
+
+    fhicl::ParameterSet initialization_data_fpga_;
+    fhicl::ParameterSet initialization_data_spexi_;
   };
 }
-#endif /* sbndaq_artdaq_Generators_ICARUSTriggerUDP_hh */
+#endif /* sbndaq_artdaq_Generators_ICARUSTriggerV2_hh */

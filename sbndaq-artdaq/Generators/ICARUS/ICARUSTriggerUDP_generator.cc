@@ -4,6 +4,7 @@
 #include "artdaq/DAQdata/Globals.hh"
 
 #include "sbndaq-artdaq/Generators/ICARUS/ICARUSTriggerUDP.hh"
+#include "canvas/Utilities/Exception.h"
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "cetlib_except/exception.h"
 #include "fhiclcpp/ParameterSet.h"
@@ -38,21 +39,21 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
-
-  configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  
+  configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (configsocket_ < 0)
     {
-      throw cet::exception("ICARUSTriggerUDP") << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
+      throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
       exit(1);
     }
-
+  
   struct sockaddr_in si_me_config;
   si_me_config.sin_family = AF_INET;
   si_me_config.sin_port = htons(configport_);
   si_me_config.sin_addr.s_addr = htonl(INADDR_ANY);
   if (bind(configsocket_, (struct sockaddr *)&si_me_config, sizeof(si_me_config)) == -1)
     {
-      throw cet::exception("ICARUSTriggerUDP")  <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Cannot bind config socket to port " << configport_ << std::endl;
       exit(1);
     }
@@ -60,15 +61,15 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   si_config_.sin_port = htons(configport_);
   if (inet_aton(ip_config_.c_str(), &si_config_.sin_addr) == 0)
     {
-      throw cet::exception("ICARUSTriggerUDP")  <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_config_ << "\n";
       exit(1);
     }
-
-  datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  
+  datasocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (datasocket_ < 0)
     {
-       throw cet::exception("ICARUSTriggerUDP") << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
+      throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
       exit(1);
     }
   struct sockaddr_in si_me_data;
@@ -77,7 +78,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   si_me_data.sin_addr.s_addr = htonl(INADDR_ANY);
   if (bind(datasocket_, (struct sockaddr *)&si_me_data, sizeof(si_me_data)) == -1)
     {
-       throw cet::exception("ICARUSTriggerUDP") <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Cannot bind data socket to port " << dataport_ << std::endl;
       exit(1);
     }
@@ -85,10 +86,11 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   si_data_.sin_port = htons(dataport_);
   if (inet_aton(ip_data_.c_str(), &si_data_.sin_addr) == 0)
     {
-      throw cet::exception("ICARUSTriggerUDP")  <<
+      throw art::Exception(art::errors::Configuration) <<
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
+
 
   fEventCounter = 1;
   fLastEvent = 0;
@@ -115,11 +117,13 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   }
   /*
     //do something in here to get data...
-   */
+    */
 
   int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
   std::string data_input = "";
-  buffer[0] = '\0';
+  //buffer[0] = '\0'; // <<< not resetting the buffer in full 
+  std::fill( buffer, buffer + sizeof(buffer), '\0' ); 
+
   if(size_bytes>0){
     //Not currently using peek buffer result, just using buffer
     //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
@@ -143,10 +147,10 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   }
 
   if(fInitialStep == 0)
-  {
-    fStartOfRun = ts;
-    fInitialStep = 1;
-  }
+    {
+      fStartOfRun = ts;
+      fInitialStep = 1;
+    }
 
   if(data_input==""){
     TLOG(TLVL_DEBUG) << "No data after poll with timeout? " << data_input;
@@ -167,66 +171,66 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   if(use_wr_time_ && wr_ts > 0)
     ts = wr_ts;
   if(use_wr_time_ && wr_ts == 0)
-  {
-    TLOG(TLVL_WARNING) << "WR time = 0";
-  }
+    {
+      TLOG(TLVL_WARNING) << "WR time = 0";
+    }
   if(datastream_info.event_no > -1)
     event_no = datastream_info.event_no;
 
   if(datastream_info.wr_name != " WR_TS1" || datastream_info.wr_seconds == -3 || datastream_info.wr_nanoseconds == -4)
-  {
-    TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
-  }
-    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger
+    {
+      TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
+    }
+  //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger
   //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly
-    //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
+  //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
   if(fLastEvent < event_no)
-  {
-    if(fLastEvent == 0)
     {
-      fLastTimestamp = fStartOfRun;
-      fLastTimestampBNB = fStartOfRun;
-      fLastTimestampNuMI = fStartOfRun;
-      fLastTimestampOther = fStartOfRun;
-    }
+      if(fLastEvent == 0)
+	{
+	  fLastTimestamp = fStartOfRun;
+	  fLastTimestampBNB = fStartOfRun;
+	  fLastTimestampNuMI = fStartOfRun;
+	  fLastTimestampOther = fStartOfRun;
+	}
 
-    fDeltaGates = datastream_info.gate_id - fLastGatesNum;
-    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+      fDeltaGates = datastream_info.gate_id - fLastGatesNum;
+      metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
 
-    if(fDeltaGates <= 0)
-      TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
+      if(fDeltaGates <= 0)
+	TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
 
-    if(datastream_info.gate_type == 1)
-    {
-      fDeltaGatesBNB = datastream_info.gate_id - fLastGatesNumBNB;
-      metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      if(fDeltaGatesBNB <= 0)
-	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
-    }
-    else if(datastream_info.gate_type == 2)
-    {
-      fDeltaGatesNuMI = datastream_info.gate_id - fLastGatesNumNuMI;
-      metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      if(fDeltaGatesNuMI <= 0)
-        TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
-    }
-    else {
-      fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
-      metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      if(fDeltaGatesOther <= 0)
-        TLOG(TLVL_WARNING) << "Change in total number of beam gates for Other <= 0!";
-    }
+      if(datastream_info.gate_type == 1)
+	{
+	  fDeltaGatesBNB = datastream_info.gate_id - fLastGatesNumBNB;
+	  metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	  if(fDeltaGatesBNB <= 0)
+	    TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
+	}
+      else if(datastream_info.gate_type == 2)
+	{
+	  fDeltaGatesNuMI = datastream_info.gate_id - fLastGatesNumNuMI;
+	  metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	  if(fDeltaGatesNuMI <= 0)
+	    TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
+	}
+      else {
+	fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
+	metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	if(fDeltaGatesOther <= 0)
+	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for Other <= 0!";
+      }
 
-    auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time,
-							     fLastTimestamp,
-							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampOther,
-							     fDeltaGates,
-							     fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesOther);
+      auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time,
+							       fLastTimestamp,
+							       fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampOther,
+							       fDeltaGates,
+							       fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesOther);
 
-    //Put data string in fragment -> make frag size size of data string, copy data string into fragment
-    //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
-    size_t fragment_size = max_fragment_size_bytes_;
-    TLOG(TLVL_DEBUG + 10) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
+      //Put data string in fragment -> make frag size size of data string, copy data string into fragment
+      //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
+      size_t fragment_size = max_fragment_size_bytes_;
+      TLOG(TLVL_DEBUG + 10) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
     frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, event_no, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
     std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
     icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
@@ -237,7 +241,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     long tdiff = (long)wr_ts - (long)fNTP_time;
 
     TLOG(TLVL_DEBUG) << "(WR TIME - NTP TIME) is (" << wr_ts << " - " << fNTP_time << ") = " << tdiff << " nanoseconds."
-		     << " (" << tdiff/1e6 << " ms)";
+     << " (" << tdiff/1e6 << " ms)";
 
     if(wr_ts>0 && std::abs(tdiff) > 20e6)
       TLOG(TLVL_WARNING) << "abs(WR TIME - NTP TIME) is " << tdiff << " nanoseconds, which is greater than 20e6 threshold!!";
@@ -369,29 +373,28 @@ int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
 {
   while(retries>-1){
 
-  char cmd[16];
-  sprintf(cmd,"%s","TTLK_CMD_INIT");
+    char cmd[16];
+    sprintf(cmd,"%s","TTLK_CMD_INIT");
 
-  TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
-  sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+    TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
 
-  TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
-  //send(TTLK_INIT);
-  int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
-  if(size_bytes>0){
-    //uint16_t buffer[size_bytes/2+1];
-    //char bufferinit[size_bytes];
-    buffer[size_bytes+1] = {'\0'};
-    read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
-    TLOG(TLVL_DEBUG) << "received:: " << buffer;
-    return retries;
-  }
+    TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    //send(TTLK_INIT);
+    int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
+    if(size_bytes>0){
+      //uint16_t buffer[size_bytes/2+1];
+      //char bufferinit[size_bytes];
+      buffer[size_bytes+1] = {'\0'};
+      read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
+      TLOG(TLVL_DEBUG) << "received:: " << buffer;
+      return retries;
+    }
 
-  retries--;
+    retries--;
   }
 
   return retries;
-
 }
 
 //no need for confirmation on these...

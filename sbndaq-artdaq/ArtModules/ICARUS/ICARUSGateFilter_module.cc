@@ -11,11 +11,11 @@
 #include "art/Framework/Principal/Handle.h"
 #include "art/Utilities/ExceptionMessages.h"
 
-#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerUDPFragment.hh"
+#include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSTriggerV2Fragment.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/ICARUSPMTGateFragment.hh"
 
-#include "sbndaq-artdaq/Generators/ICARUS/icarus-base/common.h"
 
+#include "artdaq/DAQdata/Globals.hh"
 #include "artdaq-core/Data/Fragment.hh"
 
 #include <algorithm>
@@ -47,13 +47,16 @@ public:
 private:
   std::string raw_data_label_;
   int gate_type_;
-  
+  int trigger_type_;
+  int trig_location_;
 };
 
 icarus::ICARUSGateFilter::ICARUSGateFilter(fhicl::ParameterSet const & pset)
   : EDFilter(pset),
     raw_data_label_(pset.get<std::string>("raw_data_label")),
-    gate_type_(pset.get<int>("gate_type"))
+    gate_type_(pset.get<int>("gate_type")),
+    trigger_type_(pset.get<int>("trigger_type",-1)),
+    trig_location_(pset.get<int>("trigger_location",-1))
 {
 }
 
@@ -68,24 +71,36 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
   // Look for fragments
  
   art::Handle< std::vector<artdaq::Fragment> > raw_data;
-  evt.getByLabel(raw_data_label_, "ICARUSTriggerUDP", raw_data);
+  evt.getByLabel(raw_data_label_, "ICARUSTriggerV2", raw_data);
   
   if(!raw_data.isValid()) {
-    TLOG(TLVL_INFO) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerUDP Fragments in module ";
+    TLOG(TLVL_WARN) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerV2 Fragments in module ";
     return false;
   }
 
   for(auto const& frag : *raw_data){
-    ICARUSTriggerUDPFragment trigfrag(frag);
+    ICARUSTriggerV2Fragment trigfrag(frag);
+    //To document the current (5/3/22) mapping:
+    //Gate Type: 1 = BNB, 2 = NuMI, 3 = OffbeamBNB, 4 = OffbeamNuMI, 5 = Calib
+    //Trigger Type: 0 = Majority, 1 = Minbias
+    //Trigger Source (Location): 1 = East, 2 = West, 7 = Both, 0 = Unknown
 
-    if(trigfrag.getGateType()==gate_type_){
+    if((trigfrag.getGateType()==gate_type_ || gate_type_==-1) 
+       && (trigfrag.getTriggerType()==trigger_type_ || trigger_type_==-1) 
+       && (trigfrag.getTriggerSource()==trig_location_ || trig_location_==-1)){
       TLOG(TLVL_DEBUG) << "Event " << eventNumber << " has gate type " 
-		       << trigfrag.getGateType() << "==" << gate_type_ << " and passes filter.";
+		       << trigfrag.getGateType() << "==" << gate_type_  
+	               << " and trigger type " << trigfrag.getTriggerType() << "==" << trigger_type_ 
+		       << " and trigger source " << trigfrag.getTriggerSource() << "==" << trig_location_ 
+		       << "  and passes filter.";
       return true;
     }
     else{
       TLOG(TLVL_DEBUG) << "Event " << eventNumber << " has gate type " 
-		       << trigfrag.getGateType() << "!=" << gate_type_ << " and passes filter.";
+		       << trigfrag.getGateType() << "!=" << gate_type_
+		       << " or trigger type " << trigfrag.getTriggerType() << "!=" << trigger_type_
+                       << " or trigger source " << trigfrag.getTriggerSource() << "!=" << trig_location_
+		       << " and fails filter.";
       return false;
     }
     

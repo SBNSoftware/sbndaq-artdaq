@@ -196,7 +196,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
                      << ", first_dt_begin_ptr: " << first_dt_begin_ptr;
 
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( next_dt->data );
-    TLOG(TLVL_DEBUG)<< __func__ << ": BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
+    TLOG(TLVL_DEBUG+8)<< __func__ << ": BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
 	<< board_block->header.time_stamp ;
 
   }

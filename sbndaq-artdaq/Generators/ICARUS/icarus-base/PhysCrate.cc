@@ -7,12 +7,13 @@
 #include <string.h>
 #include <netdb.h>
 
+#include "artdaq/DAQdata/Globals.hh"
+
 #define kMaxSize 950000
 #define kMaxBoards 32 
 #define kMaxBoardsonLink 5
 #define kMaxLinks 4 
 
-#include "common.h"
 
 PhysCrate::PhysCrate() {}
 

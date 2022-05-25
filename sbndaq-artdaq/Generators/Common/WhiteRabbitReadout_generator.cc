@@ -1,20 +1,13 @@
 //
 // sbndaq-artdaq/Generators/Common/WhiteRabbitReadout_generator.cc 
-//  (W.Badgett) origibal: D.Torretta : added Grafana metric for beam signals on DIO ch 1-2-3-4
+//  (W.Badgett)
 //
 // Read events from a White Rabbit socket
 //
 
-#define TRACE_NAME "WhiteRabbitReadout"
-#include "sbndaq-artdaq-core/Trace/trace_defines.h"
-
-#include "artdaq/DAQdata/Globals.hh"
-
 #include "sbndaq-artdaq/Generators/Common/WhiteRabbitReadout.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "artdaq/Generators/GeneratorMacros.hh"
-#include "cetlib_except/exception.h"
-
 #include <fstream>
 #include <iomanip>
 #include <iterator>
@@ -44,11 +37,6 @@ sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
     channelMode[i] = ps.get<bool>(name,false);
   }
   configure();
-
-
-fEventCounter = 1;
-fLastEvent = 0;
-
 }
 
 sbndaq::WhiteRabbitReadout::~WhiteRabbitReadout()
@@ -58,12 +46,13 @@ sbndaq::WhiteRabbitReadout::~WhiteRabbitReadout()
 
 void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 {
+
   TLOG(TLVL_DEBUG+1)<< "start";
   agentSocket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (agentSocket < 0) 
   {
     TLOG(TLVL_ERROR) << "WhiteRabbitReadout socket error [" << 
-      errno <<  "] " << strerror(errno);
+      errno <<  "] " << strerror(errno) <<" deviceName " << deviceName ;
     return;
   }
 
@@ -109,7 +98,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 void sbndaq::WhiteRabbitReadout::configure()
 {
   TLOG(TLVL_DEBUG) << "hello";
-  TLOG(TLVL_INFO) << " added metric for grafana ";
+  TLOG(TLVL_INFO) << " **** added metric for grafana **** DT APRIL 13  2022";
   openWhiteRabbitSocket(device.c_str());
   eventSeqCounter = 0;
 }
@@ -272,7 +261,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
     data->command       = WR_DIO_CMD_STAMP;
     data->value         = 0;
     agentDevice.ifr_data = (char *)data;
-    TLOG(TLVL_DEBUG) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
+    TLOG(TLVL_DEBUG+1) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
     clock_gettime(CLOCK_REALTIME,&event.systemTime);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
@@ -286,7 +275,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
       event.systemTime.tv_nsec;
     for (uint32_t i=0; i<data->nstamp; i++)
     {
-      TLOG(TLVL_DEBUG) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
+      TLOG(TLVL_DEBUG+1) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
 	" " << data->timeStamp[i].tv_nsec; 
 
 //added in the loop 

@@ -11,7 +11,6 @@ Chris Giese <geezer@execpc.com>	http://my.execpc.com/~geezer
 #include <stdio.h> /* printf() */
 #include <string.h> /* memcpy() */
 
-#include "common.h"
 
 static struct termios g_old_kbd_mode;
 

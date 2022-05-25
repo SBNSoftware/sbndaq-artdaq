@@ -179,7 +179,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
    * Reads data from FEB
    */
   
-  TLOG(TLVL_DEBUG) << __func__ << "() called";
+  TLOG(TLVL_DEBUG+2) << __func__ << "() called";
 
   //measure time of function execution
   static auto t_start = std::chrono::steady_clock::now();
@@ -220,7 +220,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       
       int datalen = numbytes-18;
       
-      TLOG(TLVL_DEBUG)<<__func__<<"()  datalen = "<<datalen;
+      TLOG(TLVL_DEBUG+2)<<__func__<<"()  datalen = "<<datalen;
         
       //loop over bytes of the data
       for(int jj = 0; jj < datalen; ) { // jj is incremented in processSingleHit
@@ -275,7 +275,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
           const uint64_t fragment_timestamp = (start_timestamp + 0.5) * fragment_period_;
           feb.buffer.push_back({fragment_hits, feb.metadata, fragment_timestamp});
 
-          TLOG(TLVL_DEBUG+31) << "pushing " << std::to_string(feb.metadata.hits_in_fragment()) << " hits into a fragment for MAC "<<std::to_string(mac)<<" at "<< sbndaq::BernCRTFragment::print_timestamp(fragment_timestamp);
+          TLOG(TLVL_DEBUG+5) << "pushing " << std::to_string(feb.metadata.hits_in_fragment()) << " hits into a fragment for MAC "<<std::to_string(mac)<<" at "<< sbndaq::BernCRTFragment::print_timestamp(fragment_timestamp);
 
           if(i < feb.hits.size()) {
             start_index = i;
@@ -303,7 +303,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),
       "CRT performance", 5, artdaq::MetricMode::Maximum);
   
-  TLOG(TLVL_DEBUG) << __func__ << "() read " << std::to_string(hit_count_all_febs) << " hits";
+  TLOG(TLVL_DEBUG+2) << __func__ << "() read " << std::to_string(hit_count_all_febs) << " hits";
 
   return hit_count_all_febs;
 } //GetFEBData
