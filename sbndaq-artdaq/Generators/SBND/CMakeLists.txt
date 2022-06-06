@@ -5,6 +5,7 @@ list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq-artdaq_Common_Utilities sbndaq_art
 
 add_subdirectory(TriggerBoard)
 add_subdirectory(NevisTPC)
+add_subdirectory(SPECTDC)
 
 
 find_ups_product( wibtools )
@@ -60,6 +61,12 @@ basic_plugin(TriggerBoardReader "generator"
     ${BUILD_PLUGIN_CORE_LIB_LIST}
     sbndaq-artdaq_Generators_SBND_TriggerBoard
     jsoncpp
+)
+
+basic_plugin(SPECTDCTimestampReader "generator"
+  LIBRARIES REG
+    ${BUILD_PLUGIN_CORE_LIB_LIST}
+    sbndaq-artdaq_Generators_SBND_SPECTDC
 )
 
 install_source()

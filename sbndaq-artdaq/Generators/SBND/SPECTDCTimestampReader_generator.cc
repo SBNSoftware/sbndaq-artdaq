@@ -8,7 +8,6 @@
 #include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
 #include "sbndaq-artdaq/Generators/Common/workerThread.hh"
 
-uint64_t* aa = nullptr;
 using artdaq::MetricMode;
 using sbndaq::PoolBuffer;
 using sbndaq::SPECTDCTimestampReader;
@@ -26,10 +25,7 @@ SPECTDCTimestampReader::SPECTDCTimestampReader(fhicl::ParameterSet const& ps)
       configured_{configure(ps)},
       sleep_on_no_data_us_{ps.get<decltype(sleep_on_no_data_us_)>("sleep_on_no_data_us", 10000)},
       events_to_generate_{ps.get<decltype(events_to_generate_)>("events_to_generate", 0)},
-      separate_data_thread_{ps.get<decltype(separate_data_thread_)>("separate_data_thread", 0)} {
-  aa = new uint64_t[1024];
-  std::fill_n(aa, 1024, 1);
-}
+      separate_data_thread_{ps.get<decltype(separate_data_thread_)>("separate_data_thread", 0)} {}
 
 SPECTDCTimestampReader::~SPECTDCTimestampReader() {}
 
@@ -101,8 +97,8 @@ bool SPECTDCTimestampReader::getNext_(artdaq::FragmentPtrs& fragments) {
   }
 
   if (buffer_->activeBlockCount() == 0) {
-    TLOG(TLVL_WARNING) << "Buffer has no data.  Last seen fragment seq=" << ev_counter() << "; Sleep for "
-                       << sleep_on_no_data_us_ << " us and return.";
+    TLOG(TLVL_DEBUG + 10) << "Buffer has no data.  Last seen fragment seq=" << ev_counter() << "; Sleep for "
+                          << sleep_on_no_data_us_ << " us and return.";
     utls::thread_sleep_us(sleep_on_no_data_us_);
     return true;
   }
@@ -125,15 +121,14 @@ bool SPECTDCTimestampReader::getNext_(artdaq::FragmentPtrs& fragments) {
     auto const& last_frag = *fragments.back();
     auto const last_frag_ovl = TDCTimestampFragment(last_frag);
     auto create_time_ms = utls::convert_time_ns<utls::as_milliseconds>(utls::elapsed_time_ns(last_frag.timestamp()));
-    TLOG(TLVL_DEBUG + 3) << "Fragment seq=" << last_frag.sequenceID() << ", timestamp=" << std::setw(20)
-                         << last_frag.timestamp() << ", create_time=" << std::setw(5) << create_time_ms << " ms, "
-                         << last_frag_ovl;
+    TLOG(TLVL_DEBUG + 11) << "Fragment seq=" << last_frag.sequenceID() << ", timestamp=" << std::setw(20)
+                          << last_frag.timestamp() << ", create_time=" << std::setw(5) << create_time_ms << " ms, "
+                          << last_frag_ovl;
     if (metricMan) {
       metricMan->sendMetric("Fragments Sent", 1, "Events", 1, MetricMode::Rate);
       metricMan->sendMetric("Fragment Create Time", create_time_ms, "ms", 1, MetricMode::Average | MetricMode::Maximum);
     }
 
-    aa[1] = ev_counter();
     if (0 != events_to_generate_ && ev_counter() > events_to_generate_) {
       requestStop();
       return false;
