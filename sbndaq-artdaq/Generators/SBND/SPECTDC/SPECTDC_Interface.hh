@@ -5,7 +5,7 @@
 #include "sbndaq-artdaq-core/Overlays/SBND/TDCTimestampFragment.hh"
 
 #include "fhiclcpp/fwd.h"
-
+//#define GENERATE_FAKE_DATA 1
 struct fmctdc_board;
 
 namespace sbndaq {

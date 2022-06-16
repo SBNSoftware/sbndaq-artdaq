@@ -54,19 +54,19 @@ TDCChan::TDCChan(fhicl::ParameterSet const& ps, PoolBufferUPtr_t& b, TDCCard con
 }
 
 bool TDCChan::open() {
-  TLOG(TLVL_DEBUG + 1) << "Opening channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_1) << "Opening channel=" << int{id} << ".";
   auto err = fmctdc_channel_disable(fmctdc.tdcdevice, id);
   if (err) {
     TLOG(TLVL_ERROR) << "Cannot disable channel=" << int{id} << ".";
     return false;
   }
-  TLOG(TLVL_DEBUG + 1) << "Opened channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_1) << "Opened channel=" << int{id} << ".";
   fd = fmctdc_fileno_channel(fmctdc.tdcdevice, id);
   return true;
 }
 
 void TDCChan::close() {
-  TLOG(TLVL_DEBUG + 2) << "Closing channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_2) << "Closing channel=" << int{id} << ".";
   auto err = fmctdc_channel_disable(fmctdc.tdcdevice, id);
   if (err) {
     TLOG(TLVL_ERROR) << "Cannot disable channel=" << int{id} << ".";
@@ -76,20 +76,20 @@ void TDCChan::close() {
   if (err) {
     TLOG(TLVL_ERROR) << "Cannot flush data buffers for channel=" << int{id} << ".";
   }
-  TLOG(TLVL_DEBUG + 2) << "Closed channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_2) << "Closed channel=" << int{id} << ".";
 }
 
 bool TDCChan::configure() {
-  TLOG(TLVL_DEBUG + 3) << "Configuring channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_3) << "Configuring channel=" << int{id} << ".";
   inhibit = true;
   for (auto task : configtasks)
     if (!(this->*task)()) return false;
-  TLOG(TLVL_DEBUG + 3) << "Configured channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_3) << "Configured channel=" << int{id} << ".";
   return true;
 }
 
 bool TDCChan::start() {
-  TLOG(TLVL_DEBUG + 4) << "Starting channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_4) << "Starting channel=" << int{id} << ".";
   if (metricMan) {
     metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{0}, lit::unit_samples_per_second, 1,
                           MetricMode::Rate);
@@ -114,16 +114,16 @@ bool TDCChan::start() {
   for (auto task : starttasks)
     if (!(this->*task)()) return false;
   inhibit = false;
-  TLOG(TLVL_DEBUG + 4) << "Started channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_4) << "Started channel=" << int{id} << ".";
   return true;
 }
 
 bool TDCChan::stop() {
-  TLOG(TLVL_DEBUG + 5) << "Stopping channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_5) << "Stopping channel=" << int{id} << ".";
   inhibit = true;
   for (auto task : stoptasks)
     if (!(this->*task)()) return false;
-  TLOG(TLVL_DEBUG + 5) << "Stopped channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_5) << "Stopped channel=" << int{id} << ".";
   return true;
 }
 
@@ -134,13 +134,11 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
     metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, lag_ns, lit::unit_nanoseconds, 1,
                           MetricMode::Average);
   }
-
   if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
 
   if (lag_ns <= utls::onesecond_ns) {
-    TLOG(TLVL_DEBUG + 10)
-        << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time=" << lag_ns
-        << " ns.";
+    TLOG(TLVL_DEBUG_10) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
+                        << lag_ns << " ns.";
 
   } else {
     TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="

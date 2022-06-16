@@ -34,7 +34,7 @@ uint64_t utls::hosttime_ns() {
 }
 void utls::thread_sleep(uint64_t s) { std::this_thread::sleep_until(clk::now() + seconds(s)); }
 void utls::thread_sleep_us(uint64_t us) { std::this_thread::sleep_until(clk::now() + microseconds(us)); }
-void utls::thread_sleep_ms(uint64_t ms) { std::this_thread::sleep_until(clk::now() + microseconds(ms)); }
+void utls::thread_sleep_ms(uint64_t ms) { std::this_thread::sleep_until(clk::now() + milliseconds(ms)); }
 
 std::string utls::to_localtime(uint64_t wr_time) {
   time_t epoch = wr_time;

@@ -20,7 +20,7 @@ using sbndaq::TDCTimestamp;
 bool TDCChan::configure_drain_buffer() {
   if (!enabled) return true;
 
-  TLOG(TLVL_DEBUG + 1) << "Draining data in channel=" << int{id} << ".";
+  TLOG(TLVL_DEBUG_1) << "Draining data in channel=" << int{id} << ".";
   auto drained_count = uint64_t{0};
   auto sample_info = std::string("Unknown");
   while (true) {
@@ -54,9 +54,9 @@ bool TDCChan::configure_drain_buffer() {
 
       if (host_time == sample_time) {
         if (monitor_only) {
-          TLOG(TLVL_DEBUG + 2) << sample_info;
+          TLOG(TLVL_DEBUG_2) << sample_info;
         } else {
-          TLOG(TLVL_DEBUG + 3) << sample_info;
+          TLOG(TLVL_DEBUG_3) << sample_info;
           if (inhibit) {
             ++sample_drain_count;
           } else {

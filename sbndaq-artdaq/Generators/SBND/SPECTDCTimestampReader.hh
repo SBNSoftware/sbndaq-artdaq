@@ -29,7 +29,7 @@ class SPECTDCTimestampReader : public artdaq::CommandableFragmentGenerator {
   explicit SPECTDCTimestampReader(fhicl::ParameterSet const&);
   virtual ~SPECTDCTimestampReader();
 
- private:
+  // private:
   SPECTDCTimestampReader(SPECTDCTimestampReader const&) = delete;
   SPECTDCTimestampReader(SPECTDCTimestampReader&&) = delete;
   SPECTDCTimestampReader& operator=(SPECTDCTimestampReader const&) = delete;
@@ -52,8 +52,12 @@ class SPECTDCTimestampReader : public artdaq::CommandableFragmentGenerator {
   TDCTimestampFragment::Metadata metadata_;
   bool configured_;
   uint64_t sleep_on_no_data_us_;
+  uint64_t hardware_poll_interval_us_;
   uint64_t events_to_generate_;
   bool separate_data_thread_;
+  bool separate_monitoring_thread_;
+  uint64_t next_hardware_poll_time_us_;
+  uint64_t next_status_report_time_us_;
   bool stop_requested_;
 };
 }  // namespace sbndaq

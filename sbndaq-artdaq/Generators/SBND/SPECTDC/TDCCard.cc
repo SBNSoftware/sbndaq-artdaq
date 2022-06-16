@@ -64,10 +64,14 @@ TDCCard::TDCCard(fhicl::ParameterSet const& ps, PoolBufferUPtr_t& b)
   }
 }
 
-TDCCard::~TDCCard() { close(); }
+TDCCard::~TDCCard() {
+  close();
+  chans.clear();
+  tai2utc.reset();
+}
 
 bool TDCCard::open() {
-  TLOG(TLVL_DEBUG + 1) << "Opening TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_1) << "Opening TDC device id=0x" << std::hex << deviceid << ".";
   tdcdevice = fmctdc_open(-1, deviceid);
   if (!tdcdevice) {
     TLOG(TLVL_ERROR) << "Cannot open TDC device id=" << deviceid
@@ -75,8 +79,8 @@ bool TDCCard::open() {
     return false;
   }
 
-  TLOG(TLVL_DEBUG + 1) << "Opened TDC device id=0x" << std::hex << deviceid << ", handle=" << std::hex << tdcdevice
-                       << ".";
+  TLOG(TLVL_DEBUG_1) << "Opened TDC device id=0x" << std::hex << deviceid << ", handle=" << std::hex << tdcdevice
+                     << ".";
 
   for (auto& chan : chans)
     if (!chan.open()) return false;
@@ -93,8 +97,8 @@ bool TDCCard::open() {
 
 void TDCCard::close() {
   if (!tdcdevice) return;
-  TLOG(TLVL_DEBUG + 2) << "Closing TDC device id=0x" << std::hex << deviceid << ", handle=" << std::hex << tdcdevice
-                       << ".";
+  TLOG(TLVL_DEBUG_2) << "Closing TDC device id=0x" << std::hex << deviceid << ", handle=" << std::hex << tdcdevice
+                     << ".";
   stop();
   for (auto& chan : chans) chan.close();
 
@@ -104,14 +108,14 @@ void TDCCard::close() {
                      << ", fmctdc_close returned error: " << fmctdc_strerror(errno) << ".";
   }
 
-  TLOG(TLVL_DEBUG + 2) << "Closed TDC device id=0x" << std::hex << deviceid << ", handle=" << std::hex << tdcdevice
-                       << ".";
+  TLOG(TLVL_DEBUG_2) << "Closed TDC device id=0x" << std::hex << deviceid << ", handle=" << std::hex << tdcdevice
+                     << ".";
 
   tdcdevice = nullptr;
 }
 
 bool TDCCard::configure() {
-  TLOG(TLVL_DEBUG + 3) << "Configuring TDC device id=" << deviceid;
+  TLOG(TLVL_DEBUG_3) << "Configuring TDC device id=" << deviceid;
   if (timesync_source == timesync_source_t::wr) {
     TLOG(TLVL_INFO) << "Enabling the WhiteRabbit timing system on a TDC device.";
     auto err = fmctdc_wr_mode(tdcdevice, 1);
@@ -166,14 +170,14 @@ bool TDCCard::configure() {
   for (auto& chan : chans)
     if (!chan.configure()) return false;
 
-  TLOG(TLVL_DEBUG + 3) << "Configured TDC device id=" << deviceid;
+  TLOG(TLVL_DEBUG_3) << "Configured TDC device id=" << deviceid;
   return true;
 }
 
 bool TDCCard::start() {
   if (!tdcdevice) return false;
 
-  TLOG(TLVL_DEBUG + 4) << "Starting TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_4) << "Starting TDC device id=0x" << std::hex << deviceid << ".";
 
   uint8_t error_count = 0;
   for (auto& chan : chans)
@@ -183,20 +187,20 @@ bool TDCCard::start() {
     metricMan->sendMetric(lit::monitor_wr_synced, uint8_t{0}, lit::unit_bool, 1, MetricMode::LastPoint);
     metricMan->sendMetric(lit::monitor_temperature, float{0}, lit::unit_temperature, 1, MetricMode::Average);
   }
-  TLOG(TLVL_DEBUG + 4) << "Started TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_4) << "Started TDC device id=0x" << std::hex << deviceid << ".";
   return 0 == error_count;
 }
 
 bool TDCCard::stop() {
   if (!tdcdevice) return false;
 
-  TLOG(TLVL_DEBUG + 5) << "Stopping TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_5) << "Stopping TDC device id=0x" << std::hex << deviceid << ".";
 
   uint8_t error_count = 0;
   for (auto& chan : chans)
     if (!chan.stop()) ++error_count;
 
-  TLOG(TLVL_DEBUG + 5) << "Stopped TDC device id=0x" << std::hex << deviceid << ", error_count=" << error_count << ".";
+  TLOG(TLVL_DEBUG_5) << "Stopped TDC device id=0x" << std::hex << deviceid << ", error_count=" << error_count << ".";
   return 0 == error_count;
 }
 
@@ -210,16 +214,18 @@ void TDCCard::reportTimeTemp() {
   }
 
   auto wr_seconds = tai2utc ? tai2utc->adjust(ts.seconds) : ts.seconds;
-  TLOG(TLVL_INFO) << "Current TDC time is " << (unsigned long long)ts.seconds << ", or "
-                  << utls::to_localtime(wr_seconds);
+  TLOG(TLVL_DEBUG_6) << "Current TDC time is " << (unsigned long long)ts.seconds << ", or "
+                     << utls::to_localtime(wr_seconds);
 
   int lvl;
   std::string msg;
   std::tie(lvl, msg) = utls::wr_time_summary(wr_seconds);
   TLOG(lvl) << msg;
-  auto temperature = fmctdc_read_temperature(tdcdevice);
-  TLOG(TLVL_INFO) << "Current TDC temperature is " << temperature << " deg C.";
-
+  auto temperature = float{0};
+  if (monitor_temperature) {
+    temperature = fmctdc_read_temperature(tdcdevice);
+    TLOG(TLVL_DEBUG_7) << "Current TDC temperature is " << temperature << " deg C.";
+  }
   auto status = fmctdc_check_wr_mode(tdcdevice);
   switch (status) {
     case ENODEV:
@@ -249,20 +255,20 @@ void TDCCard::reportTimeTemp() {
 }
 
 void TDCCard::read() {
-  TLOG(TLVL_DEBUG + 8) << "Reading (begin) TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_8) << "Reading (begin) TDC device id=0x" << std::hex << deviceid << ".";
   if (poll(g_pollfd, FMCTDC_NUM_CHANNELS, polltime_ms) < 1) return;
   uint8_t i = 0;
   for (auto& chan : chans) {
     if (g_pollfd[i].revents & POLLIN) chan.read();
     ++i;
   }
-  TLOG(TLVL_DEBUG + 8) << "Reading (end) TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_8) << "Reading (end) TDC device id=0x" << std::hex << deviceid << ".";
 }
 
 void TDCCard::monitor() {
   if (!tdcdevice) return;
-  TLOG(TLVL_DEBUG + 9) << "Monitoring(begin) TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_9) << "Monitoring(begin) TDC device id=0x" << std::hex << deviceid << ".";
   reportTimeTemp();
   for (auto& chan : chans) chan.monitor();
-  TLOG(TLVL_DEBUG + 9) << "Monitoring(end) TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_9) << "Monitoring(end) TDC device id=0x" << std::hex << deviceid << ".";
 }

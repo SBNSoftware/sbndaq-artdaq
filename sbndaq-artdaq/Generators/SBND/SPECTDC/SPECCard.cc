@@ -29,13 +29,13 @@ SPECCard::SPECCard(fhicl::ParameterSet const& ps, PoolBufferUPtr_t& b)
 }
 
 SPECCard::~SPECCard() {
-  TLOG(TLVL_DEBUG + 30) << "Autoclosing TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_30) << "Autoclosing TDC device id=0x" << std::hex << deviceid << ".";
   close();
-  TLOG(TLVL_DEBUG + 30) << "Autoclosed TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_30) << "Autoclosed TDC device id=0x" << std::hex << deviceid << ".";
 }
 
 bool SPECCard::open() {
-  TLOG(TLVL_DEBUG + 1) << "Opening TDC device id=" << deviceid << ".";
+  TLOG(TLVL_DEBUG_1) << "Opening TDC device id=" << deviceid << ".";
   auto card_count = fmctdc_init();
   if (card_count < 0) {
     TLOG(TLVL_ERROR) << "fmctdc_init() returned error: " << fmctdc_strerror(errno) << ".";
@@ -51,28 +51,28 @@ bool SPECCard::open() {
     std::stringstream os;
     os << "0x" << std::hex << b->dev_id;
     deviceid = os.str();
-    TLOG(TLVL_DEBUG + 1) << "Selected TDC device id=" << deviceid << ".";
+    TLOG(TLVL_DEBUG_1) << "Selected TDC device id=" << deviceid << ".";
   }
 
   fmctdc.deviceid = std::stoul(deviceid, nullptr, 16);
   isOpen = fmctdc.open();
-  TLOG(TLVL_DEBUG + 1) << "Opened TDC device id=" << deviceid
-                       << ", status=" << (isOpen ? lit::rc_success : lit::rc_failure) << ".";
+  TLOG(TLVL_DEBUG_1) << "Opened TDC device id=" << deviceid
+                     << ", status=" << (isOpen ? lit::rc_success : lit::rc_failure) << ".";
   return isOpen;
 }
 
 void SPECCard::close() {
   if (!isOpen) return;
 
-  TLOG(TLVL_DEBUG + 2) << "Closing TDC device id=" << deviceid;
+  TLOG(TLVL_DEBUG_2) << "Closing TDC device id=" << deviceid;
   fmctdc.close();
   fmctdc_exit();
-  TLOG(TLVL_DEBUG + 2) << "Closed TDC device id=" << deviceid;
+  TLOG(TLVL_DEBUG_2) << "Closed TDC device id=" << deviceid;
   isOpen = false;
 }
 
 bool SPECCard::configure() {
-  TLOG(TLVL_DEBUG + 3) << "Configuring TDC device id=" << deviceid;
+  TLOG(TLVL_DEBUG_3) << "Configuring TDC device id=" << deviceid;
 
   if (!isOpen) {
     if (!open()) {
@@ -85,15 +85,15 @@ bool SPECCard::configure() {
   if (isConfigured) return true;
 
   isConfigured = fmctdc.configure();
-  TLOG(TLVL_DEBUG + 11) << "Configured TDC device id=" << deviceid
-                        << ", status=" << (isConfigured ? "configured" : "not configured") << ".";
+  TLOG(TLVL_DEBUG_11) << "Configured TDC device id=" << deviceid
+                      << ", status=" << (isConfigured ? "configured" : "not configured") << ".";
 
   if (!isConfigured) {
     close();
     TLOG(TLVL_ERROR) << "Failed configuring TDC device id=0x" << std::hex << deviceid << ".";
     return false;
   }
-  TLOG(TLVL_DEBUG + 3) << "Configured TDC device id=0x" << std::hex << deviceid << ".";
+  TLOG(TLVL_DEBUG_3) << "Configured TDC device id=0x" << std::hex << deviceid << ".";
 
   return true;
 }

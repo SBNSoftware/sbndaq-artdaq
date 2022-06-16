@@ -1,4 +1,5 @@
-#define TRACE_NAME "SPECTDC_Test"
+#include "sbndaq-artdaq/Generators/SBND/SPECTDCTimestampReader.hh"
+#define TRACE_NAME "SPECTDCTimestampReader_Test"
 #include <fstream>
 #include <iostream>
 
@@ -13,13 +14,13 @@
 #include "fhiclcpp/intermediate_table.h"
 #include "fhiclcpp/parse.h"
 
-#include "SPECTDC_Interface.hh"
+#include "SPECTDC/SPECTDC_Interface.hh"
 #include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
 
 namespace bpo = boost::program_options;
 
+using sbndaq::SPECTDCTimestampReader;
 int main(int argc, char* argv[]) try {
-  metricMan.reset();
   std::ostringstream descstr;
   descstr << argv[0] << " <-c <config-file>> <other-options>";
 
@@ -66,36 +67,40 @@ int main(int argc, char* argv[]) try {
   std::string conf((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());
   is.close();
   auto pset = fhicl::ParameterSet::make(conf);
-  auto spec = pset.get<fhicl::ParameterSet>("spec");
+  auto events_to_generate = pset.get<uint64_t>("events_to_generate", 0);
+  auto brpset = pset.get<fhicl::ParameterSet>("fragment_receiver");
+  brpset.put_or_replace("events_to_generate", events_to_generate);
+
   if (verbose) {
-    spec.put_or_replace("verbose", true);
+    brpset.put_or_replace("verbose", true);
   }
 
-  std::unique_ptr<sbndaq::PoolBuffer> buffer = std::make_unique<sbndaq::PoolBuffer>();
-  auto frag_size = sizeof(sbndaq::TDCTimestamp);
-  auto buff_size = pset.get<decltype(frag_size)>("data_buffer_depth_fragments", 512);
-  buffer->allocate(frag_size, buff_size, true);
-  auto tdcCard = std::make_unique<sbndaq::SPECTDCInterface::SPECCard>(spec, buffer);
-
-  tdcCard->configure();
-
-  tdcCard->start();
-
-  while (!buffer->isEmpty()) tdcCard->read();
-
-  tdcCard->stop();
-
-  auto as_string = [](auto const& b) {
-    std::stringstream os;
-    os << *reinterpret_cast<sbndaq::TDCTimestamp*>(b->begin);
-    return os.str();
-  };
-
-  while (buffer->activeBlockCount()) {
-    auto block = buffer->takeActiveBlock();
-    TLOG(TLVL_DEBUG_30) << as_string(block);
-    buffer->returnFreeBlock(block);
+  try {
+    auto metric_pset = pset.get<fhicl::ParameterSet>("metrics");
+    if (metric_pset.is_empty()) {
+      metricMan.reset();
+    } else {
+      metricMan->initialize(metric_pset, "artdaqDriver");
+      metricMan->do_start();
+    }
+  } catch (...) {
+    std::cerr << "Wrong metrics configuration, exiting.";
+    return 129;
   }
+
+  auto br = std::make_unique<SPECTDCTimestampReader>(brpset);
+
+  br->StartCmd(1, 0, 0);
+
+  artdaq::FragmentPtrs fps;
+
+  while (true) {
+    bool sts = br->getNext_(fps);
+    fps.clear();
+    if (!sts) break;
+  }
+
+  br->StopCmd(0, 0);
 
   return 0;
 } catch (...) {
