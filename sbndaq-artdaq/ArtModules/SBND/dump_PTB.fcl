@@ -1,14 +1,15 @@
-process_name: Dump
+process_name: PTBDump
 
 services: {
-  TFileService: { fileName: "processed_data_result.root" }
+#output file
+  TFileService: { fileName: "new.root" }
 }
 
 #source is a root file
 source:
 {
   module_type: RootInput
-  maxEvents:   1000        # Number of events to create
+  maxEvents:   100000000      # Number of events to create
 }
 
 outputs:
@@ -29,25 +30,20 @@ physics:
 
  analyzers:{
 
-   dumpall: {
-     module_type: MultiDump
-     include_caen: true
-     include_ptb: true
-     shift_fragment_id: 0  # fcl for caen frags
-     include_wr: true
-     window_wr: 1000000000  # in ns, range is 0 to 1 second
-     include_berncrt: false
-     verbose: false
-
+   berncrtana: {
+     module_type: PTBDump
    }
 
  }
 
  #define the output stream, there could be more than one if using filters 
  stream1:  [ out1 ]
- ana: [ dumpall ]
+ ana: [ berncrtana ]
 
  #end_paths is a keyword and contains the paths that do not modify the art::Event, 
  #ie analyzers and output streams.  these all run simultaneously
  end_paths:     [ ana ]  
 }
+
+physics.analyzers.berncrtana.DumpFrags: true
+physics.analyzers.berncrtana.SaveTriggers: true
