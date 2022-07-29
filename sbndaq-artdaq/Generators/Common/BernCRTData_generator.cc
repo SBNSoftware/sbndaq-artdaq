@@ -263,8 +263,9 @@ size_t sbndaq::BernCRTData::GetFEBData() {
         if(hit.timestamp - hit.last_accepted_timestamp > max_time_with_no_data_ns_) {
           TLOG(TLVL_WARNING) 
             <<"FEB "<<(int)mac
-            <<" time between timestamps: "
-            <<hit.timestamp - hit.last_accepted_timestamp
+            <<" time between consecutive timestamps: "
+            <<sbndaq::BernCRTFragment::print_timestamp(hit.timestamp - hit.last_accepted_timestamp)
+            <<" > max_time_with_no_data_ms (" <<(max_time_with_no_data_ns_/1'000'000)<<" ms)"
             <<" this hit: "
             <<sbndaq::BernCRTFragment::print_timestamp(hit.timestamp)
             <<" previous hit: "
