@@ -211,12 +211,54 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
   std::string data_input = "";
   std::fill( buffer, buffer + sizeof(buffer), '\0' ); 
   if(size_bytes>0){
+    //TLOG(TLVL_DEBUG) << "size_bytes from poll_with_timeout " << size_bytes ;
+
     //Not currently using peek buffer result, just using buffer
     //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
     //int x = read(datasocket_,ip_data_,si_data_,sizeof(buffer)-1,buffer);
-    int x = readTCP(dataconnfd_,ip_data_,si_data_,sizeof(buffer)-1,buffer);  
-    TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
+
+    //here it seems we request to read 999 bytes (sizeof(buffer)-1)from the socket
+    //original code (JZ)
+    //int x = readTCP(dataconnfd_,ip_data_,si_data_,sizeof(buffer)-1,buffer)
+    //TLOG(TLVL_DEBUG) << "in getNext x:: " << x << " errno:: " << errno << " data received:: " << buffer;
+    //
+
+    int bytes_desired = 4;
+    int bytes_so_far = 0;
+
+    int bytes_this_read =0;
+
+    while (bytes_desired - bytes_so_far > 0 ) {
+    bytes_this_read = readTCP(dataconnfd_ , ip_data_, si_data_, (bytes_desired - bytes_so_far), &buffer[bytes_so_far] );
+    if (bytes_this_read > 0 ) {
+        bytes_so_far += bytes_this_read;}
+    }
+
+    TLOG(TLVL_DEBUG) << " buffer 0-3 bytes "  << buffer[0] <<" *  " << buffer[1] << "  *"<< buffer[2] <<"* "<< buffer[3]; 
+
+    //TLOG(TLVL_DEBUG) << "after readTCP first 4 bytes: bytes_this_read " << bytes_this_read << " bytes_so_far  " << bytes_so_far ; 
+
+    //2nd loop on rest of buffer to get remaining bytes 
+    //bytes_desired = ntohl(*(long*)buffer);  NO!!
+    //example:  0 5 3 9
+    //bytes_desired = atoi(buffer[1])*100 + atoi(buffer[2])*10 + atoi(buffer[3]);
+    std::string strtmp(&buffer[0], 4);
+    //TLOG(TLVL_DEBUG) << "printout of strtmp &buffer " << strtmp ;;
+
+    bytes_desired = std::stoi(strtmp);
+   
+    TLOG(TLVL_DEBUG) << " bytes_desired " << bytes_desired ;
+    bytes_so_far = 0;
+
+    while (bytes_desired - bytes_so_far > 0 ) {
+    bytes_this_read = readTCP(dataconnfd_ , ip_data_, si_data_, (bytes_desired - bytes_so_far), &buffer[bytes_so_far] ) ;
+    if (bytes_this_read > 0 ) {
+        bytes_so_far += bytes_this_read;}
+    }
+
+    // fill the data array (GT string data) here
     data_input = buffer;
+
   }
   TLOG(TLVL_DEBUG) << "string received:: " << data_input;
 
@@ -532,14 +574,13 @@ int sbndaq::ICARUSTriggerV2::read(int socket, std::string ip, struct sockaddr_in
 }
 
 int sbndaq::ICARUSTriggerV2::readTCP(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  TLOG(TLVL_DEBUG) << "in readTCP:: get " << size << " bytes from " << ip.c_str() << "\n";
   socklen_t slen = sizeof(si); 
   int size_rcv = recv(socket, buffer, size, 0); //for TCP/IP stuff
-
   if(size_rcv<0)
-    TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
+    TLOG(TLVL_ERROR) << "in readTCP:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
   else
-    TLOG(TLVL_DEBUG) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
+    TLOG(TLVL_DEBUG) << "in readTCP:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
 
   return size_rcv;
 }
