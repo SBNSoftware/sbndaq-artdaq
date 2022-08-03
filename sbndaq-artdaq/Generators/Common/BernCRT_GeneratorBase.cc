@@ -46,6 +46,8 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
   uint32_t FEBBufferCapacity_ = ps_.get<uint32_t>("FEBBufferCapacity");
   feb_poll_period_            = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
 
+  max_time_with_no_data_ns_   = 1'000'000UL * ps_.get<uint64_t>("max_time_with_no_data_ms", 1000); //set to 0 to disable warning message
+  max_tolerable_t0_           = ps_.get<uint32_t>("max_tolerable_t0_", 1'000'100'000); //set to 1<<30 (or more) to disable error message
 
   // new fcl parameter for using older firmware versions.
   // older firmware for which the coinc word is not in the FEB hit structure is used
