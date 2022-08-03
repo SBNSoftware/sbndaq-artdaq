@@ -57,8 +57,12 @@ void sbndaq::BernCRTData::ConfigureStart() {
   TLOG(TLVL_INFO) << __func__ << "() called";
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
-  febdrv.biasOFF();
-  
+  //switch off bias voltage one by one (rather than sending signal to all boards at once
+  //using MAC 255) so that if it fails, the error message will specify which board failed 
+  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
+    febdrv.biasOFF(MAC5s_[iFEB]);
+  }
+ 
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     feb_send_bitstreams(MAC5s_[iFEB]); //send PROBE and SC configuration to FEB
     if(feb_configuration[MAC5s_[iFEB]].GetHVOnPermission()) febdrv.biasON(MAC5s_[iFEB]); //turn on SiPM HV (if FHiCL file allows it)
