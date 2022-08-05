@@ -57,8 +57,12 @@ void sbndaq::BernCRTData::ConfigureStart() {
   TLOG(TLVL_INFO) << __func__ << "() called";
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
-  febdrv.biasOFF();
-  
+  //switch off bias voltage one by one (rather than sending signal to all boards at once
+  //using MAC 255) so that if it fails, the error message will specify which board failed 
+  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
+    febdrv.biasOFF(MAC5s_[iFEB]);
+  }
+ 
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     feb_send_bitstreams(MAC5s_[iFEB]); //send PROBE and SC configuration to FEB
     if(feb_configuration[MAC5s_[iFEB]].GetHVOnPermission()) febdrv.biasON(MAC5s_[iFEB]); //turn on SiPM HV (if FHiCL file allows it)
@@ -239,8 +243,11 @@ size_t sbndaq::BernCRTData::GetFEBData() {
     unsigned int feb_total_lostfpga = 0;
     uint64_t last_poll_hit_number = feb.hit_number;
 
+    uint32_t max_t0_in_poll = 0;
+
     for(auto & hit : feb.hits) {
       CalculateTimestamp(hit, feb.metadata);
+      max_t0_in_poll = std::max(max_t0_in_poll, hit.ts0);
 
       //compute hit number, including lost hits
       feb_total_lostfpga += feb.last_lostfpga;
@@ -252,6 +259,52 @@ size_t sbndaq::BernCRTData::GetFEBData() {
 
       hit.last_accepted_timestamp = feb.last_accepted_timestamp;
       feb.last_accepted_timestamp = hit.timestamp;
+
+      if(max_time_with_no_data_ns_ && hit.last_accepted_timestamp > 1) {
+        /**
+         * Display warning if the time between hits drops below certain value
+         */
+        if(hit.timestamp - hit.last_accepted_timestamp > max_time_with_no_data_ns_) {
+          TLOG(TLVL_WARNING) 
+            <<"FEB "<<(int)mac
+            <<" time between consecutive timestamps: "
+            <<sbndaq::BernCRTFragment::print_timestamp(hit.timestamp - hit.last_accepted_timestamp)
+            <<" > max_time_with_no_data_ms (" <<(max_time_with_no_data_ns_/1'000'000)<<" ms)"
+            <<" this hit: "
+            <<sbndaq::BernCRTFragment::print_timestamp(hit.timestamp)
+            <<" previous hit: "
+            <<sbndaq::BernCRTFragment::print_timestamp(hit.last_accepted_timestamp);
+        }
+      }
+    } //loop over hits in given FEB
+
+    if(max_time_with_no_data_ns_ && feb.hits.size() == 0) {
+      /**
+       * Display warning if FEB measured no hits during this poll
+       */
+      if(feb.last_accepted_timestamp > 1) {
+        TLOG(TLVL_WARNING)
+          <<"FEB "<<(int)mac
+          <<" sent no hits during this poll. "
+          <<" Timestamp of the last hit: "
+          <<sbndaq::BernCRTFragment::print_timestamp(feb.last_accepted_timestamp)
+          <<" ("
+          <<sbndaq::BernCRTFragment::print_timestamp(poll_end - feb.last_accepted_timestamp)
+          <<" ago)";
+      }
+      else {
+        TLOG(TLVL_WARNING)
+          <<"FEB "<<(int)mac
+          <<" sent no hits since the beginning of the run";
+      }
+    }
+    
+    if(max_t0_in_poll > max_tolerable_t0_) {
+      TLOG(TLVL_ERROR)
+        <<"During this poll in FEB "<<(int)mac
+        <<" the maximum registered t0 counter value was "
+        <<sbndaq::BernCRTFragment::print_timestamp(max_t0_in_poll)
+        <<" which suggests the FEB does not receive Pulse Per Second (PPS) signal";
     }
 
     hit_count_all_febs += feb.hits.size();
