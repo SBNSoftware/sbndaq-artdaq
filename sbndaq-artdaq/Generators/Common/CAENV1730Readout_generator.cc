@@ -641,40 +641,40 @@ void sbndaq::CAENV1730Readout::Read_ADC_CalParams_V1730(int handle, int ch, uint
   CAEN_DGTZ_ErrorCode retcod;
  // read offset
  retcod = ReadSPIRegister(handle, ch, 0x20, &CalParams[0]);
- TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[0]=" << (int)CalParams[0];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x20",handle);
  retcod = ReadSPIRegister(handle, ch, 0x21, &CalParams[1]);
- TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[1]=" << CalParams[1]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[1]=" << (int)CalParams[1];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x21",handle);
  retcod = ReadSPIRegister(handle, ch, 0x26, &CalParams[2]);
-  TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[2]=" << CalParams[2]; 
+  TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[2]=" << (int)CalParams[2];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x26",handle);
  retcod = ReadSPIRegister(handle, ch, 0x27, &CalParams[3]);
- TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[3]=" << CalParams[3]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_ch"<<ch<< ": Params[3]=" << (int)CalParams[3];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x27",handle);
  
 // read gain
  retcod = ReadSPIRegister(handle, ch, 0x22, &CalParams[4]);
- TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[4]=" << CalParams[4]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[4]=" << (int)CalParams[4];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x22",handle);
  retcod = ReadSPIRegister(handle, ch, 0x23, &CalParams[5]);
- TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[5]=" << CalParams[5]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[5]=" << (int)CalParams[5];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x23",handle);
  retcod = ReadSPIRegister(handle, ch, 0x24, &CalParams[6]);
- TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[6]=" << CalParams[6]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[6]=" << (int)CalParams[6];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x24",handle);
  retcod = ReadSPIRegister(handle, ch, 0x28, &CalParams[7]);
- TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[7]=" << CalParams[7]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[7]=" << (int)CalParams[7];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x28",handle);
  retcod = ReadSPIRegister(handle, ch, 0x29, &CalParams[8]);
- TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[8]=" << CalParams[8]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[8]=" << (int)CalParams[8];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x29",handle);
  retcod = ReadSPIRegister(handle, ch, 0x2A, &CalParams[9]);
- TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[9]=" << CalParams[9]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[9]=" << (int)CalParams[9];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x2A",handle);
  // read skew
  retcod = ReadSPIRegister(handle, ch, 0x70, &CalParams[10]);
- TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[10]=" << CalParams[10]; 
+ TLOG(TINFO)<<"Read_ADC-CalParams_"<< ": Params[10]=" << (int)CalParams[10];
  sbndaq::CAENDecoder::checkError(retcod,"Read_ADC_CalParams_0x70",handle);
  //return CAEN_DGTZ_Success;
 }
@@ -692,7 +692,7 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
  CAEN_DGTZ_ErrorCode retcod;
 // Keep parameters frozen
  retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
- TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
+ TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << (int)CalParams[0];
  sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
  // write offset
  retcod = WriteSPIRegister(handle, ch, 0x20, CalParams[0]);
