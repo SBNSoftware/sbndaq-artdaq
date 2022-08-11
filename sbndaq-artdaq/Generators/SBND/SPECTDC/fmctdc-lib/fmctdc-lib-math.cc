@@ -23,9 +23,9 @@
 uint64_t fmctdc_ts_approx_ns(struct fmctdc_time *a) {
   uint64_t ns = 0;
 
-  ns += a->seconds * 1000000000;
-  ns += a->coarse * 8;
-  ns += a->frac * 81.03 / 1000; /* FIXME check this because in other func is different */
+  ns += a->seconds * 1000000000ULL;
+  ns += a->coarse * 8ULL;
+  ns += a->frac * 8000ULL / 4096ULL / 1000ULL;
   return ns;
 }
 
