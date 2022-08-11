@@ -18,6 +18,7 @@
 #include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/WhiteRabbitFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentV2.hh"
+#include "sbndaq-artdaq-core/Overlays/SBND/TDCTimestampFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/ContainerFragment.hh"
@@ -88,6 +89,16 @@ public:
 	fhicl::Comment("lots of text output if set to true"),
 	false
 	};
+    fhicl::Atom<bool> include_tdc {
+      fhicl::Name("include_tdc"),
+	fhicl::Comment("look for spec tdc fragments true/false"),
+	false
+	};
+    fhicl::Atom<bool> tdc_ps {
+      fhicl::Name("tdc_ps"),
+	fhicl::Comment("also save timestamp is picosecond resolution"),
+	false
+	};
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
 
@@ -103,6 +114,7 @@ private:
   void analyze_caen_fragment(artdaq::Fragment & frag);
   void analyze_wr_fragment_dio(artdaq::Fragment & frag);
   void analyze_bern_fragment(artdaq::Fragment & frag);
+  void analyze_tdc_fragment(artdaq::Fragment & frag);
 
   //--default values
   uint32_t nChannels;//    = 16;
@@ -204,6 +216,12 @@ private:
   std::vector<uint>  last_accepted_timestamp ; //timestamp of previous accepted hit
   std::vector<int>  lost_hits               ; //number of lost hits from the previous one
 
+  //WR spectdc data
+  std::vector<uint64_t> ftdc_ch0;
+  std::vector<uint64_t> ftdc_ch1;
+  std::vector<uint64_t> ftdc_ch2;
+  std::vector<uint64_t> ftdc_ch3;
+  std::vector<uint64_t> ftdc_ch4;
 
   //metadata
   std::vector<int>  mac5; //last 8 bits of FEB mac5 address
@@ -220,6 +238,8 @@ private:
   std::vector<int>  sequence_id;
 
 
+  bool finclude_tdc;
+  bool ftdc_ps;
   bool finclude_caen;
   bool fcaen_keepwaveforms;
   int fShift;
@@ -238,6 +258,8 @@ sbndaq::EventAna::EventAna(EventAna::Parameters const& pset): art::EDAnalyzer(ps
   fcaen_keepwaveforms = pset().caen_keepwaveforms();
   fShift = pset().Shift();
   finclude_wr = pset().include_wr();
+  finclude_tdc = pset().include_tdc();
+  ftdc_ps = pset().tdc_ps();
   fWindow = pset().window_wr();
   if (fWindow<0 || fWindow>1000000000) {
     fWindow=1000000000;
@@ -292,6 +314,13 @@ void sbndaq::EventAna::beginJob()
     events->Branch("fWR_ch2",&fWR_ch2);
     events->Branch("fWR_ch3",&fWR_ch3);
     events->Branch("fWR_ch4",&fWR_ch4);
+  }
+  if (finclude_tdc) {
+    events->Branch("ftdc_ch0",&ftdc_ch0);
+    events->Branch("ftdc_ch1",&ftdc_ch1);
+    events->Branch("ftdc_ch2",&ftdc_ch2);
+    events->Branch("ftdc_ch3",&ftdc_ch3);
+    events->Branch("ftdc_ch4",&ftdc_ch4);
   }
   if (finclude_berncrt) {
     events->Branch("flags",         &flags);
@@ -369,6 +398,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   fRun = evt.run();
   fEvent = evt.event();
   if (fverbose)   std::cout << "Run " << fRun << " event " << fEvent << std::endl;
+  std::cout << "\n" <<std::endl;
+  std::cout << "Run " << fRun << " event " << fEvent << std::endl;
 
   /************************************************************************************************/
   // need to clear tree variables at the beginning of the event
@@ -378,11 +409,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   fPMT_ch5.clear();   fPMT_ch6.clear();   fPMT_ch7.clear(); fPMT_ch8.clear(); fPMT_ch9.clear();
   fPMT_ch10.clear();   fPMT_ch11.clear();   fPMT_ch12.clear(); fPMT_ch13.clear(); fPMT_ch14.clear();
   fPMT_ch15.clear();
-  first_wr_ch0=0;
-  first_wr_ch1=0;
-  first_wr_ch2=0;
-  first_wr_ch3=0;
-  first_wr_ch4=0;
+  first_wr_ch0=0;  first_wr_ch1=0;  first_wr_ch2=0;  first_wr_ch3=0;  first_wr_ch4=0;
+  ftdc_ch0.clear();   ftdc_ch1.clear();   ftdc_ch2.clear();   ftdc_ch3.clear();   ftdc_ch4.clear();
   /************************************************************************************************/
 
   mac5.clear(); flags.clear();   lostcpu.clear();   lostfpga.clear();   ts0.clear();   ts1.clear();
@@ -503,9 +531,33 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
     }  //  loop over frag handles
   }// if include_berncrt
   
-  events->Fill();
+  if (finclude_tdc) {
+    for (auto handle : fragmentHandles) {
+      if (!handle.isValid() || handle->size() == 0) continue;      
+      if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
+	//Container fragment
+	for (auto cont : *handle) {
+	  artdaq::ContainerFragment contf(cont);
+	  if (contf.fragment_type()==sbndaq::detail::FragmentType::TDCTIMESTAMP) {
+	    if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " TDC Timestamp Fragments in container " << std::endl;
+	    for (size_t ii = 0; ii < contf.block_count(); ++ii)
+	      analyze_tdc_fragment(*contf[ii].get());
+	  }
+	}
+      }
+      else {
+	//normal fragment
+	if (handle->front().type()==sbndaq::detail::FragmentType::TDCTIMESTAMP) {
+	  for (auto frag : *handle)
+	    analyze_tdc_fragment(frag);
+	}
+      }
+    } // loop over frag handles
+    /************************************************************************************************/
+    
+  } // if (include_tdc)
   
-  std::cout << "here" << std::endl;
+  events->Fill();
   
 }
 
@@ -988,5 +1040,40 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
 }//analyze_bern_fragment
 
 
+void sbndaq::EventAna::analyze_tdc_fragment(artdaq::Fragment & frag)  {
 
+  const auto tsfrag = TDCTimestampFragment(frag);
+  const auto ts = tsfrag.getTDCTimestamp();
+
+  // each TDCTimstamp fragment has data from only one channel. The fragments are not always in time order
+  if (ts->vals.channel==0)  ftdc_ch0.emplace_back(ts->timestamp_ns());
+  if (ts->vals.channel==1)  ftdc_ch1.emplace_back(ts->timestamp_ns());
+  if (ts->vals.channel==2)  ftdc_ch2.emplace_back(ts->timestamp_ns());
+  if (ts->vals.channel==3)  ftdc_ch3.emplace_back(ts->timestamp_ns());
+  if (ts->vals.channel==4)  ftdc_ch4.emplace_back(ts->timestamp_ns());
+
+  if(fverbose){
+    std::cout << "=====================================" << std::endl;
+    std::cout << "seq ID: " << frag.sequenceID() << std::endl;
+    std::cout << "channel: " << ts->vals.channel << std::endl;
+    std::cout << "name: " << ts->vals.name[0] 
+                          << ts->vals.name[1]
+			  << ts->vals.name[2] 
+			  << ts->vals.name[3] 
+                          << ts->vals.name[4] 
+                          << ts->vals.name[5] 
+                          << ts->vals.name[6] 
+                          << ts->vals.name[7] 
+                          << std::endl;
+    std::cout << "seconds: " << ts->vals.seconds << " s" << std::endl;
+    std::cout << "coarse: " << ts->vals.coarse << " tick for 8ns/tick" << std::endl;
+    std::cout << "frac: " << ts->vals.frac << " bit for 8ns/4096bit" << std::endl;
+    std::cout << std::endl;
+    std::cout << "fragment ts: " << frag.timestamp() << std::endl;
+    std::cout << "channel ts:  " << ts->timestamp_ns() << std::endl;
+    std::cout << "=====================================" << std::endl;
+  };
+
+
+}//end of analyze tdc timstamp fragment
 DEFINE_ART_MODULE(sbndaq::EventAna)
