@@ -1172,11 +1172,14 @@ void sbndaq::CAENV1730Readout::ConfigureAcquisition()
   retcode = CAEN_DGTZ_GetAcquisitionMode(fHandle,(CAEN_DGTZ_AcqMode_t*)&readback);
   CheckReadback("SetAcquisitionMode",fBoardID,fCAEN.acqMode,readback);
 
-  //TLOG_ARB(TCONFIG,TRACE_NAME) << "SetAnalogMonOutputMode " << (CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode) << TLOG_ENDL;
-  //retcode = CAEN_DGTZ_SetAnalogMonOutput(fHandle,(CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode));
-  //sbndaq::CAENDecoder::checkError(retcode,"SetAnalogMonOutputMode",fBoardID);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetAnalogMonOutputMode " << (CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode) << TLOG_ENDL;
+  retcode = CAEN_DGTZ_SetAnalogMonOutput(fHandle,(CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode));
+  sbndaq::CAENDecoder::checkError(retcode,"SetAnalogMonOutputMode",fBoardID);
+  
+  // GetAnalogMonOutput function does not work for V1730s, use register access instead
   //retcode = CAEN_DGTZ_GetAnalogMonOutput(fHandle,(CAEN_DGTZ_AnalogMonitorOutputMode_t*)&readback);
-  //CheckReadback("SetAnalogMonOutputMode",fBoardID,fCAEN.analogMode,readback);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_MON_MODE_ADD,&readback);
+  CheckReadback("SetAnalogMonOutputMode",fBoardID,fCAEN.analogMode,readback);
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureAcquisition() done." << TLOG_ENDL;
 }
