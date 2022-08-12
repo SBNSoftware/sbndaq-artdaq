@@ -203,12 +203,22 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
     }
   }
 
+  char missing_t0 = 0;
+  char missing_t1 = 0;
+  char num_t1_resets = 0;
+
   if(!discard_data) {
     //loop over all the CRTHit events in our buffer (for this FEB)
     for(size_t i_e=0; i_e<buffer_end; ++i_e) {
       const std::vector<BernCRTHitV2> & data     = feb.buffer[i_e].hits;
       const BernCRTFragmentMetadataV2 & metadata = feb.buffer[i_e].metadata;
       const uint64_t & fragment_timestamp        = feb.buffer[i_e].fragment_timestamp;
+
+      for(auto hit : data){
+        if (hit.flags>>3 != 0){num_t1_resets++;}
+        if (hit.flags>>0 == 0){missing_t0++;}
+        if (hit.flags>>1 == 0){missing_t1++;}
+      }
 
       if(i_e == 0) { //send metrics only once for each FillFragment call
         if(metricMan != nullptr) {
@@ -224,6 +234,24 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
               std::string("feb_poll_period_ms_")+std::to_string(feb.fragment_id & 0xff),
               (metadata.this_poll_end() - metadata.last_poll_end()) * 1e6,
               "CRT poll period", 5, artdaq::MetricMode::Average);
+        }
+      }
+
+      if(i_e == buffer_end-1) { //send metrics at end of each FillFragment call
+        if(metricMan != nullptr) {
+          //send flag metrics
+          metricMan->sendMetric(
+              std::string("FEB_T1_resets_")+std::to_string(feb.fragment_id & 0xff),
+              num_t1_resets,
+              "CRT T1 resets per poll", 1, artdaq::MetricMode::LastPoint);
+          metricMan->sendMetric(
+              std::string("FEB_missing_PPS_")+std::to_string(feb.fragment_id & 0xff),
+              missing_t0,
+              "CRT missing PPS per poll", 1, artdaq::MetricMode::LastPoint);
+          metricMan->sendMetric(
+              std::string("FEB_missing_T1_")+std::to_string(feb.fragment_id & 0xff),
+              missing_t1,
+              "CRT missing T1 per poll", 1, artdaq::MetricMode::LastPoint);
         }
       }
 
