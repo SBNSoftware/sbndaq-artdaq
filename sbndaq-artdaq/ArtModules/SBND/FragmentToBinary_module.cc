@@ -31,6 +31,8 @@
 #include <iostream>
 #include <bitset>
 
+#include <boost/archive/binary_oarchive.hpp>
+
 namespace sbndaq {
   class FragmentToBinary;
 }
@@ -118,7 +120,10 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 #else
   fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
 #endif
-  
+
+  std::ofstream ofs("binary_test");
+  boost::archive::binary_oarchive oa(ofs);
+
   /************************************************************************************************/
 
   // Loop fragment handles
@@ -140,6 +145,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
 	    // turn caen fragment to binary
+	    oa & *contf[ii].get();
 	  }
 	} 
 	else if (contf.fragment_type() == sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr) {
