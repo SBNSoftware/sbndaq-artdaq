@@ -1,0 +1,30 @@
+process_name: FragToBinary
+
+source:
+{
+  module_type: RootInput
+}
+
+physics:
+{
+
+ producers:{}
+
+ filters:{}
+
+ analyzers:{
+
+   fragtobin: {
+     module_type:     FragmentToBinary
+     include_caen:    true
+     include_wr:      true
+     include_berncrt: true
+     verbose:         true
+   }
+
+ }
+
+ ana: [ fragtobin ]
+
+ end_paths:     [ ana ]  
+}
