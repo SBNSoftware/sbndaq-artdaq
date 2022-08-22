@@ -651,8 +651,6 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
        }
      }
    } // if includes ptb
-
-  events->Fill();
   
 }
 
@@ -1217,6 +1215,9 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
         std::cout << "Unknown PTB word type = " << ptb_fragment.Word(i)->word_type << std::endl;
     }
   }
+  
+  // Fill the tree
+  events->Fill();
 
 }  // extract trigger fragments for the PTB
 
