@@ -140,6 +140,7 @@ private:
   TTree* events;
   int fRun;
   art::EventNumber_t fEvent;
+  uint64_t  caen_frag_ts;
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
   std::vector<int> fPMT_ch0;
@@ -221,7 +222,7 @@ private:
   std::vector<int> coinc;
 
   std::vector<int>  feb_hit_number          ; //hit counter for individual FEB, including hits lost in FEB or fragment generator
-  std::vector<uint>  timestamp               ; //absolute timestamp
+  std::vector<uint64_t>  timestamp               ; //absolute timestamp
   std::vector<uint>  last_accepted_timestamp ; //timestamp of previous accepted hit
   std::vector<int>  lost_hits               ; //number of lost hits from the previous one
 
@@ -319,6 +320,7 @@ void sbndaq::EventAna::beginJob()
   events->Branch("fEvent",&fEvent,"fEvent/I");
   if (finclude_caen) {
     events->Branch("TTT_ns",&TTT_ns,"TTT_ns/I");
+    events->Branch("caen_frag_ts",&caen_frag_ts, "caen_frag_ts/l");
     if (fcaen_keepwaveforms) {
       events->Branch("fTicksVec",&fTicksVec);
       events->Branch("fWvfmsVec",&fWvfmsVec);
@@ -400,10 +402,10 @@ void sbndaq::EventAna::beginJob()
     events->Branch("adc30",           &adc30);
     events->Branch("adc31",           &adc31);
     if (fcrt_keepall) {
+      events->Branch("timestamp",     &timestamp);
       events->Branch("lostcpu",       &lostcpu);
       events->Branch("lostfpga",      &lostfpga);
       events->Branch("feb_hit_number",&feb_hit_number);
-      events->Branch("timestamp",     &timestamp);
       events->Branch("last_accepted_timestamp",&last_accepted_timestamp);
       events->Branch("lost_hits",     &lost_hits);
       events->Branch("run_start_time",            &run_start_time);
@@ -489,6 +491,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 
   //  Note that this code expects exactly 1 CAEN fragment per event
   TTT_ns=0;  // will be set to value in CAEN fragement header
+  caen_frag_ts = 0;
   
   
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
@@ -760,7 +763,8 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   
   if (fverbose) std::cout <<  "     timestamp is  " << frag.timestamp() << std::endl;
   if (fverbose) std::cout <<  "     seq ID is " << frag.sequenceID() << std::endl;
-  
+
+  caen_frag_ts = frag.timestamp(); 
   
   CAENV1730Fragment bb(frag);
   auto const* md = bb.Metadata();
@@ -1057,11 +1061,11 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
       system_clock_deviation.push_back(    md->system_clock_deviation());
       feb_hits_in_poll.push_back(          md->hits_in_poll());
       feb_hits_in_fragment.push_back(      md->hits_in_fragment());
+      timestamp.push_back(                 bevt->timestamp);
       //event info
       lostcpu.push_back(                   bevt->lostcpu);
       lostfpga.push_back(                  bevt->lostfpga);
       feb_hit_number.push_back(            bevt->feb_hit_number);
-      timestamp.push_back(                 bevt->timestamp);
       last_accepted_timestamp.push_back(   bevt->last_accepted_timestamp);
       lost_hits.push_back(                 bevt->lost_hits);
     }
