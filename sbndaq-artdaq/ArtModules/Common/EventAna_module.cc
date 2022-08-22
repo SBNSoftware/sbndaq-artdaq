@@ -1176,7 +1176,6 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
   // one of the 5 word types. The 3 Msb hold the word type
   for ( size_t i = 0; i < ptb_fragment.NWords(); i++ ) {
     if (fverbose) std::cout << "PTB Word type [" << ptb_fragment.Word(i)->word_type << "]" << std::endl;
-    if (fverbose) std::cout << "PTB word type: " << ptb_fragment.Word(i)->word_type << std::endl;
     switch ( ptb_fragment.Word(i)->word_type ) {
       case 0x0 : // Feedback (errors) Word
         // Only get this word if something goes wrong at the firmware level requires expert knowledge 
