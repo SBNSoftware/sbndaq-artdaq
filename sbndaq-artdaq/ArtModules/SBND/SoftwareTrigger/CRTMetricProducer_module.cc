@@ -65,7 +65,7 @@ private:
   int hitsperplane[7];
 
   //graphana metric
-  char num_t1_resets = 0;
+  int num_t1_resets;
 
 
   void analyze_crt_fragment(artdaq::Fragment & frag);
@@ -129,13 +129,26 @@ void sbndaq::MetricProducer::produce(art::Event& evt)
     }
   } // loop over frag handles
 
-  if(metricMan) {
-    //send flag metrics
-    metricMan->sendMetric(
-        std::string("T1_resets_per_event"),
-        num_t1_resets,
-        "CRT T1 resets per event", 1, artdaq::MetricMode::LastPoint);
+  if(metricMan != nullptr) {
+      //send flag metrics
+      metricMan->sendMetric(
+          "T1_resets_per_event",
+          num_t1_resets,
+          "CRT T1 resets per event", 5, artdaq::MetricMode::LastPoint);
+
+      for (int i=0;i<7;++i){
+        metricMan->sendMetric(
+            std::string("CRT_hits_beam_plane_")+std::to_string(i),
+            hitsperplane[i],
+            "CRT hits in beam window per plane per event", 5, artdaq::MetricMode::LastPoint);
+      }
+
+      if (fVerbose) {
+        TLOG(TLVL_INFO) << "T1 resets per event: "<< num_t1_resets;
+      }
+
   }
+
 
 
   for (int i=0;i<7;++i) {CRTMetricInfo->hitsperplane[i] = hitsperplane[i];}
@@ -144,6 +157,15 @@ void sbndaq::MetricProducer::produce(art::Event& evt)
     std::cout << "CRT hit count during beam spill ";
     for (int i=0;i<7;++i) std::cout << i << " " << CRTMetricInfo->hitsperplane[i] ;
     std::cout << std::endl;
+
+    TLOG(TLVL_INFO) << "CRT hit count during beam spill "
+      << "  " << 0 << ": " << CRTMetricInfo->hitsperplane[0]
+      << "  " << 1 << ": " << CRTMetricInfo->hitsperplane[1]
+      << "  " << 2 << ": " << CRTMetricInfo->hitsperplane[2]
+      << "  " << 3 << ": " << CRTMetricInfo->hitsperplane[3]
+      << "  " << 4 << ": " << CRTMetricInfo->hitsperplane[4]
+      << "  " << 5 << ": " << CRTMetricInfo->hitsperplane[5]
+      << "  " << 6 << ": " << CRTMetricInfo->hitsperplane[6];
   }
 
   // add to event
