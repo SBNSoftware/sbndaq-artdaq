@@ -189,17 +189,9 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  // turn caen fragment to binary
 	  CAENV1730Fragment caen_frag(frag);
 	  //	  oa << caen_frag;
-	  //	  oa << caen_frag.Event();
-	  int a = std::rand();
-	  std::random_device rd{};
-	  std::mt19937 gen{rd()};
-	  std::normal_distribution<> d{5,2};
-	  double b = d(gen);
-	  sbndaq::SerializableTestStruct st;
-	  st.a = a;
-	  st.b = b;
-	  oa << st;
-	  std::cout << st.a << " & " << st.b << std::endl;
+	  oa << caen_frag.Event();
+	  //	  oa << frag;
+	  std::cout << caen_frag.Event()->DataBlock << std::endl;
 	}
       }
 

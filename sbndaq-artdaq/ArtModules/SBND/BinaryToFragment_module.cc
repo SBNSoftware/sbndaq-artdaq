@@ -117,22 +117,21 @@ void sbndaq::BinaryToFragment::analyze(const art::Event& evt)
   if (fverbose)   std::cout << "Run: " << fRun << " event: " << fEvent << std::endl;
 
   artdaq::Fragment frag;
-  // CAENV1730Fragment *caen_frag;
-  // CAENV1730Event *event;
-
+  //  CAENV1730Fragment caen_frag;
 
   if (fverbose)   std::cout << "Created empty frag" << std::endl;
   {
-    sbndaq::SerializableTestStruct st;
+    //    sbndaq::SerializableTestStruct st;
     //    std::cout << st.a << " & " << st.b << std::endl;
+    CAENV1730Event *event;
     std::ifstream file("binary_test.dat");
     for(int i = 0; i < 80; ++i)
       {
 	try
 	  {
 	    boost::archive::binary_iarchive ia(file);
-	    ia >> st;
-	    std::cout << st.a << " & " << st.b << std::endl;
+	    ia >> event;
+	    std::cout << event->DataBlock << std::endl;
 	  }
 	catch (const std::exception& ex) {
 	  std::cout << ex.what() << std::endl;
