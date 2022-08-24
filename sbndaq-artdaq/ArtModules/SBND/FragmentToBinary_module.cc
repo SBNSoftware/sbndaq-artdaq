@@ -30,6 +30,7 @@
 #include <vector>
 #include <iostream>
 #include <bitset>
+#include <random>
 
 #include <boost/archive/binary_oarchive.hpp>
 
@@ -80,6 +81,7 @@ private:
   bool finclude_berncrt;
   bool fverbose;
 
+  std::ofstream fFile;
 }; //--class FragmentToBinary
 
 
@@ -94,6 +96,7 @@ sbndaq::FragmentToBinary::FragmentToBinary(FragmentToBinary::Parameters const& p
 void sbndaq::FragmentToBinary::beginJob()
 {
   if (fverbose)  std::cout << "Starting FragmentToBinary...\n";
+  fFile = std::ofstream("binary_test.dat");
 }
 
 void sbndaq::FragmentToBinary::endJob()
@@ -121,8 +124,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
   fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
 #endif
 
-  std::ofstream ofs("binary_test");
-  boost::archive::binary_oarchive oa(ofs);
+
 
   /************************************************************************************************/
 
@@ -145,7 +147,12 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
 	    // turn caen fragment to binary
-	    oa & *contf[ii].get();
+	    const CAENV1730Fragment caen_frag(*contf[ii].get());
+	    //	    oa << caen_frag;
+	    //	    oa << caen_frag.Event();
+	    //	    oa << *contf[ii].get();
+	    std::cout << *(*contf[ii].get()).dataBegin() << std::endl;
+	    
 	  }
 	} 
 	else if (contf.fragment_type() == sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr) {
@@ -163,7 +170,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	    std::cout << "\tFound " << contf.block_count() << " BERNCRT Fragments in container " << std::endl;
 
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
-	    // turn wr fragment to binary
+	    // turn bern fragment to binary
 	  }
 	}
       }
@@ -178,7 +185,21 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  std::cout << "\tFound " << handle->size() << " normal CAEN fragments" << std::endl;
 
 	for (auto frag : *handle) {
+	  boost::archive::binary_oarchive oa(fFile);
 	  // turn caen fragment to binary
+	  CAENV1730Fragment caen_frag(frag);
+	  //	  oa << caen_frag;
+	  //	  oa << caen_frag.Event();
+	  int a = std::rand();
+	  std::random_device rd{};
+	  std::mt19937 gen{rd()};
+	  std::normal_distribution<> d{5,2};
+	  double b = d(gen);
+	  sbndaq::SerializableTestStruct st;
+	  st.a = a;
+	  st.b = b;
+	  oa << st;
+	  std::cout << st.a << " & " << st.b << std::endl;
 	}
       }
 
