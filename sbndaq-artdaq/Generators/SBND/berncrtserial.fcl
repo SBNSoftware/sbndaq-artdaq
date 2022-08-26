@@ -1,0 +1,13 @@
+metrics: {
+    aggFile: {
+      metricPluginType: "file"
+      level: 3
+      fileName: "/tmp/aggregator/agg_%UID%_metrics.log"
+      uniquify: true
+    }
+  }
+
+fragment_receiver: { 
+		   
+		   generator: BernCRTSerial
+}

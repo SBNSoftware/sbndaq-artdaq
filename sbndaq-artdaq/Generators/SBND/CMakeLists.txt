@@ -69,10 +69,31 @@ basic_plugin(SPECTDCTimestampReader "generator"
     sbndaq-artdaq_Generators_SBND_SPECTDC
 )
 
+basic_plugin(BernCRTSerialReader "generator"
+  LIBRARIES REG
+    ${BUILD_PLUGIN_CORE_LIB_LIST}
+    sbndaq-artdaq_Generators_SBND_SPECTDC
+)
+
 cet_make_exec(NAME SPECTDCTimestampReader_Test
   SOURCE
     SPECTDCTimestampReader_Test.cc
     SPECTDCTimestampReader_generator.cc
+  LIBRARIES
+    fhiclcpp
+    cetlib
+    cetlib_except
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    MF_MessageLogger
+    sbndaq-artdaq_fmctdclib
+    sbndaq-artdaq_Generators_SBND_SPECTDC
+ )
+
+cet_make_exec(NAME BernCRTSerialReader_Test
+  SOURCE
+    BernCRTSerialReader_Test.cc
+    BernCRTSerialReader_generator.cc
   LIBRARIES
     fhiclcpp
     cetlib
