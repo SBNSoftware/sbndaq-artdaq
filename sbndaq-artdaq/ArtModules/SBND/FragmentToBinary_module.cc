@@ -18,6 +18,7 @@
 #include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/WhiteRabbitFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentV2.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentSerial.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/ContainerFragment.hh"
@@ -147,11 +148,11 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
 	    // turn caen fragment to binary
-	    const CAENV1730Fragment caen_frag(*contf[ii].get());
+	    //	    const CAENV1730Fragment caen_frag(*contf[ii].get());
 	    //	    oa << caen_frag;
 	    //	    oa << caen_frag.Event();
 	    //	    oa << *contf[ii].get();
-	    std::cout << *(*contf[ii].get()).dataBegin() << std::endl;
+	    //	    std::cout << *(*contf[ii].get()).dataBegin() << std::endl;
 	    
 	  }
 	} 
@@ -185,13 +186,13 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  std::cout << "\tFound " << handle->size() << " normal CAEN fragments" << std::endl;
 
 	for (auto frag : *handle) {
-	  boost::archive::binary_oarchive oa(fFile);
+	  //	  boost::archive::binary_oarchive oa(fFile);
 	  // turn caen fragment to binary
-	  CAENV1730Fragment caen_frag(frag);
+	  //	  CAENV1730Fragment caen_frag(frag);
 	  //	  oa << caen_frag;
-	  oa << caen_frag.Event();
+	  //	  oa << caen_frag.Event();
 	  //	  oa << frag;
-	  std::cout << caen_frag.Event()->DataBlock << std::endl;
+	  //	  std::cout << caen_frag.Event()->DataBlock << std::endl;
 	}
       }
 
@@ -211,6 +212,13 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
         for (auto frag : *handle) {
 	  // turn bern fragment to binary
+	  boost::archive::binary_oarchive oa(fFile);
+	  sbndaq::BernCRTFragmentSerial serial;
+	  serial.sequence_id = frag.sequenceID();
+	  serial.fragment_id = frag.fragmentID();
+	  serial.timestamp   = frag.timestamp();
+
+	  oa << serial;
 	}
       }
     }

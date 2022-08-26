@@ -18,6 +18,7 @@
 #include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/WhiteRabbitFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentV2.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentSerial.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/ContainerFragment.hh"
@@ -110,42 +111,22 @@ sbndaq::BinaryToFragment::~BinaryToFragment()
 }
 
 
-void sbndaq::BinaryToFragment::analyze(const art::Event& evt)
+void sbndaq::BinaryToFragment::analyze(const art::Event& /*evt*/)
 {
-  fRun = evt.run();
-  fEvent = evt.event();
-  if (fverbose)   std::cout << "Run: " << fRun << " event: " << fEvent << std::endl;
-
-  artdaq::Fragment frag;
-  //  CAENV1730Fragment caen_frag;
-
-  if (fverbose)   std::cout << "Created empty frag" << std::endl;
-  {
-    //    sbndaq::SerializableTestStruct st;
-    //    std::cout << st.a << " & " << st.b << std::endl;
-    CAENV1730Event *event;
-    std::ifstream file("binary_test.dat");
-    for(int i = 0; i < 80; ++i)
-      {
-	try
-	  {
-	    boost::archive::binary_iarchive ia(file);
-	    ia >> event;
-	    std::cout << event->DataBlock << std::endl;
-	  }
-	catch (const std::exception& ex) {
-	  std::cout << ex.what() << std::endl;
+  std::ifstream file("binary_test.dat");
+  for(int i = 0; i < 400; ++i)
+    {
+      try
+	{
+	  sbndaq::BernCRTFragmentSerial serial;
+	  boost::archive::binary_iarchive ia(file);
+	  ia >> serial;
+	  std::cout << serial.sequence_id << " " << serial.fragment_id << " " << serial.timestamp << std::endl;
 	}
+      catch (const std::exception& ex) {
+	std::cout << ex.what() << std::endl;
       }
-    if (fverbose)   std::cout << "Frag read" << std::endl;
-  }
-
-  //  delete frag;
-  //  CAENV1730Event const* event_ptr = caen_frag.Event();
-  //  CAENV1730EventHeader header = event.Header;
-  // if (fverbose)      std::cout << "\tFrom CAEN header, event counter is "  << header.eventCounter   << "\n";
-  // if (fverbose)      std::cout << "\tFrom CAEN header, triggerTimeTag is " << header.triggerTimeTag << "\n";
-  // if (fverbose)      std::cout << "\tFrom CAEN header, board id is "       << header.boardID       << "\n";
+    }
 }
 
 DEFINE_ART_MODULE(sbndaq::BinaryToFragment)
