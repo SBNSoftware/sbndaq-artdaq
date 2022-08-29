@@ -89,10 +89,6 @@ int main(int argc, char* argv[]) try {
     return 129;
   }
 
-  std::cout << '\n' 
-	    << "In deference to the most iconic moment of my PhD...\n"
-	    << "------------------Omigod you guys------------------\n" << std::endl;
-
   std::ifstream file("/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/binary_test.dat");
   bool eof = false;
 
