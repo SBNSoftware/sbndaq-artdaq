@@ -99,7 +99,21 @@ int main(int argc, char* argv[]) try {
 	  sbndaq::BernCRTFragmentSerial serial;
 	  boost::archive::binary_iarchive ia(file);
 	  ia >> serial;
+
+	  artdaq::Fragment frag(serial.sequence_id, serial.fragment_id, 
+				serial.fragment_type, serial.timestamp);
 	  std::cout << serial;
+	  std::cout << std::endl;
+
+	  std::cout << '\n'
+		    << "Fragment Type: "
+		    << sbndaq::fragmentTypeToString(static_cast<sbndaq::FragmentType>(frag.type()))
+		    << '\n'
+		    << "Sequence ID:   " << frag.sequenceID() << '\n'
+		    << "Fragment ID:   " << frag.fragmentID() << '\n'
+		    << "Timestamp:     " << frag.timestamp() << '\n'
+		    << std::endl;
+
 	}
       catch (const std::exception& ex) {
 	std::cout << '\n'
