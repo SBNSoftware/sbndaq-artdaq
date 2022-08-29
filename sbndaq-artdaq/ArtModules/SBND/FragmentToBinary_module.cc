@@ -148,11 +148,15 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
 	    // turn caen fragment to binary
-	    //	    const CAENV1730Fragment caen_frag(*contf[ii].get());
-	    //	    oa << caen_frag;
-	    //	    oa << caen_frag.Event();
-	    //	    oa << *contf[ii].get();
-	    //	    std::cout << *(*contf[ii].get()).dataBegin() << std::endl;
+	    boost::archive::binary_oarchive oa(fFile);
+	    artdaq::Fragment frag(*contf[ii].get());
+	    sbndaq::BernCRTFragmentSerial serial;
+	    serial.fragment_type = frag.type();
+	    serial.sequence_id   = frag.sequenceID();
+	    serial.fragment_id   = frag.fragmentID();
+	    serial.timestamp     = frag.timestamp();
+
+	    oa << serial;
 	    
 	  }
 	} 
@@ -163,6 +167,15 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
 	    // turn wr fragment to binary
+	    boost::archive::binary_oarchive oa(fFile);
+	    artdaq::Fragment frag(*contf[ii].get());
+	    sbndaq::BernCRTFragmentSerial serial;
+	    serial.fragment_type = frag.type();
+	    serial.sequence_id   = frag.sequenceID();
+	    serial.fragment_id   = frag.fragmentID();
+	    serial.timestamp     = frag.timestamp();
+
+	    oa << serial;
 	  }
 	}
 	else if (contf.fragment_type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt) {
@@ -172,6 +185,15 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii) {
 	    // turn bern fragment to binary
+	    boost::archive::binary_oarchive oa(fFile);
+	    artdaq::Fragment frag(*contf[ii].get());
+	    sbndaq::BernCRTFragmentSerial serial;
+	    serial.fragment_type = frag.type();
+	    serial.sequence_id   = frag.sequenceID();
+	    serial.fragment_id   = frag.fragmentID();
+	    serial.timestamp     = frag.timestamp();
+
+	    oa << serial;
 	  }
 	}
       }
@@ -186,13 +208,14 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  std::cout << "\tFound " << handle->size() << " normal CAEN fragments" << std::endl;
 
 	for (auto frag : *handle) {
-	  //	  boost::archive::binary_oarchive oa(fFile);
-	  // turn caen fragment to binary
-	  //	  CAENV1730Fragment caen_frag(frag);
-	  //	  oa << caen_frag;
-	  //	  oa << caen_frag.Event();
-	  //	  oa << frag;
-	  //	  std::cout << caen_frag.Event()->DataBlock << std::endl;
+	  boost::archive::binary_oarchive oa(fFile);
+	  sbndaq::BernCRTFragmentSerial serial;
+	  serial.fragment_type = frag.type();
+	  serial.sequence_id   = frag.sequenceID();
+	  serial.fragment_id   = frag.fragmentID();
+	  serial.timestamp     = frag.timestamp();
+
+	  oa << serial;
 	}
       }
 
@@ -203,6 +226,14 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
 	for (auto frag : *handle) {
 	  // turn wr fragment to binary
+	  boost::archive::binary_oarchive oa(fFile);
+	  sbndaq::BernCRTFragmentSerial serial;
+	  serial.fragment_type = frag.type();
+	  serial.sequence_id   = frag.sequenceID();
+	  serial.fragment_id   = frag.fragmentID();
+	  serial.timestamp     = frag.timestamp();
+
+	  oa << serial;
 	}
       }
       else if (handle->front().type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt) {
@@ -214,9 +245,10 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  // turn bern fragment to binary
 	  boost::archive::binary_oarchive oa(fFile);
 	  sbndaq::BernCRTFragmentSerial serial;
-	  serial.sequence_id = frag.sequenceID();
-	  serial.fragment_id = frag.fragmentID();
-	  serial.timestamp   = frag.timestamp();
+	  serial.fragment_type = frag.type();
+	  serial.sequence_id   = frag.sequenceID();
+	  serial.fragment_id   = frag.fragmentID();
+	  serial.timestamp     = frag.timestamp();
 
 	  oa << serial;
 	}
