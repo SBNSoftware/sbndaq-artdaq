@@ -94,18 +94,24 @@ int main(int argc, char* argv[]) try {
 	    << "------------------Omigod you guys------------------\n" << std::endl;
 
   std::ifstream file("/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/binary_test.dat");
-  for(int i = 0; i < 400; ++i)
+  bool eof = false;
+
+  while(!eof)
     {
       try
-        {
+	{
 	  sbndaq::BernCRTFragmentSerial serial;
 	  boost::archive::binary_iarchive ia(file);
-          ia >> serial;
-	  std::cout << serial.sequence_id << " " << serial.fragment_id << " " << serial.timestamp <<\
-	    std::endl;
-        }
+	  ia >> serial;
+	  std::cout << serial.sequence_id << " " << serial.fragment_id << " "
+		    << serial.timestamp << std::endl;
+	}
       catch (const std::exception& ex) {
-	std::cout << ex.what() << std::endl;
+	std::cout << '\n'
+		  << "****************************************\n"
+		  << "**  Reached end of file - finishing!  **\n"
+		  << "****************************************\n" << std::endl;
+	eof = true;
       }
     }
 
