@@ -15,6 +15,7 @@
 #include "fhiclcpp/parse.h"
 
 #include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
+#include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include <boost/archive/binary_iarchive.hpp>
 
@@ -99,8 +100,12 @@ int main(int argc, char* argv[]) try {
 	  sbndaq::BernCRTFragmentSerial serial;
 	  boost::archive::binary_iarchive ia(file);
 	  ia >> serial;
-	  std::cout << serial.sequence_id << " " << serial.fragment_id << " "
-		    << serial.timestamp << std::endl;
+	  std::cout << '\n'
+		    << "Fragment Type: " << sbndaq::fragmentTypeToString(static_cast<sbndaq::FragmentType>(serial.fragment_type)) << '\n'
+		    << "Sequence ID:   " << serial.sequence_id << '\n'
+		    << "Fragment ID:   " << serial.fragment_id << '\n'
+		    << "Timestamp:     " << serial.timestamp << '\n'
+		    << std::endl;
 	}
       catch (const std::exception& ex) {
 	std::cout << '\n'

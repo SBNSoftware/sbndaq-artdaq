@@ -103,6 +103,7 @@ cet_make_exec(NAME BernCRTSerialReader_Test
     MF_MessageLogger
     sbndaq-artdaq_fmctdclib
     sbndaq-artdaq_Generators_SBND_SPECTDC
+    sbndaq-artdaq-core_Overlays
  )
 
 install_source()
