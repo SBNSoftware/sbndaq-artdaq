@@ -157,6 +157,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	    serial.timestamp     = frag.timestamp();
 
 	    oa << serial;
+	    	    std::cout << serial;
 	    
 	  }
 	} 
@@ -176,6 +177,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	    serial.timestamp     = frag.timestamp();
 
 	    oa << serial;
+	    std::cout << serial;
 	  }
 	}
 	else if (contf.fragment_type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt) {
@@ -194,6 +196,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	    serial.timestamp     = frag.timestamp();
 
 	    oa << serial;
+	    std::cout << serial;
 	  }
 	}
       }
@@ -208,6 +211,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  std::cout << "\tFound " << handle->size() << " normal CAEN fragments" << std::endl;
 
 	for (auto frag : *handle) {
+	  // turn caen fragment to binary
 	  boost::archive::binary_oarchive oa(fFile);
 	  sbndaq::BernCRTFragmentSerial serial;
 	  serial.fragment_type = frag.type();
@@ -216,6 +220,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  serial.timestamp     = frag.timestamp();
 
 	  oa << serial;
+	  std::cout << serial;
 	}
       }
 
@@ -234,6 +239,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  serial.timestamp     = frag.timestamp();
 
 	  oa << serial;
+	  std::cout << serial;
 	}
       }
       else if (handle->front().type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt) {
@@ -251,6 +257,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  serial.timestamp     = frag.timestamp();
 
 	  oa << serial;
+	  std::cout << serial;
 	}
       }
     }
