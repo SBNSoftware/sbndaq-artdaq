@@ -16,6 +16,8 @@
 
 #include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
 
+#include <boost/archive/binary_iarchive.hpp>
+
 namespace bpo = boost::program_options;
 
 using sbndaq::BernCRTSerialReader;
@@ -90,6 +92,23 @@ int main(int argc, char* argv[]) try {
   std::cout << '\n' 
 	    << "In deference to the most iconic moment of my PhD...\n"
 	    << "------------------Omigod you guys------------------\n" << std::endl;
+
+  std::ifstream file("/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/binary_test.dat");
+  for(int i = 0; i < 400; ++i)
+    {
+      try
+        {
+	  sbndaq::BernCRTFragmentSerial serial;
+	  boost::archive::binary_iarchive ia(file);
+          ia >> serial;
+	  std::cout << serial.sequence_id << " " << serial.fragment_id << " " << serial.timestamp <<\
+	    std::endl;
+        }
+      catch (const std::exception& ex) {
+	std::cout << ex.what() << std::endl;
+      }
+    }
+
   /*
   auto br = std::make_unique<BernCRTSerialReader>(brpset);
 
