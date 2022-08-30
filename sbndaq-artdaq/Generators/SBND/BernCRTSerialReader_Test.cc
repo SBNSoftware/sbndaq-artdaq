@@ -66,25 +66,10 @@ int main(int argc, char* argv[]) try {
   std::string conf((std::istreambuf_iterator<char>(is)), std::istreambuf_iterator<char>());
   is.close();
   auto pset = fhicl::ParameterSet::make(conf);
-  auto events_to_generate = pset.get<uint64_t>("events_to_generate", 0);
   auto brpset = pset.get<fhicl::ParameterSet>("fragment_receiver");
-  brpset.put_or_replace("events_to_generate", events_to_generate);
 
   if (verbose) {
     brpset.put_or_replace("verbose", true);
-  }
-
-  try {
-    auto metric_pset = pset.get<fhicl::ParameterSet>("metrics");
-    if (metric_pset.is_empty()) {
-      metricMan.reset();
-    } else {
-      metricMan->initialize(metric_pset, "artdaqDriver");
-      metricMan->do_start();
-    }
-  } catch (...) {
-    std::cerr << "Wrong metrics configuration, exiting.";
-    return 129;
   }
 
   auto reader = std::make_unique<BernCRTSerialReader>(brpset);
