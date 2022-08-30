@@ -35,31 +35,64 @@ void BernCRTSerialReader::stop() {
 
 bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
-  sbndaq::BernCRTFragmentSerial serial;
   boost::archive::binary_iarchive ia(binary_file_);
+  artdaq::Fragment::type_t frag_type;
 
   try {
-    ia >> serial;
+    ia >> frag_type;
   }
   catch(const std::exception &ex) {
     std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
-	      << ex.what() << std::endl;
-    return false;
+	      << ex.what() << '\n'
+	      << "Failed to access fragment type\n"
+	      << std::endl;
   }
 
-  fragments.emplace_back(artdaq::Fragment::FragmentBytes(
-			 sizeof(sbndaq::BernCRTHitV2) * serial.n_hits,
-			 serial.sequence_id,
-			 serial.fragment_id,
-			 serial.fragment_type,
-			 serial.metadata,
-			 serial.timestamp));
+  if(frag_type == sbndaq::detail::FragmentType::BERNCRTV2)
+    {
+      sbndaq::BernCRTFragmentSerial serial;
 
-  memcpy(fragments.back()->dataBeginBytes(),
-	 serial.bern_crt_hits.data(),
-	 sizeof(sbndaq::BernCRTHitV2) * serial.n_hits);
+      try {
+	ia >> serial;
+      }
+      catch(const std::exception &ex) {
+	std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+		  << ex.what() << '\n'
+		  << "Failed to access fragment serial\n"
+		  << std::endl;
+	return false;
+      }
 
-  return true;
+      fragments.emplace_back(artdaq::Fragment::FragmentBytes(
+			     sizeof(sbndaq::BernCRTHitV2) * serial.n_hits,
+			     serial.sequence_id,
+			     serial.fragment_id,
+			     serial.fragment_type,
+			     serial.metadata,
+			     serial.timestamp));
+
+      memcpy(fragments.back()->dataBeginBytes(),
+	     serial.bern_crt_hits.data(),
+	     sizeof(sbndaq::BernCRTHitV2) * serial.n_hits);
+
+      return true;
+    }
+  else
+    {
+      sbndaq::FragmentSerialBase serial;
+
+      try {
+	ia >> serial;
+      }
+      catch(const std::exception &ex) {
+	std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+		  << ex.what() << '\n'
+		  << "Failed to access fragment serial\n"
+		  << std::endl;
+	return false;
+      }
+      return true;
+    }
 }
 
 bool BernCRTSerialReader::checkHWStatus_() {

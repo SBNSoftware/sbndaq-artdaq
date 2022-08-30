@@ -214,7 +214,7 @@ void sbndaq::FragmentToBinary::ProcessCAENV1730(const artdaq::Fragment &frag)
   serial.fragment_id       = frag.fragmentID();
   serial.timestamp         = frag.timestamp();
 
-  oa << serial;
+  oa << frag.type() << serial;
   if (fverbose > 1)
     std::cout << frag;
 }
@@ -229,7 +229,7 @@ void sbndaq::FragmentToBinary::ProcessWhiteRabbit(const artdaq::Fragment &frag)
   serial.fragment_id       = frag.fragmentID();
   serial.timestamp         = frag.timestamp();
 
-  oa << serial;
+  oa << frag.type() << serial;
   if (fverbose > 1)
     std::cout << frag;
 }
@@ -251,7 +251,7 @@ void sbndaq::FragmentToBinary::ProcessBernCRTV2(const artdaq::Fragment &frag)
   for(unsigned hit = 0; hit < serial.n_hits; ++hit)
     serial.bern_crt_hits.push_back(*bern_frag.eventdata(hit));
 
-  oa << serial;
+  oa << frag.type() << serial;
   if (fverbose > 1)
     std::cout << bern_frag;
 }
