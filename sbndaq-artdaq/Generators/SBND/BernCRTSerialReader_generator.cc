@@ -42,6 +42,8 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
     ia >> serial;
   }
   catch(const std::exception &ex) {
+    std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+	      << ex.what() << std::endl;
     return false;
   }
 

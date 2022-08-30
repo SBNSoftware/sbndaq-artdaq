@@ -1,3 +1,4 @@
+
 process_name: FragToBinary
 
 source:
@@ -19,7 +20,7 @@ physics:
      include_caen:    true
      include_wr:      true
      include_berncrt: true
-     verbose:         1                 # 0 - No text output
+     verbose:         2                 # 0 - No text output
                                         # 1 - Event level print statements
                                         # 2 - Print contents of fragments
    }
