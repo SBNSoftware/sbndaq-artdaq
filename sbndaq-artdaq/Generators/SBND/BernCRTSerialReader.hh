@@ -16,6 +16,8 @@
 #include <random>
 #include <vector>
 
+#include<fstream>
+
 namespace share {
 class WorkerThread;
 }  // namespace share
@@ -56,6 +58,8 @@ class BernCRTSerialReader : public artdaq::CommandableFragmentGenerator {
   uint64_t next_hardware_poll_time_us_;
   uint64_t next_status_report_time_us_;
   bool stop_requested_;
+  std::string binary_file_path_;
+  std::ifstream binary_file_;
 };
 }  // namespace sbndaq
 

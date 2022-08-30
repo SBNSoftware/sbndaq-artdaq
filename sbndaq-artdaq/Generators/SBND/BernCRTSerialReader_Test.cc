@@ -16,8 +16,6 @@
 
 #include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
 
-#include <boost/archive/binary_iarchive.hpp>
-
 namespace bpo = boost::program_options;
 
 using sbndaq::BernCRTSerialReader;
@@ -89,6 +87,7 @@ int main(int argc, char* argv[]) try {
     return 129;
   }
 
+  /*
   std::ifstream file("/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/binary_test.dat");
   bool eof = false;
 
@@ -133,25 +132,38 @@ int main(int argc, char* argv[]) try {
 	  eof = true;
 	}
     }
+  */
 
-  /*
-  auto br = std::make_unique<BernCRTSerialReader>(brpset);
+  auto reader = std::make_unique<BernCRTSerialReader>(brpset);
 
-  br->StartCmd(1, 0, 0);
+  reader->StartCmd(1, 0, 0);
 
-  artdaq::FragmentPtrs fps;
+  artdaq::FragmentPtrs frags;
 
   while (true) {
-    bool sts = br->getNext_(fps);
-    fps.clear();
-    if (!sts) break;
+    bool success = reader->getNext_(frags);
+    for(auto itr = frags.begin(); itr != frags.end(); ++itr)
+      std::cout << sbndaq::BernCRTFragmentV2(**itr);
+
+    frags.clear();
+    if (!success) break;
   }
 
-  br->StopCmd(0, 0);
-  */
+  reader->StopCmd(0, 0);
   return 0;
   
-} catch (...) {
-  std::cerr << "Process exited with error: " << boost::current_exception_diagnostic_information();
-  return 128;
+}
+catch (const std::exception& ex)
+{
+    std::cout << '\n'
+	      << "Exited with std::exception: " << ex.what()
+	      << "\n\n"
+	      << "****************************************\n"
+	      << "**  Reached end of file - finishing!  **\n"
+	      << "****************************************\n" << std::endl;
+}
+catch (...)
+{
+   std::cerr << "Process exited with error: " << boost::current_exception_diagnostic_information();
+   return 128;
 }

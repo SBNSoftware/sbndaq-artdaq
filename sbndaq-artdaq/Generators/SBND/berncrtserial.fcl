@@ -8,6 +8,8 @@ metrics: {
   }
 
 fragment_receiver: { 
-		   
-		   generator: BernCRTSerial
+   generator:       BernCRTSerial
+   BinaryFilePath:  "/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/binary_test.dat"
+   board_id:        -1
+   fragment_ids:    [ 99 ]
 }
