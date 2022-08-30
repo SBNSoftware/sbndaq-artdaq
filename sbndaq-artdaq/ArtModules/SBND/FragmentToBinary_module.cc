@@ -157,7 +157,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	    serial.timestamp     = frag.timestamp();
 
 	    oa << serial;
-	    	    std::cout << serial;
+	    std::cout << serial;
 	    
 	  }
 	} 
@@ -189,14 +189,20 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	    // turn bern fragment to binary
 	    boost::archive::binary_oarchive oa(fFile);
 	    artdaq::Fragment frag(*contf[ii].get());
+	    BernCRTFragmentV2 bern_frag(frag);
 	    sbndaq::BernCRTFragmentSerial serial;
-	    serial.fragment_type = frag.type();
-	    serial.sequence_id   = frag.sequenceID();
-	    serial.fragment_id   = frag.fragmentID();
-	    serial.timestamp     = frag.timestamp();
+	    serial.fragment_type     = frag.type();
+	    serial.sequence_id       = frag.sequenceID();
+	    serial.fragment_id       = frag.fragmentID();
+	    serial.timestamp         = frag.timestamp();
+	    serial.n_hits            = bern_frag.metadata()->hits_in_fragment();
+	    serial.data_payload_size = bern_frag.DataPayloadSize();
+
+	    for(unsigned hit = 0; hit < serial.n_hits; ++hit)
+	      serial.bern_crt_hits.push_back(*bern_frag.eventdata(hit));
 
 	    oa << serial;
-	    std::cout << serial;
+	    std::cout << bern_frag;
 	  }
 	}
       }
@@ -251,13 +257,20 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 	  // turn bern fragment to binary
 	  boost::archive::binary_oarchive oa(fFile);
 	  sbndaq::BernCRTFragmentSerial serial;
-	  serial.fragment_type = frag.type();
-	  serial.sequence_id   = frag.sequenceID();
-	  serial.fragment_id   = frag.fragmentID();
-	  serial.timestamp     = frag.timestamp();
+	  BernCRTFragmentV2 bern_frag(frag);
+	  serial.fragment_type     = frag.type();
+	  serial.sequence_id       = frag.sequenceID();
+	  serial.fragment_id       = frag.fragmentID();
+	  serial.timestamp         = frag.timestamp();
+	  serial.metadata          = *bern_frag.metadata();
+	  serial.n_hits            = bern_frag.metadata()->hits_in_fragment();
+	  serial.data_payload_size = bern_frag.DataPayloadSize();
+
+	  for(unsigned hit = 0; hit < serial.n_hits; ++hit)
+	    serial.bern_crt_hits.push_back(*bern_frag.eventdata(hit));
 
 	  oa << serial;
-	  std::cout << serial;
+	  std::cout << bern_frag;
 	}
       }
     }
