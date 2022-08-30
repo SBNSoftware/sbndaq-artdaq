@@ -244,6 +244,7 @@ void sbndaq::FragmentToBinary::ProcessBernCRTV2(const artdaq::Fragment &frag)
   serial.sequence_id       = frag.sequenceID();
   serial.fragment_id       = frag.fragmentID();
   serial.timestamp         = frag.timestamp();
+  serial.metadata          = *bern_frag.metadata();
   serial.n_hits            = bern_frag.metadata()->hits_in_fragment();
   serial.data_payload_size = bern_frag.DataPayloadSize();
 
