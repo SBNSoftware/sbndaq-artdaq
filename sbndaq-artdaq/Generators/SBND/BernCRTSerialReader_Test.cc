@@ -87,53 +87,6 @@ int main(int argc, char* argv[]) try {
     return 129;
   }
 
-  /*
-  std::ifstream file("/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/binary_test.dat");
-  bool eof = false;
-
-  artdaq::FragmentPtrs frags;
-
-  while(!eof)
-    {
-      try
-	{
-	  sbndaq::BernCRTFragmentSerial serial;
-	  boost::archive::binary_iarchive ia(file);
-	  ia >> serial;
-
-	  frags.emplace_back(artdaq::Fragment::FragmentBytes(
-			     sizeof(sbndaq::BernCRTHitV2) * serial.n_hits,
-			     serial.sequence_id,
-			     serial.fragment_id,
-			     serial.fragment_type,
-			     serial.metadata,
-			     serial.timestamp)
-			     );
-
-	  memcpy(frags.back()->dataBeginBytes(),
-		 serial.bern_crt_hits.data(),
-		 sizeof(sbndaq::BernCRTHitV2) * serial.n_hits
-		 );
-
-	  if(frags.back()->type() == sbndaq::detail::FragmentType::BERNCRTV2)
-	    {
-	      sbndaq::BernCRTFragmentV2 bern_frag(*frags.back());
-	      std::cout << bern_frag;
-	    }
-	}
-      catch (const std::exception& ex)
-	{
-	  std::cout << '\n'
-		    << "Exited with std::exception: " << ex.what()
-		    << "\n\n"
-		    << "****************************************\n"
-		    << "**  Reached end of file - finishing!  **\n"
-		    << "****************************************\n" << std::endl;
-	  eof = true;
-	}
-    }
-  */
-
   auto reader = std::make_unique<BernCRTSerialReader>(brpset);
 
   reader->StartCmd(1, 0, 0);
