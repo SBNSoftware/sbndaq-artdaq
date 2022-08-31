@@ -31,12 +31,11 @@ physics:
 
    dumpall: {
      module_type: MultiDump
-     include_caen: true
+     include_caen: false
      shift_fragment_id: 1  # fcl for caen frags
-     include_wr: false
+     include_wr: true
      window_wr: 1000000000  # in ns, range is 0 to 1 second
      verbose: true
-     include_berncrt: false
    }
 
  }
