@@ -16,6 +16,7 @@
 #include "canvas/Utilities/Exception.h"
 
 #include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/CAENV1730FragmentSerial.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/WhiteRabbitFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentV2.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentSerial.hh"
@@ -207,16 +208,19 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 void sbndaq::FragmentToBinary::ProcessCAENV1730(const artdaq::Fragment &frag)
 {
   boost::archive::binary_oarchive oa(fFile);
-  sbndaq::FragmentSerialBase serial;
+  CAENV1730Fragment caen_frag(frag);
+  sbndaq::CAENV1730FragmentSerial serial;
 
   serial.fragment_type     = frag.type();
   serial.sequence_id       = frag.sequenceID();
   serial.fragment_id       = frag.fragmentID();
   serial.timestamp         = frag.timestamp();
+  serial.metadata          = *caen_frag.Metadata();
+  serial.event             = *caen_frag.Event();
 
   oa << frag.type() << serial;
   if (fverbose > 1)
-    std::cout << frag;
+    std::cout << caen_frag;
 }
 
 void sbndaq::FragmentToBinary::ProcessWhiteRabbit(const artdaq::Fragment &frag)

@@ -11,6 +11,8 @@
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentV2.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentSerial.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/CAENV1730FragmentSerial.hh"
 
 #include <atomic>
 #include <random>

@@ -77,6 +77,35 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
       return true;
     }
+  else if(frag_type == sbndaq::detail::FragmentType::CAENV1730)
+    {
+      sbndaq::CAENV1730FragmentSerial serial;
+
+      try {
+	ia >> serial;
+      }
+      catch(const std::exception &ex) {
+	std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+		  << ex.what() << '\n'
+		  << "Failed to access fragment serial\n"
+		  << std::endl;
+	return false;
+      }
+
+      fragments.emplace_back(artdaq::Fragment::FragmentBytes(
+			     sizeof(sbndaq::CAENV1730Event),
+			     serial.sequence_id,
+			     serial.fragment_id,
+			     serial.fragment_type,
+			     serial.metadata,
+			     serial.timestamp));
+
+      memcpy(fragments.back()->dataBeginBytes(),
+	     &serial.event,
+	     sizeof(sbndaq::CAENV1730Event));
+
+      return true;
+    }
   else
     {
       sbndaq::FragmentSerialBase serial;

@@ -81,7 +81,13 @@ int main(int argc, char* argv[]) try {
   while (true) {
     bool success = reader->getNext_(frags);
     for(auto itr = frags.begin(); itr != frags.end(); ++itr)
-      std::cout << sbndaq::BernCRTFragmentV2(**itr);
+      {
+	artdaq::Fragment frag(**itr);
+	if(frag.type() == sbndaq::detail::FragmentType::BERNCRTV2)
+	  std::cout << sbndaq::BernCRTFragmentV2(frag);
+	else if(frag.type() == sbndaq::detail::FragmentType::CAENV1730)
+	  std::cout << sbndaq::CAENV1730Fragment(frag);
+      }
 
     frags.clear();
     if (!success) break;
