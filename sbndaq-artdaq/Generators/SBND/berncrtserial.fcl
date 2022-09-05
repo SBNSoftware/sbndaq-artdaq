@@ -1,6 +1,6 @@
 fragment_receiver: { 
    generator:       BernCRTSerial
-   BinaryFilePath:  "/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/binary_test.dat"
+   BinaryFilePath:  "/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/berncrt_binary.dat"
    board_id:        -1
    fragment_ids:    [ 9999 ]
 }

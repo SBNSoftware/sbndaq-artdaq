@@ -63,6 +63,14 @@ public:
       fhicl::Name("verbose"),
       fhicl::Comment("define the amount of text to print")
     };
+    fhicl::Atom<std::string> caen_file_name {
+      fhicl::Name("caen_file_name"),
+      fhicl::Comment("name for binary output file for CAEN fragments")
+    };
+    fhicl::Atom<std::string> berncrt_file_name {
+      fhicl::Name("berncrt_file_name"),
+      fhicl::Comment("name for binary output file for BernCRT fragments")
+    };
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
 
@@ -86,23 +94,27 @@ private:
   bool finclude_wr;
   bool finclude_berncrt;
   unsigned fverbose;
+  std::string fberncrt_file_name, fcaen_file_name;
 
-  std::ofstream fFile;
+  std::ofstream fcaen_binary_file, fberncrt_binary_file;
 }; //--class FragmentToBinary
 
 
 sbndaq::FragmentToBinary::FragmentToBinary(FragmentToBinary::Parameters const& pset): art::EDAnalyzer(pset)
 {
-  finclude_caen = pset().include_caen();
-  finclude_wr = pset().include_wr();
-  finclude_berncrt = pset().include_berncrt();
-  fverbose = pset().verbose();
+  finclude_caen      = pset().include_caen();
+  finclude_wr        = pset().include_wr();
+  finclude_berncrt   = pset().include_berncrt();
+  fverbose           = pset().verbose();
+  fcaen_file_name    = pset().caen_file_name();
+  fberncrt_file_name = pset().berncrt_file_name();
 }
 
 void sbndaq::FragmentToBinary::beginJob()
 {
   if (fverbose > 0)  std::cout << "Starting FragmentToBinary...\n";
-  fFile = std::ofstream("binary_test.dat");
+  fcaen_binary_file    = std::ofstream(fcaen_file_name);
+  fberncrt_binary_file = std::ofstream(fberncrt_file_name);
 }
 
 void sbndaq::FragmentToBinary::endJob()
@@ -207,7 +219,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
 
 void sbndaq::FragmentToBinary::ProcessCAENV1730(const artdaq::Fragment &frag)
 {
-  boost::archive::binary_oarchive oa(fFile);
+  boost::archive::binary_oarchive oa(fcaen_binary_file);
   CAENV1730Fragment caen_frag(frag);
   sbndaq::CAENV1730FragmentSerial serial;
 
@@ -223,24 +235,13 @@ void sbndaq::FragmentToBinary::ProcessCAENV1730(const artdaq::Fragment &frag)
     std::cout << caen_frag;
 }
 
-void sbndaq::FragmentToBinary::ProcessWhiteRabbit(const artdaq::Fragment &frag)
+void sbndaq::FragmentToBinary::ProcessWhiteRabbit(const artdaq::Fragment &/*frag*/)
 {
-  boost::archive::binary_oarchive oa(fFile);
-  sbndaq::FragmentSerialBase serial;
-
-  serial.fragment_type     = frag.type();
-  serial.sequence_id       = frag.sequenceID();
-  serial.fragment_id       = frag.fragmentID();
-  serial.timestamp         = frag.timestamp();
-
-  oa << frag.type() << serial;
-  if (fverbose > 1)
-    std::cout << frag;
 }
 
 void sbndaq::FragmentToBinary::ProcessBernCRTV2(const artdaq::Fragment &frag)
 {
-  boost::archive::binary_oarchive oa(fFile);
+  boost::archive::binary_oarchive oa(fberncrt_binary_file);
   BernCRTFragmentV2 bern_frag(frag);
   sbndaq::BernCRTFragmentSerial serial;
 

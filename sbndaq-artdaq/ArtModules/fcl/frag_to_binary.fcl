@@ -23,6 +23,8 @@ physics:
      verbose:         2                 # 0 - No text output
                                         # 1 - Event level print statements
                                         # 2 - Print contents of fragments
+     berncrt_file_name: "berncrt_binary.dat"
+     caen_file_name:    "caen_binary.dat"
    }
 
  }
