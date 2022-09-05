@@ -1,20 +1,7 @@
-#include "sbndaq-artdaq/Generators/SBND/BernCRTSerialReader.hh"
 #define TRACE_NAME "BernCRTSerialReader_Test"
-#include <fstream>
-#include <iostream>
 
-#include <boost/any.hpp>
-#include <boost/exception/diagnostic_information.hpp>
+#include "sbndaq-artdaq/Generators/SBND/BernCRTSerialReader.hh"
 #include <boost/program_options.hpp>
-#include <cstddef>
-
-#include "artdaq/DAQdata/Globals.hh"
-#include "cetlib_except/exception.h"
-#include "fhiclcpp/ParameterSet.h"
-#include "fhiclcpp/intermediate_table.h"
-#include "fhiclcpp/parse.h"
-
-#include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
 
 namespace bpo = boost::program_options;
 
