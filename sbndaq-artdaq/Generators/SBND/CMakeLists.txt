@@ -72,7 +72,11 @@ basic_plugin(SPECTDCTimestampReader "generator"
 basic_plugin(BernCRTSerialReader "generator"
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
-    sbndaq-artdaq_Generators_SBND_SPECTDC
+)
+
+basic_plugin(CAENV1730SerialReader "generator"
+  LIBRARIES REG
+    ${BUILD_PLUGIN_CORE_LIB_LIST}
 )
 
 cet_make_exec(NAME SPECTDCTimestampReader_Test
@@ -102,8 +106,24 @@ cet_make_exec(NAME BernCRTSerialReader_Test
     ${Boost_SYSTEM_LIBRARY}
     MF_MessageLogger
     sbndaq-artdaq_fmctdclib
-    sbndaq-artdaq_Generators_SBND_SPECTDC
     sbndaq-artdaq-core_Overlays_Common
+    artdaq_Generators
+ )
+
+cet_make_exec(NAME CAENV1730SerialReader_Test
+  SOURCE
+    CAENV1730SerialReader_Test.cc
+    CAENV1730SerialReader_generator.cc
+  LIBRARIES
+    fhiclcpp
+    cetlib
+    cetlib_except
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    MF_MessageLogger
+    sbndaq-artdaq_fmctdclib
+    sbndaq-artdaq-core_Overlays_Common
+    artdaq_Generators
  )
 
 install_source()

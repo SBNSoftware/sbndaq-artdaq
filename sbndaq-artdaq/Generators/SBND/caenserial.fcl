@@ -1,0 +1,6 @@
+fragment_receiver: { 
+   generator:       CAENV1730Serial
+   BinaryFilePath:  "/home/nfs/sbnd/DAQ_DevAreas/DAQ_14Aug2022SimData/work/caen_binary.dat"
+   board_id:        -1
+   fragment_ids:    [ 9999 ]
+}
