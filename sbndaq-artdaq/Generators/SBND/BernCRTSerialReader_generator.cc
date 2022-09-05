@@ -106,6 +106,8 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
       return true;
     }
+  else if(frag_type == sbndaq::detail::FragmentType::INVALID)
+    return false;
   else
     {
       sbndaq::FragmentSerialBase serial;

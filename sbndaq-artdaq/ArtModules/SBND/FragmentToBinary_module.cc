@@ -125,6 +125,11 @@ void sbndaq::FragmentToBinary::endJob()
 
 sbndaq::FragmentToBinary::~FragmentToBinary()
 {
+  boost::archive::binary_oarchive caen_archive(fcaen_binary_file);
+  caen_archive << sbndaq::detail::FragmentType::INVALID;
+
+  boost::archive::binary_oarchive berncrt_archive(fberncrt_binary_file);
+  berncrt_archive << sbndaq::detail::FragmentType::INVALID;
 }
 
 
