@@ -1,11 +1,11 @@
-#define TRACE_NAME "BernCRTSerialReader_Test"
+#define TRACE_NAME "BernCRTV2SerialReader_Test"
 
-#include "sbndaq-artdaq/Generators/SBND/BernCRTSerialReader.hh"
+#include "sbndaq-artdaq/Generators/SBND/BernCRTV2SerialReader.hh"
 #include <boost/program_options.hpp>
 
 namespace bpo = boost::program_options;
 
-using sbndaq::BernCRTSerialReader;
+using sbndaq::BernCRTV2SerialReader;
 int main(int argc, char* argv[]) try {
   std::ostringstream descstr;
   descstr << argv[0] << " <-c <config-file>> <other-options>";
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) try {
     brpset.put_or_replace("verbose", true);
   }
 
-  auto reader = std::make_unique<BernCRTSerialReader>(brpset);
+  auto reader = std::make_unique<BernCRTV2SerialReader>(brpset);
 
   reader->StartCmd(1, 0, 0);
 

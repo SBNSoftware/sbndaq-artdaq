@@ -69,7 +69,7 @@ basic_plugin(SPECTDCTimestampReader "generator"
     sbndaq-artdaq_Generators_SBND_SPECTDC
 )
 
-basic_plugin(BernCRTSerialReader "generator"
+basic_plugin(BernCRTV2SerialReader "generator"
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )
@@ -94,10 +94,10 @@ cet_make_exec(NAME SPECTDCTimestampReader_Test
     sbndaq-artdaq_Generators_SBND_SPECTDC
  )
 
-cet_make_exec(NAME BernCRTSerialReader_Test
+cet_make_exec(NAME BernCRTV2SerialReader_Test
   SOURCE
-    BernCRTSerialReader_Test.cc
-    BernCRTSerialReader_generator.cc
+    BernCRTV2SerialReader_Test.cc
+    BernCRTV2SerialReader_generator.cc
   LIBRARIES
     sbndaq-artdaq-core_Overlays_Common
     artdaq_Generators

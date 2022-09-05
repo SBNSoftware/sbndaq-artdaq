@@ -1,28 +1,28 @@
 #define TRACE_NAME "BernCRTSerialReader"
 
-#include "sbndaq-artdaq/Generators/SBND/BernCRTSerialReader.hh"
+#include "sbndaq-artdaq/Generators/SBND/BernCRTV2SerialReader.hh"
 
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include <boost/archive/binary_iarchive.hpp>
 
-using sbndaq::BernCRTSerialReader;
+using sbndaq::BernCRTV2SerialReader;
 
-BernCRTSerialReader::BernCRTSerialReader(fhicl::ParameterSet const& ps)
+BernCRTV2SerialReader::BernCRTV2SerialReader(fhicl::ParameterSet const& ps)
   : CommandableFragmentGenerator{ps},
   binary_file_path_(ps.get<std::string>("BinaryFilePath"))
   {
     binary_file_.open(binary_file_path_);
   }
 
-BernCRTSerialReader::~BernCRTSerialReader() {
+BernCRTV2SerialReader::~BernCRTV2SerialReader() {
   binary_file_.close();
 }
 
-void BernCRTSerialReader::start() {}
+void BernCRTV2SerialReader::start() {}
 
-void BernCRTSerialReader::stop() {}
+void BernCRTV2SerialReader::stop() {}
 
-bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
+bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
   boost::archive::binary_iarchive ia(binary_file_);
   artdaq::Fragment::type_t frag_type;
@@ -39,7 +39,7 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
   if(frag_type == sbndaq::detail::FragmentType::BERNCRTV2)
     {
-      sbndaq::BernCRTFragmentSerial serial;
+      sbndaq::BernCRTFragmentV2Serial serial;
 
       try {
 	ia >> serial;
@@ -88,4 +88,4 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
     }
 }
 
-DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(BernCRTSerialReader)
+DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(BernCRTV2SerialReader)
