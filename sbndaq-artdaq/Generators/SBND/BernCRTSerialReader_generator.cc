@@ -31,10 +31,10 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
     ia >> frag_type;
   }
   catch(const std::exception &ex) {
-    std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+    std::cout << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
 	      << ex.what() << '\n'
 	      << "Failed to access fragment type\n"
-	      << std::endl;
+	      << "Exiting...\n" << std::endl;
   }
 
   if(frag_type == sbndaq::detail::FragmentType::BERNCRTV2)
@@ -45,10 +45,10 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	ia >> serial;
       }
       catch(const std::exception &ex) {
-	std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+	std::cout << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
 		  << ex.what() << '\n'
 		  << "Failed to access fragment serial\n"
-		  << std::endl;
+		  << "Exiting...\n" << std::endl;
 	return false;
       }
 
@@ -66,35 +66,6 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
       return true;
     }
-  else if(frag_type == sbndaq::detail::FragmentType::CAENV1730)
-    {
-      sbndaq::CAENV1730FragmentSerial serial;
-
-      try {
-	ia >> serial;
-      }
-      catch(const std::exception &ex) {
-	std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
-		  << ex.what() << '\n'
-		  << "Failed to access fragment serial\n"
-		  << std::endl;
-	return false;
-      }
-
-      fragments.emplace_back(artdaq::Fragment::FragmentBytes(
-			     sizeof(sbndaq::CAENV1730Event),
-			     serial.sequence_id,
-			     serial.fragment_id,
-			     serial.fragment_type,
-			     serial.metadata,
-			     serial.timestamp));
-
-      memcpy(fragments.back()->dataBeginBytes(),
-	     &serial.event,
-	     sizeof(sbndaq::CAENV1730Event));
-
-      return true;
-    }
   else if(frag_type == sbndaq::detail::FragmentType::INVALID)
     return false;
   else
@@ -103,15 +74,17 @@ bool BernCRTSerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
       try {
 	ia >> serial;
+	std::cout << "\nUnexpected fragment type in CAEN file: " << fragmentTypeToString(sbndaq::detail::FragmentType(frag_type)) << '\n'
+                  << "Exiting...\n" << std::endl;
       }
       catch(const std::exception &ex) {
-	std::cout << "Catching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+	std::cout << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
 		  << ex.what() << '\n'
 		  << "Failed to access fragment serial\n"
-		  << std::endl;
+		  << "Exiting...\n" << std::endl;
 	return false;
       }
-      return true;
+      return false;
     }
 }
 

@@ -5,8 +5,6 @@
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/BernCRTFragmentV2.hh"
 #include "sbndaq-artdaq-core/Overlays/SBND/BernCRTFragmentSerial.hh"
-#include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
-#include "sbndaq-artdaq-core/Overlays/SBND/CAENV1730FragmentSerial.hh"
 
 #include <fstream>
 

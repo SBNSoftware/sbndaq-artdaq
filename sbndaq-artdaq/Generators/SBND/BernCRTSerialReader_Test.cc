@@ -72,8 +72,8 @@ int main(int argc, char* argv[]) try {
 	artdaq::Fragment frag(**itr);
 	if(frag.type() == sbndaq::detail::FragmentType::BERNCRTV2)
 	  std::cout << sbndaq::BernCRTFragmentV2(frag);
-	else if(frag.type() == sbndaq::detail::FragmentType::CAENV1730)
-	  std::cout << sbndaq::CAENV1730Fragment(frag);
+	else
+	  std::cout << frag;
       }
 
     frags.clear();
