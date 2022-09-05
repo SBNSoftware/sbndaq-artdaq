@@ -99,13 +99,6 @@ cet_make_exec(NAME BernCRTSerialReader_Test
     BernCRTSerialReader_Test.cc
     BernCRTSerialReader_generator.cc
   LIBRARIES
-    fhiclcpp
-    cetlib
-    cetlib_except
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    MF_MessageLogger
-    sbndaq-artdaq_fmctdclib
     sbndaq-artdaq-core_Overlays_Common
     artdaq_Generators
  )
@@ -115,13 +108,6 @@ cet_make_exec(NAME CAENV1730SerialReader_Test
     CAENV1730SerialReader_Test.cc
     CAENV1730SerialReader_generator.cc
   LIBRARIES
-    fhiclcpp
-    cetlib
-    cetlib_except
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    MF_MessageLogger
-    sbndaq-artdaq_fmctdclib
     sbndaq-artdaq-core_Overlays_Common
     artdaq_Generators
  )
