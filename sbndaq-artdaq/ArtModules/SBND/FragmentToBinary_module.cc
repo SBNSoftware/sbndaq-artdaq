@@ -232,7 +232,7 @@ void sbndaq::FragmentToBinary::ProcessCAENV1730(const artdaq::Fragment &frag)
 
   oa << frag.type() << serial;
   if (fverbose > 1)
-    std::cout << caen_frag;
+    std::cout << '\n' << frag << '\n' << caen_frag;
 }
 
 void sbndaq::FragmentToBinary::ProcessWhiteRabbit(const artdaq::Fragment &/*frag*/)
@@ -258,7 +258,7 @@ void sbndaq::FragmentToBinary::ProcessBernCRTV2(const artdaq::Fragment &frag)
 
   oa << frag.type() << serial;
   if (fverbose > 1)
-    std::cout << bern_frag;
+    std::cout << '\n' << frag << '\n' << bern_frag;
 }
 
 DEFINE_ART_MODULE(sbndaq::FragmentToBinary)
