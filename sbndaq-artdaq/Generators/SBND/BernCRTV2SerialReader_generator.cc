@@ -31,24 +31,25 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
     ia >> frag_type;
   }
   catch(const std::exception &ex) {
-    std::cout << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
-	      << ex.what() << '\n'
-	      << "Failed to access fragment type\n"
-	      << "Exiting...\n" << std::endl;
+    TLOG(TLVL_ERROR) << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+		     << ex.what() << '\n'
+		     << "Failed to access fragment type\n"
+		     << "Exiting...\n" << std::endl;
   }
 
   if(frag_type == sbndaq::detail::FragmentType::BERNCRTV2)
     {
+      TLOG(TLVL_INFO) << "\nReading fragment serial of type: BERNCRTV2\n";
       sbndaq::BernCRTFragmentV2Serial serial;
 
       try {
 	ia >> serial;
       }
       catch(const std::exception &ex) {
-	std::cout << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
-		  << ex.what() << '\n'
-		  << "Failed to access fragment serial\n"
-		  << "Exiting...\n" << std::endl;
+	TLOG(TLVL_ERROR) << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+			 << ex.what() << '\n'
+			 << "Failed to access fragment serial\n"
+			 << "Exiting...\n" << std::endl;
 	return false;
       }
 
@@ -64,24 +65,29 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	     serial.bern_crt_hits.data(),
 	     sizeof(sbndaq::BernCRTHitV2) * serial.n_hits);
 
+      TLOG(TLVL_DEBUG) << '\n' << *fragments.back();
+
       return true;
     }
   else if(frag_type == sbndaq::detail::FragmentType::INVALID)
-    return false;
+    {
+      TLOG(TLVL_WARNING) << "\nFragment type INVALID, exiting!" << "\nShould only be seen at end of file\n";
+      return false;
+    }
   else
     {
       sbndaq::FragmentSerialBase serial;
 
       try {
 	ia >> serial;
-	std::cout << "\nUnexpected fragment type in CAEN file: " << fragmentTypeToString(sbndaq::detail::FragmentType(frag_type)) << '\n'
-                  << "Exiting...\n" << std::endl;
+	TLOG(TLVL_WARNING) << "\nUnexpected fragment type in CAEN file: " << fragmentTypeToString(sbndaq::detail::FragmentType(frag_type)) << '\n'
+			   << "Exiting...\n" << std::endl;
       }
       catch(const std::exception &ex) {
-	std::cout << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
-		  << ex.what() << '\n'
-		  << "Failed to access fragment serial\n"
-		  << "Exiting...\n" << std::endl;
+	TLOG(TLVL_ERROR) << "\nCatching exception in getNext_(artdaq::FragmentPtrs& fragments)\n"
+			 << ex.what() << '\n'
+			 << "Failed to access fragment serial\n"
+			 << "Exiting...\n" << std::endl;
 	return false;
       }
       return false;
