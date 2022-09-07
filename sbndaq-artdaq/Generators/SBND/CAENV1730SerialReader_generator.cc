@@ -65,7 +65,7 @@ bool CAENV1730SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	     &serial.event,
 	     sizeof(sbndaq::CAENV1730Event));
 
-      TLOG(TLVL_DEBUG) << '\n' << *fragments.back();
+      TLOG(TLVL_NOTICE) << '\n' << *fragments.back();
 
       return true;
     }

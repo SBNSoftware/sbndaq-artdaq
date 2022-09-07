@@ -65,7 +65,7 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	     serial.bern_crt_hits.data(),
 	     sizeof(sbndaq::BernCRTHitV2) * serial.n_hits);
 
-      TLOG(TLVL_DEBUG) << '\n' << *fragments.back();
+      TLOG(TLVL_NOTICE) << '\n' << *fragments.back();
 
       return true;
     }
