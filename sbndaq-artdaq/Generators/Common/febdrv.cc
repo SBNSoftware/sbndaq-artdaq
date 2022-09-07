@@ -219,7 +219,7 @@ int sbndaq::FEBDRV::recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt) {//resul
   /**
    * NOTE: OK
    */
-//   TLOG(TLVL_DEBUG)<<__func__<<"() called";
+  TLOG(TLVL_DEBUG+3)<<__func__<<"() called";
   struct timeval tv;
   tv.tv_sec = 0;  /* 0 Secs Timeout */
   tv.tv_usec=timeout_us;
@@ -242,10 +242,10 @@ int sbndaq::FEBDRV::recvfromfeb(int timeout_us, FEBDTP_PKT_t & rcvrpkt) {//resul
 int sbndaq::FEBDRV::flushlink() {
   //NOTE OK
   // set short timeout and Flush input buffer
-//  TLOG(TLVL_DEBUG)<<__func__<<"() called";
+  TLOG(TLVL_DEBUG+2)<<__func__<<"() called";
   while(recvfromfeb(1000,rpkt)>0) {}
   driver_state=DRV_OK;
-//  TLOG(TLVL_DEBUG)<<__func__<<"() completed";
+  TLOG(TLVL_DEBUG+2)<<__func__<<"() completed";
   return 1;
 }
 
@@ -596,12 +596,12 @@ void sbndaq::FEBDRV::pollfeb(uint8_t mac) {
    * NOTE: OK
    */
   
-  TLOG(TLVL_DEBUG)<<__func__<<"("<<(int)mac<<") called";
+  TLOG(TLVL_DEBUG+1)<<__func__<<"("<<(int)mac<<") called";
   dstmac[5] = mac;
   
   sendcommand(dstmac,FEB_RD_CDR,0,buf);
   rpkt.CMD=0; //AA: this is required for the logic of the loop. Perhaps it could be written more nicely, but I don't want to touch it at this point
-  TLOG(TLVL_DEBUG)<<__func__<<"("<<(int)mac<<") completed";
+  TLOG(TLVL_DEBUG+1)<<__func__<<"("<<(int)mac<<") completed";
 }
 
 std::vector<uint8_t> sbndaq::FEBDRV::GetMACs() {
