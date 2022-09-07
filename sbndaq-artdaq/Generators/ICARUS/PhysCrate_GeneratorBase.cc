@@ -292,7 +292,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   metricMan->sendMetric(".getNext.FinishTime",_tloop_getnext_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
-  TLOG(TLVL_DEBUG) << __func__ 
+  TLOG(TLVL_DEBUG+19) << __func__
 		   << " : Send fragment with type " << (int)frags.back()->type()
 		   << " (" << frags.back()->typeString() << "):  "
 		   << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
