@@ -80,7 +80,7 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
       try {
 	ia >> serial;
-	TLOG(TLVL_WARNING) << "\nUnexpected fragment type in CAEN file: " << fragmentTypeToString(sbndaq::detail::FragmentType(frag_type)) << '\n'
+	TLOG(TLVL_WARNING) << "\nUnexpected fragment type in BernCRT file: " << fragmentTypeToString(sbndaq::detail::FragmentType(frag_type)) << '\n'
 			   << "Exiting...\n" << std::endl;
       }
       catch(const std::exception &ex) {
