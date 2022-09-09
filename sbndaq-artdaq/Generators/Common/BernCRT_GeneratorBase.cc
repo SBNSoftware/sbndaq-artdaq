@@ -22,16 +22,16 @@ sbndaq::BernCRT_GeneratorBase::BernCRT_GeneratorBase(fhicl::ParameterSet const &
   CommandableFragmentGenerator(ps),
   ps_(ps)
 {
-  TLOG(TLVL_INFO)<<__func__<<"() constructor called";
+  TLOG(TLVL_INFO)<<"constructor called";
   Initialize();
-  TLOG(TLVL_INFO)<<__func__<<"() constructor completed";
+  TLOG(TLVL_INFO)<<"constructor completed";
 }
 
 /*---------------------------------------------------------------------*/
 
 void sbndaq::BernCRT_GeneratorBase::Initialize() {
 
-  TLOG(TLVL_INFO)<<__func__<<"() called";
+  TLOG(TLVL_INFO)<<"called";
 
   //reset last poll times
   sequence_id_ = 0;
@@ -70,7 +70,7 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
   }
   
 
-  TLOG(TLVL_INFO)<<__func__<<"() completed ... starting GetData worker thread.";
+  TLOG(TLVL_INFO)<<"completed ... starting GetData worker thread.";
   share::ThreadFunctor functor = std::bind(&BernCRT_GeneratorBase::GetData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
   auto getData_worker = share::WorkerThread::createWorkerThread(worker_functor);
@@ -81,10 +81,10 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
 
 
 void sbndaq::BernCRT_GeneratorBase::start() {
-  TLOG(TLVL_INFO)<<__func__<<"() called";
+  TLOG(TLVL_INFO)<<"called";
 
   run_start_time = std::chrono::system_clock::now().time_since_epoch().count();
-  TLOG(TLVL_DEBUG)<<__func__<<"() Run start time: " << sbndaq::BernCRTFragment::print_timestamp(run_start_time);
+  TLOG(TLVL_DEBUG)<<"Run start time: " << sbndaq::BernCRTFragment::print_timestamp(run_start_time);
   
   for(size_t iMAC5=0; iMAC5<MAC5s_.size(); ++iMAC5){
     const uint8_t& MAC5 = MAC5s_[iMAC5];
@@ -97,35 +97,35 @@ void sbndaq::BernCRT_GeneratorBase::start() {
   ConfigureStart();
   GetData_thread_->start();
 
-  TLOG(TLVL_INFO)<<__func__<<"() completed";
+  TLOG(TLVL_INFO)<<"completed";
 } //start
 
 /*-----------------------------------------------------------------------*/
 
 
 void sbndaq::BernCRT_GeneratorBase::stop() {
-  TLOG(TLVL_INFO)<<__func__<<"() called";
+  TLOG(TLVL_INFO)<<"called";
   GetData_thread_->stop();
   ConfigureStop();
-  TLOG(TLVL_INFO)<<__func__<<"() completed";
+  TLOG(TLVL_INFO)<<"completed";
 } //stop
 
 /*-----------------------------------------------------------------------*/
 
 
 void sbndaq::BernCRT_GeneratorBase::stopNoMutex() {
-TLOG(TLVL_INFO)<<__func__<<"() called";
+TLOG(TLVL_INFO)<<"called";
   GetData_thread_->stop();
   ConfigureStop();
-  TLOG(TLVL_INFO)<<__func__<<"() completed";
+  TLOG(TLVL_INFO)<<"completed";
 } //stopNoMutex
 
 /*-----------------------------------------------------------------------*/
 
 
 void sbndaq::BernCRT_GeneratorBase::Cleanup(){
-  TLOG(TLVL_INFO)<<__func__<<"() called";
-  TLOG(TLVL_INFO)<<__func__<<"() completed";
+  TLOG(TLVL_INFO)<<"called";
+  TLOG(TLVL_INFO)<<"completed";
 } //Cleanup
 
 /*-----------------------------------------------------------------------*/
@@ -152,7 +152,7 @@ std::string sbndaq::BernCRT_GeneratorBase::GetFEBIDString(uint64_t const& id) co
 void sbndaq::BernCRT_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const& /*id*/,
                                                                     size_t const& ) const { //buffer_size) const {
 
-  TLOG(TLVL_DEBUG+1)<<__func__<<"() called";
+  TLOG(TLVL_DEBUG+1)<<"called";
 
   //std::string id_str = GetFEBIDString(id);
   //metricMan->sendMetric("BufferOccupancy_"+id_str,buffer_size,"events",5,true,"BernCRTGenerator");
@@ -166,7 +166,7 @@ void sbndaq::BernCRT_GeneratorBase::UpdateBufferOccupancyMetrics(uint64_t const&
 
 bool sbndaq::BernCRT_GeneratorBase::GetData() {
 
-  TLOG(TLVL_DEBUG+2) <<__func__<< "() called";
+  TLOG(TLVL_DEBUG+2) <<"called";
 
   unsigned long total_hits = GetFEBData(); //read data FEB and fill circular buffer
   
@@ -181,7 +181,7 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
                                                     artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG+1) << __func__<<"(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
+  TLOG(TLVL_DEBUG+1) << "(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
   FEB_t & feb = FEBs_[feb_id];
 
@@ -196,7 +196,7 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
     if(std::chrono::system_clock::now().time_since_epoch().count() - run_start_time > initial_delay_ns_) {
       discard_data = false;
       if(initial_delay_ns_) {
-        TLOG(TLVL_INFO) <<__func__ << "() CRT begins to send data after initial delay of "<< (initial_delay_ns_/1000000000) <<" seconds";
+        TLOG(TLVL_INFO) <<"CRT begins to send data after initial delay of "<< (initial_delay_ns_/1000000000) <<" seconds";
       }
     }
   }
@@ -248,17 +248,17 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
-  TLOG(TLVL_DEBUG+1) <<__func__<< "(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<"(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
 } //FillFragment
 
 /*-----------------------------------------------------------------------*/
 
 size_t sbndaq::BernCRT_GeneratorBase::EraseFromFEBBuffer(FEB_t & feb, size_t const& nevents) {
-  TLOG(TLVL_DEBUG+1) <<__func__<< "() called";
+  TLOG(TLVL_DEBUG+1) <<"called";
   std::unique_lock<std::mutex> lock(*(feb.mutexptr));
-  TLOG(TLVL_DEBUG+1) <<__func__<< "() Buffer size before erasing the events: " << std::setw(3) << feb.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+1) <<"Buffer size before erasing the events: " << std::setw(3) << feb.buffer.size() << " events";
   feb.buffer.erase_begin(nevents);
-  TLOG(TLVL_DEBUG+1) <<__func__<< "() Buffer size after erasing the events: " << std::setw(4) << feb.buffer.size() << " events";
+  TLOG(TLVL_DEBUG+1) <<"Buffer size after erasing the events: " << std::setw(4) << feb.buffer.size() << " events";
   return feb.buffer.size();
 } //EraseFromFEBBuffer
 
@@ -267,7 +267,7 @@ size_t sbndaq::BernCRT_GeneratorBase::EraseFromFEBBuffer(FEB_t & feb, size_t con
 
 void sbndaq::BernCRT_GeneratorBase::SendMetadataMetrics(BernCRTFragmentMetadataV2 const& /*m*/) {
 
-  TLOG(TLVL_DEBUG)<<__func__<<"() called";
+  TLOG(TLVL_DEBUG)<<"called";
 
 //  std::string id_str = GetFEBIDString(m.feb_id());
 
@@ -287,7 +287,7 @@ void sbndaq::BernCRT_GeneratorBase::SendMetadataMetrics(BernCRTFragmentMetadataV
 
 bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
-  TLOG(TLVL_DEBUG+1) <<__func__<< " called with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<"called with frags.size = " << frags.size();
 
   //initialise variables
   static auto t_start = std::chrono::steady_clock::now();
@@ -306,7 +306,7 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     FillFragment(MAC5, frags);
   }
 
-  TLOG(TLVL_DEBUG+1) <<__func__<< ": completed with frags.size = " << frags.size();
+  TLOG(TLVL_DEBUG+1) <<"completed with frags.size = " << frags.size();
   t_end = std::chrono::steady_clock::now();
 
   if(metricMan != nullptr) metricMan->sendMetric("getNext_execution_time_ms",
@@ -315,7 +315,7 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
 
   if(frags.size()>0)
-    TLOG(TLVL_DEBUG+1) << __func__ 
+    TLOG(TLVL_DEBUG+1)
 		     << " : Send fragment with type " << (int)(frags.back()->type())
 		     << " (" << frags.back()->typeString() << "):  "
 		     << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
