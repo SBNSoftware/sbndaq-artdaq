@@ -246,16 +246,16 @@ void sbndaq::FragmentToBinary::ProcessCAENV1730(const artdaq::Fragment &frag)
   uint16_t value = 0;
   size_t ch_offset = 0;
 
-  serial.fWvfmsVec.resize(serial.metadata.nChannels);
+  serial.wvfmvec.resize(serial.metadata.nChannels);
 
   for (size_t i_ch = 0; i_ch < serial.metadata.nChannels; ++i_ch){
-    serial.fWvfmsVec[i_ch].resize(wfm_length);
+    serial.wvfmvec[i_ch].resize(wfm_length);
     ch_offset = (size_t)(i_ch * wfm_length);
 
     for(size_t i_t = 0; i_t < wfm_length; ++i_t){
       value_ptr = data_begin + ch_offset + i_t;
       value = *(value_ptr);
-      serial.fWvfmsVec[i_ch][i_t] = value;
+      serial.wvfmvec[i_ch][i_t] = value;
     }
   }
 
