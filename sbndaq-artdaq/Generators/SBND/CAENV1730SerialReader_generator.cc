@@ -65,6 +65,17 @@ bool CAENV1730SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	     &serial.event,
 	     sizeof(sbndaq::CAENV1730Event));
 
+      size_t counter = 0;
+      for(auto const &channel_wvfm : serial.fWvfmsVec)
+	{
+	  for(auto const &value : channel_wvfm)
+	    {
+	      memcpy(fragments.back()->dataBeginBytes() + sizeof(sbndaq::CAENV1730Event) + counter * sizeof(uint16_t),
+		     &value,
+		     sizeof(uint16_t));
+	      ++counter;
+	    }
+	}
       TLOG(TLVL_NOTICE) << '\n' << *fragments.back();
 
       return true;

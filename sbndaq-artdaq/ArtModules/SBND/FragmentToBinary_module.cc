@@ -235,6 +235,30 @@ void sbndaq::FragmentToBinary::ProcessCAENV1730(const artdaq::Fragment &frag)
   serial.metadata          = *caen_frag.Metadata();
   serial.event             = *caen_frag.Event();
 
+  const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() + sizeof(CAENV1730EventHeader));
+
+  const uint32_t ev_size_quad_bytes         = serial.event.Header.eventSize;
+  const uint32_t evt_header_size_quad_bytes = sizeof(CAENV1730EventHeader) / sizeof(uint32_t);
+  const uint32_t data_size_double_bytes     = 2 * (ev_size_quad_bytes - evt_header_size_quad_bytes);
+  const uint32_t wfm_length                 = data_size_double_bytes / serial.metadata.nChannels;
+
+  const uint16_t* value_ptr = data_begin;
+  uint16_t value = 0;
+  size_t ch_offset = 0;
+
+  serial.fWvfmsVec.resize(serial.metadata.nChannels);
+
+  for (size_t i_ch = 0; i_ch < serial.metadata.nChannels; ++i_ch){
+    serial.fWvfmsVec[i_ch].resize(wfm_length);
+    ch_offset = (size_t)(i_ch * wfm_length);
+
+    for(size_t i_t = 0; i_t < wfm_length; ++i_t){
+      value_ptr = data_begin + ch_offset + i_t;
+      value = *(value_ptr);
+      serial.fWvfmsVec[i_ch][i_t] = value;
+    }
+  }
+
   oa << frag.type() << serial;
   if (fverbose > 1)
     std::cout << '\n' << frag << '\n' << caen_frag;
