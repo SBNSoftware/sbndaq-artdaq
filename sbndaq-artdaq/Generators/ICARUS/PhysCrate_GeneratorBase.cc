@@ -130,25 +130,25 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   
   // Set fragment's metadata
 
-   TLOG(TLVL_DEBUG +1 ) << __func__ << " : getNext_(frags) called.";
+   TLOG(TLVL_DEBUG +1 ) << "getNext_(frags) called.";
 
   metricMan->sendMetric(".getNext.CircularBufferOccupancy",fCircularBuffer.Size()/2,"bytes",1,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Maximum|artdaq::MetricMode::Minimum|artdaq::MetricMode::Average);
 
 
   if ( fCircularBuffer.Buffer().empty() ) {
-    TLOG(TLVL_DEBUG +2 ) << __func__ << " : no data in circular buffer.";
+    TLOG(TLVL_DEBUG +2 ) << "no data in circular buffer.";
     return true;
   }
 
 
   size_t data_size_bytes = 0;
-  TLOG(TLVL_DEBUG +3 ) << __func__ << " : nBoards_: " << nBoards_;
+  TLOG(TLVL_DEBUG +3 ) << "nBoards_: " << nBoards_;
 
   //check if we have enough data for a DataTile.
   //if not, sleep and return.
   if( fCircularBuffer.Size() <= sizeof(DataTile)/sizeof(uint16_t) ){
-    TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile in circular buffer.";
+    TLOG(TLVL_DEBUG +4 ) << "not enough data for DataTile in circular buffer.";
     usleep(1000);
     return true;
   }
@@ -162,12 +162,12 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   while(iBoard < nBoards_){
     
     std::this_thread::sleep_for(1us);
-    TLOG(TLVL_DEBUG +5) << __func__  << "data_size_bytes/sizeof(uint16_t): " << data_size_bytes/sizeof(uint16_t);
+    TLOG(TLVL_DEBUG +5) << "data_size_bytes/sizeof(uint16_t): " << data_size_bytes/sizeof(uint16_t);
 
     //check if we have enough data for a DataTile.
     //if not, sleep and return.
     if( fCircularBuffer.Size() < (data_size_bytes+sizeof(DataTile))/sizeof(uint16_t) ){
-      TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile in circular buffer.";
+      TLOG(TLVL_DEBUG +4 ) << "not enough data for DataTile in circular buffer.";
       usleep(1000);
       return true;
     }
@@ -177,26 +177,26 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     auto const* next_dt = reinterpret_cast< DataTile const* >(next_dt_begin_ptr);
     auto const nt_header = next_dt->Header;
     uint32_t this_data_size_bytes = ntohl( nt_header.packSize );
-    TLOG(TLVL_DEBUG +6) << __func__ << " : Board ID: " << (nt_header.info2 & 0x0000000F);
-    TLOG(TLVL_DEBUG +6) << __func__ << ": this_data_size_bytes: " << this_data_size_bytes;
+    TLOG(TLVL_DEBUG +6) << "Board ID: " << (nt_header.info2 & 0x0000000F);
+    TLOG(TLVL_DEBUG +6) << "this_data_size_bytes: " << this_data_size_bytes;
 
     //check if there's enogh data for this board.
     //if not, sleep and return.
     if(fCircularBuffer.Size() < (data_size_bytes+this_data_size_bytes)/sizeof(uint16_t)){
-      TLOG(TLVL_DEBUG +4 ) << __func__ << " : not enough data for DataTile " << iBoard << " in circular buffer.";
+      TLOG(TLVL_DEBUG +4 ) << "not enough data for DataTile " << iBoard << " in circular buffer.";
       usleep(1000);
       return true;
     }
 
     data_size_bytes += this_data_size_bytes;
     ++iBoard;
-    TLOG(TLVL_DEBUG +7 ) << __func__  << " : iBoard: " << iBoard 
+    TLOG(TLVL_DEBUG +7 ) << "iBoard: " << iBoard 
                      << ", this_data_size_bytes: " << this_data_size_bytes 
                      << ", data_size_bytes: " << data_size_bytes
                      << ", first_dt_begin_ptr: " << first_dt_begin_ptr;
 
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( next_dt->data );
-    TLOG(TLVL_DEBUG+8)<< __func__ << ": BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
+    TLOG(TLVL_DEBUG+8)<< "BoardEventNumber: " << board_block->header.event_number << ", BoardTimeStamp: " 
 	<< board_block->header.time_stamp ;
 
   }
@@ -221,34 +221,34 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 						      0, fragment_id(),
 						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_, ts) );
 
-  TLOG(TLVL_DEBUG +8 ) << __func__ << " : Initialized data of size " << frags.back()->dataSizeBytes();
+  TLOG(TLVL_DEBUG +8 ) << "Initialized data of size " << frags.back()->dataSizeBytes();
   
-  TLOG(TLVL_DEBUG +9 ) << __func__<<  " : Read data size was " << data_size_bytes;
-  TLOG(TLVL_DEBUG +10 ) <<__func__ <<  " : fCircularBuffer.Buffer().front(): " 
+  TLOG(TLVL_DEBUG +9 ) << "Read data size was " << data_size_bytes;
+  TLOG(TLVL_DEBUG +10 ) <<"fCircularBuffer.Buffer().front(): " 
                    << fCircularBuffer.Buffer().front()
                    << ", fCircularBuffer.Buffer().back(): " << fCircularBuffer.Buffer().back();
   std::copy( first_dt_begin_ptr, first_dt_begin_ptr + data_size_bytes/sizeof(uint16_t),
              (uint16_t*)( frags.back()->dataBeginBytes() ) );
 
-  TLOG(TLVL_DEBUG + 11) << __func__ << " : copied the circular buffer to frags.";
-  TLOG(TLVL_DEBUG + 12) << __func__ << " : Read data size was " <<  data_size_bytes;
+  TLOG(TLVL_DEBUG + 11) << "copied the circular buffer to frags.";
+  TLOG(TLVL_DEBUG + 12) << "Read data size was " <<  data_size_bytes;
 
   frags.back()->resizeBytes( data_size_bytes );
-  TLOG(TLVL_DEBUG + 13) << __func__ << " : resized frags.";
+  TLOG(TLVL_DEBUG + 13) << "resized frags.";
 
 	// Erase the copied part of the circular buffer
   fCircularBuffer.Erase( data_size_bytes/sizeof(uint16_t) );
-  TLOG(TLVL_DEBUG + 14) << __func__ << " : erazed the circular buffer.";
+  TLOG(TLVL_DEBUG + 14) << "erazed the circular buffer.";
 
   //give proper event number
   // ++ev_num;
   PhysCrateFragment const& newfrag = *frags.back();
   auto ev_num = newfrag.BoardEventNumber();
-  TLOG(TLVL_DEBUG +15) << __func__ << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp();
-  TLOG(TLVL_DEBUG +15) << __func__ << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1);
-  TLOG(TLVL_DEBUG +15) << __func__ << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "
+  TLOG(TLVL_DEBUG +15) << "Board 0 Event Number: " << newfrag.BoardEventNumber() << ", TimeStamp: " << newfrag.BoardTimeStamp();
+  TLOG(TLVL_DEBUG +15) << "Board 1 Event Number: " << newfrag.BoardEventNumber(1) << ", TimeStamp: " << newfrag.BoardTimeStamp(1);
+  TLOG(TLVL_DEBUG +15) << "Fragment: nBoards: " << newfrag.nBoards() << ", nChannels: " << newfrag.nChannels() << ", nSamplesPerChannel: "
             << newfrag.nSamplesPerChannel() << ", nChannelsPerBoard: " << newfrag.nChannelsPerBoard();
-  TLOG(TLVL_DEBUG + 16) << __func__ << "ev_num: " << ev_num;
+  TLOG(TLVL_DEBUG + 16) << "ev_num: " << ev_num;
 
   metricMan->sendMetric(".getNext.BoardEventNumber",(int)ev_num,"events",1,
 			artdaq::MetricMode::LastPoint);
@@ -267,7 +267,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
       if( std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0))>max_ev_num_diff )
 	max_ts_diff = std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0));
 
-      TLOG(TLVL_ERROR + 17) << __func__ << ": Inconsistent event numbers in one fragment: Event " 
+      TLOG(TLVL_ERROR + 17) << "Inconsistent event numbers in one fragment: Event " 
 		       << ev_num << " in Board 0 while Event " 
 		       << newfrag.BoardEventNumber(jBoard) 
 		       << " in Board " << jBoard;
@@ -286,14 +286,14 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   
   metricMan->sendMetric("FragmentsSent",ev_counter(), "Events", 1,artdaq::MetricMode::LastPoint);
 
-	TLOG(TLVL_DEBUG + 18) << __func__ << ": completed.";
+	TLOG(TLVL_DEBUG + 18) << "completed.";
   _tloop_getnext_start = std::chrono::high_resolution_clock::now();
   _tloop_getnext_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_getnext_start-_tloop_getnext_end);
   metricMan->sendMetric(".getNext.FinishTime",_tloop_getnext_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
-  TLOG(TLVL_DEBUG) << __func__ 
-		   << " : Send fragment with type " << frags.back()->type() 
+  TLOG(TLVL_DEBUG+19)
+		   << " : Send fragment with type " << (int)frags.back()->type()
 		   << " (" << frags.back()->typeString() << "):  "
 		   << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
 
