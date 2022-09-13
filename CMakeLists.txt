@@ -15,7 +15,7 @@ set(CET_CETBUILDTOOLS_COMPAT TRUE)
 include(Compatibility)
 set(CET_WARN_DEPRECATED)
 
-project(sbndaq_artdaq VERSION 1.02.00)
+project(sbndaq_artdaq VERSION 1.02.01)
 
 set(CMAKE_MODULE_PATH
   $ENV{ARTDAQ_UTILITIES_DIR}/Modules
@@ -126,7 +126,7 @@ find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
-find_ups_product( sbndaq_artdaq_core v0_09_00 )
+find_ups_product( sbndaq_artdaq_core v1_02_01 )
 
 find_ups_product (jsoncpp v1_7_7c)
 
