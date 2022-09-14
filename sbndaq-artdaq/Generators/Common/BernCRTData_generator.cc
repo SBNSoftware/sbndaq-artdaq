@@ -19,12 +19,12 @@
 sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
   :
   BernCRT_GeneratorBase(ps) {
-  TLOG(TLVL_INFO) << __func__ <<"() constructor called";
+  TLOG(TLVL_INFO) << "constructor called";
 
   std::string ethernet_port = ps_.get<std::string>("ethernet_port");
 
   if( ! febdrv.Init(ethernet_port) ) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Failed to initialise febdrv on interface \"" << ethernet_port << "\"!";
+    TLOG(TLVL_ERROR) <<  "Failed to initialise febdrv on interface \"" << ethernet_port << "\"!";
     throw cet::exception( std::string(TRACE_NAME) +"::" + __func__ + "() Failed to initialise febdrv on interface \"" + ethernet_port + "\"!");
   }
 
@@ -34,27 +34,27 @@ sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
 
 
   for(const uint8_t& mac5 : MAC5s_) {
-    TLOG(TLVL_DEBUG) << __func__ << " Reading configuration for MAC5 " << std::to_string(mac5);
+    TLOG(TLVL_DEBUG) << "Reading configuration for MAC5 " << std::to_string(mac5);
     feb_configuration[mac5] = sbndaq::BernCRTFEBConfiguration(ps_, mac5); //create configuration object
 
-    TLOG(TLVL_INFO)<<__func__
+    TLOG(TLVL_INFO)
       <<"Read configuration for CRT FEB "<<(int)(mac5)
       <<" PPS offset: "<<feb_configuration[mac5].GetPPSOffset()
       <<" Turn on HV: "<<(feb_configuration[mac5].GetHVOnPermission()?"yes":"no");
   }
 
-  TLOG(TLVL_INFO) << __func__ << "() constructor completed";
+  TLOG(TLVL_INFO) << "constructor completed";
 } //constructor
 
 sbndaq::BernCRTData::~BernCRTData() {
-  TLOG(TLVL_INFO) << __func__ <<  "() called";
+  TLOG(TLVL_INFO) << "called";
 
   Cleanup();
-  TLOG(TLVL_INFO) << __func__ << "() completed";
+  TLOG(TLVL_INFO) << "completed";
 } //destructor
 
 void sbndaq::BernCRTData::ConfigureStart() {
-  TLOG(TLVL_INFO) << __func__ << "() called";
+  TLOG(TLVL_INFO) << "called";
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
   //switch off bias voltage one by one (rather than sending signal to all boards at once
@@ -69,15 +69,15 @@ void sbndaq::BernCRTData::ConfigureStart() {
   }
   StartFebdrv(); //start data taking mode for all boards
 
-  TLOG(TLVL_INFO) << __func__ << "() completed";
+  TLOG(TLVL_INFO) << "completed";
 } //ConfigureStart
 
 void sbndaq::BernCRTData::ConfigureStop() {
-  TLOG(TLVL_INFO) << __func__ << "() called";
+  TLOG(TLVL_INFO) << "called";
 
   febdrv.biasOFF();
 
-  TLOG(TLVL_INFO) << __func__ << "() completed";
+  TLOG(TLVL_INFO) << "completed";
 } //ConfigureStop
 
 void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
@@ -91,12 +91,12 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
    */
 
   if(feb_configuration.find(mac5) == feb_configuration.end()) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Could not find FEB " << mac5 << " in MAC5s!";
+    TLOG(TLVL_ERROR) <<  "Could not find FEB " << mac5 << " in MAC5s!";
     throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Could not find FEB " + std::to_string(mac5) + " in MAC5s!");
   }
 
   if(mac5==255) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Bitstreams cannot be sent to mac5 = 255!";
+    TLOG(TLVL_ERROR) <<  "Bitstreams cannot be sent to mac5 = 255!";
     return;
   }
   
@@ -114,9 +114,9 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
 } //feb_send_bitstreams
 
 void sbndaq::BernCRTData::StartFebdrv() {
-  TLOG(TLVL_DEBUG)<< __func__<<"() (re)starting febdrv";
+  TLOG(TLVL_DEBUG)<< "(re)starting febdrv";
   if(! febdrv.startDAQ() ) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Failed to (re)start DAQ";
+    TLOG(TLVL_ERROR) <<  "Failed to (re)start DAQ";
     throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Failed to (re)start DAQ!");
   }
 
@@ -183,7 +183,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
    * Reads data from FEB
    */
   
-  TLOG(TLVL_DEBUG+2) << __func__ << "() called";
+  TLOG(TLVL_DEBUG+2) << "called";
 
   //measure time of function execution
   static auto t_start = std::chrono::steady_clock::now();
@@ -224,7 +224,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       
       int datalen = numbytes-18;
       
-      TLOG(TLVL_DEBUG+2)<<__func__<<"()  datalen = "<<datalen;
+      TLOG(TLVL_DEBUG+2)<<" datalen = "<<datalen;
         
       //loop over bytes of the data
       for(int jj = 0; jj < datalen; ) { // jj is incremented in processSingleHit
@@ -356,7 +356,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),
       "CRT performance", 5, artdaq::MetricMode::Maximum);
   
-  TLOG(TLVL_DEBUG+2) << __func__ << "() read " << std::to_string(hit_count_all_febs) << " hits";
+  TLOG(TLVL_DEBUG+2) << "read " << std::to_string(hit_count_all_febs) << " hits";
 
   return hit_count_all_febs;
 } //GetFEBData
