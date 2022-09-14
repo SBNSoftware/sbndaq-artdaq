@@ -191,32 +191,28 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
     }
     else {
       
-      // Type of fragment?
+      unsigned n_caen_frags(0), n_wr_frags(0), n_berncrt_frags(0);
 
-      if (handle->front().type() == sbndaq::detail::FragmentType::CAENV1730 && finclude_caen) {
-	
-	if (fverbose > 0)
-	  std::cout << "\tFound " << handle->size() << " normal CAEN fragments" << std::endl;
+      for (auto frag : *handle) {
 
-	for (auto frag : *handle)
-	  ProcessCAENV1730(frag);
+        if (frag.type() == sbndaq::detail::FragmentType::CAENV1730 && finclude_caen) {
+          ProcessCAENV1730(frag);
+          ++n_caen_frags;
+        }
+        else if (frag.type()==sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr) {
+          ProcessWhiteRabbit(frag);
+          ++n_wr_frags;
+        }
+        else if (frag.type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt) {
+          ProcessBernCRTV2(frag);
+          ++n_berncrt_frags;
+        }
       }
 
-      else if (handle->front().type()==sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr) {
-
-	if (fverbose > 0)
-	  std::cout << "\tFound " << handle->size() << " normal WR fragments" << std::endl;
-
-	for (auto frag : *handle)
-	  ProcessWhiteRabbit(frag);
-      }
-      else if (handle->front().type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt) {
-
-	if (fverbose > 0)
-	  std::cout << "\tFound " << handle->size() << " normal BERNCRT fragments" << std::endl;
-
-        for (auto frag : *handle)
-	  ProcessBernCRTV2(frag);
+      if (fverbose > 0) {
+        std::cout << "\n\tFound " << n_caen_frags << " normal CAEN fragments" << std::endl;
+        std::cout << "\tFound " << n_wr_frags << " normal WR fragments" << std::endl;
+        std::cout << "\tFound " << n_berncrt_frags << " normal BERNCRT fragments\n" << std::endl;
       }
     }
   }
