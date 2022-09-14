@@ -54,23 +54,23 @@ bool CAENV1730SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
       }
 
       fragments.emplace_back(artdaq::Fragment::FragmentBytes(
-			     sizeof(sbndaq::CAENV1730Event),
-			     serial.sequence_id,
-			     serial.fragment_id,
-			     serial.fragment_type,
-			     serial.metadata,
-			     serial.timestamp));
+                             serial.metadata.ExpectedDataSize(),
+                             serial.sequence_id,
+                             serial.fragment_id,
+                             serial.fragment_type,
+                             serial.metadata,
+                             serial.timestamp));
 
       memcpy(fragments.back()->dataBeginBytes(),
-	     &serial.event,
-	     sizeof(sbndaq::CAENV1730Event));
+             &serial.event.Header,
+             sizeof(sbndaq::CAENV1730EventHeader));
 
       size_t counter = 0;
       for(auto const &channel_wvfm : serial.wvfmvec)
 	{
 	  for(auto const &value : channel_wvfm)
 	    {
-	      memcpy(fragments.back()->dataBeginBytes() + sizeof(sbndaq::CAENV1730Event) + counter * sizeof(uint16_t),
+	      memcpy(fragments.back()->dataBeginBytes() + sizeof(sbndaq::CAENV1730EventHeader) + counter * sizeof(uint16_t),
 		     &value,
 		     sizeof(uint16_t));
 	      ++counter;
