@@ -13,3 +13,4 @@ list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq-artdaq_Common_Utilities sbndaq_art
 
 #build_plugin(MetricProducer "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin(CRTMetricProducer "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin(NeutrinoStreamFilter "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
