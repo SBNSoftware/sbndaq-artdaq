@@ -411,102 +411,74 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 #endif
   
   /************************************************************************************************/
-  if (finclude_caen) {
+
     for (auto handle : fragmentHandles) {
       if (!handle.isValid() || handle->size() == 0) continue;
-      
-      if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
-	//Container fragment
-	for (auto cont : *handle) {
-	  artdaq::ContainerFragment contf(cont);
-	  if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
-	    if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
-	    fWvfmsVec.resize(16*contf.block_count());
-	    for (size_t ii = 0; ii < contf.block_count(); ++ii)
-	      analyze_caen_fragment(*contf[ii].get());
-	  }
-	}
-      }
-      else {
-	//normal fragment
-	if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
-	  if (fverbose) 	std::cout << "   found normal caen fragments " << handle->size() << std::endl;
-	  fWvfmsVec.resize(16*handle->size());
-	  for (auto frag : *handle)
-	    analyze_caen_fragment(frag);
-	}
-      }
-    } // loop over frag handles
-  }  // if include caen
-  
-  
-  if (finclude_wr) {
-    for (auto handle : fragmentHandles) {
-      if (!handle.isValid() || handle->size() == 0) continue;      
-      if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
-	//Container fragment
-	for (auto cont : *handle) {
-	  artdaq::ContainerFragment contf(cont);
-	  if (contf.fragment_type()==sbndaq::detail::FragmentType::WhiteRabbit) {
-	    if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " WR Fragments in container " << std::endl;
-	    for (size_t ii = 0; ii < contf.block_count(); ++ii)
-	      analyze_wr_fragment_dio(*contf[ii].get());
-	  }
-	}
-      }
-      else {
-	//normal fragment
-	if (handle->front().type()==sbndaq::detail::FragmentType::WhiteRabbit) {
-	  for (auto frag : *handle)
-	    analyze_wr_fragment_dio(frag);
-	}
-      }
-    } // loop over frag handles
-    /************************************************************************************************/
-    
-    if (fverbose) std::cout << " WR ch 0 " << fnstamps0 << " WR ch 1 " << fnstamps1 << " WR ch 2 " << fnstamps2 << " WR ch 3 " <<
-		    fnstamps3 << " WR ch 4 " << fnstamps4 << std::endl;
-    
-  } // if (include_wr)
 
-  
-  if (finclude_berncrt){
-    
-    std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
-    
-#if ART_HEX_VERSION < 0x30900
-    evt.getManyByType(fragmentHandles);
-#else
-    fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
-#endif
-    
-    for (auto handle : fragmentHandles) {
-      if (!handle.isValid() || handle->size() == 0)
-	continue;
-      
       if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
-        //Container fragment
+
         for (auto cont : *handle) {
           artdaq::ContainerFragment contf(cont);
-          if (contf.fragment_type() != sbndaq::detail::FragmentType::BERNCRTV2)
-            continue;
-          for (size_t ii = 0; ii < contf.block_count(); ++ii)
-            analyze_bern_fragment(*contf[ii].get());
+
+          if (contf.fragment_type() == sbndaq::detail::FragmentType::CAENV1730 && finclude_caen) {
+            if (fverbose)         std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
+            fWvfmsVec.resize(16*contf.block_count());
+            for (size_t ii = 0; ii < contf.block_count(); ++ii)
+              analyze_caen_fragment(*contf[ii].get());
+          }
+
+          else if (contf.fragment_type() == sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr) {
+            if (fverbose)         std::cout << "    Found " << contf.block_count() << " WR Fragments in container " << std::endl;
+            for (size_t ii = 0; ii < contf.block_count(); ++ii)
+              analyze_wr_fragment_dio(*contf[ii].get());
+          }
+
+          else if (contf.fragment_type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt) {
+            if (fverbose)         std::cout << "    Found " << contf.block_count() << " BERN Fragments in container " << std::endl;
+            for (size_t ii = 0; ii < contf.block_count(); ++ii)
+              analyze_bern_fragment(*contf[ii].get());
+          }
         }
       }
       else {
-        //normal fragment
-        if (handle->front().type() != sbndaq::detail::FragmentType::BERNCRTV2) continue;
-        for (auto frag : *handle)
-          analyze_bern_fragment(frag);
+
+        unsigned n_caen_frags(0), n_wr_frags(0), n_berncrt_frags(0);
+
+        for (auto frag : *handle) {
+
+          if (frag.type() == sbndaq::detail::FragmentType::CAENV1730 && finclude_caen)
+            ++n_caen_frags;
+          else if (frag.type() == sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr)
+            ++n_wr_frags;
+          else if (frag.type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt)
+            ++n_berncrt_frags;
+        }
+
+        for (auto frag : *handle) {
+
+          if (frag.type() == sbndaq::detail::FragmentType::CAENV1730 && finclude_caen) {
+            fWvfmsVec.resize(16*n_caen_frags);
+            analyze_caen_fragment(frag);
+          }
+          else if (frag.type() == sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr)
+            analyze_wr_fragment_dio(frag);
+          else if (frag.type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt)
+            analyze_bern_fragment(frag);
+        }
+
+        if (fverbose > 0) {
+          std::cout << "\n\tFound " << n_caen_frags << " normal CAEN fragments" << std::endl;
+          std::cout << "\tFound " << n_wr_frags << " normal WR fragments" << std::endl;
+          std::cout << "\tFound " << n_berncrt_frags << " normal BERNCRT fragments\n" << std::endl;
+        }
       }
-    }  //  loop over frag handles
-  }// if include_berncrt
-  
-  events->Fill();
-  
-  std::cout << "here" << std::endl;
-  
+    } // loop over frag handles
+
+    if (fverbose && finclude_wr)
+      std::cout << " WR ch 0 " << fnstamps0 << " WR ch 1 " << fnstamps1 << " WR ch 2 " << fnstamps2 << " WR ch 3 "
+                << fnstamps3 << " WR ch 4 " << fnstamps4 << std::endl;
+
+    events->Fill();
 }
 
 

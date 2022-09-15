@@ -199,7 +199,7 @@ void sbndaq::FragmentToBinary::analyze(const art::Event& evt)
           ProcessCAENV1730(frag);
           ++n_caen_frags;
         }
-        else if (frag.type()==sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr) {
+        else if (frag.type() == sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr) {
           ProcessWhiteRabbit(frag);
           ++n_wr_frags;
         }
