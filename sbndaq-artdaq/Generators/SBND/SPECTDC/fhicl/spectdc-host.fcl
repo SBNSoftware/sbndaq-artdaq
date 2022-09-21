@@ -1,0 +1,38 @@
+data_buffer_depth_fragments:16384
+#data_buffer_depth_fragments:1024
+
+spec: {
+  deviceid:auto
+  fmctdc: {
+    timesync_source:host
+    calibration_data:none
+    polltime_ms: 100
+    blocking_reads: true
+    monitor:{
+      temperature:true
+      timestamps:true
+    }
+    channels: [
+      { id : 0
+        name:pps
+        enabled: true
+        time_offset_ps: 0
+        terminated: false },
+      { id : 1
+        name:beam
+        enabled: true
+        time_offset_ps: 0
+        terminated: false },
+      { id : 2
+        name:beam1
+        enabled: false
+        time_offset_ps: 0
+        terminated: false },
+      { id : 3
+        name:beam2
+        enabled: false
+        time_offset_ps: 0
+        terminated: false }
+    ]
+  }
+}

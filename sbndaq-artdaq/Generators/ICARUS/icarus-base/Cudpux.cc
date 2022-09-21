@@ -7,7 +7,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include "common.h"
+
+#include "artdaq/DAQdata/Globals.hh"
 
 #ifdef __OLDAPPLE__
 typedef int socklen_t;
@@ -53,12 +54,12 @@ Cudp::Cudp(int localport)
           throw;
         }
 
-	  TRACEN("Cudpx.cc",TLVL_INFO, "Bound socket %d (%d)", myaddr.sin_port,ntohs(myaddr.sin_port));
+	  TRACEN("Cudpx.cc",TLVL_DEBUG, "Bound socket %d (%d)", myaddr.sin_port,ntohs(myaddr.sin_port));
         
     
      sockAddrSize = sizeof (struct sockaddr_in);
 
-    TRACEN("Cudpx.cc",TLVL_ERROR, "Sock addr size %d", sockAddrSize);
+    TRACEN("Cudpx.cc",TLVL_DEBUG, "Sock addr size %d", sockAddrSize);
 
 }
 
@@ -116,7 +117,7 @@ Cudp::Receive(char *buffer,int size,int timeout)
   else
     retva = select (nfd,&rfds,0,0,&tv);
   
-  TRACEN("Cudpx.cc",TLVL_ERROR, "select return: %d isset %d",retva,FD_ISSET(sock,&rfds));
+  TRACEN("Cudpx.cc",TLVL_DEBUG, "select return: %d isset %d",retva,FD_ISSET(sock,&rfds));
   
   if (retva)
     {
@@ -159,7 +160,7 @@ Cudp::Answer( char *buffer,int size)
 
   //inetAddr = inet_ntoa(clientAddr.sin_addr);
  
-TRACEN("Cudpx.cc",TLVL_ERROR, "Trying to answer message size %d",size);
+TRACEN("Cudpx.cc",TLVL_DEBUG, "Trying to answer message size %d",size);
 
 //   if (size > 1024) size = 1024;
 

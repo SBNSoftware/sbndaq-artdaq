@@ -20,6 +20,7 @@
 // Constructor
 sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
+  generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0)),
   ps_(ps)
 {
   fragmentId  = ps.get<uint32_t>("fragmentId");
@@ -260,7 +261,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
     data->command       = WR_DIO_CMD_STAMP;
     data->value         = 0;
     agentDevice.ifr_data = (char *)data;
-    TLOG(TLVL_INFO) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
+    TLOG(TLVL_DEBUG+1) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
     clock_gettime(CLOCK_REALTIME,&event.systemTime);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
@@ -270,11 +271,11 @@ bool sbndaq::WhiteRabbitReadout::getData()
       return(false);
     }
 
-    TLOG(TLVL_INFO) << "WhiteReadout: data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
+    TLOG(TLVL_DEBUG) << "WhiteReadout: data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
       event.systemTime.tv_nsec;
     for (uint32_t i=0; i<data->nstamp; i++)
     {
-      TLOG(TLVL_INFO) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
+      TLOG(TLVL_DEBUG+1) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
 	" " << data->timeStamp[i].tv_nsec; 
 
 //added in the loop 
@@ -335,6 +336,14 @@ bool sbndaq::WhiteRabbitReadout::getData()
 
 bool sbndaq::WhiteRabbitReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
+
+  //copied from TriggerUDP code: if shouldn't send fragments, then don't create fragment/send
+  if(generated_fragments_per_event_== 0){
+    fLastEvent = fEventCounter;
+    ++fEventCounter;
+    return true;
+  }
+
   FillFragment(frags,true);
 
   for (auto const& frag : frags) {

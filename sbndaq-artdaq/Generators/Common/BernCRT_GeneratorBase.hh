@@ -11,6 +11,8 @@
 
 #include "BernCRTFEBConfiguration.hh"
 
+#include "febdrv.hh"
+
 #include <unistd.h>
 #include <vector>
 #include <deque>
@@ -101,6 +103,12 @@ namespace sbndaq {
     uint64_t feb_restart_period_;
     uint32_t feb_poll_period_;
     int32_t fragment_period_;
+    FirmwareVersion FirmwareFlag;       //flag to use older version of firmware
+
+    //warning messages
+    uint64_t max_time_with_no_data_ns_;
+    uint32_t max_tolerable_t0_;
+
     
   private:
 

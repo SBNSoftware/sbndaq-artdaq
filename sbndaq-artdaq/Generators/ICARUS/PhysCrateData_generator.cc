@@ -46,10 +46,10 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
     _redisCtxt = redisConnect(_redisHost.c_str(),_redisPort);
     if (_redisCtxt == NULL || _redisCtxt->err) {
       if (_redisCtxt) {
-	printf("Error: %s\n", _redisCtxt->errstr);
+        TLOG(TLVL_ERROR) <<"Error: " <<  _redisCtxt->errstr;
 	// handle error
       } else {
-	printf("Can't allocate redis context\n");
+        TLOG(TLVL_DEBUG+20) << "Can't allocate redis context";
       }
       
       throw cet::exception("PhysCrateData") << "Could not setup redis context without error";
@@ -119,7 +119,7 @@ void icarus::PhysCrateData::SetDCOffset()
     int res1, res2;
     res1 = CAENComm_Read32( bdhandle, A_DAC_C, (uint32_t*) &offset_c );
     res2 = CAENComm_Read32( bdhandle, A_DAC_D, (uint32_t*) &offset_d );
-    TRACEN("PhysCrateData",TLVL_DEBUG,"Board %d, Offset 1 (Err,Val)=(%d,%ul), Offset 2 (Err,Val)=(%d,%ul)",ib,res1,offset_c,res2,offset_d);
+    TRACEN("PhysCrateData",TLVL_DEBUG+1,"Board %d, Offset 1 (Err,Val)=(%d,%ul), Offset 2 (Err,Val)=(%d,%ul)",ib,res1,offset_c,res2,offset_d);
 
   }
 }
@@ -175,23 +175,23 @@ void icarus::PhysCrateData::SetTestPulse()
 }
   
 void icarus::PhysCrateData::VetoOn(){
-  TRACEN("PhysCrateData",TLVL_DEBUG,"VetoOn called.");
+  TRACEN("PhysCrateData",TLVL_DEBUG+2,"VetoOn called.");
 
   int result = veto_udp.VetoOn();
-  TRACEN("PhysCrateData",TLVL_DEBUG,"VetoOn called. Result %d",result);
+  TRACEN("PhysCrateData",TLVL_DEBUG+3,"VetoOn called. Result %d",result);
   if(result<0)
-    TRACEN("PhysCrateData",TLVL_DEBUG,"VetoOn Error: %s",std::strerror(errno));
+    TRACEN("PhysCrateData",TLVL_DEBUG+4,"VetoOn Error: %s",std::strerror(errno));
 
   veto_state = true;
 }
 
 void icarus::PhysCrateData::VetoOff(){
-  TRACEN("PhysCrateData",TLVL_DEBUG,"VetoOff called.");
+  TRACEN("PhysCrateData",TLVL_DEBUG+2,"VetoOff called.");
 
   int result = veto_udp.VetoOff();
-  TRACEN("PhysCrateData",TLVL_DEBUG,"VetoOff called. Result %d",result);
+  TRACEN("PhysCrateData",TLVL_DEBUG+3,"VetoOff called. Result %d",result);
   if(result<0)
-    TRACEN("PhysCrateData",TLVL_DEBUG,"VetoOff Error: %s",std::strerror(errno));
+    TRACEN("PhysCrateData",TLVL_DEBUG+4,"VetoOff Error: %s",std::strerror(errno));
 
   veto_state = false;
 }
@@ -317,7 +317,7 @@ bool icarus::PhysCrateData::VetoTest(){
 
 int icarus::PhysCrateData::GetData(){
 
-  TRACEN("PhysCrateData",TLVL_DEBUG,"GetData called.");
+  TRACEN("PhysCrateData",TLVL_DEBUG+5,"GetData called.");
 
   physCr->ArmTrigger();
 
@@ -326,18 +326,18 @@ int icarus::PhysCrateData::GetData(){
   //end loop timer
   _tloop_end = std::chrono::high_resolution_clock::now();
   UpdateDuration();
-  TRACEN("PhysCrateData",TLVL_TIMER,"GetData : waitData loop time was %lf seconds",_tloop_duration.count());
+  TRACEN("PhysCrateData",TLVL_DEBUG+6,"GetData : waitData loop time was %lf seconds",_tloop_duration.count());
   metricMan->sendMetric(".GetData.ReturnTime",_tloop_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
-  TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Calling waitData()");
+  TRACEN("PhysCrateData",TLVL_DEBUG+7,"GetData : Calling waitData()");
   physCr->waitData();
 
   //start loop timer
   _tloop_start = std::chrono::high_resolution_clock::now();
 
   _tloop_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_start-_tloop_end);
-  TRACEN("PhysCrateData",TLVL_TIMER,"GetData : waitData call time was %lf seconds",_tloop_duration.count());
+  TRACEN("PhysCrateData",TLVL_DEBUG+8,"GetData : waitData call time was %lf seconds",_tloop_duration.count());
   metricMan->sendMetric(".GetData.WaitTime",_tloop_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
@@ -345,18 +345,18 @@ int icarus::PhysCrateData::GetData(){
   // int iBoard = 0, nBoards_ = 2;
       
   while(physCr->dataAvail()){
-    TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : DataAvail!");
+    TRACEN("PhysCrateData",TLVL_DEBUG+9,"GetData : DataAvail!");
     auto data_ptr = physCr->getData();
     
     size_t const this_data_size_bytes = ntohl( data_ptr->Header.packSize );
-    TLOG(TLVL_DEBUG) << "PhysCrateData::GetData : Data acquired! Size is " << this_data_size_bytes << " bytes, with " 
+    TLOG(TLVL_DEBUG+10) << "PhysCrateData::GetData : Data acquired! Size is " << this_data_size_bytes << " bytes, with " 
                      << data_size_bytes << " bytes already acquired.";
 
     if( this_data_size_bytes == 32 ) continue;
 
     // ++iBoard;
     
-    TLOG(TLVL_DEBUG) << "PhysCrateData: data_size_bytes: " << std::dec << data_size_bytes 
+    TLOG(TLVL_DEBUG+11) << "PhysCrateData: data_size_bytes: " << std::dec << data_size_bytes 
               << ", this_data_size_bytes: " << this_data_size_bytes
               << ", token: " << std::hex << data_ptr->Header.token << ", info1: " << data_ptr->Header.info1 
               << ", info2: " << data_ptr->Header.info2 << ", info3: " << data_ptr->Header.info3 
@@ -367,7 +367,7 @@ int icarus::PhysCrateData::GetData(){
     // TRACEN("PhysCrateData",TLVL_DEBUG,"GetData : Data event number is %#8X",*ev_ptr);
     
     auto const* board_block = reinterpret_cast< A2795DataBlock const * >( data_ptr->data );
-    TLOG(TLVL_DEBUG) << "PhysCrateData: event_number: " << board_block->header.event_number 
+    TLOG(TLVL_DEBUG+12) << "PhysCrateData: event_number: " << board_block->header.event_number 
               << ", time_stamp: " << board_block->header.time_stamp;
 
     // if ( iBoard == nBoards_ ) {
@@ -377,19 +377,19 @@ int icarus::PhysCrateData::GetData(){
     // }
     fCircularBuffer.Insert( this_data_size_bytes/sizeof(uint16_t), reinterpret_cast<uint16_t const*>(data_ptr) );
     data_size_bytes += this_data_size_bytes;
-    TLOG(TLVL_DEBUG) << "PhysCrateData::GetData: Data copied! Size was " << this_data_size_bytes << " bytes, with "
+    TLOG(TLVL_DEBUG+13) << "PhysCrateData::GetData: Data copied! Size was " << this_data_size_bytes << " bytes, with "
                      << data_size_bytes << " bytes now acquired.";
 
   }
   
-  TRACEN("PhysCrateData",TLVL_DEBUG,"GetData completed. Status %d, Data size %lu bytes",0,data_size_bytes);
+  TRACEN("PhysCrateData",TLVL_DEBUG+14,"GetData completed. Status %d, Data size %lu bytes",0,data_size_bytes);
   metricMan->sendMetric(".GetData.DataAcquiredSize",data_size_bytes,"bytes",1,artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
 
   //start loop timer
   _tloop_start = std::chrono::high_resolution_clock::now();
 
   _tloop_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_start-_tloop_end);
-  TRACEN("PhysCrateData",TLVL_TIMER,"GetData : waitData fill time was %lf seconds",_tloop_duration.count());
+  TRACEN("PhysCrateData",TLVL_DEBUG+15,"GetData : waitData fill time was %lf seconds",_tloop_duration.count());
   metricMan->sendMetric(".GetData.FillTime",_tloop_duration.count()*1000.,"ms",1,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
@@ -411,7 +411,7 @@ void icarus::PhysCrateData::FillStatPack( statpack & pack )
   pack.memstat2 = 0;
   pack.size = htonl(28);
 
-  TRACEN("PhysCrateData",TLVL_DEBUG,"statpack initilized...");
+  TRACEN("PhysCrateData",TLVL_DEBUG+16,"statpack initilized...");
 
   //return pack;
 }

@@ -97,6 +97,8 @@ sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   boost::asio::ip::tcp::resolver resolver(io_service);  
 
   const std::string receiver_address = ps.get<std::string>("boardreader_address");
+  // require the private hostname
+  std::string priv ("-daq");
 
   TLOG_INFO(TNAME) << "Host name is " << receiver_address << TLOG_ENDL;
   std::for_each(resolver.resolve({receiver_address, ""}), {}, [](const auto& re) {
