@@ -8,6 +8,7 @@
 #include "sbndaq-artdaq/Generators/Common/WhiteRabbitReadout.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "artdaq/Generators/GeneratorMacros.hh"
+#include "artdaq/DAQdata/Globals.hh"
 #include <fstream>
 #include <iomanip>
 #include <iterator>
