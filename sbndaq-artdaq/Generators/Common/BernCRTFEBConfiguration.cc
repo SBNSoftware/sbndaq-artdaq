@@ -34,12 +34,12 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
 //if bitstream exists in FHiCL file, it is loaded, otherwise human readable format is used
   std::string s = ps_.get<std::string>("SlowControlBitStream"+std::to_string(mac5), "failure");
   if(s.compare("failure")) {
-    TLOG(TLVL_INFO)<< __func__ << " Loading bitstream configuration for FEB" + mac5;
+    TLOG(TLVL_INFO)<< "Loading bitstream configuration for FEB" + mac5;
     if(!read_bitstream(ps_, mac5))
       throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5));
   }
   else {
-    TLOG(TLVL_INFO)<< __func__ << " Loading human-readable configuration for FEB" << (int)mac5;
+    TLOG(TLVL_INFO)<< "Loading human-readable configuration for FEB" << (int)mac5;
     if(!read_human_readable_parameters(ps_, mac5))
       throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL SlowControl configuration for FEB " + std::to_string(mac5));
   }
@@ -49,7 +49,7 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
     ps_.get<std::string>("ProbeBitStream"),
     ProbeBitStream,
     PROBE_BITSTREAM_NBITS)) {
-      TLOG(TLVL_ERROR)<<__func__ << " Failed to load PROBE bit stream";
+      TLOG(TLVL_ERROR)<<"Failed to load PROBE bit stream";
       throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load FHiCL PROBE configuration for FEB " + std::to_string(mac5));
   }
   
@@ -60,13 +60,13 @@ sbndaq::BernCRTFEBConfiguration::BernCRTFEBConfiguration(fhicl::ParameterSet con
 
   //validate size of the arrays in the FHiCL file
   if(hv_on_permissions.size() != fragment_ids.size()) {
-    TLOG(TLVL_ERROR)<< __func__ << " TurnOnHV array size differs from fragment_ids array size";
+    TLOG(TLVL_ERROR)<< "TurnOnHV array size differs from fragment_ids array size";
     throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " TurnOnHV array size differs from fragment_ids array size");
   }
   hv_on_permission = hv_on_permissions[iFEB];
   
   if(PPS_offsets.size() != fragment_ids.size()) {
-    TLOG(TLVL_ERROR)<< __func__ << " PPS_offset_ns array size differs from fragment_ids array size";
+    TLOG(TLVL_ERROR)<< "PPS_offset_ns array size differs from fragment_ids array size";
     throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " PPS_offset_ns array size differs from fragment_ids array size");
   }
   PPS_offset = PPS_offsets[iFEB];
@@ -80,7 +80,7 @@ bool sbndaq::BernCRTFEBConfiguration::read_bitstream(fhicl::ParameterSet const &
         ps_.get<std::string>("SlowControlBitStream"+std::to_string(iFEB)),
         SlowControlBitStream,
         SLOW_CONTROL_BITSTREAM_NBITS)) {
-    TLOG(TLVL_ERROR)<< __func__  << " Failed to load Slow Control bit stream";
+    TLOG(TLVL_ERROR)<< "Failed to load Slow Control bit stream";
     return false;
     throw cet::exception(std::string(TRACE_NAME) + "::" + __func__ + " Failed to load Slow Control bit stream");
   }
@@ -253,7 +253,7 @@ bool sbndaq::BernCRTFEBConfiguration::read_human_readable_parameters(fhicl::Para
   for(auto parameter : numerical_parameters) {
     numerical_parameters[parameter.first].value = psn.get<uint16_t>(parameter.first);
     if(numerical_parameters[parameter.first].value > numerical_parameters[parameter.first].max_value) {
-      TLOG(TLVL_ERROR)<<__func__ << " Failed to load "<<parameter.first<<" for MAC "<<MAC5<<": "<<numerical_parameters[parameter.first].value<<" > "<<numerical_parameters[parameter.first].max_value;
+      TLOG(TLVL_ERROR)<<"Failed to load "<<parameter.first<<" for MAC "<<MAC5<<": "<<numerical_parameters[parameter.first].value<<" > "<<numerical_parameters[parameter.first].max_value;
       return false;
     }
   }
@@ -263,12 +263,12 @@ bool sbndaq::BernCRTFEBConfiguration::read_human_readable_parameters(fhicl::Para
   std::vector< std::vector<uint16_t> > fhicl_channel_array  = psn.get< std::vector< std::vector<uint16_t> > >("channel_configuration");
   
   if(fhicl_channel_array.size() != 32) {
-    TLOG(TLVL_ERROR)<<__func__ << " Invalid size of channel configuration for MAC "<<MAC5<<": "<<fhicl_channel_array.size()<<" ≠ 32";
+    TLOG(TLVL_ERROR)<<"Invalid size of channel configuration for MAC "<<MAC5<<": "<<fhicl_channel_array.size()<<" ≠ 32";
     return false;
   }
   for(int channel = 0; channel < 32; channel++) {
     if(fhicl_channel_array[channel].size() != 10) {
-      TLOG(TLVL_ERROR)<<__func__ << " Invalid size of channel "<<channel<<" configuration for MAC "<<MAC5<<": "<<fhicl_channel_array[channel].size()<<" ≠ 10";
+      TLOG(TLVL_ERROR)<<"Invalid size of channel "<<channel<<" configuration for MAC "<<MAC5<<": "<<fhicl_channel_array[channel].size()<<" ≠ 10";
       return false;
     }
     
@@ -280,13 +280,13 @@ bool sbndaq::BernCRTFEBConfiguration::read_human_readable_parameters(fhicl::Para
       }
       else if(numerical_channel_parameters.count(name)) {
         if(fhicl_channel_array[channel][parameter] > numerical_channel_parameters[name].max_value) {
-          TLOG(TLVL_ERROR)<<__func__ << " MAC "<<MAC5<<", channel "<<channel<<", parameter "<<parameter<<" ("<<name<<") value "<<fhicl_channel_array[channel][parameter]<<" > "<<numerical_channel_parameters[name].max_value;
+          TLOG(TLVL_ERROR)<<"MAC "<<MAC5<<", channel "<<channel<<", parameter "<<parameter<<" ("<<name<<") value "<<fhicl_channel_array[channel][parameter]<<" > "<<numerical_channel_parameters[name].max_value;
           return false;
         }
         numerical_channel_parameters[name].value = fhicl_channel_array[channel][parameter];
       }
       else { //oopsie
-        TLOG(TLVL_ERROR)<<__func__ << " Parameter "<<parameter<<" not found, internal error, blame the coder";
+        TLOG(TLVL_ERROR)<<"Parameter "<<parameter<<" not found, internal error, blame the coder";
         return false;
       }
     }
@@ -342,7 +342,7 @@ int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream
       if(c == ' ') continue; //ignore blank characters
       if(c == '0' || c == '1') { //encode the bit into the bitstream
         if(read_bits >= nBits) {
-          TLOG(TLVL_WARNING)<< __func__ << " too long bitstream!!!";
+          TLOG(TLVL_WARNING)<< "too long bitstream!!!";
           memset(bitstream,0,nBits/8); //reset
           return false;
         }
@@ -355,7 +355,7 @@ int sbndaq::BernCRTFEBConfiguration::ASCIIToBitStream(std::string ASCIIBitStream
   }
 
   if(read_bits < nBits) {
-    TLOG(TLVL_WARNING)<< __func__  << " too short bitstream!!!";
+    TLOG(TLVL_WARNING)<< "too short bitstream!!!";
     memset(bitstream,0, nBits/8); //reset
     return false;
   }
@@ -369,7 +369,7 @@ int sbndaq::BernCRTFEBConfiguration::GetBit(unsigned int bit_number, uint8_t * b
    * nBits is the total length of the bitstream
    */
   if(bit_number >= nBits) {
-    TLOG(TLVL_ERROR)<< __func__ << " requested bit " << std::to_string(bit_number) << "exceeds bitstream length!";
+    TLOG(TLVL_ERROR)<< "requested bit " << std::to_string(bit_number) << "exceeds bitstream length!";
     return -1;
   }
   const int byte = (nBits - bit_number - 1) / 8; //reverse byte order
@@ -401,7 +401,7 @@ void sbndaq::BernCRTFEBConfiguration::SetBit(unsigned int bit_number, bool value
    * nBits is the total length of the bitstream
    */
   if(bit_number >= nBits) {
-    TLOG(TLVL_ERROR)<< __func__ << " requested bit " << std::to_string(bit_number) << "exceeds bitstream length!";
+    TLOG(TLVL_ERROR)<< "requested bit " << std::to_string(bit_number) << "exceeds bitstream length!";
     return;
   }
   const int byte = (nBits - bit_number - 1) / 8; //reverse byte order
@@ -433,7 +433,7 @@ std::string sbndaq::BernCRTFEBConfiguration::BitsToASCII(unsigned int first_bit,
    * If last bit is not specified, only one bit is printed
    */
   if(last_bit >= SLOW_CONTROL_BITSTREAM_NBITS) {
-    TLOG(TLVL_ERROR)<< __func__ << " Last bit " << std::to_string(last_bit) << "exceeds Slow Control bitstream length!";
+    TLOG(TLVL_ERROR)<< "Last bit " << std::to_string(last_bit) << "exceeds Slow Control bitstream length!";
     return "-";
   }
   std::string s = "";

@@ -51,7 +51,7 @@ namespace sbndaq{
   template <class T>
   size_t sbndaq::CircularBuffer<T>::Insert(size_t n_obj, std::unique_ptr<T[]> const& dataptr){
     
-    TRACE(TDEBUG,"Inserting %lu objects. Currently %lu/%lu in buffer.",
+    TRACE(TDEBUG+1,"Inserting %lu objects. Currently %lu/%lu in buffer.",
 	  n_obj,buffer.size(),buffer.capacity());
     
     //don't fill while we wait for available capacity...
@@ -59,11 +59,11 @@ namespace sbndaq{
     
     //obtain the lock
     std::unique_lock<std::mutex> lock(*(mutexptr));
-    TRACE(TDEBUG,"Obtained circular buffer lock for insert.");
+    TRACE(TDEBUG+2,"Obtained circular buffer lock for insert.");
     
     buffer.insert(buffer.end(),&(dataptr[0]),&(dataptr[n_obj]));
     
-    TRACE(TDEBUG,"Inserted %lu objects. Currently have %lu/%lu in buffer.",
+    TRACE(TDEBUG+3,"Inserted %lu objects. Currently have %lu/%lu in buffer.",
 	  n_obj,buffer.size(),buffer.capacity());  
     
     return buffer.size();
@@ -72,7 +72,7 @@ namespace sbndaq{
   template <class T>
   size_t sbndaq::CircularBuffer<T>::Insert(size_t n_obj, T const* dataptr){
 
-    TRACE(TDEBUG,"Inserting %lu objects (pointer version). Currently %lu/%lu in buffer.",
+    TRACE(TDEBUG+1,"Inserting %lu objects (pointer version). Currently %lu/%lu in buffer.",
           n_obj,buffer.size(),buffer.capacity());
 
     //don't fill while we wait for available capacity...
@@ -80,11 +80,11 @@ namespace sbndaq{
 
     //obtain the lock
     std::unique_lock<std::mutex> lock(*(mutexptr));
-    TRACE(TDEBUG,"Obtained circular buffer lock for insert.");
+    TRACE(TDEBUG+2,"Obtained circular buffer lock for insert.");
 
     buffer.insert(buffer.end(),dataptr,dataptr+n_obj);
 
-    TRACE(TDEBUG,"Inserted %lu objects. Currently have %lu/%lu in buffer.",
+    TRACE(TDEBUG+3,"Inserted %lu objects. Currently have %lu/%lu in buffer.",
           n_obj,buffer.size(),buffer.capacity());
 
     return buffer.size();
@@ -93,14 +93,14 @@ namespace sbndaq{
   template <class T>
   size_t sbndaq::CircularBuffer<T>::Erase(size_t n_obj){
     
-    TRACE(TDEBUG,"Erasing %lu objects. Currently %lu/%lu in buffer.",
+    TRACE(TDEBUG+4,"Erasing %lu objects. Currently %lu/%lu in buffer.",
 	  n_obj,buffer.size(),buffer.capacity());
     
     std::unique_lock<std::mutex> lock(*(mutexptr));
-    TRACE(TDEBUG,"Obtained circular buffer lock for erase.");
+    TRACE(TDEBUG+5,"Obtained circular buffer lock for erase.");
     
     buffer.erase_begin(n_obj);
-    TRACE(TDEBUG,"Erased %lu objects. Currently have %lu/%lu in buffer.",
+    TRACE(TDEBUG+6,"Erased %lu objects. Currently have %lu/%lu in buffer.",
 	  n_obj,buffer.size(),buffer.capacity());  
     
     return buffer.size();	

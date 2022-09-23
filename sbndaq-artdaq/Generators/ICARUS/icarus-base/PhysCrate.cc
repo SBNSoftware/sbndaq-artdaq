@@ -237,8 +237,8 @@ PhysCrate::getData()
 //printf ("nSamp %d \n",boards[i]->nSamples);
 
     int nSamples=boards[i]->getData(1,tile->data  );
-    TRACEN("PhysCrate.cc",TLVL_DEBUG, "nSamp %d ",nSamples);
-    TLOG(20) << "PhysCrate::getData: tile->data: " << &(tile->data);
+//    TRACEN("PhysCrate.cc",TLVL_DEBUG+1, "nSamp %d ",nSamples);
+    TLOG(TLVL_DEBUG+1) << "PhysCrate::getData: tile->data: " << &(tile->data);
 
 //    boards[i]->getData(2,tile->data + boards[i]->nSamples);
 
@@ -247,7 +247,7 @@ PhysCrate::getData()
     //tile->Header.packSize = htonl(size);
     //tile->Header.packSize = htonl(2*nSamples+sizeof(DataTile));
     tile->Header.packSize = htonl(nSamples+sizeof(DataTile));
-    TLOG(20) << "PhysCrate::getData: nSamples: " << nSamples << ", sizeof(DataTile): " 
+    TLOG(TLVL_DEBUG+1) << "PhysCrate::getData: nSamples: " << nSamples << ", sizeof(DataTile): "
              << sizeof(DataTile);
     //tile->Header.packSize = htonl(2*boards[i]->nSamples+sizeof(DataTile));
     //tile->Header.chID = htonl(mip+i*256); 
