@@ -83,6 +83,11 @@ public:
 	fhicl::Comment("put all crt fluff into tree true/false"),
 	false
 	};
+    fhicl::Atom<bool> include_dummy {
+      fhicl::Name("include_dummy"),
+	fhicl::Comment("look for dummy fragments true/false"),
+	false
+	};
     fhicl::Atom<bool> verbose {
       fhicl::Name("verbose"),
 	fhicl::Comment("lots of text output if set to true"),
@@ -103,6 +108,7 @@ private:
   void analyze_caen_fragment(artdaq::Fragment & frag);
   void analyze_wr_fragment_dio(artdaq::Fragment & frag);
   void analyze_bern_fragment(artdaq::Fragment & frag);
+  void analyze_dummy_fragment(artdaq::Fragment & frag);
 
   //--default values
   uint32_t nChannels;//    = 16;
@@ -149,6 +155,7 @@ private:
   std::vector<float> fWR_ch3;
   std::vector<float> fWR_ch4;
   bool firstEvt = true;
+  std::vector<uint64_t> fcaen_timestamp;
   int TTT;  // will be set to value in CAEN fragement header
   int TTT_ns;
 
@@ -203,7 +210,7 @@ private:
   std::vector<uint>  timestamp               ; //absolute timestamp
   std::vector<uint>  last_accepted_timestamp ; //timestamp of previous accepted hit
   std::vector<int>  lost_hits               ; //number of lost hits from the previous one
-
+  std::vector<uint64_t> bern_timestamp;
 
   //metadata
   std::vector<int>  mac5; //last 8 bits of FEB mac5 address
@@ -219,6 +226,9 @@ private:
   //information from fragment header
   std::vector<int>  sequence_id;
 
+  //information from dummy fragments
+  std::vector<uint64_t> dummy_timestamp;
+
 
   bool finclude_caen;
   bool fcaen_keepwaveforms;
@@ -227,6 +237,7 @@ private:
   int fWindow;
   bool finclude_berncrt;
   bool fcrt_keepall;
+  bool finclude_dummy;
   bool fverbose;
 
 }; //--class EventAna
@@ -244,10 +255,10 @@ sbndaq::EventAna::EventAna(EventAna::Parameters const& pset): art::EDAnalyzer(ps
     std::cout << "Bad value for fcl parameter window_wr=" << fWindow << "  setting to default value 1000000000 nsec = 1 sec"
 	    << std::endl;
   }
-  fverbose = pset().verbose();
   finclude_berncrt = pset().include_berncrt();
   fcrt_keepall = pset().crt_keepall();
-
+  finclude_dummy = pset().include_dummy();
+  fverbose = pset().verbose();
 }
 
 void sbndaq::EventAna::beginJob()
@@ -264,6 +275,7 @@ void sbndaq::EventAna::beginJob()
   events->Branch("fRun",&fRun,"fRun/I");
   events->Branch("fEvent",&fEvent,"fEvent/I");
   if (finclude_caen) {
+    events->Branch("caen_timestamp", &fcaen_timestamp);
     events->Branch("TTT_ns",&TTT_ns,"TTT_ns/I");
     if (fcaen_keepwaveforms) {
       events->Branch("fTicksVec",&fTicksVec);
@@ -348,7 +360,12 @@ void sbndaq::EventAna::beginJob()
       events->Branch("feb_hits_in_fragment",      &feb_hits_in_fragment);
       events->Branch("sequence_id",               &sequence_id);
     }
+    events->Branch("bern_timestamp", &bern_timestamp);
   }
+  if(finclude_dummy) {
+    events->Branch("dummy_timestamp", &dummy_timestamp);
+  }
+
 
 }
 
@@ -383,6 +400,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   first_wr_ch2=0;
   first_wr_ch3=0;
   first_wr_ch4=0;
+  fcaen_timestamp.clear(); 
   /************************************************************************************************/
 
   mac5.clear(); flags.clear();   lostcpu.clear();   lostfpga.clear();   ts0.clear();   ts1.clear();
@@ -396,11 +414,14 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   lost_hits.clear()               ;   run_start_time.clear();   this_poll_start.clear();   this_poll_end.clear();
   last_poll_start.clear();   last_poll_end.clear();    system_clock_deviation.clear();    feb_hits_in_poll.clear();
   feb_hits_in_fragment.clear();
+  bern_timestamp.clear();
+  /************************************************************************************************/
+
+  dummy_timestamp.clear();
   /************************************************************************************************/
 
   //  Note that this code expects exactly 1 CAEN fragment per event
-  TTT_ns=0;  // will be set to value in CAEN fragement header
-  
+  TTT_ns=0;  // will be set to value in CAEN fragement header  
   
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
   
@@ -413,6 +434,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   /************************************************************************************************/
 
     for (auto handle : fragmentHandles) {
+
       if (!handle.isValid() || handle->size() == 0) continue;
 
       if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
@@ -438,11 +460,17 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
             for (size_t ii = 0; ii < contf.block_count(); ++ii)
               analyze_bern_fragment(*contf[ii].get());
           }
+
+          else if (contf.fragment_type() == sbndaq::detail::FragmentType::DummyGenerator && finclude_dummy) {
+            if (fverbose)         std::cout << "    Found " << contf.block_count() << " Dummy Fragments in container " << std::endl;
+            for (size_t ii = 0; ii < contf.block_count(); ++ii)
+              analyze_dummy_fragment(*contf[ii].get());
+          }
         }
       }
       else {
 
-        unsigned n_caen_frags(0), n_wr_frags(0), n_berncrt_frags(0);
+        unsigned n_caen_frags(0), n_wr_frags(0), n_berncrt_frags(0), n_dummy_frags(0);
 
         for (auto frag : *handle) {
 
@@ -452,6 +480,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
             ++n_wr_frags;
           else if (frag.type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt)
             ++n_berncrt_frags;
+          else if (frag.type() == sbndaq::detail::FragmentType::DummyGenerator && finclude_dummy)
+            ++n_dummy_frags;
         }
 
         for (auto frag : *handle) {
@@ -464,12 +494,15 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
             analyze_wr_fragment_dio(frag);
           else if (frag.type() == sbndaq::detail::FragmentType::BERNCRTV2 && finclude_berncrt)
             analyze_bern_fragment(frag);
+          else if (frag.type() == sbndaq::detail::FragmentType::DummyGenerator && finclude_dummy)
+            analyze_dummy_fragment(frag);
         }
 
         if (fverbose > 0) {
           std::cout << "\n\tFound " << n_caen_frags << " normal CAEN fragments" << std::endl;
           std::cout << "\tFound " << n_wr_frags << " normal WR fragments" << std::endl;
-          std::cout << "\tFound " << n_berncrt_frags << " normal BERNCRT fragments\n" << std::endl;
+          std::cout << "\tFound " << n_berncrt_frags << " normal BERNCRT fragments" << std::endl;
+          std::cout << "\tFound " << n_dummy_frags << " normal Dummy fragments\n" << std::endl;
         }
       }
     } // loop over frag handles
@@ -582,10 +615,10 @@ void sbndaq::EventAna::analyze_wr_fragment_dio(artdaq::Fragment & frag)  {
 void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   
   
-  if (fverbose) std::cout <<  "     timestamp is  " << frag.timestamp() << std::endl;
+  if (fverbose) std::cout <<  "CAEN Timestamp: " << frag.timestamp() << std::endl;
   if (fverbose) std::cout <<  "     seq ID is " << frag.sequenceID() << std::endl;
   
-  
+  fcaen_timestamp.push_back(frag.timestamp());
   CAENV1730Fragment bb(frag);
   auto const* md = bb.Metadata();
   CAENV1730Event const* event_ptr = bb.Event();
@@ -867,6 +900,10 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
 
   BernCRTFragmentV2 bern_fragment(frag);
   const BernCRTFragmentMetadataV2* md = bern_fragment.metadata();
+
+  bern_timestamp.push_back(frag.timestamp());
+  if(fverbose) std::cout << "Bern Timestamp: " << frag.timestamp() << std::endl;
+
   for(unsigned int iHit = 0; iHit < md->hits_in_fragment(); iHit++) {
     BernCRTHitV2 const* bevt = bern_fragment.eventdata(iHit);
     
@@ -958,6 +995,15 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
   }// end loop over fragments
   
 }//analyze_bern_fragment
+
+void sbndaq::EventAna::analyze_dummy_fragment(artdaq::Fragment & frag)  {
+
+  dummy_timestamp.push_back(frag.timestamp());
+
+  if(fverbose)
+    std::cout << "Dummy Timestamp: " << frag.timestamp() << std::endl;
+
+}//analyze_dummy_fragment
 
 
 
