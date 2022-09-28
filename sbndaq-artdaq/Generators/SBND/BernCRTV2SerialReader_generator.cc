@@ -5,6 +5,9 @@
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include <boost/archive/binary_iarchive.hpp>
 
+#include <chrono>
+#include <thread>
+
 using sbndaq::BernCRTV2SerialReader;
 
 BernCRTV2SerialReader::BernCRTV2SerialReader(fhicl::ParameterSet const& ps)
@@ -12,6 +15,7 @@ BernCRTV2SerialReader::BernCRTV2SerialReader(fhicl::ParameterSet const& ps)
   binary_file_path_(ps.get<std::string>("BinaryFilePath"))
   {
     binary_file_.open(binary_file_path_);
+    fragment_counter = 0;
   }
 
 BernCRTV2SerialReader::~BernCRTV2SerialReader() {
@@ -53,19 +57,32 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	return false;
       }
 
+      ++fragment_counter;
+
+      auto timenow = std::chrono::system_clock::now().time_since_epoch().count();
+      auto fractimenow = timenow % 1000000000;
+
       fragments.emplace_back(artdaq::Fragment::FragmentBytes(
 			     sizeof(sbndaq::BernCRTHitV2) * serial.n_hits,
-			     serial.sequence_id,
+			     fragment_counter,
 			     serial.fragment_id,
 			     serial.fragment_type,
 			     serial.metadata,
-			     serial.timestamp));
+			     serial.sequence_id * 1e9 + fractimenow));
 
       memcpy(fragments.back()->dataBeginBytes(),
 	     serial.bern_crt_hits.data(),
 	     sizeof(sbndaq::BernCRTHitV2) * serial.n_hits);
 
       TLOG(TLVL_NOTICE) << '\n' << *fragments.back();
+      TLOG(TLVL_NOTICE) << "\nSerial SeqID:  " << serial.sequence_id 
+                        << "\nSerial FragID: " << serial.fragment_id
+                        << "\nSerial TS:     " << artdaq::Fragment::print_timestamp(serial.timestamp)
+                        << "\nTimenow:       " << artdaq::Fragment::print_timestamp(timenow)
+                        << "\nFractimenow:   " << artdaq::Fragment::print_timestamp(fractimenow)
+                        << std::endl;
+
+      std::this_thread::sleep_for(std::chrono::microseconds(375));
 
       return true;
     }

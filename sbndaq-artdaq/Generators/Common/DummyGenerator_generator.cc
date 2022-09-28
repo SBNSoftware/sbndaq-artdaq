@@ -42,12 +42,18 @@ bool sbndaq::DummyGenerator::getNext_(artdaq::FragmentPtrs& frags) {
   while(std::chrono::system_clock::now() > timestamp_)  {
     metadata_.fragment_fill_time_ = std::chrono::system_clock::now().time_since_epoch().count();
 
-    TLOG(TLVL_DEBUG)<<__func__
+    auto timenow = std::chrono::system_clock::now().time_since_epoch().count();
+    auto fractimenow = timenow % 1000000000;
+    auto ts = ev_counter() * 1e9 + fractimenow;
+
+    TLOG(TLVL_NOTICE)<<__func__
       <<"() Sending fragment "<<ev_counter()<<" ("
       <<sbndaq::BernCRTZMQFragment::print_timestamp(timestamp_.time_since_epoch().count())
       <<") after "<<
       (metadata_.fragment_fill_time_ - timestamp_.time_since_epoch().count())/1e6
-      << " ms delay";
+      << " ms delay"
+      << "\nInvented timestamp: " << artdaq::Fragment::print_timestamp(ts);
+		     
 
     std::unique_ptr<artdaq::Fragment> fragptr(
         artdaq::Fragment::FragmentBytes(
@@ -56,7 +62,7 @@ bool sbndaq::DummyGenerator::getNext_(artdaq::FragmentPtrs& frags) {
           fragment_id_,
           sbndaq::detail::FragmentType::DummyGenerator,
           metadata_,
-          timestamp_.time_since_epoch().count()
+	  ts
           )
         );
 
