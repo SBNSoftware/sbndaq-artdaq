@@ -14,7 +14,7 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateStatFragment.hh"
 
-#include "sbndaq-artdaq/Generators/ICARUS/icarus-base/common.h"
+#include "artdaq/DAQdata/Globals.hh"
 
 #include "artdaq-core/Data/Fragment.hh"
 

@@ -1,76 +1,41 @@
-art_make(NO_PLUGINS # WAnt different link lists for modues
+cet_make(
+ NO_PLUGINS
  BASENAME_ONLY
- LIBRARY_NAME sbndaq-artdaq_ArtModules_ICARUS
- LIB_LIBRARIES sbndaq-artdaq-core_Overlays
- 	       sbndaq-artdaq-core_Overlays_Common
- 	       sbndaq-artdaq-core_Overlays_ICARUS #icarus-artdaq_Products
+ LIBRARY_NAME
+    sbndaq-artdaq_ArtModules_ICARUS
+ LIB_LIBRARIES
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS
  EXCLUDE
- Icarus_fragmentNameHelper.cc
+    Icarus_fragmentNameHelper.cc
+    IcarusFragmentWatcher_module.cc
 )
+#      artdaq_DAQdata
+#      artdaq_Generators
+#      artdaq-utilities_Plugins
+#      artdaq_core::artdaq-core_Utilities
+list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS)
+list(APPEND BUILD_PLUGIN_CORE_LIB_LIST artdaq_DAQdata)
+list(APPEND BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS)
 
-simple_plugin(IcarusArtdaqBuildInfo "module"
-  artdaq_DAQdata
-  artdaq_BuildInfo
-  artdaq-core_BuildInfo
-  sbndaq-artdaq_BuildInfo
-  sbndaq-artdaq-core_BuildInfo
-  ${MF_MESSAGELOGGER}
-  ${FHICLCPP}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+build_plugin(IcarusArtdaqBuildInfo "module" LIBRARIES REG ${BUILD_PLUGIN_BUILDINFO_LIB_LIST})
+build_plugin(PhysCrateDump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+build_plugin(ICARUSTriggerUDPDump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+build_plugin(ICARUSGateFilter  "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+build_plugin(PhysCrateWriteICARUSDataFile "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+build_plugin(PhysCrateViewer "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+build_plugin(PhysCrateSimpleAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+build_plugin(ICARUSTriggerUDPSimpleAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+basic_plugin(Icarus "fragmentNameHelper" LIBRARIES REG ${BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST})
+
+simple_plugin(IcarusFragmentWatcher "module"
+   artdaq_DAQdata
+   artdaq-utilities_Plugins
+   art_Framework_Services_Registry
+   art_Utilities
+   MF_MessageLogger
+   fhiclcpp
+   cetlib
 )
-
-simple_plugin(PhysCrateDump "module"
-         			${ARTDAQ-CORE_UTILITIES}
-              sbndaq-artdaq-core_Overlays
-              sbndaq-artdaq-core_Overlays_ICARUS)
-
-simple_plugin(ICARUSTriggerUDPDump "module" 
-				   ${ARTDAQ-CORE_UTILITIES}
-              sbndaq-artdaq-core_Overlays
-	      sbndaq-artdaq-core_Overlays_ICARUS)
-
-simple_plugin(PhysCrateWriteICARUSDataFile "module"
-         			${ARTDAQ-CORE_UTILITIES}
-              sbndaq-artdaq-core_Overlays
-              sbndaq-artdaq-core_Overlays_ICARUS)
-
-simple_plugin(PhysCrateViewer "module"
-              sbndaq-artdaq-core_Overlays
-              sbndaq-artdaq-core_Overlays_ICARUS
-	      art_root_io_tfile_support ${ROOT_CORE}
-	      art_Framework_Services_Registry
-	      art_root_io_TFileService_service
-	      ${ARTDAQ-CORE_UTILITIES}
-	      ${ROOT_BASIC_LIB_LIST} )
-
-simple_plugin(PhysCrateSimpleAna "module"
-	sbndaq-artdaq-core_Overlays
-              sbndaq-artdaq-core_Overlays_ICARUS
-	      art_root_io_tfile_support ${ROOT_CORE}
-	      art_Framework_Services_Registry
-	      art_root_io_TFileService_service
-	      ${ARTDAQ-CORE_UTILITIES}
-	      ${ROOT_BASIC_LIB_LIST} )
-
-simple_plugin(ICARUSTriggerUDPSimpleAna "module"
-	      sbndaq-artdaq-core_Overlays
-	      sbndaq-artdaq-core_Overlays_ICARUS
-	      art_root_io_tfile_support ${ROOT_CORE}
-	      art_Framework_Services_Registry
-	      art_root_io_TFileService_service
-	      ${ARTDAQ-CORE_UTILITIES}
-	      ${ROOT_BASIC_LIB_LIST} )	
-
-simple_plugin(Icarus "fragmentNameHelper"
-  artdaq-core_Data_Artdaq_fragmentNameHelper
-  artdaq-core_Data
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
-  sbndaq-artdaq-core_Overlays_ICARUS
-  ${ARTDAQ-CORE_UTILITIES}
-  ${MF_MESSAGELOGGER}
-  ${FHICLCPP}
-  ${CETLIB_EXCEPT}
-  )
 
