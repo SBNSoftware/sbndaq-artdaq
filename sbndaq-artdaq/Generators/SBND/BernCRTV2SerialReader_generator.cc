@@ -11,8 +11,9 @@
 using sbndaq::BernCRTV2SerialReader;
 
 BernCRTV2SerialReader::BernCRTV2SerialReader(fhicl::ParameterSet const& ps)
-  : CommandableFragmentGenerator{ps},
-  binary_file_path_(ps.get<std::string>("BinaryFilePath"))
+  : CommandableFragmentGenerator{ps}
+  , binary_file_path_(ps.get<std::string>("binary_file_path"))
+  , post_event_delay_ms(ps.get<unsigned>("post_event_delay_ms"))
   {
     binary_file_.open(binary_file_path_);
     fragment_counter = 0;
@@ -61,9 +62,9 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
       if(serial.sequence_id == event_counter+1)
 	{
 	  TLOG(TLVL_NOTICE) << "\nSerial from new event, sequence ID: " << serial.sequence_id 
-			    << "\nIncrementing event counter and delaying 9 second"
+			    << "\nIncrementing event counter and delaying " << post_event_delay_ms << " millisecond(s)"
 			    << std::endl;
-	  std::this_thread::sleep_for(std::chrono::seconds(9));
+	  std::this_thread::sleep_for(std::chrono::milliseconds(post_event_delay_ms));
 	  ++event_counter;
 	}
 
