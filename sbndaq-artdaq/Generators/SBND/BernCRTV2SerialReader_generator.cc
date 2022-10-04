@@ -62,7 +62,7 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
       if(serial.sequence_id == event_counter+1)
 	{
 	  TLOG(TLVL_NOTICE) << "\nSerial from new event, sequence ID: " << serial.sequence_id 
-			    << "\nIncrementing event counter and delaying " << post_event_delay_ms << " millisecond(s)"
+			    << "\nIncrementing event counter and delaying " << post_event_delay_ms << "ms"
 			    << std::endl;
 	  std::this_thread::sleep_for(std::chrono::milliseconds(post_event_delay_ms));
 	  ++event_counter;
@@ -79,7 +79,7 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 			     serial.fragment_id,
 			     serial.fragment_type,
 			     serial.metadata,
-			     serial.sequence_id * 1e9 /*+ fractimenow*/));
+			     serial.sequence_id * 1e9 + fractimenow));
 
       memcpy(fragments.back()->dataBeginBytes(),
 	     serial.bern_crt_hits.data(),
@@ -97,7 +97,8 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
     }
   else if(frag_type == sbndaq::detail::FragmentType::INVALID)
     {
-      TLOG(TLVL_WARNING) << "\nFragment type INVALID, exiting!" << "\nShould only be seen at end of file\n";
+      TLOG(TLVL_WARNING) << "\nFragment type INVALID, exiting after " << 4 * post_event_delay_ms << "ms delay!" << "\nShould only be seen at end of file\n";
+      std::this_thread::sleep_for(std::chrono::milliseconds(4 * post_event_delay_ms));
       return false;
     }
   else
