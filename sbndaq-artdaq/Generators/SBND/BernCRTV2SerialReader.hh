@@ -31,6 +31,7 @@ class BernCRTV2SerialReader : public artdaq::CommandableFragmentGenerator {
   std::ifstream binary_file_;
 
   unsigned fragment_counter;
+  unsigned event_counter;
 };
 }  // namespace sbndaq
 

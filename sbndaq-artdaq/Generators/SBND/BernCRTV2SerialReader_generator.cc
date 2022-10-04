@@ -16,6 +16,7 @@ BernCRTV2SerialReader::BernCRTV2SerialReader(fhicl::ParameterSet const& ps)
   {
     binary_file_.open(binary_file_path_);
     fragment_counter = 0;
+    event_counter = 1;
   }
 
 BernCRTV2SerialReader::~BernCRTV2SerialReader() {
@@ -57,6 +58,15 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	return false;
       }
 
+      if(serial.sequence_id == event_counter+1)
+	{
+	  TLOG(TLVL_NOTICE) << "\nSerial from new event, sequence ID: " << serial.sequence_id 
+			    << "\nIncrementing event counter and delaying 9 second"
+			    << std::endl;
+	  std::this_thread::sleep_for(std::chrono::seconds(9));
+	  ++event_counter;
+	}
+
       ++fragment_counter;
 
       auto timenow = std::chrono::system_clock::now().time_since_epoch().count();
@@ -68,7 +78,7 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 			     serial.fragment_id,
 			     serial.fragment_type,
 			     serial.metadata,
-			     serial.sequence_id * 1e9 + fractimenow));
+			     serial.sequence_id * 1e9 /*+ fractimenow*/));
 
       memcpy(fragments.back()->dataBeginBytes(),
 	     serial.bern_crt_hits.data(),
@@ -81,8 +91,6 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
                         << "\nTimenow:       " << artdaq::Fragment::print_timestamp(timenow)
                         << "\nFractimenow:   " << artdaq::Fragment::print_timestamp(fractimenow)
                         << std::endl;
-
-      std::this_thread::sleep_for(std::chrono::microseconds(375));
 
       return true;
     }

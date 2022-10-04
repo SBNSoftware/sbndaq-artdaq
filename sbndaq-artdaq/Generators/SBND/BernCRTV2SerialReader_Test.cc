@@ -6,7 +6,7 @@
 namespace bpo = boost::program_options;
 
 using sbndaq::BernCRTV2SerialReader;
-int main(int argc, char* argv[]) try {
+int main(int argc, char* argv[]) /*try*/ {
   std::ostringstream descstr;
   descstr << argv[0] << " <-c <config-file>> <other-options>";
 
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) try {
   return 0;
   
 }
-catch (const std::exception& ex)
+/*catch (const std::exception& ex)
 {
     std::cout << '\n'
 	      << "Exited with std::exception: " << ex.what()
@@ -98,3 +98,4 @@ catch (...)
    std::cerr << "Process exited with error: " << boost::current_exception_diagnostic_information();
    return 128;
 }
+*/

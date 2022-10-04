@@ -44,7 +44,7 @@ bool sbndaq::DummyGenerator::getNext_(artdaq::FragmentPtrs& frags) {
 
     auto timenow = std::chrono::system_clock::now().time_since_epoch().count();
     auto fractimenow = timenow % 1000000000;
-    auto ts = ev_counter() * 1e9 + fractimenow;
+    auto ts = ev_counter() * 1e9 /*+ fractimenow*/;
 
     TLOG(TLVL_NOTICE)<<__func__
       <<"() Sending fragment "<<ev_counter()<<" ("
