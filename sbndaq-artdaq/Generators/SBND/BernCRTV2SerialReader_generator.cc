@@ -59,13 +59,15 @@ bool BernCRTV2SerialReader::getNext_(artdaq::FragmentPtrs& fragments) {
 	return false;
       }
 
-      if(serial.sequence_id == event_counter+1)
+      if(serial.sequence_id > event_counter)
 	{
+	  const unsigned diff = serial.sequence_id - event_counter;
+
 	  TLOG(TLVL_NOTICE) << "\nSerial from new event, sequence ID: " << serial.sequence_id 
-			    << "\nIncrementing event counter and delaying " << post_event_delay_ms << "ms"
+			    << "\nIncrementing event counter and delaying " << diff * post_event_delay_ms << "ms"
 			    << std::endl;
-	  std::this_thread::sleep_for(std::chrono::milliseconds(post_event_delay_ms));
-	  ++event_counter;
+	  std::this_thread::sleep_for(std::chrono::milliseconds(diff * post_event_delay_ms));
+	  event_counter = serial.sequence_id;
 	}
 
       ++fragment_counter;
