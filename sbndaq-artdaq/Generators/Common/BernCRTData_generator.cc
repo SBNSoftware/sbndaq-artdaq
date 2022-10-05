@@ -12,6 +12,7 @@
 
 #include "febdrv.hh"
 
+#include "artdaq/DAQdata/Globals.hh"
 #define id "BernCRT"
 #define TRACE_NAME "BernCRTData"
 
