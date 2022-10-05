@@ -444,7 +444,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 
           if (contf.fragment_type() == sbndaq::detail::FragmentType::CAENV1730 && finclude_caen) {
             if (fverbose)         std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
-            fWvfmsVec.resize(16*contf.block_count());
+            fWvfmsVec.resize(fWvfmsVec.size() + 16*contf.block_count());
             for (size_t ii = 0; ii < contf.block_count(); ++ii)
               analyze_caen_fragment(*contf[ii].get());
           }
@@ -487,7 +487,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
         for (auto frag : *handle) {
 
           if (frag.type() == sbndaq::detail::FragmentType::CAENV1730 && finclude_caen) {
-            fWvfmsVec.resize(16*n_caen_frags);
+            fWvfmsVec.resize(fWvfmsVec.size() + 16*n_caen_frags);
             analyze_caen_fragment(frag);
           }
           else if (frag.type() == sbndaq::detail::FragmentType::WhiteRabbit && finclude_wr)
