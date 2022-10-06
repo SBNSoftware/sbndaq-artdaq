@@ -1,4 +1,4 @@
-#include "artdaq-core/Data/FragmentNameHelper.hh"
+#include "artdaq-core/Plugins/FragmentNameHelper.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 
 #include "TRACE/tracemf.h"
@@ -9,7 +9,7 @@ namespace sbnd {
  * \brief SBNDFragmentNameHelper extends ArtdaqFragmentNamingService.
  * This implementation uses SBND's SystemTypeMap and directly assigns names based on it
  */
-class SBNDFragmentNameHelper : public artdaq::ArtdaqFragmentNameHelper {
+class SBNDFragmentNameHelper : public artdaq::FragmentNameHelper {
  public:
 	/**
 	 * \brief DefaultArtdaqFragmentNamingService Destructor
@@ -30,7 +30,7 @@ class SBNDFragmentNameHelper : public artdaq::ArtdaqFragmentNameHelper {
 
 SBNDFragmentNameHelper::SBNDFragmentNameHelper(std::string unidentified_instance_name,
 																							 std::vector<std::pair<artdaq::Fragment::type_t, std::string>> extraTypes)
-		: ArtdaqFragmentNameHelper(unidentified_instance_name, extraTypes) {
+		: FragmentNameHelper(unidentified_instance_name, extraTypes) {
 	TLOG(TLVL_DEBUG) << "SBNDFragmentNameHelper CONSTRUCTOR START";
 	SetBasicTypes(sbndaq::makeFragmentTypeMap());
 	TLOG(TLVL_DEBUG) << "SBNDFragmentNameHelper CONSTRUCTOR END";

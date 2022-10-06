@@ -29,7 +29,6 @@ set(BUILD_PLUGIN_CORE_LIB_LIST
 set(BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST
   artdaq_core::artdaq-core_Utilities
   artdaq_core::artdaq-core_Data
-  artdaq_core::artdaq-core_Data_Artdaq_fragmentNameHelper
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
   MF_MessageLogger

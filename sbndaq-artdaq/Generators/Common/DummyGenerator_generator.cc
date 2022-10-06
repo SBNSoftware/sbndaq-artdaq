@@ -1,5 +1,6 @@
 #include "DummyGenerator.hh"
 
+#include "artdaq/DAQdata/Globals.hh"
 #include "canvas/Utilities/Exception.h"
 
 #include "artdaq-core/Utilities/SimpleLookupPolicy.hh"
