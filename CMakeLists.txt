@@ -15,7 +15,7 @@ set(CET_CETBUILDTOOLS_COMPAT TRUE)
 include(Compatibility)
 set(CET_WARN_DEPRECATED)
 
-project(sbndaq_artdaq VERSION 1.03.00)
+project(sbndaq_artdaq VERSION 1.04.00)
 
 set(CMAKE_MODULE_PATH
   $ENV{ARTDAQ_UTILITIES_DIR}/Modules
@@ -101,18 +101,18 @@ include(ArtMake)
 include(BuildPlugins)
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v3_11_00 )
-find_ups_product( artdaq_utilities v1_06_03)
-find_ups_product( artdaq_core v3_08_00 )
-find_ups_product( canvas v3_12_01 )
-find_ups_product( art v3_05_01 )
-find_ups_product( art_root_io v1_08_00 )
-find_ups_product( fhiclcpp v4_15_00 )
-find_ups_product( messagefacility v2_08_01)
-find_ups_product( cetlib v3_11_01 )
-find_ups_product( cetlib_except  v1_05_00)
-find_ups_root(  v6_22_06b )
-find_ups_boost( v1_73_0 filesystem
+find_ups_product( artdaq v3_12_01 )
+find_ups_product( artdaq_utilities v1_08_01)
+find_ups_product( artdaq_core v3_09_03 )
+find_ups_product( canvas v3_12_04 )
+find_ups_product( art v3_09_03 )
+find_ups_product( art_root_io v1_08_03 )
+find_ups_product( fhiclcpp v4_15_03 )
+find_ups_product( messagefacility v2_08_04)
+find_ups_product( cetlib v3_13_04 )
+find_ups_product( cetlib_except  v1_07_04)
+find_ups_root(  v6_22_08d )
+find_ups_boost( v1_75_0 filesystem
                         program_options
                         system
                         unit_test_framework
@@ -126,18 +126,14 @@ find_ups_product( caenvme v2_50 )
 find_ups_product( caencomm v1_2a )
 find_ups_product( caendigitizer v2_7_2 )
 
-find_ups_product( sbndaq_artdaq_core v1_02_01 )
+find_ups_product( sbndaq_artdaq_core v1_04_00 )
 
 find_ups_product (jsoncpp v1_7_7c)
 
-find_ups_product (TRACE v3_17_01)
+find_ups_product (TRACE v3_17_05)
 
 find_ups_product( zmq v4_3_1 )
 find_ups_product( redis v5_0_5 )
-
-IF(SBND_BUILD)
-  find_ups_product( libxml2 v2_9_9 )
-ENDIF()
 
 
 link_directories("$ENV{ROOTSYS}/lib")
