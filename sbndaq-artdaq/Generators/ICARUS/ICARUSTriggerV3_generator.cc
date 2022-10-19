@@ -172,7 +172,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fLastTimestampBNBOffMinbias = 0;
   fLastTimestampNuMIOffMaj = 0;
   fLastTimestampNuMIOffMinbias = 0;
-  fLastTimestampCalib = 0;
+  fLastTimestampCalibMaj = 0;
+  fLastTimestampCalibMinbias = 0;
   fLastGatesNum = 0;
   fLastGatesNumBNBMaj = 0;
   fLastGatesNumBNBMinbias = 0;
@@ -183,7 +184,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fLastGatesNumBNBOffMinbias = 0;
   fLastGatesNumNuMIOffMaj = 0;
   fLastGatesNumNuMIOffMinbias = 0;
-  fLastGatesNumCalib = 0;
+  fLastGatesNumCalibMaj = 0;
+  fLastGatesNumCalibMinbias = 0;
   fDeltaGates = 0;
   fDeltaGatesBNBMaj = 0;
   fDeltaGatesBNBMinbias = 0;
@@ -194,7 +196,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fDeltaGatesBNBOffMinbias = 0;
   fDeltaGatesNuMIOffMaj = 0;
   fDeltaGatesNuMIOffMinbias = 0;
-  fDeltaGatesCalib = 0;
+  fDeltaGatesCalibMaj = 0;
+  fDeltaGatesCalibMinbias = 0;
   fLastTriggerType = 0;
   fLastTriggerBNBMaj = 0;
   fLastTriggerBNBMinbias = 0;
@@ -204,7 +207,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fLastTriggerBNBOffMinbias = 0;
   fLastTriggerNuMIOffMaj = 0;
   fLastTriggerNuMIOffMinbias = 0;
-  fLastTriggerCalib = 0;
+  fLastTriggerCalibMaj = 0;
+  fLastTriggerCalibMinbias = 0;
   fTotalTriggerBNBMaj = 0;
   fTotalTriggerBNBMinbias = 0;
   fTotalTriggerNuMIMaj = 0;
@@ -214,6 +218,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fTotalTriggerNuMIOffMaj = 0;
   fTotalTriggerNuMIOffMinbias = 0;
   fTotalTriggerCalib = 0;
+  fTotalTriggerCalibMaj = 0;
+  fTotalTriggerCalibMinbias = 0;
   fStartOfRun = 0;
   fInitialStep = 0;
 }
@@ -351,7 +357,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       fLastTimestampBNBOffMinbias = fStartOfRun;
       fLastTimestampNuMIOffMaj = fStartOfRun;
       fLastTimestampNuMIOffMinbias = fStartOfRun;
-      fLastTimestampCalib = fStartOfRun;
+      fLastTimestampCalibMaj = fStartOfRun;
+      fLastTimestampCalibMinbias = fStartOfRun;
     }
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
@@ -464,8 +471,24 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     }
     else if(datastream_info.gate_type == 5)
     {
-      fDeltaGatesCalib = datastream_info.gate_id - fLastGatesNumCalib;
-      ++fTotalTriggerCalib;
+      if(datastream_info.trigger_type == 0)
+      {
+	fDeltaGatesCalibMaj = datastream_info.gate_id - fLastGatesNumCalibMaj;
+	++fTotalTriggerCalibMaj; 
+	++fTotalTriggerCalib;
+	fTotalGatesCalibMaj += fDeltaGatesCalibMaj;
+	if(fDeltaGatesNuMIOffMinbias <= 0)
+          TLOG(TLVL_WARNING) << "Change in total number of beam gates for Calibration Majority <= 0!";
+      }
+      if(datastream_info.trigger_type == 1)
+      {
+	fDeltaGatesCalibMinbias = datastream_info.gate_id - fLastGatesNumCalibMinbias;
+	++fTotalTriggerCalibMinbias;
+	++fTotalGatesCalibMinbias;
+	++fTotalTriggerCalib;
+	if(fDeltaGatesNuMIOffMinbias <= 0)
+	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for Calibration Minbias <= 0!";
+      } 
       metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
       metricMan->sendMetric("CalibrationTotal",uint64_t(fTotalTriggerCalib), "Triggers", 1,artdaq::MetricMode::LastPoint);
     }
@@ -482,26 +505,29 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 							     fLastTimestampNuMIMaj,fLastTimestampNuMIMinbias,
 							     fLastTimestampBNBOffMaj, fLastTimestampBNBOffMinbias,  
 							     fLastTimestampNuMIOffMaj, fLastTimestampNuMIOffMinbias,
-							     fLastTimestampCalib,fLastTimestampOther,
+							     fLastTimestampCalibMaj, fLastTimestampCalibMinbias,
+							     fLastTimestampOther,
 							     fLastTriggerType, fLastSourceType, 
 							     fLastTriggerBNBMaj, fLastTriggerBNBMinbias,
 							     fLastTriggerNuMIMaj, fLastTriggerNuMIMinbias, 
 							     fLastTriggerBNBOffMaj, fLastTriggerBNBOffMinbias,
 							     fLastTriggerNuMIOffMaj, fLastTriggerNuMIOffMinbias, 
-							     fLastTriggerCalib,
+							     fLastTriggerCalibMaj, fLastTriggerCalibMinbias,
 							     fTotalTriggerBNB, fTotalTriggerBNBMaj,
 							     fTotalTriggerBNBMinbias, fTotalTriggerNuMI,
 							     fTotalTriggerNuMIMaj, fTotalTriggerNuMIMinbias,
 							     fTotalTriggerBNBOff, fTotalTriggerBNBOffMaj,
 							     fTotalTriggerBNBOffMinbias, fTotalTriggerNuMIOff,
-							     fTotalTriggerNuMIOffMaj, fTotalTriggerNuMIOffMinbias, 
+							     fTotalTriggerNuMIOffMaj, fTotalTriggerNuMIOffMinbias,
 							     fTotalTriggerCalib,
+							     fTotalTriggerCalibMaj, fTotalTriggerCalibMinbias,
 							     fDeltaGates,
 							     fDeltaGatesBNBMaj, fDeltaGatesBNBMinbias, 
 							     fDeltaGatesNuMIMaj,fDeltaGatesNuMIMinbias,
 							     fDeltaGatesBNBOffMaj, fDeltaGatesBNBOffMinbias,
 							     fDeltaGatesNuMIOffMaj,fDeltaGatesNuMIOffMinbias, 
-							     fDeltaGatesCalib, fDeltaGatesOther);
+							     fDeltaGatesCalibMaj, fDeltaGatesCalibMinbias, 
+							     fDeltaGatesOther);
 
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
@@ -588,9 +614,18 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     }
     else if(datastream_info.gate_type == 5)
     {
-      fLastTimestampCalib = ts;
-      fLastGatesNumCalib = datastream_info.gate_id;
-      fLastTriggerCalib = datastream_info.wr_event_no;
+      if(datastream_info.trigger_type == 0)
+      {
+	fLastTimestampCalibMaj = ts;
+	fLastGatesNumCalibMaj = datastream_info.gate_id;
+	fLastTriggerCalibMaj = datastream_info.wr_event_no;
+      }
+      if(datastream_info.trigger_type == 1)
+      {
+	fLastTimestampCalibMinbias = ts;
+	fLastGatesNumCalibMinbias = datastream_info.gate_id;
+	fLastTriggerCalibMinbias = datastream_info.wr_event_no;
+      }
     }
     else{
       fLastTimestampOther = ts;

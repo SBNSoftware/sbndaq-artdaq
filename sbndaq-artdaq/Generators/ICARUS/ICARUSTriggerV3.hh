@@ -113,7 +113,8 @@ namespace sbndaq
     uint64_t fLastTimestampBNBOffMinbias;
     uint64_t fLastTimestampNuMIOffMaj;
     uint64_t fLastTimestampNuMIOffMinbias;
-    uint64_t fLastTimestampCalib;
+    uint64_t fLastTimestampCalibMaj;
+    uint64_t fLastTimestampCalibMinbias;
     long fLastGatesNum;
     long fLastGatesNumBNBMaj;
     long fLastGatesNumBNBMinbias;
@@ -124,7 +125,8 @@ namespace sbndaq
     long fLastGatesNumBNBOffMinbias;
     long fLastGatesNumNuMIOffMaj;
     long fLastGatesNumNuMIOffMinbias;
-    long fLastGatesNumCalib;
+    long fLastGatesNumCalibMaj;
+    long fLastGatesNumCalibMinbias;
     long fDeltaGates;
     long fDeltaGatesBNBMaj;
     long fDeltaGatesBNBMinbias;
@@ -135,7 +137,8 @@ namespace sbndaq
     long fDeltaGatesBNBOffMinbias;
     long fDeltaGatesNuMIOffMaj;
     long fDeltaGatesNuMIOffMinbias;
-    long fDeltaGatesCalib;
+    long fDeltaGatesCalibMaj;
+    long fDeltaGatesCalibMinbias;
     long fLastTriggerBNBMaj;
     long fLastTriggerBNBMinbias;
     long fLastTriggerNuMIMaj;
@@ -144,7 +147,8 @@ namespace sbndaq
     long fLastTriggerBNBOffMinbias;
     long fLastTriggerNuMIOffMaj;
     long fLastTriggerNuMIOffMinbias;
-    long fLastTriggerCalib;
+    long fLastTriggerCalibMaj;
+    long fLastTriggerCalibMinbias;
     long fTotalTriggerBNB;
     long fTotalTriggerBNBMaj;
     long fTotalTriggerBNBMinbias;
@@ -156,8 +160,10 @@ namespace sbndaq
     long fTotalTriggerBNBOffMinbias;
     long fTotalTriggerNuMIOff;
     long fTotalTriggerNuMIOffMaj;
-    long fTtotalTriggerNuMIOffMinbias;
+    long fTotalTriggerNuMIOffMinbias;
     long fTotalTriggerCalib;
+    long fTotalTriggerCalibMaj;
+    long fTotalTriggerCalibMinbias;
     long fTotalGatesBNB;
     long fTotalGatesBNBMaj;
     long fTotalGatesBNBMinbias;
@@ -170,6 +176,8 @@ namespace sbndaq
     long fTotalGatesNuMIOff;
     long fTotalGatesNuMIOffMaj;
     long fTotalGatesNuMIOffMinbias;
+    long fTotalGatesCalibMaj;
+    long fTotalGatesCalibMinbias;
     int fLastTriggerType;
     int fLastSourceType;
     uint64_t fStartOfRun;
