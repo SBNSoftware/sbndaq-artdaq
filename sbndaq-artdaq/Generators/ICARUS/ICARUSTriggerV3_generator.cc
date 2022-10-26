@@ -190,7 +190,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fDeltaGatesBNBMaj = 0;
   fDeltaGatesBNBMinbias = 0;
   fDeltaGatesNuMIMaj = 0;
-  fDeltaGatesNumIMinbias = 0;
+  fDeltaGatesNuMIMinbias = 0;
   fDeltaGatesOther = 0;
   fDeltaGatesBNBOffMaj = 0;
   fDeltaGatesBNBOffMinbias = 0;
@@ -518,7 +518,6 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 							     fTotalTriggerBNBOff, fTotalTriggerBNBOffMaj,
 							     fTotalTriggerBNBOffMinbias, fTotalTriggerNuMIOff,
 							     fTotalTriggerNuMIOffMaj, fTotalTriggerNuMIOffMinbias,
-							     fTotalTriggerCalib,
 							     fTotalTriggerCalibMaj, fTotalTriggerCalibMinbias,
 							     fDeltaGates,
 							     fDeltaGatesBNBMaj, fDeltaGatesBNBMinbias, 
@@ -526,7 +525,7 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 							     fDeltaGatesBNBOffMaj, fDeltaGatesBNBOffMinbias,
 							     fDeltaGatesNuMIOffMaj,fDeltaGatesNuMIOffMinbias, 
 							     fDeltaGatesCalibMaj, fDeltaGatesCalibMinbias,fDeltaGatesOther,
-							     fTotalGatesBNBMaj, fTotalGatesBNBMinbias,                       
+							     fTotalGatesBNBMaj, fTotalGatesBNBMinbias,
 							     fTotalGatesNuMIMaj, fTotalGatesNuMIMinbias,
 							     fTotalGatesBNBOffMaj, fTotalGatesBNBOffMinbias,
 							     fTotalGatesNuMIOffMaj, fTotalGatesNuMIOffMinbias,
