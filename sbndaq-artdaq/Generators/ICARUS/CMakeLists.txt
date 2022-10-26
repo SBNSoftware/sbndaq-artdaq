@@ -41,6 +41,11 @@ basic_plugin(ICARUSTriggerV2 "generator"
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )
 
+basic_plugin(ICARUSTriggerV3 "generator"
+  LIBRARIES REG
+    ${BUILD_PLUGIN_CORE_LIB_LIST}
+)  
+
 #JCZ - obsolete interpretation
 #basic_plugin(ICARUSPMTGate "generator"
 #  LIBRARIES REG
