@@ -375,7 +375,6 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 	fDeltaGatesBNBMaj = datastream_info.gate_id_BNB - fLastGatesNumBNBMaj;
 	++fTotalTriggerBNBMaj;
 	++fTotalTriggerBNB;
-	fTotalGatesBNB += fDeltaGatesBNBMaj;
 	fTotalGatesBNBMaj += fDeltaGatesBNBMaj;
 	if(fDeltaGatesBNBMaj <= 0)
 	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB Majority <= 0!";
@@ -526,8 +525,12 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 							     fDeltaGatesNuMIMaj,fDeltaGatesNuMIMinbias,
 							     fDeltaGatesBNBOffMaj, fDeltaGatesBNBOffMinbias,
 							     fDeltaGatesNuMIOffMaj,fDeltaGatesNuMIOffMinbias, 
-							     fDeltaGatesCalibMaj, fDeltaGatesCalibMinbias, 
-							     fDeltaGatesOther);
+							     fDeltaGatesCalibMaj, fDeltaGatesCalibMinbias,fDeltaGatesOther,
+							     fTotalGatesBNBMaj, fTotalGatesBNBMinbias,                       
+							     fTotalGatesNuMIMaj, fTotalGatesNuMIMinbias,
+							     fTotalGatesBNBOffMaj, fTotalGatesBNBOffMinbias,
+							     fTotalGatesNuMIOffMaj, fTotalGatesNuMIOffMinbias,
+							     fTotalGatesCalibMaj, fTotalGatesCalibMinbias);
 
     //Put data string in fragment -> make frag size size of data string, copy data string into fragment
     //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
