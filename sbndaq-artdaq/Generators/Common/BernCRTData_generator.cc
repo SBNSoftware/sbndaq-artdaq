@@ -12,6 +12,7 @@
 
 #include "febdrv.hh"
 
+#include "artdaq/DAQdata/Globals.hh"
 #define id "BernCRT"
 #define TRACE_NAME "BernCRTData"
 
@@ -19,61 +20,65 @@
 sbndaq::BernCRTData::BernCRTData(fhicl::ParameterSet const & ps)
   :
   BernCRT_GeneratorBase(ps) {
-  TLOG(TLVL_INFO) << __func__ <<"() constructor called";
+  TLOG(TLVL_INFO) << "constructor called";
 
   std::string ethernet_port = ps_.get<std::string>("ethernet_port");
 
   if( ! febdrv.Init(ethernet_port) ) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Failed to initialise febdrv on interface \"" << ethernet_port << "\"!";
+    TLOG(TLVL_ERROR) <<  "Failed to initialise febdrv on interface \"" << ethernet_port << "\"!";
     throw cet::exception( std::string(TRACE_NAME) +"::" + __func__ + "() Failed to initialise febdrv on interface \"" + ethernet_port + "\"!");
   }
-  
+
   //compare detected list of FEBs with that declared in FHiCL file
   auto hardware_macs = febdrv.GetMACs();
   VerifyMACConfiguration(hardware_macs);
 
 
   for(const uint8_t& mac5 : MAC5s_) {
-    TLOG(TLVL_DEBUG) << __func__ << " Reading configuration for MAC5 " << std::to_string(mac5);
+    TLOG(TLVL_DEBUG) << "Reading configuration for MAC5 " << std::to_string(mac5);
     feb_configuration[mac5] = sbndaq::BernCRTFEBConfiguration(ps_, mac5); //create configuration object
 
-    TLOG(TLVL_INFO)<<__func__
+    TLOG(TLVL_INFO)
       <<"Read configuration for CRT FEB "<<(int)(mac5)
       <<" PPS offset: "<<feb_configuration[mac5].GetPPSOffset()
       <<" Turn on HV: "<<(feb_configuration[mac5].GetHVOnPermission()?"yes":"no");
   }
 
-  TLOG(TLVL_INFO) << __func__ << "() constructor completed";
+  TLOG(TLVL_INFO) << "constructor completed";
 } //constructor
 
 sbndaq::BernCRTData::~BernCRTData() {
-  TLOG(TLVL_INFO) << __func__ <<  "() called";
+  TLOG(TLVL_INFO) << "called";
 
   Cleanup();
-  TLOG(TLVL_INFO) << __func__ << "() completed";
+  TLOG(TLVL_INFO) << "completed";
 } //destructor
 
 void sbndaq::BernCRTData::ConfigureStart() {
-  TLOG(TLVL_INFO) << __func__ << "() called";
+  TLOG(TLVL_INFO) << "called";
   
   //make sure the HV and DAQ are off before we start to send the configuration to the board
-  febdrv.biasOFF();
-  
+  //switch off bias voltage one by one (rather than sending signal to all boards at once
+  //using MAC 255) so that if it fails, the error message will specify which board failed 
+  for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
+    febdrv.biasOFF(MAC5s_[iFEB]);
+  }
+ 
   for(unsigned int iFEB = 0; iFEB < nFEBs(); iFEB++) {
     feb_send_bitstreams(MAC5s_[iFEB]); //send PROBE and SC configuration to FEB
     if(feb_configuration[MAC5s_[iFEB]].GetHVOnPermission()) febdrv.biasON(MAC5s_[iFEB]); //turn on SiPM HV (if FHiCL file allows it)
   }
   StartFebdrv(); //start data taking mode for all boards
 
-  TLOG(TLVL_INFO) << __func__ << "() completed";
+  TLOG(TLVL_INFO) << "completed";
 } //ConfigureStart
 
 void sbndaq::BernCRTData::ConfigureStop() {
-  TLOG(TLVL_INFO) << __func__ << "() called";
+  TLOG(TLVL_INFO) << "called";
 
   febdrv.biasOFF();
 
-  TLOG(TLVL_INFO) << __func__ << "() completed";
+  TLOG(TLVL_INFO) << "completed";
 } //ConfigureStop
 
 void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
@@ -87,12 +92,12 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
    */
 
   if(feb_configuration.find(mac5) == feb_configuration.end()) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Could not find FEB " << mac5 << " in MAC5s!";
+    TLOG(TLVL_ERROR) <<  "Could not find FEB " << mac5 << " in MAC5s!";
     throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Could not find FEB " + std::to_string(mac5) + " in MAC5s!");
   }
 
   if(mac5==255) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Bitstreams cannot be sent to mac5 = 255!";
+    TLOG(TLVL_ERROR) <<  "Bitstreams cannot be sent to mac5 = 255!";
     return;
   }
   
@@ -110,9 +115,9 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
 } //feb_send_bitstreams
 
 void sbndaq::BernCRTData::StartFebdrv() {
-  TLOG(TLVL_DEBUG)<< __func__<<"() (re)starting febdrv";
+  TLOG(TLVL_DEBUG)<< "(re)starting febdrv";
   if(! febdrv.startDAQ() ) {
-    TLOG(TLVL_ERROR) <<  __func__ << "() Failed to (re)start DAQ";
+    TLOG(TLVL_ERROR) <<  "Failed to (re)start DAQ";
     throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Failed to (re)start DAQ!");
   }
 
@@ -179,11 +184,26 @@ size_t sbndaq::BernCRTData::GetFEBData() {
    * Reads data from FEB
    */
   
-  TLOG(TLVL_DEBUG) << __func__ << "() called";
+  TLOG(TLVL_DEBUG+2) << "called";
+
+  //measure time of function execution
+  static auto t_start = std::chrono::steady_clock::now();
+  static auto t_end = std::chrono::steady_clock::now();
+
+  t_start = std::chrono::steady_clock::now();
+  if(metricMan != nullptr) metricMan->sendMetric("time_outside_GetFEBData_ms",
+      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_end, t_start),
+      "CRT performance", 5, artdaq::MetricMode::Maximum);
   
   // Sleep until the time for next poll comes
   int now = std::chrono::system_clock::now().time_since_epoch().count() % feb_poll_period_;
   usleep((feb_poll_period_ - now)/1000);
+
+  const auto t_wait = std::chrono::steady_clock::now();
+  if(metricMan != nullptr) metricMan->sendMetric("time_waiting_for_poll_ms",
+      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_wait),
+      "CRT performance", 5, artdaq::MetricMode::Maximum);
+
 
   size_t hit_count_all_febs = 0;
   
@@ -205,13 +225,13 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       
       int datalen = numbytes-18;
       
-      TLOG(TLVL_DEBUG)<<__func__<<"()  datalen = "<<datalen;
+      TLOG(TLVL_DEBUG+2)<<" datalen = "<<datalen;
         
       //loop over bytes of the data
       for(int jj = 0; jj < datalen; ) { // jj is incremented in processSingleHit
         BernCRTHitV2 hit;
 
-        febdrv.processSingleHit(jj, hit); //read next hit
+	febdrv.processSingleHit(jj, hit, FirmwareFlag); //read next hit
         feb.hits.push_back(hit);
       }
     }
@@ -224,8 +244,11 @@ size_t sbndaq::BernCRTData::GetFEBData() {
     unsigned int feb_total_lostfpga = 0;
     uint64_t last_poll_hit_number = feb.hit_number;
 
+    uint32_t max_t0_in_poll = 0;
+
     for(auto & hit : feb.hits) {
       CalculateTimestamp(hit, feb.metadata);
+      max_t0_in_poll = std::max(max_t0_in_poll, hit.ts0);
 
       //compute hit number, including lost hits
       feb_total_lostfpga += feb.last_lostfpga;
@@ -237,6 +260,52 @@ size_t sbndaq::BernCRTData::GetFEBData() {
 
       hit.last_accepted_timestamp = feb.last_accepted_timestamp;
       feb.last_accepted_timestamp = hit.timestamp;
+
+      if(max_time_with_no_data_ns_ && hit.last_accepted_timestamp > 1) {
+        /**
+         * Display warning if the time between hits drops below certain value
+         */
+        if(hit.timestamp - hit.last_accepted_timestamp > max_time_with_no_data_ns_) {
+          TLOG(TLVL_WARNING) 
+            <<"FEB "<<(int)mac
+            <<" time between consecutive timestamps: "
+            <<sbndaq::BernCRTFragment::print_timestamp(hit.timestamp - hit.last_accepted_timestamp)
+            <<" > max_time_with_no_data_ms (" <<(max_time_with_no_data_ns_/1'000'000)<<" ms)"
+            <<" this hit: "
+            <<sbndaq::BernCRTFragment::print_timestamp(hit.timestamp)
+            <<" previous hit: "
+            <<sbndaq::BernCRTFragment::print_timestamp(hit.last_accepted_timestamp);
+        }
+      }
+    } //loop over hits in given FEB
+
+    if(max_time_with_no_data_ns_ && feb.hits.size() == 0) {
+      /**
+       * Display warning if FEB measured no hits during this poll
+       */
+      if(feb.last_accepted_timestamp > 1) {
+        TLOG(TLVL_WARNING)
+          <<"FEB "<<(int)mac
+          <<" sent no hits during this poll. "
+          <<" Timestamp of the last hit: "
+          <<sbndaq::BernCRTFragment::print_timestamp(feb.last_accepted_timestamp)
+          <<" ("
+          <<sbndaq::BernCRTFragment::print_timestamp(poll_end - feb.last_accepted_timestamp)
+          <<" ago)";
+      }
+      else {
+        TLOG(TLVL_WARNING)
+          <<"FEB "<<(int)mac
+          <<" sent no hits since the beginning of the run";
+      }
+    }
+    
+    if(max_t0_in_poll > max_tolerable_t0_) {
+      TLOG(TLVL_ERROR)
+        <<"During this poll in FEB "<<(int)mac
+        <<" the maximum registered t0 counter value was "
+        <<sbndaq::BernCRTFragment::print_timestamp(max_t0_in_poll)
+        <<" which suggests the FEB does not receive Pulse Per Second (PPS) signal";
     }
 
     hit_count_all_febs += feb.hits.size();
@@ -260,7 +329,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
           const uint64_t fragment_timestamp = (start_timestamp + 0.5) * fragment_period_;
           feb.buffer.push_back({fragment_hits, feb.metadata, fragment_timestamp});
 
-          TLOG(TLVL_DEBUG+31) << "pushing " << std::to_string(feb.metadata.hits_in_fragment()) << " hits into a fragment for MAC "<<std::to_string(mac)<<" at "<< sbndaq::BernCRTFragment::print_timestamp(fragment_timestamp);
+          TLOG(TLVL_DEBUG+5) << "pushing " << std::to_string(feb.metadata.hits_in_fragment()) << " hits into a fragment for MAC "<<std::to_string(mac)<<" at "<< sbndaq::BernCRTFragment::print_timestamp(fragment_timestamp);
 
           if(i < feb.hits.size()) {
             start_index = i;
@@ -277,8 +346,18 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       StartFebdrv();
     }
   }
+
+  t_end = std::chrono::steady_clock::now();
+
+  if(metricMan != nullptr) metricMan->sendMetric("time_reading_FEBs_ms",
+      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_wait, t_end),
+      "CRT performance", 5, artdaq::MetricMode::Maximum);
+
+  if(metricMan != nullptr) metricMan->sendMetric("GetFEBData_execution_time_ms",
+      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),
+      "CRT performance", 5, artdaq::MetricMode::Maximum);
   
-  TLOG(TLVL_DEBUG) << __func__ << "() read " << std::to_string(hit_count_all_febs) << " hits";
+  TLOG(TLVL_DEBUG+2) << "read " << std::to_string(hit_count_all_febs) << " hits";
 
   return hit_count_all_febs;
 } //GetFEBData

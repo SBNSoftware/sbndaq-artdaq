@@ -8,6 +8,7 @@
 #include "sbndaq-artdaq/Generators/Common/WhiteRabbitReadout.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "artdaq/Generators/GeneratorMacros.hh"
+#include "artdaq/DAQdata/Globals.hh"
 #include <fstream>
 #include <iomanip>
 #include <iterator>
@@ -20,6 +21,7 @@
 // Constructor
 sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
+  generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0)),
   ps_(ps)
 {
   fragmentId  = ps.get<uint32_t>("fragmentId");
@@ -45,12 +47,13 @@ sbndaq::WhiteRabbitReadout::~WhiteRabbitReadout()
 
 void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 {
+
   TLOG(TLVL_DEBUG+1)<< "start";
   agentSocket = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
   if (agentSocket < 0) 
   {
     TLOG(TLVL_ERROR) << "WhiteRabbitReadout socket error [" << 
-      errno <<  "] " << strerror(errno);
+      errno <<  "] " << strerror(errno) <<" deviceName " << deviceName ;
     return;
   }
 
@@ -96,6 +99,7 @@ void sbndaq::WhiteRabbitReadout::openWhiteRabbitSocket(const char *deviceName)
 void sbndaq::WhiteRabbitReadout::configure()
 {
   TLOG(TLVL_DEBUG) << "hello";
+  TLOG(TLVL_INFO) << " **** added metric for grafana **** DT APRIL 13  2022";
   openWhiteRabbitSocket(device.c_str());
   eventSeqCounter = 0;
 }
@@ -258,7 +262,7 @@ bool sbndaq::WhiteRabbitReadout::getData()
     data->command       = WR_DIO_CMD_STAMP;
     data->value         = 0;
     agentDevice.ifr_data = (char *)data;
-    TLOG(TLVL_INFO) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
+    TLOG(TLVL_DEBUG+1) << "WhiteRabbit data->command: " << data->command << "  data->flags: " << data->flags;
     retcod = ioctl(agentSocket, PRIV_MEZZANINE_CMD, &agentDevice);
     clock_gettime(CLOCK_REALTIME,&event.systemTime);
     if ( ( retcod < 0 ) && ( retcod != EAGAIN ))
@@ -268,13 +272,58 @@ bool sbndaq::WhiteRabbitReadout::getData()
       return(false);
     }
 
-    TLOG(TLVL_INFO) << "WhiteReadout data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
+    TLOG(TLVL_DEBUG) << "WhiteReadout: data nstamp " << data->nstamp << " at " << event.systemTime.tv_sec << " " <<
       event.systemTime.tv_nsec;
     for (uint32_t i=0; i<data->nstamp; i++)
     {
-      TLOG(TLVL_INFO) << "WhiteReadout data " << i << " " << data->timeStamp[i].tv_sec << 
+      TLOG(TLVL_DEBUG+1) << "WhiteReadout: data " << i << " Ch  " << data->channel << " TS  " << data->timeStamp[i].tv_sec << 
 	" " << data->timeStamp[i].tv_nsec; 
-    }
+
+//added in the loop 
+//    std::ostringstream tempStream;
+//    tempStream << "Card: " << fBoardID
+//               << ", Channel: " << ch << " temp.";
+//    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+//                          artdaq::MetricMode::Average, "CAENV1730");
+
+//    std::ostringstream tsStream;
+//    tsStream << "DIO Channel " << data->channel
+//               << ", Data: " << data->timeStamp[i].tv_sec << " ts.";
+
+}
+
+   std::ostringstream tsStream; 
+   tsStream << "DIO Channel " << data->channel << " Rates";
+
+
+//  PPS
+    if(data->channel == 0) 
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_PPS");
+// $1D from MI12
+    if(data->channel == 1) 
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$1D");
+
+// gatedBES from MI12
+    if(data->channel == 4)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_gatedBES");
+
+// $AE from MI60
+    if(data->channel == 2)
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$AE");
+
+// $74 from MI60
+    if(data->channel == 3) 
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+                          artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$74");
+
+
+//Average
+//Rate
+
 
     if ( data->nstamp > 0 )
     {
@@ -283,12 +332,19 @@ bool sbndaq::WhiteRabbitReadout::getData()
       bufferLock.unlock();
     }
   }
-
   return(true);
 }
 
 bool sbndaq::WhiteRabbitReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
+
+  //copied from TriggerUDP code: if shouldn't send fragments, then don't create fragment/send
+  if(generated_fragments_per_event_== 0){
+    fLastEvent = fEventCounter;
+    ++fEventCounter;
+    return true;
+  }
+
   FillFragment(frags,true);
 
   for (auto const& frag : frags) {

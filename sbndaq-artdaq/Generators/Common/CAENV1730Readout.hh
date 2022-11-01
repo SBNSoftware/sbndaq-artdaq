@@ -21,6 +21,8 @@
 #include "workerThread.hh"
 
 #include <string>
+#include <unordered_map>
+#include <mutex>
 
 namespace sbndaq
 {
@@ -42,6 +44,7 @@ namespace sbndaq
   private:
     bool readSingleWindowFragments(artdaq::FragmentPtrs &);
     bool readSingleWindowDataBlock();
+    bool readWindowDataBlocks();
 	
     bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
 		
@@ -175,8 +178,10 @@ namespace sbndaq
     int fVerbosity;
     int fBoardChainNumber;
     uint8_t  fInterruptEnable;
+    uint32_t fIRQTimeoutMS;
     uint32_t fGetNextSleep;
     uint32_t fGetNextFragmentBunchSize;
+    uint32_t fMaxEventsPerTransfer;
     bool     fSWTrigger;
     uint32_t fSelfTriggerMode;
     uint32_t fSelfTriggerMask;
@@ -186,6 +191,7 @@ namespace sbndaq
     bool     fCombineReadoutWindows;
     bool     fCalibrateOnConfig;
     bool     fLockTempCalibration;
+    bool     fWriteCalibration;
     uint32_t fFragmentID;
 
     bool fUseTimeTagForTimeStamp;
@@ -243,6 +249,7 @@ namespace sbndaq
     //uint32_t fSWTriggerValue;
     // Animesh & Aiwu add end
 
+
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
@@ -251,10 +258,12 @@ namespace sbndaq
     uint32_t fEvCounter; // set to zero at the beginning
     uint32_t last_rcvd_rwcounter;
     uint32_t last_sent_rwcounter;
+    uint32_t last_sent_ts;
     uint32_t total_data_size;
     //uint32_t event_size;	
     uint32_t n_readout_windows;
     uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
+    uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
     
     //functions
     void Configure();
@@ -271,6 +280,9 @@ namespace sbndaq
     void SetLockTempCalibration(bool onOff, uint32_t ch);
     CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
     CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
 
 
     bool WaitForTrigger();
@@ -279,6 +291,20 @@ namespace sbndaq
     sbndaq::PoolBuffer fPoolBuffer; 		
     size_t fCircularBufferSize;
     std::unique_ptr<uint16_t[]> fBuffer;
+
+    std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
+    mutable std::mutex fTimestampMapMutex;
+
+    //internals in getting the data
+    boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
+    boost::posix_time::ptime fTimeEpoch;
+    boost::posix_time::time_duration fTimeDiffPollBegin,fTimeDiffPollEnd;
+    
+    artdaq::Fragment::timestamp_t fTS;
+    uint64_t fMeanPollTime;
+    uint64_t fMeanPollTimeNS;
+    uint32_t fTTT;
+    long fTTT_ns;
 
     void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
 

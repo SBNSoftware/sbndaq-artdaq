@@ -40,7 +40,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
   
-  configsocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (configsocket_ < 0)
     {
       throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
@@ -66,7 +66,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
       exit(1);
     }
   
-  datasocket_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  datasocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (datasocket_ < 0)
     {
       throw art::Exception(art::errors::Configuration) << "ICARUSTriggerUDP: Error creating socket!" << std::endl;
@@ -90,6 +90,7 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
 	"ICARUSTriggerUDP: Could not translate provided IP Address: " << ip_data_ << "\n";
       exit(1);
     }
+
 
   fEventCounter = 1;
   fLastEvent = 0;
@@ -116,13 +117,17 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   }
   /*
     //do something in here to get data...
-   */
+    */
 
   int size_bytes = poll_with_timeout(datasocket_,ip_data_, si_data_,500);
   std::string data_input = "";
-  buffer[0] = '\0';
+  //buffer[0] = '\0'; // <<< not resetting the buffer in full 
+  std::fill( buffer, buffer + sizeof(buffer), '\0' ); 
+
   if(size_bytes>0){
-    int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);  
+    //Not currently using peek buffer result, just using buffer
+    //int x = read(datasocket_,ip_data_,si_data_,size_bytes,buffer);
+    int x = read(datasocket_,ip_data_,si_data_,sizeof(buffer)-1,buffer);
     TLOG(TLVL_DEBUG) << "x:: " << x << " errno:: " << errno << " data received:: " << buffer;
     data_input = buffer;
   }
@@ -142,10 +147,10 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   }
 
   if(fInitialStep == 0)
-  {
-    fStartOfRun = ts;
-    fInitialStep = 1;
-  }
+    {
+      fStartOfRun = ts;
+      fInitialStep = 1;
+    }
 
   if(data_input==""){
     TLOG(TLVL_DEBUG) << "No data after poll with timeout? " << data_input;
@@ -158,7 +163,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     ++fEventCounter;
     return true;
   }
-  
+
   icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerString(buffer);
 
   uint64_t event_no = fEventCounter;
@@ -166,66 +171,66 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   if(use_wr_time_ && wr_ts > 0)
     ts = wr_ts;
   if(use_wr_time_ && wr_ts == 0)
-  {
-    TLOG(TLVL_WARNING) << "WR time = 0";
-  }
+    {
+      TLOG(TLVL_WARNING) << "WR time = 0";
+    }
   if(datastream_info.event_no > -1)
     event_no = datastream_info.event_no;
 
   if(datastream_info.wr_name != " WR_TS1" || datastream_info.wr_seconds == -3 || datastream_info.wr_nanoseconds == -4)
-  {
-    TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
-  }
-    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    
+    {
+      TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
+    }
+  //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger
   //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly
-    //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
+  //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
   if(fLastEvent < event_no)
-  {
-    if(fLastEvent == 0)
     {
-      fLastTimestamp = fStartOfRun;
-      fLastTimestampBNB = fStartOfRun;
-      fLastTimestampNuMI = fStartOfRun;
-      fLastTimestampOther = fStartOfRun;
-    }
+      if(fLastEvent == 0)
+	{
+	  fLastTimestamp = fStartOfRun;
+	  fLastTimestampBNB = fStartOfRun;
+	  fLastTimestampNuMI = fStartOfRun;
+	  fLastTimestampOther = fStartOfRun;
+	}
 
-    fDeltaGates = datastream_info.gate_id - fLastGatesNum;
-    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-    
-    if(fDeltaGates <= 0)
-      TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
+      fDeltaGates = datastream_info.gate_id - fLastGatesNum;
+      metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
 
-    if(datastream_info.gate_type == 1)
-    {
-      fDeltaGatesBNB = datastream_info.gate_id - fLastGatesNumBNB;
-      metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      if(fDeltaGatesBNB <= 0)
-	TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
-    }
-    else if(datastream_info.gate_type == 3)
-    {
-      fDeltaGatesNuMI = datastream_info.gate_id - fLastGatesNumNuMI;
-      metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      if(fDeltaGatesNuMI <= 0)
-        TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
-    }
-    else {
-      fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
-      metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      if(fDeltaGatesOther <= 0)
-        TLOG(TLVL_WARNING) << "Change in total number of beam gates for Other <= 0!";
-    }
+      if(fDeltaGates <= 0)
+	TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
 
-    auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time,
-							     fLastTimestamp,
-							     fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampOther,
-							     fDeltaGates,
-							     fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesOther);
+      if(datastream_info.gate_type == 1)
+	{
+	  fDeltaGatesBNB = datastream_info.gate_id - fLastGatesNumBNB;
+	  metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	  if(fDeltaGatesBNB <= 0)
+	    TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
+	}
+      else if(datastream_info.gate_type == 2)
+	{
+	  fDeltaGatesNuMI = datastream_info.gate_id - fLastGatesNumNuMI;
+	  metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	  if(fDeltaGatesNuMI <= 0)
+	    TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
+	}
+      else {
+	fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
+	metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	if(fDeltaGatesOther <= 0)
+	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for Other <= 0!";
+      }
 
-    //Put data string in fragment -> make frag size size of data string, copy data string into fragment
-    //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
-    size_t fragment_size = max_fragment_size_bytes_;
-    TLOG(TLVL_DEBUG + 10) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
+      auto metadata = icarus::ICARUSTriggerUDPFragmentMetadata(fNTP_time,
+							       fLastTimestamp,
+							       fLastTimestampBNB,fLastTimestampNuMI,fLastTimestampOther,
+							       fDeltaGates,
+							       fDeltaGatesBNB,fDeltaGatesNuMI,fDeltaGatesOther);
+
+      //Put data string in fragment -> make frag size size of data string, copy data string into fragment
+      //Add timestamp, in number of nanoseconds, as extra argument to fragment after metadata. Add seconds and nanoseconds
+      size_t fragment_size = max_fragment_size_bytes_;
+      TLOG(TLVL_DEBUG + 10) << "Created ICARUSTriggerUDP Fragment with size of 500 bytes";
     frags.emplace_back(artdaq::Fragment::FragmentBytes(fragment_size, event_no, fragment_id_, sbndaq::detail::FragmentType::ICARUSTriggerUDP, metadata, ts));
     std::copy(&buffer[0], &buffer[sizeof(buffer)/sizeof(char)], (char*)(frags.back()->dataBeginBytes())); //attempt to copy data string into fragment
     icarus::ICARUSTriggerUDPFragment const &newfrag = *frags.back();
@@ -234,13 +239,13 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
     TLOG(TLVL_DEBUG) << "The artdaq timestamp value is: " << ts << ". Diff from last timestamp is " << ts-fLastTimestamp;
 
     long tdiff = (long)wr_ts - (long)fNTP_time;
-    
+
     TLOG(TLVL_DEBUG) << "(WR TIME - NTP TIME) is (" << wr_ts << " - " << fNTP_time << ") = " << tdiff << " nanoseconds."
-		     << " (" << tdiff/1e6 << " ms)";
-    
+     << " (" << tdiff/1e6 << " ms)";
+
     if(wr_ts>0 && std::abs(tdiff) > 20e6)
       TLOG(TLVL_WARNING) << "abs(WR TIME - NTP TIME) is " << tdiff << " nanoseconds, which is greater than 20e6 threshold!!";
-    
+
 
     fLastTimestamp = ts;
     fLastGatesNum = datastream_info.gate_id;
@@ -250,7 +255,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       fLastTimestampBNB = ts;
       fLastGatesNumBNB = datastream_info.gate_id;
     }
-    else if(datastream_info.gate_type == 3)
+    else if(datastream_info.gate_type == 2)
     {
       fLastTimestampNuMI = ts;
       fLastGatesNumNuMI = datastream_info.gate_id;
@@ -263,7 +268,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
   }
 
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
-  //std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl; 
+  //std::cout << "getNext_ function takes: " << delta.count() << " seconds." << std::endl;
   return true;
 
 }
@@ -289,7 +294,7 @@ void sbndaq::ICARUSTriggerUDP::resume()
 
 //send a command
 void sbndaq::ICARUSTriggerUDP::send(const Command_t cmd)
-{  
+{
   TLOG(TLVL_DEBUG + 10) << "send:: COMMAND " << cmd << " to " << ip_config_.c_str() << ":" << configport_ << "\n";
 
   sendto(configsocket_,&cmd,sizeof(Command_t), 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
@@ -314,22 +319,23 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
     //have something good
     if (ufds[0].revents == POLLIN || ufds[0].revents == POLLPRI){
       //do something to get data size here?
-      
-     
+
+
       peekBuffer[1] = {0};
       //recvfrom(datasocket_, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
       //(struct sockaddr *) &si_data_, (socklen_t*)sizeof(si_data_));
       socklen_t slen = sizeof(si);
-      //int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                               
+      //int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
       //(struct sockaddr *) &si, (socklen_t*)sizeof(si));
-      int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,                                    
-			 (struct sockaddr *) &si, &slen);    
+      int ret = recvfrom(socket, peekBuffer, sizeof(peekBuffer), MSG_PEEK,
+			 (struct sockaddr *) &si, &slen);
       //std::cout << msg_size << std::endl;
-      TLOG(TLVL_DEBUG + 10) << "peek recvfrom:: " << ret << " " << errno;
-      return (int)(peekBuffer[1]);
+      TLOG(TLVL_DEBUG) << "peek recvfrom:: " << ret << " " << errno << " size: " << (int)(peekBuffer[1]);
+      //return (int)(peekBuffer[1]);
       //return sizeof(peekBuffer);
       //return sizeof(peekBuffer[1]);
       //return 1400;
+      return 1;
     }
   }
   //timeout
@@ -349,15 +355,15 @@ int sbndaq::ICARUSTriggerUDP::poll_with_timeout(int socket, std::string ip, stru
 
 //read data size from socket
 int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TLOG(TLVL_DEBUG + 10) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
+  TLOG(TLVL_DEBUG) << "read:: get " << size << " bytes from " << ip.c_str() << "\n";
   socklen_t slen = sizeof(si);
   //int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, (socklen_t*)sizeof(si));
   int size_rcv = recvfrom(socket, buffer, size, 0, (struct sockaddr *) &si, &slen);
-  
+
   if(size_rcv<0)
     TLOG(TLVL_ERROR) << "read:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
   else
-    TLOG(TLVL_DEBUG + 10) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
+    TLOG(TLVL_DEBUG) << "read:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
 
   return size_rcv;
 }
@@ -366,30 +372,29 @@ int sbndaq::ICARUSTriggerUDP::read(int socket, std::string ip, struct sockaddr_i
 int sbndaq::ICARUSTriggerUDP::send_TTLK_INIT(int retries, int sleep_time_ms)
 {
   while(retries>-1){
-  
-  char cmd[16];
-  sprintf(cmd,"%s","TTLK_CMD_INIT");
 
-  TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
-  sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+    char cmd[16];
+    sprintf(cmd,"%s","TTLK_CMD_INIT");
 
-  TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
-  //send(TTLK_INIT);
-  int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
-  if(size_bytes>0){
-    //uint16_t buffer[size_bytes/2+1];
-    //char bufferinit[size_bytes];
-    buffer[size_bytes+1] = {'\0'};
-    read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
-    TLOG(TLVL_DEBUG) << "received:: " << buffer;
-    return retries;
+    TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+
+    TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    //send(TTLK_INIT);
+    int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
+    if(size_bytes>0){
+      //uint16_t buffer[size_bytes/2+1];
+      //char bufferinit[size_bytes];
+      buffer[size_bytes+1] = {'\0'};
+      read(configsocket_,ip_config_,si_config_,size_bytes,buffer);
+      TLOG(TLVL_DEBUG) << "received:: " << buffer;
+      return retries;
+    }
+
+    retries--;
   }
-  
-  retries--;
-  }
-  
+
   return retries;
-  
 }
 
 //no need for confirmation on these...

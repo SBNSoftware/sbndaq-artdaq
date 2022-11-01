@@ -3,7 +3,7 @@
  *         Ryan Howell    <rhowell3@ur.rochester.edu>
  */
 
-#include "sbndaq-artdaq/Generators/Common/CRTFragGen.hh"
+#include "sbndaq-artdaq/Generators/ICARUS/CRTFragGen.hh"
 
 #include "canvas/Utilities/Exception.h"
 

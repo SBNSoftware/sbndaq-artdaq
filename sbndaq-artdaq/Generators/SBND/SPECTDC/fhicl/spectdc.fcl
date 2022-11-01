@@ -1,0 +1,111 @@
+events_to_generate: 100
+run_number: 101
+transition_timeout: 30
+debug_cout: false
+
+fragment_receiver: {
+   max_fragment_size_bytes: 200
+
+   generator: SPECTDCTimestampReader
+   fragment_type: TDCTIMESTAMP
+   fragment_id: 0
+   board_id: 0
+
+   data_buffer_depth_fragments:512
+   sleep_on_no_data_us: 100000
+
+   spec: {
+     deviceid:auto
+     fmctdc: {
+       timesync_source:wr
+       time_adjustment:{
+         make_adjustment:true
+         add_leap_seconds:36
+         next_leap_second_tai:1672531199
+       }
+       calibration_data:none
+       polltime_ms: 100
+       blocking_reads: true
+       monitor:{
+         temperature:true
+         timestamps:true
+       }
+       channels: [
+         { id : 0
+           name:pps
+           enabled: true
+           time_offset_ps: 0
+           terminated: false },
+         { id : 1
+           name:beam
+           enabled: true
+           time_offset_ps: 0
+           terminated: false },
+         { id : 2
+           name:beam1
+           enabled: false
+           time_offset_ps: 0
+           terminated: false },
+         { id : 3
+           name:beam2
+           enabled: false
+           time_offset_ps: 0
+           terminated: false }
+       ]
+     }
+   }
+}
+event_builder: {
+  expected_fragments_per_event: 1
+  max_fragment_size_bytes: 200
+  buffer_count: 10
+  use_art: true
+  print_event_store_stats: false
+  verbose: true
+  expected_art_event_processing_time_us: 2000000
+  init_fragment_count: 0
+}
+
+######################################################################
+# The ART code
+######################################################################
+
+art: {
+services: {
+   ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService }
+  ArtdaqFragmentNamingServiceInterface: { service_provider: ArtdaqFragmentNamingService helper_plugin: "SBND" }
+    TimeTracker: {}
+}
+physics:
+{
+  analyzers:{}
+
+  producers:{ }
+
+   e2: [ rootout ]
+   end_paths: [e2]
+}
+
+outputs:
+{
+ rootout:
+  {
+    module_type: RootDAQOut
+    fileName: "/tmp/artdaqDemoTest_%06r_%#_%to_%tc.root"
+    compressionLevel: 0
+    fileProperties: {
+      maxSubRuns: 1  # default is unbounded
+      maxRuns: 1  # default is unbounded
+      granularity: Event # default is "Event"
+    }
+  }
+
+}
+
+source:
+{
+  module_type: ArtdaqInput
+}
+
+process_name: DemoDriver
+}

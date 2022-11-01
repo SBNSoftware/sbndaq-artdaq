@@ -67,13 +67,22 @@ int main(int argc, char * argv[]) {
   putenv(const_cast<char*>("FHICL_FILE_PATH=.:$FHICL_FILE_PATH"));
   cet::filepath_lookup policy("FHICL_FILE_PATH");
 
-  // parse a configuration file; obtain intermediate form
-  fhicl::intermediate_table tbl;
-  fhicl::parse_document(infile_name, policy, tbl);
+	
+#if FHICLCPP_HEX_VERSION < 0x41500
+   // parse a configuration file; obtain intermediate form
+		fhicl::intermediate_table tbl;
+	  fhicl::parse_document(infile_name, policy,tbl);
+   // convert to ParameterSet
+   fhicl::ParameterSet pset;
+	 fhicl::make_ParameterSet(tbl,pset);
+#else
+   // parse a configuration file; obtain intermediate form
+		fhicl::intermediate_table tbl =fhicl::parse_document(infile_name, policy);
+   // convert to ParameterSet
+   fhicl::ParameterSet pset= fhicl::ParameterSet::make(tbl);
+#endif
 
-  // convert to ParameterSet
-  fhicl::ParameterSet pset;
-  fhicl::make_ParameterSet(tbl, pset);
+
   
   fhicl::ParameterSet fragment_receiver = pset.get<fhicl::ParameterSet>("fragment_receiver");
   

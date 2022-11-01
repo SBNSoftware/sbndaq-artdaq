@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdio.h>
-#include "common.h"
 
+#include "artdaq/DAQdata/Globals.hh"
 #include "Cudpux.h"
 
 Cudp mytrig(9888);
@@ -28,10 +28,10 @@ int vetoOn()
 //    retval = mysock.Receive(myrec,2,1); 
     //retval = mysock.Receive(myrec,2); 
 //    printf("sent received %s %s\n",buf, myrec);
-    if (retval<0) {TRACEN("veto.cc",TLVL_INFO, "Lost udp packet");}
+    if (retval<0) {TRACEN("veto.cc",TLVL_ERROR, "Lost udp packet");}
   } while (retval<0);
    
-   TRACEN("veto.cc",TLVL_INFO, "veto ON");
+   TRACEN("veto.cc",TLVL_DEBUG+1, "veto ON");
 
 return 0;
 }
@@ -52,10 +52,10 @@ int vetoOff()
     mytrig.SendTo(mhost,10000,buf,14);  
    // retval = mysock.Receive(myrec,2,1); 
     //retval = mysock.Receive(myrec,2); 
-    if (retval<0) {TRACEN("veto.cc",TLVL_INFO, "Lost udp packet");}
+    if (retval<0) {TRACEN("veto.cc",TLVL_ERROR, "Lost udp packet");}
   } while (retval<0);
 
-    TRACEN("veto.cc",TLVL_INFO, "veto OFF");
+    TRACEN("veto.cc",TLVL_DEBUG+1, "veto OFF");
 
 return 0;
 }

@@ -87,6 +87,11 @@ namespace sbndaq
     char        channelMode[N_CHANNELS];
     int         channelPPS[N_CHANNELS];
 
+    uint64_t fEventCounter;
+    uint64_t fLastEvent;
+    //expected fragments
+    int generated_fragments_per_event_;
+
     std::atomic_bool running;
     std::mutex bufferLock;
 
