@@ -1,3 +1,4 @@
+#define TRACE_NAME "PhysCrate_cc"
 #include "PhysCrate.h"
 #include "veto.h"
 #include <sys/types.h>
@@ -27,7 +28,7 @@ PhysCrate::~PhysCrate()
 void
 PhysCrate::initialize(std::vector<int> busVec) 
 {
-   TRACEN("PhysCrate.cc",TLVL_INFO, "PhysCrate::initialize(): Initializing crate.");
+   TRACEN("PhysCrate_cc",TLVL_INFO, "PhysCrate::initialize(): Initializing crate.");
 
     //int status;
     int boardId(0);
@@ -41,14 +42,14 @@ PhysCrate::initialize(std::vector<int> busVec)
       int nBus=0;
       do {
         do {        
-  	  TRACEN("PhysCrate.cc",TLVL_INFO, "trying bus=%d,dev=%d",nBus,nDev);
+  	  TRACEN("PhysCrate_cc",TLVL_INFO, "trying bus=%d,dev=%d",nBus,nDev);
 	
           boards[nBoards]=new A2795Board(nDev,nBus);
           boardId = boards[nBoards]->boardId;
           nDev++;
           if (boardId>-1)
           { 
-	      TRACEN("PhysCrate.cc",TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nDev,nBoards,boardId);
+	      TRACEN("PhysCrate_cc",TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nDev,nBoards,boardId);
 	      nBoards++;
 	  }
 	  //else break;
@@ -62,14 +63,14 @@ PhysCrate::initialize(std::vector<int> busVec)
       for(int nBus : busVec){
 
 	do {        
-	  TRACEN("PhysCrate.cc", TLVL_INFO, "trying bus=%d,dev=%d",nBus,nDev);
+	  TRACEN("PhysCrate_cc", TLVL_INFO, "trying bus=%d,dev=%d",nBus,nDev);
 	  
 	  boards[nBoards]=new A2795Board(nDev,nBus);
           boardId = boards[nBoards]->boardId;
 	  nDev++;
 	  if (boardId>-1)
 	    { 
-	      TRACEN("PhysCrate.cc", TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nDev,nBoards,boardId);
+	      TRACEN("PhysCrate_cc", TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nDev,nBoards,boardId);
 	      
 	      nBoards++;
 	    }
@@ -82,17 +83,17 @@ PhysCrate::initialize(std::vector<int> busVec)
     BoardIDs.resize( nBoards );
     for ( int iBoard = 0; iBoard < nBoards; ++iBoard ) BoardIDs[iBoard] = boards[iBoard]->boardId;
 
-    TRACEN("PhysCrate.cc",TLVL_INFO,  "PhysCrate::initialize(): %d A2795 boards found.", nBoards);
+    TRACEN("PhysCrate_cc",TLVL_INFO,  "PhysCrate::initialize(): %d A2795 boards found.", nBoards);
 
     char mhost[128];
     gethostname(mhost,128);
 
     struct hostent *hp = gethostbyname(mhost);
 
-    TRACEN("PhysCrate.cc",TLVL_INFO,  std::string("Got local name ").append(mhost));
+    TRACEN("PhysCrate_cc",TLVL_INFO,  std::string("Got local name ").append(mhost));
 	     
     if (hp == NULL) {
-             TRACEN("PhysCrate.cc",TLVL_INFO,  std::string("Host").append(mhost).append(" not found"));
+             TRACEN("PhysCrate_cc",TLVL_INFO,  std::string("Host").append(mhost).append(" not found"));
 
              //exit (3);
       mip=158;
@@ -102,12 +103,12 @@ PhysCrate::initialize(std::vector<int> busVec)
        in_addr in;
        memcpy(&in.s_addr, *p, sizeof (in.s_addr));
        
-       TRACEN("PhysCrate.cc",TLVL_INFO,  std::string("inet_ntoa").append(inet_ntoa(in)));
+       TRACEN("PhysCrate_cc",TLVL_INFO,  std::string("inet_ntoa").append(inet_ntoa(in)));
        
        sscanf(inet_ntoa(in),"%d",&mip);
     }
 
-    TRACEN("PhysCrate.cc",TLVL_INFO, "Set localID.");
+    TRACEN("PhysCrate_cc",TLVL_INFO, "Set localID.");
 
   int size = sizeof(DataTile)+2*kMaxSize*nBoards;
   tilebuf = new char[size];
@@ -130,7 +131,7 @@ PhysCrate::initialize()
     for (int i = 0; i < nBoards; i++)
     {
         boards[i] = new A2795Board(i,0);
-	TRACEN("PhysCrate.cc",TLVL_DEBUG, "PhysCrate::initialize(): Created board.");
+	TRACEN("PhysCrate_cc",TLVL_DEBUG, "PhysCrate::initialize(): Created board.");
     }
   int size = sizeof(DataTile)+2*kMaxSize*nBoards;
   tilebuf = new char[size];
@@ -145,7 +146,7 @@ PhysCrate::configure(BoardConf conf)
     {
         boards[i]->configure(conf);
     }
-    TRACEN("PhysCrate.cc",TLVL_DEBUG, "PhysCrate::configure(): Board parameters set.");
+    TRACEN("PhysCrate_cc",TLVL_DEBUG, "PhysCrate::configure(): Board parameters set.");
     
 } // configure()
 
@@ -158,7 +159,7 @@ PhysCrate::configureTrig(TrigConf conf)
         boards[i]->configureTrig(conf);
     }
     
-    TRACEN("PhysCrate.cc",TLVL_DEBUG, "PhysCrate::configureTrig(): Trigger parameters set.");
+    TRACEN("PhysCrate_cc",TLVL_DEBUG, "PhysCrate::configureTrig(): Trigger parameters set.");
 }
 
 void
@@ -186,7 +187,7 @@ PhysCrate::start()
 void
 PhysCrate::waitData()
 {
-      TRACEN("PhysCrate.cc",20, "PhysCrate::waitData(): on %d boards", nBoards);
+      TRACEN("PhysCrate_cc",20, "PhysCrate::waitData(): on %d boards", nBoards);
   
 #ifdef AUTO_TRIGGER
   //boards[0]->write(A_Signals, SIGNALS_TTLINK_GTRG);
@@ -197,11 +198,11 @@ PhysCrate::waitData()
     // for (int i = nBoards-1; i < nBoards; i++)
     {
 
-      TRACEN("PhysCrate.cc", 20, "PhysCrate::waitData(): waiting for board %d", i);
+      TRACEN("PhysCrate_cc", 20, "PhysCrate::waitData(): waiting for board %d", i);
 	
         while(!(boards[i]->isDataRdy()));
 
-      TRACEN("PhysCrate.cc", 20, "Board %d ready.", i);
+      TRACEN("PhysCrate_cc", 20, "Board %d ready.", i);
     }
 } // waitData()
 
@@ -210,9 +211,10 @@ bool
 PhysCrate::dataAvail()
 {
  if (presBoard<nBoards) {
-   TRACEN("PhysCrate.cc", 20, "PhysCrate::waitData(): waiting for board %d", presBoard);
+   TRACEN("PhysCrate_cc", 20, "PhysCrate::waitData(): waiting for board %d", presBoard);
    while(!(boards[presBoard]->isDataRdy()));
-   TRACEN("PhysCrate.cc", 20, "Board %d ready.", presBoard);
+   TRACEN("PhysCrate_cc", 20, "Board %d ready.", presBoard);
+   TLOG(20) << "Board " << presBoard << " has data ready.";
    return true;
   }
   return false;
@@ -237,7 +239,7 @@ PhysCrate::getData()
 //printf ("nSamp %d \n",boards[i]->nSamples);
 
     int nSamples=boards[i]->getData(1,tile->data  );
-//    TRACEN("PhysCrate.cc",TLVL_DEBUG+1, "nSamp %d ",nSamples);
+//    TRACEN("PhysCrate_cc",TLVL_DEBUG+1, "nSamp %d ",nSamples);
     TLOG(TLVL_DEBUG+1) << "PhysCrate::getData: tile->data: " << &(tile->data);
 
 //    boards[i]->getData(2,tile->data + boards[i]->nSamples);

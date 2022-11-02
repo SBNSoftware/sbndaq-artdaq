@@ -76,6 +76,7 @@ void icarus::PhysCrate_GeneratorBase::start() {
 					BoardIDs_);
 
   fCircularBuffer = sbndaq::CircularBuffer<uint16_t>(fCircularBufferSize/sizeof(uint16_t));
+  packSize_zero_counter_=0;
 
   ConfigureStart();
 
@@ -180,6 +181,20 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     TLOG(TLVL_DEBUG +6) << "Board ID: " << (nt_header.info2 & 0x0000000F);
     TLOG(TLVL_DEBUG +6) << "this_data_size_bytes: " << this_data_size_bytes;
 
+    if(this_data_size_bytes==0){
+      TLOG(TLVL_DEBUG+6) << "No data in this DataTile? Happened " << packSize_zero_counter_ << " times before.";
+      //if happened a lot, get out of here
+      if(packSize_zero_counter_==10){
+	TLOG(TLVL_ERROR) << "Too many times (10) with zero data size in TileHeader. Exit.";
+	return false;
+      }
+      //else, try again
+      ++packSize_zero_counter_;
+      usleep(1000);
+      return true;
+    }
+
+
     //check if there's enogh data for this board.
     //if not, sleep and return.
     if(fCircularBuffer.Size() < (data_size_bytes+this_data_size_bytes)/sizeof(uint16_t)){
@@ -258,6 +273,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   int max_ev_num_diff=0;
   int max_ts_diff=0;
 
+  bool found_inconsistent_boards=false;
 
   for ( uint16_t jBoard = 1; jBoard < nBoards_; ++jBoard ) {
     if ( newfrag.BoardEventNumber(jBoard) != ev_num ) {
@@ -267,10 +283,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
       if( std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0))>max_ev_num_diff )
 	max_ts_diff = std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0));
 
-      TLOG(TLVL_ERROR + 17) << "Inconsistent event numbers in one fragment: Event " 
+      TLOG(TLVL_ERROR) << "Inconsistent event numbers in one fragment: Event " 
 		       << ev_num << " in Board 0 while Event " 
 		       << newfrag.BoardEventNumber(jBoard) 
 		       << " in Board " << jBoard;
+      found_inconsistent_boards=true;
     }
   }
 
@@ -278,6 +295,19 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
   metricMan->sendMetric("MaxBoardTimeStampDiff",max_ts_diff,"ticks",1,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
+  
+  if(found_inconsistent_boards){
+      
+    TLOG(TLVL_ERROR) << "Inconsistent event numbers within one of the fragments found."
+		     << " Will return false in getNext_ and hopefully stop.";
+
+    for(uint16_t iBoard=0; iBoard<nBoards_; ++iBoard)
+      TLOG(TLVL_ERROR) << "Board " << iBoard << ":\n" << *(newfrag.BoardDataBlock(iBoard));
+    
+    return false;
+  }
+
+
   if(ev_num==0)
     event_offset_ = 1;
 
@@ -297,6 +327,8 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 		   << " (" << frags.back()->typeString() << "):  "
 		   << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
 
+  //sent out a good fragment, so reset this to zero
+  packSize_zero_counter_=0;
 
   return true;
 
