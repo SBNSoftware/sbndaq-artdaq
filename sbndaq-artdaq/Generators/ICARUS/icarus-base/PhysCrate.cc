@@ -9,6 +9,7 @@
 #include <netdb.h>
 
 #include "artdaq/DAQdata/Globals.hh"
+#include "TRACE/tracemf.h"
 
 #define kMaxSize 950000
 #define kMaxBoards 32 

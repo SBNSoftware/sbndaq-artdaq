@@ -11,6 +11,7 @@
 #include "CAENComm.h"
 
 #include "artdaq/DAQdata/Globals.hh"
+#include "TRACE/tracemf.h"
 
 #define WRITE 1
 #define READ 0
