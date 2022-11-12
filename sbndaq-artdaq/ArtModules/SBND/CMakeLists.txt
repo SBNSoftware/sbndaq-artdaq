@@ -16,6 +16,7 @@ list(APPEND BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST  sbndaq_artdaq_core::sbndaq-art
 
 build_plugin(SBNDArtdaqBuildInfo "module" LIBRARIES REG ${BUILD_PLUGIN_BUILDINFO_LIB_LIST})
 build_plugin( EventAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( PMTmetrics "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( MultiDump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 
 basic_plugin(SBND "fragmentNameHelper" LIBRARIES REG ${BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST})

@@ -31,8 +31,8 @@
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/ContainerFragment.hh"
 
-#include "sbndcode/OpDetSim/sbndPDMapAlg.hh"
-#include "sbnobj/SBND/Trigger/pmtSoftwareTrigger.hh"
+//#include "sbndcode/OpDetSim/sbndPDMapAlg.hh"
+#include "pmtSoftwareTrigger.hh"
 
 // ROOT includes
 #include "TH1D.h"
@@ -73,7 +73,13 @@ private:
   art::Persistable is_persistable_;
   double fTriggerTimeOffset;    // offset of trigger time, default 0.5 sec
   double fBeamWindowLength; // beam window length after trigger time, default 1.6us
-  uint32_t fWvfmLength;
+  uint32_t fWvfmLength;  // overwritten in code, fhicl value not used
+  uint32_t    fETrigFragid;
+  uint32_t    fETrigThresh;
+  std::vector<int> fFragidlist;
+  std::vector<int> fCoated;
+  std::vector<int> fTPC;
+ 
   bool fVerbose;
   bool fSaveHists;
 
@@ -83,6 +89,7 @@ private:
   int fADCThreshold;
   bool fFindPulses;
   double fPEArea; // conversion factor from ADCxns area to PE count 
+  // end fhicl parameters
 
   // histogram info  
   std::stringstream histname; //raw waveform hist name
@@ -93,7 +100,7 @@ private:
   art::EventNumber_t fEvent;
 
   // PD information
-  opdet::sbndPDMapAlg pdMap; // photon detector map
+  //  opdet::sbndPDMapAlg pdMap; // photon detector map
   std::vector<unsigned int> channelList; 
 
   // beam window
@@ -109,44 +116,95 @@ private:
 
   // pmt information 
   std::vector<sbnd::trigger::pmtInfo> fpmtInfoVec;
+    std::map<int,int> map_fragid_index;
 
   void checkCAEN1730FragmentTimeStamp(const artdaq::Fragment &frag);
   void analyzeCAEN1730Fragment(const artdaq::Fragment &frag);
   void estimateBaseline(int i_ch);
   void SimpleThreshAlgo(int i_ch);
+  void reconfigure(fhicl::ParameterSet const & p);
+  uint32_t find_beam_spill(const artdaq::Fragment &frag);
+
+
 
 };
 
 
 sbnd::trigger::pmtSoftwareTriggerProducer::pmtSoftwareTriggerProducer(fhicl::ParameterSet const& p)
-  : EDProducer{p},
-  is_persistable_(p.get<bool>("is_persistable", true) ? art::Persistable::Yes : art::Persistable::No),
-  fTriggerTimeOffset(p.get<double>("TriggerTimeOffset", 0.5)),
-  fBeamWindowLength(p.get<double>("BeamWindowLength", 1.6)), 
-  fWvfmLength(p.get<uint32_t>("WvfmLength", 5120)),
-  fVerbose(p.get<bool>("Verbose", false)),
-  fSaveHists(p.get<bool>("SaveHists",false)),
-  fBaselineAlgo(p.get<std::string>("BaselineAlgo", "estimate")),
-  fInputBaseline(p.get<double>("InputBaseline", 8000)),
-  fInputBaselineSigma(p.get<double>("InputBaselineSigma", 2)),
-  fADCThreshold(p.get<double>("ADCThreshold", 7960)),
-  fFindPulses(p.get<bool>("FindPulses", false)),
-  fPEArea(p.get<double>("PEArea", 66.33))
-  // More initializers here.
+  : EDProducer{p}
   {
+    this->reconfigure(p);
     // Call appropriate produces<>() functions here.
     produces< sbnd::trigger::pmtSoftwareTrigger >("", is_persistable_);
 
     beamWindowStart = fTriggerTimeOffset*1e9;
     beamWindowEnd = beamWindowStart + fBeamWindowLength*1000;
 
-    // build PD map and channel list - needed for simulated data only??
-    auto subsetCondition = [](auto const& i)->bool { return i["pd_type"] == "pmt_coated" || i["pd_type"] == "pmt_uncoated"; };
-    auto pmtMap = pdMap.getCollectionFromCondition(subsetCondition);
-    for(auto const& i:pmtMap){
-      channelList.push_back(i["channel"]);
-    }
-  }
+
+    // build PD map and channel list
+    // auto subsetCondition = [](auto const& i)->bool { return i["pd_type"] == "pmt_coated" || i["pd_type"] == "pmt_uncoated"; };
+    // auto pmtMap = pdMap.getCollectionFromCondition(subsetCondition);
+    // for(auto const& i:pmtMap){
+    //   channelList.push_back(i["channel"]);
+    // }
+
+    // need to put channel list into fcl params as well.
+    fETrigFragid=9;
+    fFragidlist={9,15,17,18,19,20,21,22};
+    fCoated.resize(120);
+    fCoated={0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1,  // board 0
+	     0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1,  // board 1
+	     0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1,  // board 2
+	     0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1,  // board 3
+	     0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1,  // board 4
+	     0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1,  // board 5
+	     0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1,  // board 6
+	     0, 0, 0, 0,1,0,0,0,0,1,0,0,0,0,1};  // board 7
+    fTPC.resize(120);
+    fTPC = {0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0,0,  // board 0
+	    0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0,0,  // board 1
+	    0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0,0,  // board 2
+	    0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0,0,  // board 3
+	    1, 1, 1, 1,1,1,1,1,1,1,1,1,1,1,1,  // board 4
+	    1, 1, 1, 1,1,1,1,1,1,1,1,1,1,1,1,  // board 5
+	    1, 1, 1, 1,1,1,1,1,1,1,1,1,1,1,1,  // board 6
+	    1, 1, 1, 1,1,1,1,1,1,1,1,1,1,1,1};  // board 7
+
+
+    // map from fragID to array index 0-7
+    for (size_t i=0;i<8;++i)       
+      map_fragid_index.insert(std::make_pair(fFragidlist[i],i));
+
+    //   map_fragid_index.insert(std::make_pair(9,0));
+    // map_fragid_index.insert(std::make_pair(15,1));
+    // map_fragid_index.insert(std::make_pair(17,2));
+
+}
+
+void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet const & p)
+{
+  // Initialize member data here
+  is_persistable_ = p.get<bool>("is_persistable", true) ? art::Persistable::Yes : art::Persistable::No;
+  fTriggerTimeOffset=p.get<double>("TriggerTimeOffset", 0.5);
+  fBeamWindowLength=p.get<double>("BeamWindowLength", 1.6);
+  fWvfmLength=p.get<uint32_t>("WvfmLength", 5120);  //not used
+  fETrigFragid=p.get<uint32_t>("ETrigFragID",0);
+  fETrigThresh=p.get<uint32_t>("ETrigThresh",5000);
+  fFragidlist=p.get<std::vector<int> >("FragIDlist");
+  fCoated=p.get<std::vector<int> >("Coated");
+  fTPC=p.get<std::vector<int> >("TPC");  // TPC=0(1) is neg(pos) x and beam right(left)
+  fVerbose=p.get<bool>("Verbose", false);
+  //
+  fSaveHists=p.get<bool>("SaveHists",false);
+  fBaselineAlgo=p.get<std::string>("BaselineAlgo", "est");
+  fInputBaseline=p.get<double>("InputBaseline", 8000);
+  fInputBaselineSigma=p.get<double>("InputBaselineSigma", 2);
+  fADCThreshold=p.get<double>("ADCThreshold", 7960);
+  fFindPulses=p.get<bool>("FindPulses", false);
+  fPEArea=p.get<double>("PEArea", 66.33);
+  
+}
+
 
 void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
 {
@@ -162,77 +220,97 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
   // reset for this event
   foundBeamTrigger = false;
   fWvfmsFound = false;
-  fWvfmsVec.clear(); fWvfmsVec.resize(15*8); // 15 pmt channels per fragment, 8 fragments per trigger
-  fpmtInfoVec.clear(); fpmtInfoVec.resize(15*8); 
-
-
+  fWvfmsVec.clear(); fWvfmsVec.resize(16*8); // 16 1730 channels per fragment, 8 fragments per trigger
+  fpmtInfoVec.clear(); fpmtInfoVec.resize(15*8); // 15 PMS per fragment, 8 fragments per trigger
+  
+  
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles = e.getMany<std::vector<artdaq::Fragment>>();
-
-  // first find the beam spill time
+  
+  // first find the beam spill time 
+  // FIXME - note it would be best to check fragID here before opening container
+  
   int beamtimestamp = -1;
   // loop over fragment handles
   for (auto &handle : fragmentHandles) {
     if (!handle.isValid() || handle->size() == 0) continue;
-
+    
     if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
-      //Container fragment                                                                                               
+      //Container fragment                                                            
       for (auto cont : *handle) {
 	artdaq::ContainerFragment contf(cont);
         if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
-	  if (fverbose)           std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
-	  //          fWvfmsVec.resize(16*contf.block_count());
+	  if (fVerbose)           std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
           for (size_t ii = 0; ii < contf.block_count(); ++ii) {
-	    auto this_ts = find_beam_spill(*contf[ii].get());
-	    if (this_ts!=0) { beamtimestamp=this_ts; break;}
-	  }
-        }
-      }
-    }   
+	    // access fragment ID	    
+	    const artdaq::Fragment &frag = *contf[ii].get();
+	    uint fragId = static_cast<int>(frag.fragmentID()); 
+	    if (fVerbose) std::cout << "Looking for beam spill, fragID is " << fragId << std::endl;
+	    if (fragId==fETrigFragid) {
+	      auto this_ts = find_beam_spill(*contf[ii].get());
+	      if (this_ts!=0) { beamtimestamp=this_ts; break;}
+	    }  // check frag id
+	  } //for loop over 
+        } // if
+      } //for loop over fragments in container
+    } // if container  
     else if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
       if (fVerbose)   std::cout << "Found " << handle->size() << " CAEN1730 fragments" << std::endl;
-      fWvfmsVec.resize(16*handle->size());
       for (auto frag : *handle) {
-	auto this_ts = find_beam_spill(frag);
-	if (this_ts!=0) { beamtimestamp=this_ts; break;}
+	// access fragment ID	    
+	uint fragId = static_cast<int>(frag.fragmentID()); 
+	  if (fVerbose) std::cout << "Looking for beam spill, fragID is " << fragId << std::endl;
+	if (fragId==fETrigFragid) {	  
+	  auto this_ts = find_beam_spill(frag);
+	  //       	if (this_ts!=0) { beamtimestamp=this_ts; break;}
+	  if (this_ts!=0) { beamtimestamp=this_ts; 
+	    if (fVerbose) std::cout <<  "in loop . . . beamtimestamp is " << beamtimestamp << std::endl;
+	  }
+	}
       }
     }
-
+    if (fVerbose) std::cout << "beamtimestamp is " << beamtimestamp << std::endl;
+    
     // end edits here . . .
-      // identify whether any fragments correspond to the beam spill
-      // loop over fragments, in steps of 8
-      size_t beamFragmentIdx = 9999;
-      for (size_t fragmentIdx = 0; fragmentIdx < handle->size(); fragmentIdx += 8) {
-        checkCAEN1730FragmentTimeStamp(handle->at(fragmentIdx));
-        if (foundBeamTrigger) {
-          beamFragmentIdx = fragmentIdx;
-          if (fVerbose) std::cout << "Found fragment in time with beam at index: " << beamFragmentIdx << std::endl;
-          break;
-        }
-      }
-
-
-      // save this for later
-      // if set of fragment in time with beam found, process waveforms
-      if (foundBeamTrigger && beamFragmentIdx != 9999) {
-        for (size_t fragmentIdx = beamFragmentIdx; fragmentIdx < beamFragmentIdx+8; fragmentIdx++) {
-          analyzeCAEN1730Fragment(handle->at(fragmentIdx));
+    
+    /*
+    // identify whether any fragments correspond to the beam spill
+    // loop over fragments, in steps of 8
+    size_t beamFragmentIdx = 9999;
+    for (size_t fragmentIdx = 0; fragmentIdx < handle->size(); fragmentIdx += 8) {
+    checkCAEN1730FragmentTimeStamp(handle->at(fragmentIdx));
+    if (foundBeamTrigger) {
+    beamFragmentIdx = fragmentIdx;
+    if (fVerbose) std::cout << "Found fragment in time with beam at index: " << beamFragmentIdx << std::endl;
+    break;
+    }
+    }
+    
+    // save this for later
+    // if set of fragment in time with beam found, process waveforms
+    if (foundBeamTrigger && beamFragmentIdx != 9999) {
+    for (size_t fragmentIdx = beamFragmentIdx; fragmentIdx < beamFragmentIdx+8; fragmentIdx++) {
+    analyzeCAEN1730Fragment(handle->at(fragmentIdx));
         }
         fWvfmsFound = true;
-      }
-    }
+	}
+    */
   } // end loop over handles
-
+  
   // object to store trigger metrics in
   std::unique_ptr<sbnd::trigger::pmtSoftwareTrigger> pmtSoftwareTriggerMetrics = std::make_unique<sbnd::trigger::pmtSoftwareTrigger>();
-
-  if (foundBeamTrigger && fWvfmsFound) {
-
+  
+  // calculate metrics
+  /*
+    bool foundBeamTrigger=false;
+    
+    if (foundBeamTrigger && fWvfmsFound) {
+    
     pmtSoftwareTriggerMetrics->foundBeamTrigger = true;
     // store timestamp of trigger, relative to beam window start
     double triggerTimeStamp = fTriggerTime - beamWindowStart;
     pmtSoftwareTriggerMetrics->triggerTimestamp = triggerTimeStamp;
     if (fVerbose) std::cout << "Saving trigger timestamp: " << triggerTimeStamp << " ns" << std::endl;
-
+    
     double promptPE = 0;
     double prelimPE = 0; 
 
@@ -313,13 +391,16 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     }
   }
   else{
-    if (fVerbose) std::cout << "Beam and wvfms not found" << std::endl;
-    pmtSoftwareTriggerMetrics->foundBeamTrigger = false;
-    pmtSoftwareTriggerMetrics->triggerTimestamp = -9999;
-    pmtSoftwareTriggerMetrics->nAboveThreshold = -9999;
-    pmtSoftwareTriggerMetrics->promptPE = -9999;
-    pmtSoftwareTriggerMetrics->prelimPE = -9999;
-  }
+
+*/
+  if (fVerbose) std::cout << "Beam and wvfms not found" << std::endl;
+  pmtSoftwareTriggerMetrics->foundBeamTrigger = false;
+  pmtSoftwareTriggerMetrics->triggerTimestamp = -9999;
+  pmtSoftwareTriggerMetrics->nAboveThreshold = -9999;
+  pmtSoftwareTriggerMetrics->promptPE = -9999;
+  pmtSoftwareTriggerMetrics->prelimPE = -9999;
+  // }
+
   e.put(std::move(pmtSoftwareTriggerMetrics));      
 
 }
@@ -354,54 +435,95 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::OLDcheckCAEN1730FragmentTimeStam
 }
 */
 
-uint32_t sbnd::trigger::pmtSoftwareTriggerProducer::checkCAEN1730FragmentTimeStamp(const artdaq::Fragment &frag) {
+uint32_t sbnd::trigger::pmtSoftwareTriggerProducer::find_beam_spill(const artdaq::Fragment &frag) {
 
 
   uint32_t retval = 0;
+  if (fVerbose) std::cout << " inside find beam spill " << std::endl;
 
-  // access fragment ID
-  int fragId = static_cast<int>(frag.fragmentID()); 
-
-  // get fragment metadata
+  //--get number of channels from metadata and waveform length from header
   sbndaq::CAENV1730Fragment bb(frag);
   auto const* md = bb.Metadata();
-
-
-  // access timestamp
-  uint32_t timestamp = md->timeStampNSec;
+  sbndaq::CAENV1730Event const* event_ptr = bb.Event();  
+  sbndaq::CAENV1730EventHeader header = event_ptr->Header; 
+  // - not used-  seqID = static_cast<int>(frag.sequenceID()); 
+  // - not used -   int fragId = static_cast<int>(frag.fragmentID()); 
+  size_t nChannels = md->nChannels;
+  //  if (fVerbose) std::cout << "\tNumber of channels: " << nChannels << "\n";
+  
+  uint32_t ev_size_quad_bytes = header.eventSize;
+  if (fVerbose) std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
+  uint32_t evt_header_size_quad_bytes = sizeof(sbndaq::CAENV1730EventHeader)/sizeof(uint32_t);
+  uint32_t data_size_double_bytes = 2*(ev_size_quad_bytes - evt_header_size_quad_bytes);
+  //-  uint32_t wfm_length = data_size_double_bytes/nChannels;
+  fWvfmLength = data_size_double_bytes/nChannels;
+  if (fVerbose) std::cout << "Channel waveform length = " << fWvfmLength << "\n";
+  size_t ch_offset = (size_t)(15*fWvfmLength);
 
   // access beam signal, in ch15 of first PMT of each fragment set
-  // check entry 500 (0us), at trigger time
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() 
-								 + sizeof(sbndaq::CAENV1730EventHeader));
+			     + sizeof(sbndaq::CAENV1730EventHeader));
   const uint16_t* value_ptr =  data_begin;
   uint16_t value = 0;
 
-  size_t ch_offset = (size_t)(15*fWvfmLength);
-  size_t tr_offset = fTriggerTimeOffset*1e3;
-
+  // not currently used because there's no guarantee where the trigger is in the waveform
+  //  size_t tr_offset = fTriggerTimeOffset*1e3;
+  size_t tr_offset = 0;
   value_ptr = data_begin + ch_offset + tr_offset; // pointer arithmetic 
-  value = *(value_ptr);
-  
-  if (value == 1 && timestamp >= beamWindowStart && timestamp <= beamWindowEnd) {
-    foundBeamTrigger = true;
-    fTriggerTime = timestamp;
+  //  value = *(value_ptr);
+
+  uint32_t timestamp = 0;
+
+  for (uint ind=0;ind<fWvfmLength;++ind){
+    value = *(value_ptr+ind);
+    if (value>fETrigThresh) {
+	timestamp = md->timeStampNSec;
+	foundBeamTrigger = true;
+	fTriggerTime = timestamp;
+	std::cout << "Found beam trigger : ind= " << ind << " adc is " << value << std::endl;
+      break;
+    }
   }
+
+  std::cout << " timestamp is " << timestamp << std::endl;
+  return(timestamp);
+
 }
 
-void sbnd::trigger::pmtSoftwareTriggerProducer::analyzeCAEN1730Fragment(const artdaq::Fragment &frag) {
+void sbnd::trigger::pmtSoftwareTriggerProducer::analyzeCAEN1730Fragment(const artdaq::Fragment &frag) 
+{
   
+  //--get number of channels from metadata and waveform length from header
+  sbndaq::CAENV1730Fragment bb(frag);
+  auto const* md = bb.Metadata();
+  sbndaq::CAENV1730Event const* event_ptr = bb.Event();
+  
+  sbndaq::CAENV1730EventHeader header = event_ptr->Header;
+  
+  // - not used-  seqID = static_cast<int>(frag.sequenceID()); 
+  int fragId = static_cast<int>(frag.fragmentID()); 
+  std::map<int,int>::iterator it = map_fragid_index.find(fragId);
+  int findex = it->second;     
 
-  // access waveforms in fragment and save
+  size_t nChannels = md->nChannels;
+  if (fVerbose) std::cout << "\tNumber of channels: " << nChannels << "\n";
+  
+  uint32_t ev_size_quad_bytes = header.eventSize;
+  if (fVerbose) std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
+  uint32_t evt_header_size_quad_bytes = sizeof(sbndaq::CAENV1730EventHeader)/sizeof(uint32_t);
+  uint32_t data_size_double_bytes = 2*(ev_size_quad_bytes - evt_header_size_quad_bytes);
+  //-  uint32_t wfm_length = data_size_double_bytes/nChannels;
+  //- if (fverbose) std::cout << "Channel waveform length = " << wfm_length << "\n";
+  fWvfmLength = data_size_double_bytes/nChannels;
+  if (fVerbose) std::cout << "Channel waveform length = " << fWvfmLength << "\n";
+  
+  //--access waveforms in fragment and save
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() 
-								 + sizeof(sbndaq::CAENV1730EventHeader));
+      				 + sizeof(sbndaq::CAENV1730EventHeader));
   const uint16_t* value_ptr =  data_begin;
   uint16_t value = 0;
-
-  // channel offset
-  size_t nChannels = 15; // 15 pmts per fragment
   size_t ch_offset = 0;
-
+  
   // loop over channels
   for (size_t i_ch = 0; i_ch < nChannels; ++i_ch){
     fWvfmsVec[i_ch + nChannels*fragId].resize(fWvfmLength);
