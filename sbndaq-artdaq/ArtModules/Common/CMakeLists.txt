@@ -22,4 +22,6 @@ build_plugin( BernCRTZMQAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST}
 build_plugin( BernCRTAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( BernCRTAnaV2 "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( BernCRTDumpV2 "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( EventAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( MultiDump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 
