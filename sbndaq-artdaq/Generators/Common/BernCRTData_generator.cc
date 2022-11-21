@@ -114,7 +114,7 @@ void sbndaq::BernCRTData::feb_send_bitstreams(uint8_t mac5) {
 } //feb_send_bitstreams
 
 void sbndaq::BernCRTData::StartFebdrv() {
-  TLOG(TLVL_DEBUG)<< "(re)starting febdrv";
+  TLOG(TLVL_NOTICE)<< "(re)starting febdrv";
   if(! febdrv.startDAQ() ) {
     TLOG(TLVL_ERROR) <<  "Failed to (re)start DAQ";
     throw cet::exception( std::string(TRACE_NAME) +"::"+ __func__ + " Failed to (re)start DAQ!");
