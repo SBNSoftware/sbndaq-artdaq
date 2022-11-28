@@ -159,6 +159,7 @@ private:
   std::vector<int> fPMT_ch13;
   std::vector<int> fPMT_ch14;
   std::vector<int> fPMT_ch15;
+  std::vector<int> ffragID;
 
   int fnstamps0;
   int fnstamps1;
@@ -303,6 +304,7 @@ sbndaq::EventAna::EventAna(EventAna::Parameters const& pset): art::EDAnalyzer(ps
   finclude_berncrt = pset().include_berncrt();
   fcrt_keepall = pset().crt_keepall();
   finclude_ptb = pset().include_ptb();
+  fShift=0; // repurpose fShift variable
 }
 
 void sbndaq::EventAna::beginJob()
@@ -341,6 +343,7 @@ void sbndaq::EventAna::beginJob()
     events->Branch("fPMT_ch13",&fPMT_ch13);
     events->Branch("fPMT_ch14",&fPMT_ch14);
     events->Branch("fPMT_ch15",&fPMT_ch15);
+    events->Branch("ffragID",&ffragID);
   }
   if (finclude_wr) {
     events->Branch("fWR_ch0",&fWR_ch0);
@@ -488,8 +491,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 
   // Reset PTB variables
   reset_ptb_variables();
-
-  //  Note that this code expects exactly 1 CAEN fragment per event
+  // Reset 1730 variables
+  fShift=0;   // fragment counter
   TTT_ns=0;  // will be set to value in CAEN fragement header
   caen_frag_ts = 0;
   
@@ -772,13 +775,13 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   CAENV1730EventHeader header = event_ptr->Header;
   
   int fragId = static_cast<int>(frag.fragmentID());
-  fragId-=fShift;
+  ffragID.push_back(fragId);
   //
   if (fverbose)      std::cout << "\tFrom CAEN header, event counter is "  << header.eventCounter   << "\n";
   if (fverbose)      std::cout << "\tFrom CAEN header, triggerTimeTag is " << header.triggerTimeTag << "\n";
   if (fverbose)       std::cout << "\tFrom CAEN header, board id is "       << header.boardID       << "\n";
   if (fverbose)       std::cout << "\tFrom CAEN fragment, fragment id is "  << fragId << "\n";
-  if (fverbose)       std::cout << "\tShift back, fragment id of "  << fShift << "\n";
+  if (fverbose)       std::cout << "\tFragment counter for this event "  << fShift << "\n";
   
   uint32_t t0 = header.triggerTimeTag;
   TTT = (int)t0;
@@ -803,14 +806,13 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   fTicksVec.resize(wfm_length);
   
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes()
-								 + sizeof(CAENV1730EventHeader));
-  
+						      	 + sizeof(CAENV1730EventHeader));
   const uint16_t* value_ptr =  data_begin;
   uint16_t value = 0;
   size_t ch_offset = 0;
   //--loop over channels
   for (size_t i_ch=0; i_ch<nChannels; ++i_ch){
-    fWvfmsVec[i_ch+nChannels*fragId].resize(wfm_length);
+    fWvfmsVec[i_ch+nChannels*fShift].resize(wfm_length);
     ch_offset = (size_t)(i_ch * wfm_length);
     
     //--loop over waveform samples
@@ -821,7 +823,7 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
       if (i_ch == 0 && firstEvt) {
 	h_wvfm_ev0_ch0->SetBinContent(i_t,value);
       }
-      fWvfmsVec[i_ch+nChannels*fragId][i_t] = value;
+      fWvfmsVec[i_ch+nChannels*fShift][i_t] = value;
     } //--end loop samples
     firstEvt = false;
   } //--end loop channels
@@ -831,10 +833,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   // find leading edges in waveforms
   int toggle=0;
   int i_ch =0 ;
-  auto this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  auto this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch0.emplace_back(i_t);
@@ -844,10 +846,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   
   // find leading edges in waveforms
   i_ch = 1; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch1.emplace_back(i_t);
@@ -857,10 +859,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   
   // find leading edges in waveforms
   i_ch = 2; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch2.emplace_back(i_t);
@@ -870,10 +872,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 3; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch3.emplace_back(i_t);
@@ -883,10 +885,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   
   // find leading edges in waveforms
   i_ch = 4; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch4.emplace_back(i_t);
@@ -896,10 +898,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 5; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch5.emplace_back(i_t);
@@ -909,10 +911,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 6; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch6.emplace_back(i_t);
@@ -922,10 +924,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 7; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch7.emplace_back(i_t);
@@ -935,10 +937,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 8; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch8.emplace_back(i_t);
@@ -948,10 +950,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 9; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch9.emplace_back(i_t);
@@ -961,10 +963,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 10; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch10.emplace_back(i_t);
@@ -974,10 +976,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 11; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch11.emplace_back(i_t);
@@ -987,10 +989,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 12; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch12.emplace_back(i_t);
@@ -1000,10 +1002,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 13; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch13.emplace_back(i_t);
@@ -1013,10 +1015,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 14; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch14.emplace_back(i_t);
@@ -1026,10 +1028,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 15; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch15.emplace_back(i_t);
@@ -1038,7 +1040,7 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   }
   
 
-
+  fShift++;
 
 }
 
