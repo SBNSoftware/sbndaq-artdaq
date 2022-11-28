@@ -23,7 +23,7 @@
 #include "artdaq-core/Data/ContainerFragment.hh"
 #include "artdaq/DAQdata/Globals.hh"
 
-//#include "sbndaq-artdaq-core/Obj/SBND/pmtSoftwareTrigger.hh"
+#include "sbndaq-artdaq-core/Obj/SBND/pmtSoftwareTrigger.hh"
 #include "sbndaq-artdaq-core/Obj/SBND/CRTmetric.hh"
 //#include "sbnobj/SBND/Trigger/CRTmetric.hh"
 
@@ -57,8 +57,8 @@ private:
   std::string fPMTInputModuleName; //PMT Metrics Module Name
   int fNumCRTPlanes; //Total number of CRT planes expected (should be 7)
   std::vector<int> fExcludeCRTPlanes; //which CRT planes to allow to have hits in the beam window (window is defined by CRT metrics producer)
-  int fNPMTHits;
-  bool fVerbose;
+  int fNPMTHits; //number of PMT hits to be below
+  bool fVerbose; //turn on/off print statements
 
 };
 
@@ -105,6 +105,22 @@ bool NeutrinoStreamFilter::filter(art::Event& e)
 
     if (hitsperplane[ip] !=0){ return false; }
   }
+  //end CRT
+
+  // read pmt metric information from event
+  art::Handle< sbnd::trigger::pmtSoftwareTrigger > pmtHandle;
+  e.getByLabel(fPMTInputModuleName, pmtHandle);
+  if(!pmtHandle.isValid()) {
+    TLOG(TLVL_ERROR) << "NeutrinoStreamFilter: could not find pmt information from producer, check PMT input module name specified is correct.";
+    return false;
+  }
+
+  int nAboveThreshold = -1;
+
+  nAboveThreshold = pmtHandle->nAboveThreshold;
+
+  if (nAboveThreshold > fNPMTHits){ return false; }
+  //end PMT
 
   if (fVerbose) {
     TLOG(TLVL_INFO) << "NeutrinoStreamFilter: Selected Event "<< fEvent;
