@@ -112,7 +112,7 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
   }
   
   else if(!raw_data.isValid()) {
-    TLOG(TLVL_WARN) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerV3 Fragments in module, checking for ICARUSTriggerV2 fragments ";
+    TLOG(TLVL_DEBUG) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerV3 Fragments in module, checking for ICARUSTriggerV2 fragments!";
   }
     
   evt.getByLabel(raw_data_label_, "ICARUSTriggerV2", raw_data);
@@ -126,7 +126,7 @@ bool icarus::ICARUSGateFilter::filter(art::Event & evt)
   }
 
   else if(!raw_data.isValid()) {
-    TLOG(TLVL_WARN) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerV2 Fragments in module ";
+    TLOG(TLVL_WARN) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero ICARUSTriggerV2 or ICARUSTriggerV3 Fragments in module, not separating by beam type!";
   }
 
   
