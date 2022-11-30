@@ -189,7 +189,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
         TLOG(TLVL_ERROR) << "Too many times (10) with zero data size in TileHeader. Exit.";
         return false;
       }
-      //git it some time otherwise
+      //give it some time otherwise
       ++packSize_zero_counter_;
       usleep(1000);
       return true;
