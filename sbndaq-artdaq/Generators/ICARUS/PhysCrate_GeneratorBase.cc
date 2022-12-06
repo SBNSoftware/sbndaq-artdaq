@@ -173,6 +173,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
       return true;
     }
 
+    if (not fCircularBuffer.Buffer().is_linearized()){
+      TLOG(TLVL_DEBUG + 7)
+        << "fCircularBuffer is not linear. Buffer will be linearized when setting next_dt_begin_ptr";
+    }
+
     //  the Tile Header is at the beginning of the board data:
     auto const* next_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData() + data_size_bytes/sizeof(uint16_t);
     auto const* next_dt = reinterpret_cast< DataTile const* >(next_dt_begin_ptr);
@@ -207,7 +212,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
     ++iBoard;
     if (not fCircularBuffer.Buffer().is_linearized()){
       TLOG(TLVL_DEBUG + 7)
-        << "fCircularBuffer is not linear. Relinearize.";
+        << "fCircularBuffer is not linear. Linearize for debugging statements.";
       first_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData();
       next_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData() + data_size_bytes/sizeof(uint16_t);
       next_dt = reinterpret_cast< DataTile const* >(next_dt_begin_ptr);
