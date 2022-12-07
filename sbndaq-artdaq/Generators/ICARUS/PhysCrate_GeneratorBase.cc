@@ -287,6 +287,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   int max_ev_num_diff=0;
   int max_ts_diff=0;
 
+  bool found_inconsistent_boards=false;
 
   for ( uint16_t jBoard = 1; jBoard < nBoards_; ++jBoard ) {
     if ( newfrag.BoardEventNumber(jBoard) != ev_num ) {
@@ -296,10 +297,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
       if( std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0))>max_ev_num_diff )
 	max_ts_diff = std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0));
 
-      TLOG(TLVL_ERROR + 17) << "Inconsistent event numbers in one fragment: Event " 
+      TLOG(TLVL_ERROR) << "Inconsistent event numbers in one fragment: Event " 
 		       << ev_num << " in Board 0 while Event " 
 		       << newfrag.BoardEventNumber(jBoard) 
 		       << " in Board " << jBoard;
+      found_inconsistent_boards=true;
     }
   }
 
@@ -307,6 +309,17 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
   metricMan->sendMetric("MaxBoardTimeStampDiff",max_ts_diff,"ticks",1,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
+
+  if(found_inconsistent_boards){
+    TLOG(TLVL_ERROR) << "Inconsistent event numbers within one of the fragments found."
+                     << " Will return false in getNext_ and hopefully stop.";
+
+    for(uint16_t iBoard=0; iBoard<nBoards_; ++iBoard)
+      TLOG(TLVL_ERROR) << "Board " << iBoard << ":\n" << *(newfrag.BoardDataBlock(iBoard));
+
+    return false;
+  }
+
   if(ev_num==0)
     event_offset_ = 1;
 
