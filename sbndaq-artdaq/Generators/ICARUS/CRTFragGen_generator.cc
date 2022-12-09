@@ -25,10 +25,11 @@
 //#include "uhal/uhal.hpp"
 
 #include "artdaq/DAQdata/Globals.hh"
+#include "TRACE/tracemf.h"
 
 CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
     CommandableFragmentGenerator(ps)
-  , sqltable(ps.get<std::string>("sqltable", ""))
+  , configfile(ps.get<std::string>("configfile", ""))
   , readout_buffer_(nullptr)
   , hardware_interface_(new CRTInterface(ps))
   , timestamp_(0)
@@ -61,10 +62,13 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   // and we will always read only from the latest file when data is requested.
   //
   // Yes, a call to system() is awful.  We could improve this.
+  //system(("/home/nfs/rhowell/test/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str());
   if(startbackend &&
-     system(("source /nfs/sw/crt/readout_linux/script/setup.sh; "
-              "startallboards.pl " + sqltable).c_str())){
+     system(("/home/nfs/rhowell/test/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str())){
     throw cet::exception("CRT") << "Failed to start up CRT backend\n";
+  }
+  else  {
+    TLOG(TLVL_INFO, "CRT") << "backend started succesfully\n";
   }
 
   // If we aren't the process that starts the backend, this will block
@@ -75,9 +79,11 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
 CRT::FragGen::~FragGen()
 {
   // Stop the backend DAQ.
-  if(system(("source /nfs/sw/crt/readout_linux/script/setup.sh; "
-              "nohup stopallboards.pl " + sqltable + " &").c_str())){
-    TLOG(TLVL_WARNING, "CRT") << "Failed in call to stopallboards.pl\n";
+  if(system(("nohup /home/nfs/rhowell/test/ICARUS_DAQ/DAQ_CPP_v1/stopallboards_fcl " + configfile + " &").c_str())){
+    TLOG(TLVL_WARNING, "CRT") << "Failed in call to stopallboards.pl\n"; // TODO review this, maybe exception?
+  }
+  else {
+    TLOG(TLVL_INFO, "CRT") << "backend ended succesfully\n";
   }
 
   hardware_interface_->FreeReadoutBuffer(readout_buffer_);
@@ -86,7 +92,7 @@ CRT::FragGen::~FragGen()
 bool CRT::FragGen::getNext_(
   std::list< std::unique_ptr<artdaq::Fragment> > & frags)
 {
-  if(!gotRunStartTime) 
+  /*if(!gotRunStartTime) 
   {
     //getRunStartTime();
 
@@ -119,7 +125,7 @@ bool CRT::FragGen::getNext_(
     oldUNIX = time(nullptr);
 
   }
-                                                                                                     
+   */                                                                                                  
   if(should_stop()){
     TLOG(TLVL_INFO, "CRT") << "getNext_ returning on should_stop()\n";
     return false;
@@ -128,6 +134,7 @@ bool CRT::FragGen::getNext_(
   // Maximum number of Fragments allowed per GetNext_() call.  I think we
   // should keep this as small as possible while making sure this Fragment
   // Generator can keep up.
+  // TODO check this at some point
   const int maxFrags = 64;
 
   int fragIt = 0;
@@ -157,6 +164,9 @@ bool CRT::FragGen::getNext_(
     metricMan->sendMetric("Fragments Made", fragIt, "Fragments", 1, artdaq::MetricMode::Accumulate);
   }
 
+  // TODO prune debug messages, make trace message BottomCRT
+  // TODO add metric to send difference in local time and fragment timestamp
+
   if(fragIt > 0){//If we read at least one Fragment
     if (metricMan /* What is this? */ != nullptr)
       metricMan->sendMetric("Fragments Sent", ev_counter(), "Events", 3 /* ? */,
@@ -164,10 +174,10 @@ bool CRT::FragGen::getNext_(
 
     ev_counter_inc(); // from base CommandableFragmentGenerator
 
-    TLOG(TLVL_DEBUG, "CRT") << "getNext_ is returning with hits in " << fragIt << " Fragments\n";
+    TLOG(TLVL_INFO, "CRT") << "getNext_ is returning with hits in " << fragIt << " Fragments\n";
   }
   else{
-    TLOG(TLVL_DEBUG, "CRT") << "getNext_ is returning with no data\n";
+    TLOG(TLVL_INFO, "CRT") << "getNext_ is returning with no data\n";
   }
 
   return true;
@@ -271,7 +281,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 			      << " and deltaUNIX = " << deltaUNIX 
 			      << ".  Throwing out this Fragment - out of time.\n";
 
-    if( labs(deltaT) == 86 ) {  //try to realign the time in case we are off by 1 cycle for whatever reason
+    if( labs(deltaT) == 1 ) {  //try to realign the time in case we are off by 1 cycle for whatever reason
 
       if(deltaT<0) {newUppertime++;} //try to futher correct the uppertime for this cycle: + 1 reset that was missed
       if(deltaT>0) {newUppertime--;} //try to futher correct the uppertime for this cycle: - 1 reset that was missed
@@ -314,13 +324,15 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   fragptr->setSequenceID( ev_counter() );
   fragptr->setFragmentID( fragment_id() ); // Ditto
   fragptr->setUserType( sbndaq::detail::BottomCRT );
+  // TODO timestamp calculated within 16 ns of  real hardware timestamp
+  // TODO add trace message with frag ID and timestamp_
   fragptr->setTimestamp( timestamp_ );
   memcpy(fragptr->dataBeginBytes(), readout_buffer_, bytes_read);
 
   return fragptr;
 }
-
-/*void CRT::FragGen::getRunStartTime()
+/*
+void CRT::FragGen::getRunStartTime()
 {
   uhal::ValWord<uint32_t> status
     = timinghw.getNode("endpoint0.csr.stat.ep_stat").read();
@@ -338,7 +350,10 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 }
 */
 void CRT::FragGen::start()
-{
+{ 
+  runstarttime = time(nullptr);
+  gotRunStartTime = true;
+  TLOG(TLVL_INFO, "CRT") << "runstarttime set to " << runstarttime << "\n";
   hardware_interface_->StartDatataking();
 
   uppertime = 0;

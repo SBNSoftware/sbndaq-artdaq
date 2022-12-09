@@ -365,6 +365,8 @@ size_t CRTInterface::read_everything_from_file(char * cooked_data)
 
 void CRTInterface::FillBuffer(char* cooked_data, size_t* bytes_ret)
 {
+  TLOG(TLVL_DEBUG, "CRTInterface")
+    << "Entering CRTInterface::FillBuffer";
   *bytes_ret = 0;
 
   // First see if we can decode another module packet out of the data already
@@ -493,19 +495,19 @@ void CRTInterface::SetBaselines()
     }
   }
 
-  int module = 0, channel = 0, nhit = 0;
-  float fbaseline = 0, stddev = 0;
+  int usb = 0, module = 0, channel = 0;
+  float fbaseline = 0, stddev = 0, nhit = 0;
   int nconverted = 0;
   int line = 0;
-  while(EOF != (nconverted = fscanf(in, "%d,%d,%f,%f,%d",
-        &module, &channel, &fbaseline, &stddev, &nhit))){
+  while(EOF != (nconverted = fscanf(in, "%d,%d,%d,%f,%f,%f",
+        &usb, &module, &channel, &fbaseline, &stddev, &nhit))){
 
     line++; // This somewhat erroneously assumes that we consume
             // one line per scanf.  In a pathological file with the right
             // format, but bad data, and with fewer line breaks than expected,
             // the reported line number will be wrong.
 
-    if(nconverted != 5){
+    if(nconverted != 6){
       TLOG(TLVL_WARNING, "CRTInterface") << "Warning: skipping invalid line "
         << line << " in baseline file";
       continue;

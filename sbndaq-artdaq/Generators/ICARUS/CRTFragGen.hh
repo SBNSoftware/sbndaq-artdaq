@@ -53,7 +53,7 @@ namespace CRT
 
     // Name of CRT database table that gives the information about the set of modules
     // we will read from.
-    std::string sqltable;
+    std::string configfile;
 
     // Written to by the hardware interface
     char* readout_buffer_;
