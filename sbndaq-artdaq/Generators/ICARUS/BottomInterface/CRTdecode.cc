@@ -393,7 +393,7 @@ unsigned int raw2cook(char * const cooked_data,
   }
 
   next_raw_byte -= used_raw_bytes;
-  TLOG(TLVL_DEBUG, "CRTdecode") << "Cooked bytes: " << cooked_bytes<< "\n";
+  //TLOG(TLVL_DEBUG, "CRTdecode") << "Cooked bytes: " << cooked_bytes<< "\n";
   return cooked_bytes;
 }
 

@@ -365,8 +365,8 @@ size_t CRTInterface::read_everything_from_file(char * cooked_data)
 
 void CRTInterface::FillBuffer(char* cooked_data, size_t* bytes_ret)
 {
-  TLOG(TLVL_DEBUG, "CRTInterface")
-    << "Entering CRTInterface::FillBuffer";
+  //TLOG(TLVL_DEBUG, "CRTInterface")
+  //  << "Entering CRTInterface::FillBuffer";
   *bytes_ret = 0;
 
   // First see if we can decode another module packet out of the data already
