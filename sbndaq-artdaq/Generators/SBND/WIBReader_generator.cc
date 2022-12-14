@@ -74,6 +74,11 @@ namespace sbndaq
     if(success){
        TLOG_INFO(identification) << "******** Configuration is successful in the " << success_index << " th try ***************" << TLOG_ENDL;
     }
+    
+    TLOG_INFO(identification) << "================== WIB SUMMARY AFTER CONFIGURATION ======================" << TLOG_ENDL;
+    TLOG_INFO(identification) << "WIB FW VERSION : " << std::hex << int(wib->Read("FW_VERSION")) << TLOG_ENDL;
+    TLOG_INFO(identification) << "SLOT ADDRESS : " << std::hex << int(wib->Read("SLOT_ADDR")) << TLOG_ENDL;
+    TLOG_INFO(identification) << "CRATE ADDRESS : " << std::hex << int(wib->Read("CRATE_ADDR")) << TLOG_ENDL;
  }
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
@@ -88,6 +93,7 @@ namespace sbndaq
    const std::string identification = "SBNDWIBReader::setupWIB";
    TLOG_INFO(identification) << "Now Starting setupWIB " << TLOG_ENDL;
    
+   TLOG_INFO(identification) << "WIB DAT SOURCE : " << int(DTS_source) << TLOG_ENDL;
       
    //TLOG_INFO(identification) << "Connecting to WIB at " <<  wib_address << TLOG_ENDL;
    
