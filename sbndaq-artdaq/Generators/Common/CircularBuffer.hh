@@ -15,7 +15,7 @@ namespace sbndaq{
 
   public:
     CircularBuffer(uint32_t capacity): buffer( boost::circular_buffer<T>(capacity) ),
-				       mutexptr(new std::mutex)
+				       mutexptr(new std::mutex),linearizeCount{0}
     { Init(); }
     CircularBuffer()
     { CircularBuffer(0); }
@@ -23,6 +23,8 @@ namespace sbndaq{
     void Init(){
       buffer.clear();
       mutexptr->unlock();
+
+      metricMan->sendMetric(".CircularBuffer.LinearizeCount",linearizeCount,"count",1,artdaq::MetricMode::LastPoint);
     }
 
     size_t Insert(size_t,std::unique_ptr<T[]>  const& );
@@ -38,6 +40,7 @@ namespace sbndaq{
   private:
     boost::circular_buffer<T> buffer;
     std::unique_ptr<std::mutex> mutexptr;
+    uint64_t linearizeCount;
 
     enum {
       TERROR    = TLVL_ERROR,
@@ -123,12 +126,14 @@ namespace sbndaq{
     buffer.linearize();
     
     //TRACE(TDEBUG,"Circular buffer linearize complete. Size is %lu. Is linear? %s",
-	//  buffer.size(),buffer.is_linearized()?"yes":"no");
-	TLOG(TDEBUG)<< "Circular buffer linearize complete. Size is "<<buffer.size()
+    //  buffer.size(),buffer.is_linearized()?"yes":"no");
+    TLOG(TDEBUG+2)<< "Circular buffer linearize complete. Size is "<<buffer.size()
 				<<". Is linear? "<< std::string(buffer.is_linearized()?"yes":"no");
    
-   if(!buffer.is_linearized() )	
+    if(!buffer.is_linearized() )	
 		 throw std::runtime_error("Circular buffer is not linear.");
+
+    metricMan->sendMetric(".CircularBuffer.LinearizeCount",++linearizeCount,"count",1,artdaq::MetricMode::LastPoint);
 
     return buffer.size();
   }
@@ -136,19 +141,21 @@ namespace sbndaq{
   template <class T>
   T const* sbndaq::CircularBuffer<T>::LinearizeAndGetData(){
 
-    TRACE(10,"Linearize circular buffer called. Size is %lu. Is linear? %s",
+    TRACE(TDEBUG+2,"Linearize circular buffer called. Size is %lu. Is linear? %s",
           buffer.size(),std::string(buffer.is_linearized()?"yes":"no").c_str());
 
     if(buffer.is_linearized())
       return &buffer.front();
 
     std::unique_lock<std::mutex> lock(*(mutexptr));
-    TRACE(10,"Obtained circular buffer lock for linearize.");
+    TRACE(TDEBUG+2,"Obtained circular buffer lock for linearize.");
 
     T const* data_ptr = buffer.linearize();
 
-    TRACE(10,"Circular buffer linearize complete. Size is %lu. Is linear? %s",
-          buffer.size(),std::string(buffer.is_linearized()?"yes":"no").c_str());
+    TLOG(TDEBUG+2)<< "Circular buffer linearize complete. Size is "<<buffer.size()
+      <<". Is linear? "<< std::string(buffer.is_linearized()?"yes":"no");
+
+    metricMan->sendMetric(".CircularBuffer.LinearizeCount",++linearizeCount,"count",1,artdaq::MetricMode::LastPoint);
 
     return data_ptr;
   }
@@ -158,7 +165,7 @@ namespace sbndaq{
 
     std::unique_lock<std::mutex> lock(*(mutexptr));
     size_t size = buffer.size();
-    TRACE(10, "Obtained the size of the circular buffer: %lu.", size );
+    TRACE(TDEBUG+2, "Obtained the size of the circular buffer: %lu.", size );
     return size;
 
   }
