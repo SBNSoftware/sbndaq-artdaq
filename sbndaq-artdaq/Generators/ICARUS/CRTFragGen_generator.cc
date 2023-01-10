@@ -62,9 +62,9 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   // and we will always read only from the latest file when data is requested.
   //
   // Yes, a call to system() is awful.  We could improve this.
-  //system(("/home/nfs/rhowell/test/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str());
+  //system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str());
   if(startbackend &&
-     system(("/home/nfs/rhowell/test/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str())){
+     system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str())){
     throw cet::exception("CRT") << "Failed to start up CRT backend\n";
   }
   else  {
@@ -79,7 +79,7 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
 CRT::FragGen::~FragGen()
 {
   // Stop the backend DAQ.
-  if(system(("nohup /home/nfs/rhowell/test/ICARUS_DAQ/DAQ_CPP_v1/stopallboards_fcl " + configfile + " &").c_str())){
+  if(system(("nohup /home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/stopallboards_fcl " + configfile + " &").c_str())){
     TLOG(TLVL_WARNING, "CRT") << "Failed in call to stopallboards.pl\n"; // TODO review this, maybe exception?
   }
   else {
@@ -125,7 +125,8 @@ bool CRT::FragGen::getNext_(
     oldUNIX = time(nullptr);
 
   }
-   */                                                                                                  
+   */
+  oldUNIX = time(nullptr);
   if(should_stop()){
     TLOG(TLVL_INFO, "CRT") << "getNext_ returning on should_stop()\n";
     return false;
@@ -233,7 +234,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //uint64_t deltaUNIX = currentUNIX - oldtimestamp; //difference in time in sec.
 
   if(deltaUNIX > 0 ){ // there is a difference, check if a reset happen ( @1 sec )
-    deltaUNIX /= (16./1.e9)*pow(2.,32.); //number of clock counter between two consecutive events considering the 16ns ticks=85.89s=1s
+    //deltaUNIX /= (16./1.e9)*pow(2.,32.); //number of clock counter between two consecutive events considering the 16ns ticks=85.89s=1s
     deltaUNIX = (int)deltaUNIX; //lower end, need to check if it is off by one additional rollover    
     newUppertime += deltaUNIX; //adding an intenger number of seconds (1s) corresponding to how many resets we detect (should old do this when pausing the run)
   } 
@@ -246,13 +247,14 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   }
   
   //building the new timestamp with the rollover if any
-  timestamp_ = ((uint64_t)newUppertime << 32) + lowertime + runstarttime;
+  //timestamp_ = ((uint64_t)newUppertime << 32) + lowertime + runstarttime*1.e9/16.;
+  timestamp_ = lowertime + ((uint64_t)newUppertime + runstarttime)*1.e9/16.;
 
 
   //debug for the moment the new deltaUNIX time constructor
   if (deltaUNIX > 0) { //there was at least one reset
 
-    TLOG(TLVL_WARNING, "CRT") << "Constructing a timestamp with deltaUNIX included, current linux time = "
+    TLOG(TLVL_WARNING, "CRT") << "Detected a rollover, current linux time = "
 			   << currentUNIX << " newUppertime is = " 
 			   << newUppertime << " uppertime is = "
 			   << uppertime << " difference between the old and the new UNIX time = "
@@ -286,7 +288,8 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
       if(deltaT<0) {newUppertime++;} //try to futher correct the uppertime for this cycle: + 1 reset that was missed
       if(deltaT>0) {newUppertime--;} //try to futher correct the uppertime for this cycle: - 1 reset that was missed
 
-      timestamp_ = ((uint64_t)newUppertime << 32) + lowertime + runstarttime;
+      //timestamp_ = ((uint64_t)newUppertime << 32) + lowertime + runstarttime*1.e9/16.;
+      timestamp_ = lowertime + ((uint64_t)newUppertime + runstarttime)*1.e9/16.;
 
       newtimediff = timestamp_*16./1.e9 - currentUNIX; //16 nanosecond ticks, convert timestamp in sec.
 
@@ -351,10 +354,11 @@ void CRT::FragGen::getRunStartTime()
 */
 void CRT::FragGen::start()
 { 
+  hardware_interface_->StartDatataking();
+
   runstarttime = time(nullptr);
   gotRunStartTime = true;
   TLOG(TLVL_INFO, "CRT") << "runstarttime set to " << runstarttime << "\n";
-  hardware_interface_->StartDatataking();
 
   uppertime = 0;
   oldlowertime = 0;
