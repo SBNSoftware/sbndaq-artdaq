@@ -220,24 +220,31 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
   const uint64_t rolloverThreshold = 1000; //was 100000000
 
-  uint64_t newUppertime = uppertime;
+  int64_t newUppertime = uppertime;
 
   // L. Jiang && C. Mariani Oct.2019
   uint64_t currentUNIX = time(nullptr);
 
   //determine the number of reset that occurred if the time passed is greater than 1s
 
-  //uint64_t oldtimestamp = (((uint64_t)uppertime << 32) + lowertime + runstarttime)*16./1.e9;  //this is in sec.
+  //int64_t oldtimestamp = lowertime + ((uint64_t)uppertime + runstarttime)*1.e9/16.;  //this is in sec.
 
-  uint64_t deltaUNIX = currentUNIX - oldUNIX; //this is in sec.
+  int64_t deltaUNIX = currentUNIX - oldUNIX; //this is in sec.
 
   //uint64_t deltaUNIX = currentUNIX - oldtimestamp; //difference in time in sec.
+
+  //debug for the moment the new deltaUNIX time constructor
+  if (labs(deltaUNIX) > 0) { //there was at least one reset
 
   if(deltaUNIX > 0 ){ // there is a difference, check if a reset happen ( @1 sec )
     //deltaUNIX /= (16./1.e9)*pow(2.,32.); //number of clock counter between two consecutive events considering the 16ns ticks=85.89s=1s
     deltaUNIX = (int)deltaUNIX; //lower end, need to check if it is off by one additional rollover    
     newUppertime += deltaUNIX; //adding an intenger number of seconds (1s) corresponding to how many resets we detect (should old do this when pausing the run)
-  } 
+  }
+  //else if (deltaUNIX < 0){
+  //  deltaUNIX = (int)deltaUNIX;
+  //  newUppertime -= deltaUNIX;
+  //} 
   //detecting if there is an additional rollover, close to the edge of the clock reset
   else if((uint64_t)(lowertime + rolloverThreshold) < oldlowertime){
     /*TLOG(TLVL_DEBUG, "CRT") << "lowertime " << lowertime
@@ -245,15 +252,6 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
       "uppertime is now " << uppertime << ".\n";*/
     newUppertime++;  
   }
-  
-  //building the new timestamp with the rollover if any
-  //timestamp_ = ((uint64_t)newUppertime << 32) + lowertime + runstarttime*1.e9/16.;
-  timestamp_ = lowertime + ((uint64_t)newUppertime + runstarttime)*1.e9/16.;
-
-
-  //debug for the moment the new deltaUNIX time constructor
-  if (deltaUNIX > 0) { //there was at least one reset
-
     TLOG(TLVL_WARNING, "CRT") << "Detected a rollover, current linux time = "
 			   << currentUNIX << " newUppertime is = " 
 			   << newUppertime << " uppertime is = "
@@ -263,6 +261,12 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 			   << ".  New Timestamp is " << timestamp_ << "\n";
   }
   
+  
+  //building the new timestamp with the rollover if any
+  //timestamp_ = ((uint64_t)newUppertime << 32) + lowertime + runstarttime*1.e9/16.;
+  timestamp_ = lowertime + ((uint64_t)newUppertime + runstarttime)*1.e9/16.;
+
+
   //Sanity check on timestamps, repeating somehow what we did before to cross check - TBF
 
   const uint64_t inSeconds = timestamp_*16./1.e9; //16 nanosecond ticks in the ProtoDUNE-SP timing system
@@ -306,7 +310,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
   else { 
     uppertime = newUppertime; //This timestamp "makes sense", so keep track of 32-bit rollovers.
-    oldUNIX = currentUNIX;
+    oldUNIX = timestamp_*16/1.e9;
     oldlowertime = lowertime;
   }
 
@@ -324,7 +328,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     = artdaq::Fragment::FragmentBytes(bytes_read);
 
   // ev_counter() from base CommandableFragmentGenerator
-  fragptr->setSequenceID( ev_counter() );
+  fragptr->setSequenceID( ev_counter_inc() );
   fragptr->setFragmentID( fragment_id() ); // Ditto
   fragptr->setUserType( sbndaq::detail::BottomCRT );
   // TODO timestamp calculated within 16 ns of  real hardware timestamp
