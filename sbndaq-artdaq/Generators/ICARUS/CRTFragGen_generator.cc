@@ -63,6 +63,10 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   //
   // Yes, a call to system() is awful.  We could improve this.
   //system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str());
+  if (system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/stopallboards_fcl " + configfile).c_str())) {
+    throw cet::exception("CRT") << "Failed to stop stale readout process\n";
+  }
+
   if(startbackend &&
      system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str())){
     throw cet::exception("CRT") << "Failed to start up CRT backend\n";

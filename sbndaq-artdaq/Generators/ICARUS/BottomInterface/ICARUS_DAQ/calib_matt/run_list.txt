@@ -1,0 +1,26 @@
+Run	HV	Notes
+94	ON	Ch1: 692
+95	ON	Ch1: 792, Ch2: 760
+96	ON	Ch1: 792, Ch2: 760, DAC threshold: down to 1150, Ch3: 715
+97	ON	Ch1: 792, Ch2: 760, Ch3: 755, Ch4: 737
+98	ON	Ch1: 792, Ch2: 720, Ch3: 775, Ch4: 737, threshold down to 1100, Ch5: 730, DAC at 1100
+99	ON	Ch1: 792, Ch2: 720, Ch3: 775, Ch4: 787, Ch5: 730, DAC at 1100, Ch6: 720, DAC at 1100
+100	ON	Same as 99, but turned off HV for Ch6
+101	ON	Same as 100, but turned off data taking for boards 1-3
+102	ON	Ch4: 757V, 1000DAC, Ch5: 800V
+103	ON	Data from only Ch5, DAC1000
+105	ON	Same as 103, turned on Ch6 at 720V
+106	ON	Ch6 up to 820V, re-enabled data for boards 1 and 2
+108	ON	Same as 106, but re-enabled boards 3 and 4, and changed all DAC threshold to 1000
+109	ON	Same as 108, hopefully a more stable run
+110	ON	Same as 109
+
+
+133		All boards, DAC threshold at 900 (or 950 for 5 and 6)
+134-139		Same settings as run 133, but each with only one PMT enabled for data taking, counting down from 6 to 1
+
+140		Same as 133, with DAC threshold lowered to 700 for all boards
+141-146		Same scheme as 134-139 with the new DAC threshold
+
+
+

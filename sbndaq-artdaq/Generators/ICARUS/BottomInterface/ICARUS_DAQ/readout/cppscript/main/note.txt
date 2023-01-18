@@ -1,0 +1,1 @@
+g++ -o main -std=c++0x main_f.cpp `mysql_config --cflags --libs` 
