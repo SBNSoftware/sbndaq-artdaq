@@ -21,7 +21,7 @@
 #include <netdb.h> 
 #include <syslog.h> 
 #include <signal.h> 
-#include <libusb-1.0.8/libusb/libusb.h>
+#include <libusb-1.0/libusb.h>
 
 // usb
 //#include "libusb-1.0/libusb.h"
