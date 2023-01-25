@@ -4,6 +4,9 @@
  */
 
 #include "sbndaq-artdaq/Generators/ICARUS/CRTFragGen.hh"
+#include "sbndaq-artdaq/Generators/ICARUS/CRTFragGen.hh"
+#include "sbndaq-artdaq/Generators/ICARUS/BottomInterface/Backend_DAQ/DAQ_CPP_v1/startallboards.cc"
+#include "sbndaq-artdaq/Generators/ICARUS/BottomInterface/Backend_DAQ/DAQ_CPP_v1/stopallboards.cc"
 
 #include "canvas/Utilities/Exception.h"
 
@@ -35,6 +38,7 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   , timestamp_(0)
   , uppertime(0)
   , oldlowertime(0)
+  , indir(ps.get<std::string>("indir"))
   , runstarttime(0)
   , partition_number(ps.get<int>("partition_number"))
   , startbackend(ps.get<bool>("startbackend"))
@@ -63,16 +67,10 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   //
   // Yes, a call to system() is awful.  We could improve this.
   //system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str());
-  if (system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/stopallboards_fcl " + configfile).c_str())) {
-    throw cet::exception("CRT") << "Failed to stop stale readout process\n";
-  }
+  stopallboards(configfile.c_str(),indir.c_str());
 
-  if(startbackend &&
-     system(("/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/startallboards_fcl " + configfile).c_str())){
-    throw cet::exception("CRT") << "Failed to start up CRT backend\n";
-  }
-  else  {
-    TLOG(TLVL_INFO, "CRT") << "backend started succesfully\n";
+  if(startbackend) {
+    startallboards(configfile.c_str(),indir.c_str());
   }
 
   // If we aren't the process that starts the backend, this will block
@@ -83,12 +81,7 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
 CRT::FragGen::~FragGen()
 {
   // Stop the backend DAQ.
-  if(system(("nohup /home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/DAQ_CPP_v1/stopallboards_fcl " + configfile + " &").c_str())){
-    TLOG(TLVL_WARNING, "CRT") << "Failed in call to stopallboards.pl\n"; // TODO review this, maybe exception?
-  }
-  else {
-    TLOG(TLVL_INFO, "CRT") << "backend ended succesfully\n";
-  }
+  stopallboards(configfile.c_str(),indir.c_str());
 
   hardware_interface_->FreeReadoutBuffer(readout_buffer_);
 }

@@ -91,6 +91,9 @@ namespace CRT
     // rolled over and need to increment uppertime.
     uint32_t oldlowertime = 0;
 
+    // Directory on local scratch to store backend DAQ data and logs
+    std::string indir;
+
     uint64_t oldUNIX = 0;
 
     // The 64-bit global timestamp of the start of the run. We need to

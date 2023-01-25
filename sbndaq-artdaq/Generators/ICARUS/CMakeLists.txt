@@ -56,6 +56,8 @@ basic_plugin(ICARUSTriggerV3 "generator"
 
 basic_plugin(CRTFragGen "generator"
   LIBRARIES
+  sbndaq-artdaq_ICARUS_BottomInterface_StartBackend
+  sbndaq-artdaq_ICARUS_BottomInterface_StopBackend
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq-artdaq_Generators_ICARUS_BottomInterface
   artdaq_Application
