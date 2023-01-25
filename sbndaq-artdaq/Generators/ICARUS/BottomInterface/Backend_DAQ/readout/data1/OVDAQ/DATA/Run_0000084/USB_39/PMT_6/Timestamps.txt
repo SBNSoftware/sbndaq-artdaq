@@ -1,0 +1,14 @@
+
+Data for /home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/data1/OVDAQ/DATA/Run_0000084/binary/signal_39.dec
+Initial time:                   1674072375
+Final time:                     1674072400
+Total timestamps expected:      26
+Total timestamps found:         26
+Total x packets found:          0
+Total p packets found:          45948
+Percentage timestamps lost:  0
+
+Extra packets as a percentage of: 
+
+Timestamps lost:             0
+Time + data packets found:   0
