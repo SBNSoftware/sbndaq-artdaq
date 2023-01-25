@@ -16,12 +16,13 @@ using std::string;
 
 int stopallboards(const char *argv, const char *online_path){ 
   string filename;
+  string rundir = "/runs";
   int PMTINI,PMTFIN; 
   filename = argv;
   int disk = 1;                 //Disk number (1 or 2)
     
   //string online_path = "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ";
-  data_path = online_path+"/runs";
+  string data_path = online_path+rundir;
   //log_path = online_path;
   string DataPath2 = online_path;//"/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/DCOV";
 
@@ -48,7 +49,7 @@ int stopallboards(const char *argv, const char *online_path){
 
   //TODO Change this to work with hardware library
   string file_path = __FILE__;
-  string dir_path = file_path.substr(0,file_path.rfind("\\");
+  string dir_path = file_path.substr(0,file_path.rfind("\\"));
   string cmd = dir_path + "\\/readout\\/script\\/stop_readout.sh \"readout\"";
   system(cmd.c_str());
 

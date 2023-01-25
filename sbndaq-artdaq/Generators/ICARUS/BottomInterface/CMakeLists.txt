@@ -1,3 +1,5 @@
+add_subdirectory(Backend_DAQ)
+
 art_make(
         LIB_LIBRARIES
         art_Utilities
