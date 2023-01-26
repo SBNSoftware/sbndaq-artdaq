@@ -87,13 +87,16 @@ namespace sbndaq
       DYNAMIC_RANGE      = 0x8028,
       TRG_OUT_WIDTH      = 0x8070,
       TRG_OUT_WIDTH_CH   = 0x1070,
+      SLF_TRG_LG_CH      = 0x1084,
+      SLF_TRG_LG_GLB     = 0x8084,
+      GLB_TRG_MASK       = 0x810C,
       ACQ_CONTROL        = 0x8100,
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,
       FP_LVDS_CONTROL    = 0x81A0,
       READOUT_CONTROL    = 0xEF00,
       // Animesh & Aiwu add registers for the LVDS logic
-      FP_LVDS_Logic_G1   = 0x1084,
+     /* FP_LVDS_Logic_G1   = 0x1084,
       FP_LVDS_Logic_G2   = 0x1184,
       FP_LVDS_Logic_G3   = 0x1284,
       FP_LVDS_Logic_G4   = 0x1384,
@@ -137,7 +140,7 @@ namespace sbndaq
       Baseline_Ch13 = 0x1C98,
       Baseline_Ch14 = 0x1D98,
       Baseline_Ch15 = 0x1E98,
-      Baseline_Ch16 = 0x1F98,
+      Baseline_Ch16 = 0x1F98, */
       // want to send a software trigger
       // SWTriggerValue = 0x8108
       // Animesh & Aiwu add end
@@ -198,7 +201,7 @@ namespace sbndaq
     uint32_t fTimeOffsetNanoSec;
 
     // Animesh & Aiwu add fhicl parameters - LVDS logic
-    uint32_t fLVDSLogicValueG1;
+/*    uint32_t fLVDSLogicValueG1;
     uint32_t fLVDSLogicValueG2;
     uint32_t fLVDSLogicValueG3;
     uint32_t fLVDSLogicValueG4;
@@ -230,6 +233,22 @@ namespace sbndaq
     //Animesh & Aiwu add end
     // Animesh & Aiwu add - dpp algorithm feature 0x1n80
     uint32_t fChargePedstalBitCh1;
+    uint32_t fBaselineCh1;
+    uint32_t fBaselineCh2;
+    uint32_t fBaselineCh3;
+    uint32_t fBaselineCh4;
+    uint32_t fBaselineCh5;
+    uint32_t fBaselineCh6;
+    uint32_t fBaselineCh7;
+    uint32_t fBaselineCh8;
+    uint32_t fBaselineCh9;
+    uint32_t fBaselineCh10;
+    uint32_t fBaselineCh11;
+    uint32_t fBaselineCh12;
+    uint32_t fBaselineCh13;
+    uint32_t fBaselineCh14;
+    uint32_t fBaselineCh15;
+    uint32_t fBaselineCh16;*/
     //uint32_t fSWTriggerValue;
     // Animesh & Aiwu add end
 
@@ -258,14 +277,14 @@ namespace sbndaq
     void ConfigureReadout();
     void ConfigureAcquisition();
     void ConfigureLVDS();
-    void ConfigureOthers();
+  /*  void ConfigureOthers(); */
     void ConfigureSelfTriggerMode();
     void RunADCCalibration();
     void SetLockTempCalibration(bool onOff, uint32_t ch);
     CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
-    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
-    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value); 
+   /* void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams); */
     void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
 
 
@@ -300,3 +319,4 @@ namespace sbndaq
 }
 
 #endif
+
