@@ -258,7 +258,6 @@ namespace sbndaq
     void ConfigureReadout();
     void ConfigureAcquisition();
     void ConfigureLVDS();
-    void ConfigureOthers();
     void ConfigureSelfTriggerMode();
     void RunADCCalibration();
     void SetLockTempCalibration(bool onOff, uint32_t ch);
