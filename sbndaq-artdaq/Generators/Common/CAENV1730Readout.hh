@@ -230,22 +230,6 @@ namespace sbndaq
     //Animesh & Aiwu add end
     // Animesh & Aiwu add - dpp algorithm feature 0x1n80
     uint32_t fChargePedstalBitCh1;
-    uint32_t fBaselineCh1;
-    uint32_t fBaselineCh2;
-    uint32_t fBaselineCh3;
-    uint32_t fBaselineCh4;
-    uint32_t fBaselineCh5;
-    uint32_t fBaselineCh6;
-    uint32_t fBaselineCh7;
-    uint32_t fBaselineCh8;
-    uint32_t fBaselineCh9;
-    uint32_t fBaselineCh10;
-    uint32_t fBaselineCh11;
-    uint32_t fBaselineCh12;
-    uint32_t fBaselineCh13;
-    uint32_t fBaselineCh14;
-    uint32_t fBaselineCh15;
-    uint32_t fBaselineCh16;
     //uint32_t fSWTriggerValue;
     // Animesh & Aiwu add end
 

@@ -317,40 +317,6 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   TLOG(TINFO)<<"SelfTrigBit=" << fSelfTrigBit;
   fChargePedstalBitCh1 = ps.get<uint32_t>("ChargePedstalBitCh1"); // DPP algorithm feature
   TLOG(TINFO)<<"ChargePedstalBitCh1=" << fChargePedstalBitCh1;
-  // dc offset or baseline
-  fBaselineCh1 = ps.get<uint32_t>("BaselineCh1"); // ch1 baseline
-  TLOG(TINFO)<<"BaselineCh1=" << fBaselineCh1;
-  fBaselineCh2 = ps.get<uint32_t>("BaselineCh2"); // ch2 baseline
-  TLOG(TINFO)<<"BaselineCh2=" << fBaselineCh2;
-  fBaselineCh3 = ps.get<uint32_t>("BaselineCh3"); // ch3 baseline
-  TLOG(TINFO)<<"BaselineCh3=" << fBaselineCh3;
-  fBaselineCh4 = ps.get<uint32_t>("BaselineCh4"); // ch4 baseline
-  TLOG(TINFO)<<"BaselineCh4=" << fBaselineCh4;
-  fBaselineCh5 = ps.get<uint32_t>("BaselineCh5"); // ch5 baseline
-  TLOG(TINFO)<<"BaselineCh5=" << fBaselineCh5;
-  fBaselineCh6 = ps.get<uint32_t>("BaselineCh6"); // ch6 baseline
-  TLOG(TINFO)<<"BaselineCh6=" << fBaselineCh6;
-  fBaselineCh7 = ps.get<uint32_t>("BaselineCh7"); // ch7 baseline
-  TLOG(TINFO)<<"BaselineCh7=" << fBaselineCh7;
-  fBaselineCh8 = ps.get<uint32_t>("BaselineCh8"); // ch8 baseline
-  TLOG(TINFO)<<"BaselineCh8=" << fBaselineCh8;
-  fBaselineCh9 = ps.get<uint32_t>("BaselineCh9"); // ch9 baseline
-  TLOG(TINFO)<<"BaselineCh9=" << fBaselineCh9;
-  fBaselineCh10 = ps.get<uint32_t>("BaselineCh10"); // ch10 baseline
-  TLOG(TINFO)<<"BaselineCh10=" << fBaselineCh10;
-  fBaselineCh11 = ps.get<uint32_t>("BaselineCh11"); // ch11 baseline
-  TLOG(TINFO)<<"BaselineCh11=" << fBaselineCh11;
-  fBaselineCh12 = ps.get<uint32_t>("BaselineCh12"); // ch12 baseline
-  TLOG(TINFO)<<"BaselineCh12=" << fBaselineCh12;
-  fBaselineCh13 = ps.get<uint32_t>("BaselineCh13"); // ch13 baseline
-  TLOG(TINFO)<<"BaselineCh13=" << fBaselineCh13;
-  fBaselineCh14 = ps.get<uint32_t>("BaselineCh14"); // ch14 baseline
-  TLOG(TINFO)<<"BaselineCh14=" << fBaselineCh14;
-  fBaselineCh15 = ps.get<uint32_t>("BaselineCh15"); // ch15 baseline
-  TLOG(TINFO)<<"BaselineCh15=" << fBaselineCh15;
-  fBaselineCh16 = ps.get<uint32_t>("BaselineCh16"); // ch16 baseline
-  TLOG(TINFO)<<"BaselineCh16=" << fBaselineCh16;
-  //Aimesh & Aiwu addd end
 
   fUseTimeTagForTimeStamp = ps.get<bool>("UseTimeTagForTimeStamp",true);
   TLOG(TINFO) <<"fUseTimeTagForTimeStamp=" << fUseTimeTagForTimeStamp;
@@ -453,52 +419,35 @@ void sbndaq::CAENV1730Readout::ConfigureOthers(){
   TLOG(TINFO) << "DPP Algorithm feature ch2: 0x" << std::hex << readBack << std::dec;
 
   // set DC offset, or baseline
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch1, fBaselineCh1);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch1, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch1: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch2, fBaselineCh2);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch2, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch2: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch3, fBaselineCh3);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch3, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch3: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch4, fBaselineCh4);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch4, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch4: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch5, fBaselineCh5);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch5, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch5: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch6, fBaselineCh6);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch6, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch6: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch7, fBaselineCh7);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch7, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch7: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch8, fBaselineCh8);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch8, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch8: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch9, fBaselineCh9);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch9, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch9: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch10, fBaselineCh10);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch10, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch10: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch11, fBaselineCh11);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch11, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch11: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch12, fBaselineCh12);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch12, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch12: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch13, fBaselineCh13);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch13, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch13: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch14, fBaselineCh14);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch14, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch14: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch15, fBaselineCh15);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch15, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch15: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch16, fBaselineCh16);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch16, &readBack);
   TLOG(TINFO) << "DC offset, or baseline of ch16: 0x" << std::hex << readBack << std::dec;
 
@@ -1275,43 +1224,6 @@ void sbndaq::CAENV1730Readout::start()
   //  Animesh ends
 
 uint32_t readBack;
- // Animesh start reading the baseline values 
- // dc offset or baseline
- // fBaselineCh1 = ps.get<uint32_t>("BaselineCh1"); // ch1 baseline
-  TLOG(TINFO)<<"Check_BaselineCh1=" << fBaselineCh1;
-//  fBaselineCh2 = ps.get<uint32_t>("BaselineCh2"); // ch2 baseline
-  TLOG(TINFO)<<"Check_BaselineCh2=" << fBaselineCh2;
-//  fBaselineCh3 = ps.get<uint32_t>("BaselineCh3"); // ch3 baseline
-  TLOG(TINFO)<<"Check_BaselineCh3=" << fBaselineCh3;
-//  fBaselineCh4 = ps.get<uint32_t>("BaselineCh4"); // ch4 baseline
-  TLOG(TINFO)<<"Check_BaselineCh4=" << fBaselineCh4;
-//  fBaselineCh5 = ps.get<uint32_t>("BaselineCh5"); // ch5 baseline
-  TLOG(TINFO)<<"Check_BaselineCh5=" << fBaselineCh5;
-//  fBaselineCh6 = ps.get<uint32_t>("BaselineCh6"); // ch6 baseline
-  TLOG(TINFO)<<"Check_BaselineCh6=" << fBaselineCh6;
-//  fBaselineCh7 = ps.get<uint32_t>("BaselineCh7"); // ch7 baseline
-  TLOG(TINFO)<<"Check_BaselineCh7=" << fBaselineCh7;
-//  fBaselineCh8 = ps.get<uint32_t>("BaselineCh8"); // ch8 baseline
-  TLOG(TINFO)<<"Check_BaselineCh8=" << fBaselineCh8;
-//  fBaselineCh9 = ps.get<uint32_t>("BaselineCh9"); // ch9 baseline
-  TLOG(TINFO)<<"Check_BaselineCh9=" << fBaselineCh9;
-//  fBaselineCh10 = ps.get<uint32_t>("BaselineCh10"); // ch10 baseline
-  TLOG(TINFO)<<"Check_BaselineCh10=" << fBaselineCh10;
-//  fBaselineCh11 = ps.get<uint32_t>("BaselineCh11"); // ch11 baseline
-  TLOG(TINFO)<<"Check_BaselineCh11=" << fBaselineCh11;
-//  fBaselineCh12 = ps.get<uint32_t>("BaselineCh12"); // ch12 baseline
-  TLOG(TINFO)<<"Check_BaselineCh12=" << fBaselineCh12;
-//  fBaselineCh13 = ps.get<uint32_t>("BaselineCh13"); // ch13 baseline
-  TLOG(TINFO)<<"Check_BaselineCh13=" << fBaselineCh13;
-//  fBaselineCh14 = ps.get<uint32_t>("BaselineCh14"); // ch14 baseline
-  TLOG(TINFO)<<"Check_BaselineCh14=" << fBaselineCh14;
-//  fBaselineCh15 = ps.get<uint32_t>("BaselineCh15"); // ch15 baseline
-  TLOG(TINFO)<<"Check_BaselineCh15=" << fBaselineCh15;
-//  fBaselineCh16 = ps.get<uint32_t>("BaselineCh16"); // ch16 baseline
-  TLOG(TINFO)<<"Check_BaselineCh16=" << fBaselineCh16;
-
-// Animesh ends here
-
 
 // Animesh Check trigger threshold here
 
@@ -1359,24 +1271,12 @@ uint32_t readBack;
 
   fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
   GetData_thread_->start();
-
-// Animesh Check the trigger difference value
-uint32_t Diff_ch1 = fBaselineCh1 - fCAEN.triggerThresholds[0];
-TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch 1 is" << Diff_ch1;
-uint32_t Diff_ch2 = fBaselineCh2 - fCAEN.triggerThresholds[1];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 2 is" << Diff_ch2;
-uint32_t Diff_ch3 = fBaselineCh3 - fCAEN.triggerThresholds[2];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 3 is" << Diff_ch3;
-uint32_t Diff_ch4 = fBaselineCh4 - fCAEN.triggerThresholds[3];
-TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch 4 is" << Diff_ch4;
-uint32_t Diff_ch5 = fBaselineCh5 - fCAEN.triggerThresholds[4];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 5 is" << Diff_ch5;
-uint32_t Diff_ch6 = fBaselineCh6 - fCAEN.triggerThresholds[5];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 6 is" << Diff_ch6;
-uint32_t Diff_ch7 = fBaselineCh7 - fCAEN.triggerThresholds[6];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 7 is" << Diff_ch7;
-// Animesh
-   
+  
+  // Animesh Check the trigger difference value
+  for(size_t i_ch=0; i_ch<16; ++i_ch){
+    TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch " << i_ch << " is " 
+	       << (uint32_t)(fCAEN.pedestals[i_ch]-fCAEN.triggerThresholds[i_ch];    
+  }   
 
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
   TLOG(TINFO) << "After0 Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
