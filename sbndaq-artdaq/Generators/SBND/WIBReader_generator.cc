@@ -79,6 +79,7 @@ namespace sbndaq
     TLOG_INFO(identification) << "WIB FW VERSION : " << std::hex << int(wib->Read("FW_VERSION")) << TLOG_ENDL;
     TLOG_INFO(identification) << "SLOT ADDRESS : " << std::hex << int(wib->Read("SLOT_ADDR")) << TLOG_ENDL;
     TLOG_INFO(identification) << "CRATE ADDRESS : " << std::hex << int(wib->Read("CRATE_ADDR")) << TLOG_ENDL;
+    TLOG_INFO(identification) << "FIRMWARE TRACKER : " << std::hex << int(wib->Read(0x100)) << TLOG_ENDL;
  }
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
