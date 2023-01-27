@@ -21,7 +21,6 @@
 #include <dirent.h>
 #include "usbreadout.h"
 #include "decode.h"
-#include "baselines.h"
 #include "CRT.h"
 
 #define foreach(item, array) \
@@ -141,203 +140,6 @@ void tarry(float sec)
 void getpmtdata(int,int);
 void SplitString(string s, vector<string> &v, string c);
 int scanFiles(string inputDirectory);
-int scanSignalFiles(vector<string> &fileList, string inputDirectory, int usb);
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
-void baselinemb(int disk_num, string online_path)
-{
-
-  int usb;// = 35;
-  
-  char DataPath[128] = "runs/";
-  
-  DataFolder = online_path + "/runs/";
-  
-  printf("Baseline and Initialization: \n");
-  
-  printf( "\n");
-  
-  int usbbase[20];
-  int usbread;
-  
-  //now the new folder and the new data path will be passed to the DAQ
-  
-  set_data_path(DataPath);
-  
-  set_data_disk(disk_num);  //setting $DataFolder
-
-  //defining the run number
-  int file_run;
-  int max = 0;
-  int files_run[20];
-  
-  time_t t1 = time(0);   //get time now
-  struct tm * now = localtime( & t1 );
-  
-  int Sec = now->tm_sec;
-  int Hour = now->tm_hour;
-  int Min = now->tm_min;
-  int Day = now->tm_mday;
-  int Mon = now->tm_mon;
-  int Year = now->tm_year;
-  int elapsed_time;
-
-  int newSec;
-  int newHour;
-  int newMin;
-  int newDay;
-
-  
-  string date;
-  
-  date = to_string(Year) + to_string(Mon) + to_string(Day);
-  
-  long runtmp = scanFiles(DataFolder);
-  
-  sprintf(run_number,"%.7ld",runtmp);
-  
-  set_run_number(run_number);
-  
-  //create the directory structure needed for the baseline data taking
-
-  /*
-    #  -3; create file structure
-    #  -2; release inhibit for baseline                                                     
-    #  -1; inhibit writing data                                                             
-    #   0;  release inhibit for writing data
-  */
-  
-
-  //here we can loop on the number of USB using the usbhowmanyboards structure
-  
-  for(int i=0;i<usbhowmanyboardscount;i++){
-    
-    usb = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves the total usb board number, usbhowmanyboard[1] saves the actual usb number
-
-    if(structure[usb]==0) {
-      printf("Baseline: usb board %d\n",usb);
-      set_inhibit_usb(usb,-3);                            
-    
-      set_inhibit_usb(usb,-2);
-      structure[usb]=-2;
-    
-      tarry(1.);    
-    }
-  }
-
-  foreach(int *pmt_local, pmt_board_array) 
-    {
-      if(*pmt_local >= 0) 
-	{
-
-	  int usb = pmt_usb_conv[*pmt_local];
-	  int pmt = *pmt_local - usb*1000;
-
-	  com_usb(usb, pmt, 110, 1);          // turn off lef off/on the PMT's board = 1/0
-	  com_usb(usb, pmt, 109, 1);          // vdd_fsb on
-	  com_usb(usb, pmt, 73, 0b00000);     // set up pmt module
-	  com_usb(usb, pmt, 255, 0);          // clear buffers
-	  com_usb(usb, pmt, 74, 0b0100000);   // default gain
-	  com_usb(usb, pmt, 70, 0);           // load default
-	  dac_usb(usb, pmt, 1000);            // threshold value
-	  com_usb(usb, pmt, 71, 0);           // rst_g to maroc
-	  com_usb(usb, pmt, 72, 0);           // write config was done twice
-	  com_usb(usb, pmt, 73, 0b00110);     // set up pme module
-	  com_usb(usb, pmt, 87, 0);           // no force trigger
-	  com_usb(usb, pmt, 75, 0b00010000);  // set up trigger mode for module
-	  com_usb(usb, pmt, 109, 0);          // vdd_fsb off
-	  com_usb(usb, pmt, 254, 0);          // enable trigger
-	  //baseline data taking
-	  for( int i = 1; i <= 500; i++)
-	    {
-	      com_usb(usb, pmt, 81, 0);         // test trigger
-	    }
-	  
-	  tarry(0.1);
-	  
-	  com_usb(usb, pmt, 255, 0);          // disable trigger
-	  com_usb(usb, pmt, 73, 0b00000);     // set up pmt module
-	  
-	  
-	  for(int e = 0; e<=5; e++){
-	    tarry(0.1);
-	    printf(".");
-	  }	  
-	  
-	  time_t t2 = time(0);   //get time now
-	  struct tm * now1 = localtime( & t2 );
-	  
-	  newSec = now1->tm_sec;
-	  newHour = now1->tm_hour;
-	  newMin = now1->tm_min;
-	  newDay = now1->tm_mday;
-	  	  
-
-	}
-      else
-        {
-          newSec = Sec;
-          newMin = Min;
-          newHour = Hour;
-          newDay = Day;
-        }
-    }
-
-  elapsed_time = (newDay - Day)*24*3600 + (newHour - Hour)*3600 + (newMin - Min)*60 + (newSec - Sec);
-  
-  printf(": %d sec\n",elapsed_time);
-  
-  sleep(1); //wait for late packet before closing the file
-  
-  //close the file for the baselines
-
-  for(int i=0;i<usbhowmanyboardscount;i++){
-
-    usb = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves the total usb board number, usbhowmanyboard[1] saves the actual usb number
-
-    if(structure[usb]==-2){
-      set_inhibit_usb(usb,-1);
-      structure[usb]=0;
-      tarry(0.25);
-      //create folder structure for the baseline files
-
-      string runtmp(run_number);
-      string dir0 = online_path + "/runs/Run_" + runtmp + "/USB_" + to_string(usb);
-	  
-      string mkdir_cmd0 = "mkdir " + dir0;
-      system(mkdir_cmd0.c_str());
-
-    }
-  }
-
-
-  tarry(3);
-  
-  //baseline analysis
-  
-  printf("Baseline data taken completed. Analyzing now the baselines ....\n\n");
-  
-  foreach(int *pmt_local, pmt_board_array) 
-    {
-      if(*pmt_local >=0)
-	{
-
-	  int usb = pmt_usb_conv[*pmt_local];
-	  int pmt = *pmt_local - usb*1000;
-
-	  generatebaseline(usb,pmt,online_path);
-	  
-	  initializeusb(usb,pmt);
-	  
-	}
-      
-    }
-
-  printf("\n\n --- Baseline data taking and initialization completed.\n");
-  
-
-} //end of initialization
 
 ////////////////////////////////////////////////////////////////////////////////////
 
@@ -403,8 +205,7 @@ void initializeusb(int usb, int pmt) {
     string summaryfile1 = dir2 + "/summary_new" + "_" + to_string(usb) + ".txt";
     
     string summaryfile2 = dir2 + "/summary_2" + "_" + to_string(usb) + ".txt";
-    
-    
+
     ifstream efile(summaryfile.c_str());
     
     if(efile.good()){ // summary file already exists
@@ -509,6 +310,7 @@ vector <vector<string>> fcl_read(string filename)
 }
 ///////////////////////////////////////////////////////////////////////////////
 void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,string filename){
+    usbhowmanyboardscount = 0;
     //Default mode for mode_local paramter.
     if(mode_local == "")
         mode = "fcl";
@@ -599,7 +401,7 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
         int usbtemp;
         int pmttemp;
         for (unsigned int i=0; i< output_fcl.size(); i++){
-            usbtemp = std::stoi(output_fcl[i][0]);          
+            usbtemp = std::stoi(output_fcl[i][0]);        
             pmttemp = std::stoi(output_fcl[i][2]);
 	    pmtdata[usbtemp][pmttemp][0] = output_fcl[i][1];//
 	    pmtdata[usbtemp][pmttemp][1] = output_fcl[i][2];//
@@ -687,112 +489,6 @@ int scanFiles(string inputDirectory){
     closedir(p_dir);
     return max+1;
 }
-
-///////////////////////////////////////////////////////////////////////////////
-
-bool JudgeNum(string str, int iTmp){
-    bool bNum = true;
-    string::size_type szSize = str.size();
-    for(int i=0; i<(signed int)szSize; ++i){
-        char ch = str.at(i);
-        if((ch < '0') || (ch > '9')){
-            bNum = false;
-            break;
-        }
-    }
-    if(bNum){
-        istringstream iss(str);
-        iss >> iTmp;
-    }
-    return bNum;
-}
-
-
-void check_system_time()
-{
-    int filesize;
-    int readfilesize[2][20] = { 0 };                           //readfilesize[0] save filesize, readfilesize[1] save usb number
-    int usbread;
-    
-    int i = 0;
-    int j = 0;
-    int diff;
-    int a,b,c;
-    int iTmp = 0;
-    
-    string cmd = "ls -ltr --time-sytle=long-iso " + Time_Data_Path + "|";
-    ifstream myfile(cmd.c_str());
-    if(myfile.is_open())
-    {
-        string line;
-        vector<int> iVec;
-        while(getline(myfile,line))
-        {
-            if(JudgeNum(line, iTmp))
-            {
-                iVec.push_back(iTmp);
-            }
-        }
-        a = iVec.at(0);
-        b = iVec.at(1);
-        c = iVec.at(2);
-        cout << a << " " << b << "_" << c;
-        filesize = a;
-        readfilesize[0][j] = filesize;
-        readfilesize[1][j] = c;
-        if(readfilesize[1][j] != usb_box)
-        {
-            readfilesize[0][j] += filesize;
-            i++;
-        }
-        j++;
-    }
-    
-    myfile.close();
-    
-    
-    int maxdim = 0;
-    int mindim = 1000000000;
-    
-    for (i=0; readfilesize[1][i] && usbhowmanyboards[1][i]; i++)
-    {
-        if(readfilesize[1][i] != usbhowmanyboards[1][i])
-        {
-            printf("Problem in the number of USB found .%d. in path %s expected .%d. \n", readfilesize[1][i], Time_Data_Path.c_str(), usbhowmanyboards[1][i]);
-        }
-    }
-    
-    for(i=0; readfilesize[1][i]; i++)
-    {
-        usbread = readfilesize[1][i];
-        if(usbread != usb_box)
-        {
-            readfilesize[0][i] /= usbhowmanyboards[0][i];           //this normalize the file dimension by the pmt boards
-            if(readfilesize[0][i] > maxdim)
-            {
-                maxdim = readfilesize[0][i];
-            }
-            if(readfilesize[0][i] < mindim)
-            {
-                mindim = readfilesize[0][i];
-            }
-        }
-    }
-    
-    diff = maxdim - mindim;
-    
-    if((maxdim == 0) || (mindim == 0))
-    {
-        printf("Got a problem Number of packet is ZEOR!\n");
-    }
-    
-    if(diff > 300)
-    {
-        printf("We got a problem with the timing info DeltaDim(Max-Min) between files=%d \n", diff);
-    }
-}
-
-
 
 ////////////////////////////////////////////////////////////////////////
 void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
@@ -973,7 +669,6 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     }
     
     sleep(2.0);
-    
     printf("shutting down ");
     
     for(int m = 0;m<=10; m++)
@@ -998,99 +693,9 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     
     sleep(1);
 
-    long runtmp = scanFiles(online_path + "/runs");
+    long runtmp = scanFiles(online_path + "/runs1/DATA");
     
         sprintf(run_number,"%.7ld",runtmp - 1); //ScanFiles returns 1+ the current max run#
-}
-////////////////////////////////////////////////////////////////////////////
-
-void takedatamb(int runlength)
-{
-
-  int pmt1;
-
-  printf(".....Taking data for %d secs.",runlength);
-
-  
-  foreach(int *pmt_local, pmt_board_array)
-    {
-    if(*pmt_local >=0) 
-      {
-	int usb = pmt_usb_conv[*pmt_local];
-	int pmt = *pmt_local - usb*1000;
-	com_usb(usb, pmt, 254, 0);                 //enable trigger on the pmt board
-	tarry(0.5);
-      }
-    }
-
-
-    //opening file for writing
-  for(int i=0;i<usbhowmanyboardscount;i++){
-    
-    int usb = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves the total usb board number, usbhowmanyboard[1] saves the actual usb number
-    if(structure[usb]==0) {
-    
-      set_inhibit_usb(usb, 0);     //  -2 release inhibit for baseline
-                                   //  -1; inhibit writing data
-                                   //   0;  release inhibit for writing data      
-      structure[usb]=-2;
-    }
-  }  
-    
-  tarry(0.5); 
-  
-  int delay = 1.;
-  
-  if( runlength > 1000 ) 
-    { 
-      delay = 60.;
-    }
-  
-  for(int m=0; m <= int(runlength/delay); m++)
-    {
-      printf(".");
-      tarry(delay);
-    }
-  
-  
-  printf("\n");
-  
-  //stopping the run
-  
-  foreach(int *pmt_local, pmt_board_array) 
-    {
-      if(*pmt_local >=0)
-	{
-	  int usb = pmt_usb_conv[*pmt_local];
-	  int pmt = *pmt_local - usb*1000;
-	  com_usb(usb, pmt, 255, 0);                 //enable trigger on the pmt board
-	  tarry(0.5);
-	}
-    }
-  //wait for late packets
-  
-  for(int m=0; m<=10; m++)
-    {
-      printf(".");
-      tarry(0.1);
-    }
-  
-  //closing file for writing
-  for(int i=0;i<usbhowmanyboardscount;i++){
-    
-    int usb = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves the total usb board number, usbhowmanyboard[1] saves the actual usb number
-    if(structure[usb]==-2) {
-      set_inhibit_usb(usb, -1);     //  -2 release inhibit for baseline
-                                    //  -1; inhibit writing data
-                                    //   0;  release inhibit for writing data
-      structure[usb]=-1;
-    }
-  }
-
-  tarry(5); //wait a bit so the file are on disk and renamed after the data taking finish
-  
-  printf("Data taking completed. \n");
-  
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1193,459 +798,6 @@ int scanCheckrateFiles(vector<string> &fileList, string inputDirectory){
     return fileList.size();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////// 
-void check_rate(int tot_pmt, int tot_usb, int boxusb, int switchonoff, string online_path)
- {
-    string runtmp(run_number);
-    string full_path = online_path + "/runs/Run_" + runtmp + "/";
-    string folderlocation = full_path + "binary/";
-    string location_baseline;
-    string files[20];
-    string tempfile;
-    int hnumber = 0;
-    int gnumber = 0;
-    int hit_pmt[1024][2];                  // hit_pmt[][0] for keys, hit_pmt[][1] for value
-    int cnt_pmt[1024];
-    int gap_pmt[1024][3];                  // gap_pmt[][0] for keys, gap_pmt[][1] for gapkey, gap_pmt[][2] for value
-    int diff, tdiff;
-    int keymax = 0;
-    int keymin = 1000000;
-    int key;
-    int usbnum;
-    int found_pmt_in_time = 0;
-    int module_number;
-    int filenum = 0;
-    vector<string> tempfiles;
-    
-    for(int i=0; i<1024;i++)
-        cnt_pmt[i] = 0;
-    for(int i=0; i<1024;i++){
-        for(int j=0;j<2;j++)
-            hit_pmt[i][j]=0;
-    }
-
-    for(int i=0; i<1024;i++){
-        for(int j=0;j<3;j++)
-            gap_pmt[i][j]=0;
-    }
-       
-    if(!switchonoff)
-    {
-    //get all the files under the directory
-        int size = scanCheckrateFiles(tempfiles,folderlocation.c_str());
- 
-        for(int i = 0; i < size; i++)
-        {
-        cout << tempfiles[i] << endl;
-        files[i] = tempfiles[i];
-        filenum++;
-        }
-    }   
-    else
-    {
-    //get one file under the directory
-        int size = scanCheckrateFiles(tempfiles,folderlocation.c_str());
-        for(int i=0;i<size;i++){
-            string tmp = tempfiles[i];
-            if(tmp[0] == 'b'){
-                files[0] = tmp;
-                filenum++;
-            }
-        }
-        tot_usb = tot_usb - 1;    //box do not get baseline file
-    }
- 
-    if(filenum < tot_usb - 1)
-        printf("No files found \n");
-    for(int i = 0; i<filenum; i++)
-    {
-        tempfile = files[i];
-        int strsize = tempfile.size();
-        string substring;
-        for(int j = 0; j<strsize; j++){
-            if(tempfile[j] == '_'){
-                substring = tempfile.substr(j+1,strsize);
-            }
-        }
-        usbnum = atoi(substring.c_str());
-        if(usbnum == boxusb)
-            continue;
-        string cmd = full_path + "binary/";
-        string cmd1 = cmd + tempfile;
-
-        std::stringstream ss;
-        auto old_buf = std::cout.rdbuf(ss.rdbuf());
-        dodecode(cmd1.c_str());
-        std::cout.rdbuf(old_buf);
-       
-        char buf1[1024];
-        if(!ss){
-            printf("Can not open file\n");
-        }
-        else
-        {
-            string s;
-            while (std::getline(ss,s))
-            {
-                vector<string> line;
-                SplitString(s,line,",");
-                int linesize = line.size();
-                if(line[0].compare("p") == 0)
-                {
-                    for(int j=0;j<(linesize-1);j++)
-                        line[j] = line[j+1];
-                    linesize--;
-                    long tmp = atoi(line[0].c_str());
-                    long mod = (tmp >> 8) & 127;
-                    mod += 100 * usbnum;
-                    int hswitch = 0;
-                    for(int t=0;t<=hnumber;t++){
-                        if(hit_pmt[t][0] == mod){
-                            hit_pmt[t][1]++;
-                            hswitch = 1;
-                        }
-                    }
-                    if(hswitch == 0){
-                        hit_pmt[hnumber][0] = mod;
-                        hit_pmt[hnumber][1]++;
-                        hnumber++;
-                    }
-                    if(!switchonoff)
-                    {
-                        for(int j=0;j<(linesize-1);j++)
-                            line[j] = line[j+1];
-                        linesize--;
-                        int tim = (atoi(line[0].c_str()) >> 8) & 255;    // This assumes 256ms internal clocked trigger
-                        int tdiff;
-                        if(cnt_pmt[mod])
-                        {
-                            tdiff = tim - cnt_pmt[mod];
-                            if(tdiff > 1)
-                            {
-                                gap_pmt[gnumber][0] = mod;
-                                gap_pmt[gnumber][1] = tdiff;
-                                gap_pmt[gnumber][2]++;
-                                gnumber++;
-                            }
-                        }
-                        cnt_pmt[mod] = tim;
-                    }
-                }
-            }  
-        }
-    }
-    
-    // check which is the missing pmt
-    for(int i = 1; i<= tot_pmt;i++)
-    {
-        found_pmt_in_time = 0;
-        for(int j = 0; hit_pmt[j][0]; j++)
-        {
-            module_number = pmttoboard[i] + 100*pmttousb[i];
-            if(hit_pmt[j][0] == module_number)
-            {
-                found_pmt_in_time = 1;
-            }
-        }
-        if(found_pmt_in_time == 0)
-        {
-            if(!switchonoff)
-            {
-                cout << "Error: PMT Board " << pmttoboard[i] << " is missing from the timing check \n";
-            }
-            else
-            {
-                cout << "Error: PMT Board " << pmttoboard[i] << " is missing from the baseline file \n";
-                string cmd = "Error: PMT Board" + to_string(pmttoboard[i]) + " is missing from the baseline file \n";
-                string cmd1 = "PMT Board " + to_string(pmttoboard[i]) + " is missing from the baseline file";
-            }
-        }
-    }
- 
-    int tmptotpmts = hnumber;
-    if(tmptotpmts != tot_pmt)
-    {
-        cout << "Error: Number of pmts found: " << tmptotpmts << "\tNumber of pmts expected in FHiCL file: " << tot_pmt << "\n";
-        string cmd = "Error: Number of pmts found:" + to_string(tmptotpmts) + ", Number of pmts expected in FHiCL:" + to_string(tot_pmt);
-        string cmd1 = "Number of pmts found  " + to_string(tmptotpmts) + " expected " + to_string(tot_pmt);
-    }
- 
-    //now find the min and max value for the hit
-    for(int j = 0; hit_pmt[j][0]; j++)
-    {
-        key = hit_pmt[j][0];
-        if(hit_pmt[j][1] > keymax)
-        {
-            keymax = hit_pmt[j][1];
-        }
-        if(hit_pmt[j][1] < keymin)
-        {
-        keymin = hit_pmt[j][1];
-        }
-    }
- 
-    diff = keymax - keymin;
- 
-    if(keymax == 0 || keymin == 0)
-    {
-        cout << "Got a Problem Number of packet is ZEOR\n";
-    }
- 
-    if(diff > 5)
-    {
-        if(!switchonoff)
-        {
-            cout << "Error the differrence between the trigger packet is " << diff << "\n";
-            string cmd ="Error the differrence between the trigger packet is " + to_string(diff);
-        }
-        else
-        {
-            string cmd ="Error the differrence between baseline packet is " + to_string(diff);
-            cout << cmd << "\n";
-        }
-    }
- 
-    if(!switchonoff)
-    {
-        for(int i = 0; hit_pmt[i][0]; i++)
-        {
-            key = hit_pmt[i][0];
-            int tot_missed = 0;
-            for(int j = 0; gap_pmt[j][0];j++)
-            {
-                gapkey = gap_pmt[j][1];
-                tot_missed += gapkey * gap_pmt[j][2];
-            }
-            if(tot_missed > 1 && hit_pmt[i][1])
-            {
-                cout << "PMT " << key << " missing fraction of triggers: " << tot_missed << "/" << hit_pmt[i][1] << "\n";
-                string cmd = "PMT " + to_string(key) + " missing fraction of triggers: " + to_string(tot_missed) + "/" + to_string(hit_pmt[i][1]);
-            }
-        }
-    }
- 
-    if(switchonoff && keymin < (switchonoff - 5))
-    {
-        string cmd = "Error minimum number of baseline packets found is " + to_string(keymin);
-        cout << cmd << "\n";
-    }
-}
- 
-//////////////////////////////////////////////////////////////////
-
-int scanSignalFiles(vector<string> &fileList, string inputDirectory, int usb){
-
-
-  string usb_char = to_string(usb);
-  
-  DIR *p_dir;
-  const char* str = inputDirectory.c_str();
-
-  p_dir = opendir(str);
-  if( p_dir == NULL)
-    {
-      cout << "In scansignalfiles function - can't open :" << inputDirectory << endl;
-    }
-  
-  struct dirent *p_dirent;
-  
-  while ( ( p_dirent = readdir(p_dir) ) )
-    {
-      string tmpFileName = p_dirent->d_name;
-      if( tmpFileName == "." || tmpFileName == "..")
-        {
-	  continue;
-        }
-      else
-        {
-	  if(tmpFileName[0] == '1' && tmpFileName[11] == usb_char[0] && tmpFileName[12] == usb_char[1]){
-	    fileList.push_back(tmpFileName);
-	    cout << "tmpFileName: " << tmpFileName << endl;
-	  }
-        }
-    }
-    closedir(p_dir);
-    return fileList.size();
-}
-///////////////////////////////////////////////////////////////////////////////
-
-void generatebaseline(int usb, int pmt, string online_path)
-{
-  modulenum = pmt;
-
-  string runtmp(run_number);
-  string dir0 = online_path + "/runs/Run_" + runtmp + "/USB_" + to_string(usb);
-
-  string mkdir_cmd0 = "mkdir -p " + dir0;
-    system(mkdir_cmd0.c_str());
-
-
-  string dir1 = online_path + "/runs/Run_" + runtmp + "/USB_" + to_string(usb)+ "/PMT_" + to_string(modulenum);
-  
-  string mkdir_cmd = "mkdir -p " + dir1;
-  system(mkdir_cmd.c_str());
-  
-  string filebase = DataFolder + "Run_" + runtmp + "/binary/";
-  
-  string baselines_Path = online_path + "/DAQ_CPP_v1/baselines/baselines ";
-
-  string arg_baseline = filebase + "baseline_" + to_string(usb);// + " " + to_string(pmt) + " " + online_path;
-  dobaselines(baselines_Path,arg_baseline, pmt, online_path);
-  string cmd_mv = "cp " + DataFolder + "Run_" + runtmp + "/baselines.dat " + dir1 + "/baselines.dat";
-  system(cmd_mv.c_str());
-  
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void checkeff(int usb,int pmt3, string online_path)
-{
-    DataFolder = online_path + "/readout/data1/OVDAQ/DATA";
-    string runtmp(run_number);
-    string localpath = DataFolder + "/Run_" + runtmp;
-
-    string file = localpath + "/binary/signal_" + to_string(usb) + ".dec";
-
-    int TimeStampPerSecond = 1;
-    int countert = 0;
-    int counterx = 0;
-    int counterp = 0;
-    int initial = 0;
-    int FINAL = 0;
-    int flag = 0;
-    int dummy = 0;
-
-    ifstream IN(file.c_str());
-    string s;
-    if(!IN.good())
-    {
-        cout << "In checkeff function - Can not open file\n";
-        IN.close();
-    }
-    else
-    {
-        while(getline(IN,s))
-        {
-            vector<string> line;
-            SplitString(s,line,",");
-            if(line[0] == "t"){
-                dummy = atoi(line[1].c_str());
-                if(!flag){
-                    flag = 1;
-                    initial = dummy;
-                }
-                else if(flag){
-                    FINAL = dummy;
-                }
-                countert++;
-            }
-            else if(line[0] == "x"){
-                counterx++;
-            }
-            else if(line[0] == "p"){
-                counterp++;
-            }
-        }
-        IN.close();
-    }
-
-    dummy = FINAL - initial + 1;
-    dummy *= TimeStampPerSecond;
-
-    string cmd = localpath + "/USB_" + to_string(usb) + "/PMT_" + to_string(pmt3) + "/Timestamps.txt";
-    FILE *OUT;
-    OUT = fopen(cmd.c_str(),"w");
-    if(OUT == NULL){
-        cout << "Can not open file\n";
-        fclose(OUT);
-    }
-    else{
-        fprintf(OUT,"\nData for %s\n",file.c_str());
-        fprintf(OUT,"Initial time:                   %d\n",initial);
-        fprintf(OUT,"Final time:                     %d\n",FINAL);
-        fprintf(OUT,"Total timestamps expected:      %d\n",dummy);
-        fprintf(OUT,"Total timestamps found:         %d\n",countert);
-        fprintf(OUT,"Total x packets found:          %d\n",counterx);
-        fprintf(OUT,"Total p packets found:          %d\n",counterp);
-
-        if(counterx > 0){
-            fprintf(OUT,"PMT: %d\t Total x packets found:          %d\n",pmt3,counterx);
-        }
-        
-        if(dummy-countert){
-            FINAL = counterx/(dummy - countert) * 100;
-        }
-        else{
-            FINAL = 0;
-        }
-        initial = counterx/(counterp + countert) * 100;
-        dummy = (dummy - countert)/dummy * 100;
-
-        fprintf(OUT,"Percentage timestamps lost:  %d\n\n",dummy);
-        fprintf(OUT,"Extra packets as a percentage of: \n\n");
-        fprintf(OUT,"Timestamps lost:             %d\n",FINAL);
-        fprintf(OUT,"Time + data packets found:   %d\n",initial);
-        fclose(OUT);
-    }
- 
-
-
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void process_signal(int usb)
-{
-
-    printf("Processing files for USB=%d",usb);
-
-    string runtmp(run_number);
-
-    string filename = DataFolder + "/Run_" + runtmp + "/signal" + "_" + to_string(usb) + ".dec";
-   
-    string filepath = DataFolder + "/Run_" + runtmp + "/binary/";
-
-    vector<string> fileList;
-    int filesize;
-
-    filesize = scanSignalFiles(fileList,filepath,usb);  //this now produce the list fo files with usb as the last character
-
-    for(int i = 0;i<filesize; i++){
-        string decode_arg = filepath + fileList[i] + " >> " + filename;
-        dodecode(decode_arg.c_str());
-    }
-    printf("...Done.\n");
-}
-
-//////////////////////////////////////////////////////////////////////////////////
-
-void plotdatamb(int usb, int pmtmb, string online_path)
-{
-    getpmtdata(usb, pmtmb);
-    
-    printf("Plotting data for USB=%d and PMT=%d\n",usb,pmtmb);
-    
-    string runtmp(run_number);
-    string full_path = online_path + "/readout/data1/OVDAQ/DATA/Run_" + runtmp + "/";
-    string cmd = online_path + "/cpp_readout/histogram/histogram ";
-    
-    //make histograms
-    string cmd1 = cmd + full_path + " summary.csv " + to_string(1) + " " + "\"Pulse heights\"" + " >> " + full_path + "log_" + to_string(pmtserialnumber) + "_" + runtmp + ".txt";
-    string cmd2 = cmd + full_path + " summary.csv " + to_string(2) + " Sigma" + " >> " + full_path + "log_" + to_string(pmtserialnumber) + "_" + runtmp + ".txt";
-    string cmd3 = cmd + full_path + " summary.csv " + to_string(3) + " " + "\"Hits by channel\"" + " >> " + full_path + "log_" + to_string(pmtserialnumber) + "_" + runtmp + ".txt";
-    string cmd5 = cmd + full_path + " summary.csv " + to_string(5) + " Photoelectrons" + " >> " + full_path + "log_" + to_string(pmtserialnumber) + "_" + runtmp + ".txt";
-    string cmd7 = cmd + full_path + " summary.csv " + to_string(7) + " Rate" + " >> " +full_path + "log_" + to_string(pmtserialnumber) + "_" + runtmp + ".txt";
-    string cmd8 = cmd + full_path + " summary.csv " + to_string(8) + " " + "\"Gain Constants\"" + " >> " + full_path + "log_" + to_string(pmtserialnumber) + "_" + runtmp + ".txt";
-    string cmd9 = cmd + full_path + " summary.csv " + to_string(9) + " " + "\"Normalized Hits by channel\"" + " >> " + full_path + "log_" + to_string(pmtserialnumber) + "_" + runtmp + ".txt";
-    system(cmd1.c_str());
-    system(cmd2.c_str());
-    system(cmd3.c_str());
-    system(cmd5.c_str());
-    system(cmd7.c_str());
-    system(cmd8.c_str());
-    system(cmd9.c_str());
-    system(cmd1.c_str());
-    
-}
-
 /////////////////////////////////////////////////////////////////////
 
 void SplitString(string s, vector<string> &v, string c)
@@ -1673,14 +825,11 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
 
 
     int disk_num = 1;
-    char DataPath[128] = "/runs";
-    DataFolder = online_path;
+    char DataPath[128] = "/DATA/";
+    DataFolder = online_path + "/runs"+to_string(disk_num)+"/DATA/";
     pipedelay = 20;
-    int structure_t0[128] = {0};
+    int structure_t0[128] = {-10};
 
-
-
-    
     if(!pmtini && !pmtfin){
         pmtini = 1;
         pmtfin = totalpmt;
@@ -1692,29 +841,16 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
             printf("Problem with initialization \n");
         }
     }
-
-
-
-
-    
     int pmt1;
     int usbbase[20];
     int usbread;
-    
-    int i;
-    for(i=0;usbhowmanyboards[0][i];i++){
+ 
+    for(int i=0;i<pmtfin;i++){
         usbread = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves board number, usbhowmanyboard[1] saves usb number
         if(structure_t0[usbread]==0) {
 	  set_inhibit_usb(usbread,-1);
 	  structure_t0[usbread] = 1;
 	}
-    }
-
-
-    
-    for(i=0;usbhowmanybox[0][i];i++){
-        usbread = usbhowmanybox[1][i];
-        set_inhibit_usb(usbread,-1);
     }
     
     sleep(1);
@@ -1736,18 +872,18 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     time_t t1 = time(0);   //get time now
     struct tm * now = localtime( & t1 );
     
-    int Sec = now->tm_sec;
-    int Hour = now->tm_hour;
-    int Min = now->tm_min;
-    int Day = now->tm_mday;
-    int Mon = now->tm_mon;
-    int Year = now->tm_year;
+    Sec = now->tm_sec;
+    Hour = now->tm_hour;
+    Min = now->tm_min;
+    Day = now->tm_mday;
+    Mon = now->tm_mon;
+    Year = now->tm_year;
     
     string date;
     
     date = to_string(Year) + to_string(Mon) + to_string(Day);
     
-    long runtmp = scanFiles(online_path + "/runs");
+    long runtmp = scanFiles(online_path + "/runs1/DATA");
     // data_path = online_path+"/runs";
     
     if(define_runnumber.compare("auto") == 0){
@@ -1858,7 +994,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     printf("Initializing .\n");
     
     string dir2 = DataFolder + "Run_" + run_number;
-    string summary = "on";                                 // summary file default = off
+    string summary = "off";                                 // summary file default = off
  
     for (pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
         
@@ -1914,7 +1050,6 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
         // here create a first summary file or append to an existing one
      
         if(summary.compare("on")==0){
-            
             string summaryfile = dir2 + "/summary.txt";
             string summaryfile1 = dir2 + "/summary_new.txt";
             
@@ -1981,108 +1116,19 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-void getavg(int pmtini, int pmtfin, int col, string online_path)
-{
-
-  int usb;
-  int pmt;
-
-  int pmt1;
-
-  if(!pmtini && !pmtfin){
-    pmtini=1;
-    pmtfin=totalpmt;
-  }
-  //run automatically acquiring last take run number
-  int disk_num = 1;
-  DataFolder = online_path + "/readout/data" + to_string(disk_num) + "/OVDAQ/DATA/";
-
-  for (pmt1 = pmtini; pmt1<=pmtfin; pmt1++){
-    if(!(usb_local = pmttousb[pmt1] || !(pmt_local = pmttoboard[pmt1]))){
-      printf("usb_local or pmt_local not defined.\n");
-    }
-    usb = pmttousb[pmt1];
-    pmt = pmttoboard[pmt1];
-
-
-    double data[64];
-
-    string runtmp(run_number);
-    
-    // read input file
-    string full_path = online_path + "/readout/data1/OVDAQ/DATA/Run_" + runtmp + "/";
-    string cmd = full_path + "USB_" + to_string(usb) + "/PMT_" + to_string(pmt) + "/summary.csv";
-    ifstream IN(cmd.c_str());
-    string s;
-    int i,j = 0;
-    if(!IN.good())
-    {
-        cout << "In getavg function - Can not open summary file...\n";
-        IN.close();
-    }
-    else
-    {
-        getline(IN,s);
-        while(!IN.eof())
-        {
-            getline(IN, s);
-            vector<string> line;
-            SplitString(s,line,",");
-            double d = atof(line[col].c_str());
-            data[j] = d;
-            j++;
-	    if(j==64) break;  //make sure to read just 64 lines
-        }
-        IN.close();
-    }
-    
-    // calculate average
-    int n = sizeof(data)/sizeof(data[0]);
-    if(!n)
-        exit(0);
-    double average = 0;
-    for(i=0;i<n;i++)
-    {
-        average += data[i];
-    }
-    average = average/n;
-    string colname;
-    if(col == 1)
-        colname = "pulse height";
-    else if(col == 2)
-        colname = "pulse height sigma";
-    else if(col == 3)
-        colname = "hits per channel";
-    else if(col == 4)
-        colname = "hits per packet";
-    else if(col == 5)
-        colname = "number of photo-electrons";
-    else if(col == 6)
-        colname = "gain";
-    else if(col == 7)
-        colname = "rate per channel";
-
-
-    cout << "\n" << "Average " << colname <<" (USB= " << usb << ", pmt board=" << pmt << ") = " << average << " \n\n";
-  }
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
 {
 
 
     if(DataPath=="auto"){
         int disk_num = 1;
-	DataPath = online_path + "/readout/data" + to_string(disk_num) + "/OVDAQ/DATA/Run_" + run_number;
+	DataPath = online_path + "/runs1/DATA/Run_" + run_number;
 	string mkdir_cmd0 = "mkdir -m a=rwx -p " + DataPath;
         system(mkdir_cmd0.c_str());
-
-	string rem = "rm -f " + online_path + "/readout/DataFolder";
+	string rem = "rm -f " + online_path + "/runs1/DataFolder";
 	system(rem.c_str());
 
-        string symb = "ln -sf " + DataPath + " " + online_path + "/readout/DataFolder";
+        string symb = "ln -sf " + DataPath + " " + online_path + "/runs1/DataFolder";
         system(symb.c_str());
     }
    

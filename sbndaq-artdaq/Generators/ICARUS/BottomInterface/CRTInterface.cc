@@ -35,6 +35,7 @@ CRTInterface::CRTInterface(fhicl::ParameterSet const& ps) :
   usbnumber(ps.get<unsigned int>("usbnumber")),
   state(CRT_FIRST_FILE | CRT_WAIT)
 {
+  indir = indir + "/runs1/DataFolder";
 }
 
 void CRTInterface::StartDatataking()
@@ -473,7 +474,6 @@ void CRTInterface::SetBaselines()
   // If a channel has no baseline set, nothing will be subtracted and the ADC
   // values will be obviously shifted upwards from what's expected.
   memset(baselines, 0, sizeof(baselines));
-
   FILE * in = NULL;
   while(true){
     errno = 0;

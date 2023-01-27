@@ -8,7 +8,6 @@ cet_make_library(
     CRT.cc
     usbreadout.cc
     decode.h
-    baselines.h
   LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
 )
@@ -21,7 +20,6 @@ cet_make_library(
     CRT.cc
     usbreadout.cc
     decode.h
-    baselines.h
   LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
 )

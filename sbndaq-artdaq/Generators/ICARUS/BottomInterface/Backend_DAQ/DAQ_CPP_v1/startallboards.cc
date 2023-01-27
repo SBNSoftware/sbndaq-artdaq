@@ -17,13 +17,11 @@ using std::string;
 int startallboards(const char *argv, const char *online_path)
 { 
   string filename;
-  string rundir = "/runs";
   int PMTINI,PMTFIN; 
   filename = argv;
   int disk = 1;                 //Disk number (1 or 2)
 
     //string online_path = "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ";
-    string data_path = online_path+rundir;
     //log_path = online_path;
     string DataPath2 = online_path;//"/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/DCOV";
 
@@ -32,10 +30,9 @@ int startallboards(const char *argv, const char *online_path)
     //DAQ is also expectiing to write a logfile in $(DataPath2)/log (must exist or DAQ will fail)
 
     //TODO Change this to work with hardware library
-    string file_path = __FILE__;
-    string dir_path = file_path.substr(0,file_path.rfind("\\"));
-    string cmd = dir_path + "\\/readout\\/script\\/start_readout.sh \"readout\" \"1\" \"1\" \"none\"";
-    system(cmd.c_str());
+  string dir_path = "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ";
+  string cmd = dir_path + "\\/readout\\/script\\/start_readout.sh \"readout\" \"1\" \"1\" \"none\"";
+  system(cmd.c_str());
 
     //Data may be written wherever, but the code assumes there is a symbolic link $(online_path)/readout/data1 
     //to the folder where the DAQ puts the data

@@ -19,8 +19,8 @@
 #include "usbreadout.h"
 
 
-#define buf_size 2048 //1024
-#define MSG_BUF_SIZE 2048 //32
+#define buf_size 1024
+#define MSG_BUF_SIZE 32
 #define MSG_BUF_SIZE_2 5
 
 //using namespace std;
@@ -182,7 +182,7 @@ void mq_send_str(int msg, char data[]){
 
 //mq_send_usb $msg_id, $usb_num,$data;
 void mq_send_usb (int msg, int usb_num, unsigned char data[]){
- //   std::cout<<"inside mq_send_usb"<<std::endl;
+    //std::cout<<"inside mq_send_usb"<<std::endl;
     int mq0;
     int mq1;
     struct mymsg1 msgp;
@@ -196,11 +196,11 @@ void mq_send_usb (int msg, int usb_num, unsigned char data[]){
     usb_num += Msg_Base;
     while(1){
         try{
-    //std::cout<<"try block"<<std::endl;
+   // std::cout<<"try block"<<std::endl;
             signal(SIGALRM,handle);
             alarm(1);
             try{
-    //std::cout<<"second try block"<<std::endl;
+   //std::cout<<"second try block"<<std::endl;
                 msgp.mtype = msg;
                 // strcpy((char *)msgp.mtext,(char *)data);
                 //int msgsz = sizeof(msgp) - sizeof(long);
@@ -218,10 +218,10 @@ void mq_send_usb (int msg, int usb_num, unsigned char data[]){
                     mq1 = MQs[1][i];
                     if(mq1==usb_num){
                         //int rc = msgsnd(MQs[0][i],(void*)&msgp,msgsz, 0);
- //   std::cout<<"if statement"<<std::endl;
+   //std::cout<<"if statement"<<std::endl;
                         int rc = msgsnd(MQs[0][i],(void*)&msgp,4, IPC_NOWAIT | MSG_NOERROR);
                         if(rc == -1){
-   // std::cout<<"second if statement"<<std::endl;
+                            std::cerr<<"errno = "<<errno<<std::endl;
                             perror("msgsnd");
                             exit(1);
                         }
@@ -259,21 +259,21 @@ void send_out_usb(int usb, unsigned int usbdata){
     //std::cout<<"inside send_out_usb"<<std::endl;
     unsigned char data1[4];
     //std::cout<<"memset"<<std::endl;
-    //memset(data1,'\0',4);
+    memset(data1,'\0',4);
     memset(data1,0,4);
     //strcpy(data1,data.c_str());
     // data1[0] = usbdata;
     // memcpy(data1,&usbdata,sizeof(int));
-    //std::cout<<"starting data block"<<std::endl;
+    ////std::cout<<"starting data block"<<std::endl;
     data1[0] = usbdata & 0xff;
     data1[1] = (usbdata>>8) & 0xff;
     data1[2] = (usbdata>>16) & 0xff;
     data1[3] = (usbdata>>24) & 0xff;
     //cout << "data1[0] = " << data1[0] << (usbdata) << " & " << 0xff << "\n";
-    //cout << "data1[1] = " << data1[1] << (usbdata>>8) << " & " << 0xff << "\n";
+   // cout << "data1[1] = " << data1[1] << (usbdata>>8) << " & " << 0xff << "\n";
     //cout << "data1[2] = " << data1[2] << (usbdata>>16) << " & " << 0xff << "\n";
     //cout << "data1[3] = " << data1[3] << (usbdata>>24) << " & " << 0xff << "\n";
-    //std::cout<<"mq_send_usb"<<std::endl;
+   // std::cout<<"mq_send_usb"<<std::endl;
     mq_send_usb(1,usb,data1);
     
 }
@@ -297,7 +297,7 @@ void set_data_path(char data_path[]){
 }
 
 void com_usb(int usb, int pmt, int b2, int b3){
- //   std::cout<<"inside com_usb"<<std::endl;
+    //std::cout<<"inside com_usb"<<std::endl;
     unsigned int b1 = 4194304+((pmt & 63) * 256 + b2) *256 + b3;
     //cout << "b2 = " << b2 << ", b3 = " << b3 << ", b1 = " << b1 << "\n";
     send_out_usb(usb, b1);
