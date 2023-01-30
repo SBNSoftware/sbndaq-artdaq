@@ -1157,11 +1157,10 @@ void sbndaq::CAENV1730Readout::start()
   
   // Animesh Check trigger threshold here
   
-  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  for(uint32_t ch=0; ch<fNChannels; ++ch)
     {
       retcod = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readBack);
-      TLOG(TINFO) << "Trigger threshold before run start for ch " << ch << " is 0x" 
-	       << std::hex << readBack << std::dec;    
+      TLOG(TINFO) << "Trigger threshold before run start for ch " << ch << " is " << readBack << TLOG_ENDL;    
     }
   
   
@@ -1204,11 +1203,10 @@ void sbndaq::CAENV1730Readout::start()
   GetData_thread_->start();
   
   // Check the baseline values
-  for ( uint32_t i_ch=0; i_ch<CAENConfiguration::MAX_CHANNELS; ++i_ch)
+  for(uint32_t i_ch=0; i_ch<fNChannels; ++i_ch)
   {
     retcod = CAEN_DGTZ_GetChannelDCOffset(fHandle,i_ch,&readBack);
-    TLOG(TINFO)<<"DC offset or baseline before run start for Ch " << i_ch << " is 0x" 
-	       << std::hex << readBack << std::dec;    
+    TLOG(TINFO)<<"DC offset or baseline before run start for Ch " << i_ch << " is " << readBack << TLOG_ENDL;    
   }   
 
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
