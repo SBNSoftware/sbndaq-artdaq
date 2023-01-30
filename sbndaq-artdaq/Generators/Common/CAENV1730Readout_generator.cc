@@ -73,14 +73,14 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   Configure();
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
+  TLOG(TLVL_INFO) << "FP_TRG_OUT_CONTROL Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
     "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
+  TLOG(TLVL_INFO) << "FP_IO_CONTROL Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_LVDS_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
+  TLOG(TLVL_INFO) << "FP_LVDS_CONTROL Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
     data << std::dec;
 
   if(!fOK)
@@ -202,7 +202,7 @@ void sbndaq::CAENV1730Readout::configureInterrupts()
 void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 {
   // initialize the fhicl parameters (see CAENV1730Readout.hh)
-  // the obj ps has a member method that gets he private members
+  // the obj ps has a member method that gets the private members
   // fVerbosity, etc.. are priv memb in CAENV1730Readout.hh
   //
   // wes, 16Jan2018: disabling default parameters
@@ -244,18 +244,23 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fCircularBufferSize = ps.get<uint32_t>("CircularBufferSize"); //1000000
   TLOG(TINFO) << "CircularBufferSize=" << fCircularBufferSize;
 
+  // force ADC calibration on config
   fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig");
   TLOG(TINFO) <<"CalibrateOnConfig=" << fCalibrateOnConfig;
 
+  // disable temperature calibration
   fLockTempCalibration = ps.get<bool>("LockTempCalibration");
   TLOG(TINFO) <<"LockTempCalibration=" << fLockTempCalibration;
+
+  // read/write ADC calibration parameters
+  fWriteCalibration = ps.get<bool>("AdcCalibration");
+  TLOG(TINFO) <<"WriteCalibration=" << fWriteCalibration;
 
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<"fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
   fMaxEventsPerTransfer = ps.get<uint32_t>("maxEventsPerTransfer",1);
   TLOG(TINFO) <<"fMaxEventsPerTransfer=" << fMaxEventsPerTransfer;
-
 
   //Animesh & Aiwu add - for LVDS logic settings
   fLVDSLogicValueG1 = ps.get<uint32_t>("LVDSLogicValueG1"); // LVDS logic value for G1
@@ -275,6 +280,7 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fLVDSLogicValueG8 = ps.get<uint32_t>("LVDSLogicValueG8"); // LVDS logic value for G8
   TLOG(TINFO)<<"LVDSLogicValueG8=" << fLVDSLogicValueG8;
   //Animesh & Aiwu add end
+
   //Animesh & Aiwu add - for LVDS output width
   fLVDSOutWidthC1 = ps.get<uint32_t>("LVDSOutWidthC1"); // LVDS output width Ch1
   TLOG(TINFO)<<"LVDSOutWidthC1=" << fLVDSOutWidthC1;
@@ -309,7 +315,6 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fLVDSOutWidthC16 = ps.get<uint32_t>("LVDSOutWidthC16"); // LVDS output width Ch16
   TLOG(TINFO)<<"LVDSOutWidthC16=" << fLVDSOutWidthC16;
   //Animesh & Aiwu add end
-
 
   //Animesh & Aiwu add - self trigger polarity
   fSelfTrigBit = ps.get<uint32_t>("SelfTrigBit"); // LVDS output width Ch16
@@ -376,10 +381,9 @@ void sbndaq::CAENV1730Readout::Configure()
   if (fWriteCalibration)  
     { 
       
-      TLOG(TINFO)<<"maximum ch is = " <<CAENConfiguration::MAX_CHANNELS<<TLOG_ENDL;
       for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
 	{
-	  TLOG(TINFO)<<"Chnumber is" <<ch<<TLOG_ENDL;
+	  TLOG(TINFO)<<"Chnumber is " <<ch<<TLOG_ENDL;
 	  Read_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
 	  //  Write_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
 	}
@@ -1153,9 +1157,11 @@ void sbndaq::CAENV1730Readout::start()
   
   // Animesh Check trigger threshold here
   
-  for(uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
     {
-      TLOG(TINFO) << "Trigger threshold before run start for ch " <<ch<<"is "<< fCAEN.triggerThresholds[ch];
+      retcod = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readBack);
+      TLOG(TINFO) << "Trigger threshold before run start for ch " << ch << " is 0x" 
+	       << std::hex << readBack << std::dec;    
     }
   
   
@@ -1197,10 +1203,12 @@ void sbndaq::CAENV1730Readout::start()
   fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
   GetData_thread_->start();
   
-  // Animesh Check the trigger difference value
-  for(size_t i_ch=0; i_ch<16; ++i_ch){
-    TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch " << i_ch << " is " 
-	       << (uint32_t)(fCAEN.pedestal[i_ch]-fCAEN.triggerThresholds[i_ch]);    
+  // Check the baseline values
+  for ( uint32_t i_ch=0; i_ch<CAENConfiguration::MAX_CHANNELS; ++i_ch)
+  {
+    retcod = CAEN_DGTZ_GetChannelDCOffset(fHandle,i_ch,&readBack);
+    TLOG(TINFO)<<"DC offset or baseline before run start for Ch " << i_ch << " is 0x" 
+	       << std::hex << readBack << std::dec;    
   }   
 
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
