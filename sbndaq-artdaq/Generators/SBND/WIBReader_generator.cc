@@ -33,6 +33,8 @@ namespace sbndaq
 
  WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps) 
  {
+   time_t start, end;
+   time(&start);
    const std::string identification = "WIBReader";
    TLOG_INFO(identification) << "WIBReader constructor" << TLOG_ENDL;
    
@@ -74,7 +76,9 @@ namespace sbndaq
     if(success){
        TLOG_INFO(identification) << "******** Configuration is successful in the " << success_index << " th try ***************" << TLOG_ENDL;
     }
-    
+    time(&end);
+    double time_taken = double(end - start);
+    TLOG_INFO(identification) << "Time took to run DAQ : " << time_taken << std::setprecision(5) << "  seconds." << TLOG_ENDL;
     TLOG_INFO(identification) << "================== WIB SUMMARY AFTER CONFIGURATION ======================" << TLOG_ENDL;
     TLOG_INFO(identification) << "WIB FW VERSION : " << std::hex << int(wib->Read("FW_VERSION")) << TLOG_ENDL;
     TLOG_INFO(identification) << "SLOT ADDRESS : " << std::hex << int(wib->Read("SLOT_ADDR")) << TLOG_ENDL;
