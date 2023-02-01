@@ -677,7 +677,6 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
         sleep(0.3);
     }
     printf("\n");
-    
   for(int pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
         usb_local = pmttousb[pmt1];
         pmt_local = pmttoboard[pmt1]; 
@@ -694,7 +693,6 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     sleep(1);
 
     long runtmp = scanFiles(online_path + "/runs1/DATA");
-    
         sprintf(run_number,"%.7ld",runtmp - 1); //ScanFiles returns 1+ the current max run#
 }
 
