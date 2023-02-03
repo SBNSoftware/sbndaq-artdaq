@@ -138,8 +138,8 @@ struct buf_t d[BUF_NO];
 
 struct file_t {
 	int state;				// state
-	char name_tmp[80];		// name (while writing)
-	char name[80];			// name
+	char name_tmp[580];		// name (while writing)
+	char name[580];			// name
 	int offset;				// write offset
 	int desc;				// file descriptor
 };
@@ -168,8 +168,8 @@ static char run_number[100]="";
 static int disk_number = 1; //default disk number
 static char directory[300];
 static char target[300];
-static char target_dir[300]= "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/data1/OVDAQ/DATA"; //default data folder
-static char target_path[300]= "OVDAQ/DATA/"; // default relative path
+static char target_dir[300]= "/scratch_local/crt_tests/backend_data/runs1/DATA/"; //default data folder
+static char target_path[300]= "DATA/"; // default relative path
 static char baseline[300];
 static char decoded[200];
 static char val[BUFSIZE];
@@ -213,7 +213,7 @@ static int ot = 0;
 
 static void debug() {
 	int i;
-	char gaibu_debug_msg[BUFSIZE];
+	//char gaibu_debug_msg[BUFSIZE];
 	int t = time(0);
 	if (t != ot) { // So you don't get debug info until next unix timestamp second
 		if(ot==0) { ot = t; return; }
@@ -231,30 +231,30 @@ static void debug() {
 
 		if (diag_result & 1) {
 			printf("resending: %d\n",ser_no); 
-			sprintf(gaibu_debug_msg,"resending: %d",ser_no);
-			gaibu_msg(MWARNING, gaibu_debug_msg);
+			//sprintf(gaibu_debug_msg,"resending: %d",ser_no);
+			//gaibu_msg(MWARNING, gaibu_debug_msg);
 		}
 
 		//
 		if (diag_result & 2) {
 			printf("usb_full: %d\n",ser_no);
-			sprintf(gaibu_debug_msg,"usb_full: %d",ser_no);
-			gaibu_msg(MEXCEPTION, gaibu_debug_msg);
+			//sprintf(gaibu_debug_msg,"usb_full: %d",ser_no);
+			//gaibu_msg(MEXCEPTION, gaibu_debug_msg);
 		}
 		if (diag_result & 4) {
 			printf("pmt_full: %d\n",ser_no);
-			sprintf(gaibu_debug_msg,"pmt_full: %d",ser_no);
-			gaibu_msg(MEXCEPTION, gaibu_debug_msg);
+			//sprintf(gaibu_debug_msg,"pmt_full: %d",ser_no);
+			//gaibu_msg(MEXCEPTION, gaibu_debug_msg);
 		}
 		if (!(diag_result & 8)) {
 			printf("no_lock: %d\n",ser_no);
-			sprintf(gaibu_debug_msg,"no_lock: %d",ser_no);
-			gaibu_msg(MEXCEPTION, gaibu_debug_msg);
+			//sprintf(gaibu_debug_msg,"no_lock: %d",ser_no);
+			//gaibu_msg(MEXCEPTION, gaibu_debug_msg);
 		}
 		if (!(diag_result & 16)) {
 			printf("no_clk: %d\n",ser_no);
-			sprintf(gaibu_debug_msg,"no_clk: %d",ser_no);
-			gaibu_msg(MEXCEPTION, gaibu_debug_msg);
+			//sprintf(gaibu_debug_msg,"no_clk: %d",ser_no);
+			//gaibu_msg(MEXCEPTION, gaibu_debug_msg);
 		}
 		//
 
@@ -392,8 +392,8 @@ int try_to_open(int file) {
     if(time_lastopen[ser_no] != -1){ // check that we are not just starting or we are not restarting
       if( (t - time_lastopen[ser_no]) % latency != 0){
 	//Gaibu Alert
-	sprintf(gaibu_msg_buf,"Error naming file for USB %d, time now=%ld, time_pred=%ld, get auto name",ser_no,time(0),time_lastopen[ser_no]+latency);
-	gaibu_msg(MNOTICE, gaibu_msg_buf);
+	//sprintf(gaibu_msg_buf,"Error naming file for USB %d, time now=%ld, time_pred=%ld, get auto name",ser_no,time(0),time_lastopen[ser_no]+latency);
+	//gaibu_msg(MNOTICE, gaibu_msg_buf);
 //	t = time_lastopen[ser_no] + latency;
         time_lastopen[ser_no] = t;	
 
@@ -427,8 +427,8 @@ int try_to_open(int file) {
     printf("error creating file %s\n", f[file].name_tmp);
     kill_me = 1;
     //Gaibu Alert
-    sprintf(gaibu_msg_buf,"Error creating file for USB %d",ser_no);
-    gaibu_msg(MNOTICE, gaibu_msg_buf);
+    //sprintf(gaibu_msg_buf,"Error creating file for USB %d",ser_no);
+    //gaibu_msg(MNOTICE, gaibu_msg_buf);
     return 0;
   }
   
@@ -453,7 +453,7 @@ void try_to_close(int file) {
     //Gaibu Alert
     char mymsg[BUFSIZE];
     sprintf(mymsg,"Error closing file for USB %d",ser_no);
-    gaibu_msg(MNOTICE, mymsg);
+    //gaibu_msg(MNOTICE, mymsg);
     return;
   }
   
@@ -461,7 +461,7 @@ void try_to_close(int file) {
   if (res) { 
         char mymsg[BUFSIZE];
         sprintf(mymsg,"Error cound not rename file for USB %d",ser_no);
-        gaibu_msg(MNOTICE, mymsg);
+        //gaibu_msg(MNOTICE, mymsg);
 	perror("couldn't rename file\n"); 
 	}
   f[file].state = F_NOTHING;
@@ -515,8 +515,8 @@ static void check_data_in() {
   if (len >= 0) {
     disk_number = *((int *) msg_buf.mdata);
     //sprintf(target_dir,"/data%d/OVDAQ/DATA",disk_number);
-    sprintf(target_dir,"../data%d%s",disk_number,target_path);
-    printf("Targer Directory: %s\n",target_dir);
+    sprintf(target_dir,"/scratch_local/crt_tests/backend_data/runs%d%s",disk_number,target_path);
+    printf("Target Directory: %s\n",target_dir);
   }
   
   // Get inhibit
@@ -533,7 +533,7 @@ static void check_data_in() {
       printf("USB %d: releasing inhibit\n",ser_no);
       /* Alert Gaibu Server */
       sprintf(mymsg,"USB %d: releasing inhibit",ser_no);
-      gaibu_msg(MNOTICE, mymsg);
+      //gaibu_msg(MNOTICE, mymsg);
       
     }    //normal data taking -- write to disk enabled
     
@@ -542,7 +542,7 @@ static void check_data_in() {
       printf("USB %d: inhibiting writing to file\n",ser_no);
       /* Alert Gaibu Server */
       sprintf(mymsg,"USB %d: inhibiting writing to file",ser_no);
-      gaibu_msg(MNOTICE, mymsg);
+      //gaibu_msg(MNOTICE, mymsg);
       
       //f[active].state = F_CLOSING;   //move state to close and close files
     }
@@ -552,7 +552,7 @@ static void check_data_in() {
       
       /* Alert Gaibu Server */
       sprintf(mymsg,"USB %d: releasing inhibit for baseline",ser_no);
-      gaibu_msg(MNOTICE, mymsg);
+      //gaibu_msg(MNOTICE, mymsg);
       
       try_to_open(2);
       timer_reset(T_FILE_CHANGE, 100);
@@ -634,8 +634,8 @@ static void read_data_in() {
       if (r < 0){ 
 	printf("error cancelling data in\n");
 	//Gaibu Alert
-	sprintf(gaibu_msg_buf,"Error deleting data IN for USB %d",ser_no);
-	gaibu_msg(MNOTICE, gaibu_msg_buf);
+	//sprintf(gaibu_msg_buf,"Error deleting data IN for USB %d",ser_no);
+	//gaibu_msg(MNOTICE, gaibu_msg_buf);
       }
       else d[rw].buf_state = BUF_CANCELLING;
     }
@@ -656,8 +656,8 @@ static void read_data_in() {
 	if( inhibit_writetofile == 0) {
 	  printf("no file to write to\n"); 
 	  //Gaibu Alert
-	  sprintf(gaibu_msg_buf,"Error:no file to write to for USB %d",ser_no);
-	  gaibu_msg(MNOTICE, gaibu_msg_buf);
+	  //sprintf(gaibu_msg_buf,"Error:no file to write to for USB %d",ser_no);
+	  //gaibu_msg(MNOTICE, gaibu_msg_buf);
 	  kill_me = 1;   // not to write to a file depending on flag
 	  //d[rw].buf_state = BUF_NOTHING;
 	}
@@ -688,8 +688,8 @@ static void read_data_in() {
 	if (ret) {
 	  printf("aio write submit error: %d\n", errno); 
 	  //Gaibu Alert
-	  sprintf(gaibu_msg_buf,"aio write submit error for USB %d",ser_no);
-	  gaibu_msg(MNOTICE, gaibu_msg_buf);
+	  //sprintf(gaibu_msg_buf,"aio write submit error for USB %d",ser_no);
+	  //gaibu_msg(MNOTICE, gaibu_msg_buf);
 	  kill_me = 1;
 	  d[rw].buf_state = BUF_NOTHING;
 	} else {
@@ -726,8 +726,8 @@ static void read_data_in() {
 	// oops
 	printf("aio error1 %d\n", errno);
 	//Gaibu Alert
-	sprintf(gaibu_msg_buf,"aio error1 %d",errno);
-	gaibu_msg(MNOTICE, gaibu_msg_buf);
+	//sprintf(gaibu_msg_buf,"aio error1 %d",errno);
+	//gaibu_msg(MNOTICE, gaibu_msg_buf);
 	kill_me = 1; //// for now
       }
       
@@ -744,8 +744,8 @@ static void read_data_in() {
       // oops
       printf("aio error2 %d\n", errno);
       //Gaibu Alert
-      sprintf(gaibu_msg_buf,"aio error2 %d",errno);
-      gaibu_msg(MNOTICE, gaibu_msg_buf);
+      //sprintf(gaibu_msg_buf,"aio error2 %d",errno);
+      //gaibu_msg(MNOTICE, gaibu_msg_buf);
       kill_me = 1; //// for now
       break;
     }
@@ -777,8 +777,8 @@ static void read_data_in() {
 		if (r < 0) {
 		  printf("data in: submit error\n"); 
 		  //Gaibu Alert
-		  sprintf(gaibu_msg_buf,"data in submit error for USB %d",ser_no);
-		  gaibu_msg(MNOTICE, gaibu_msg_buf);
+		  //sprintf(gaibu_msg_buf,"data in submit error for USB %d",ser_no);
+		  //gaibu_msg(MNOTICE, gaibu_msg_buf);
 		  kill_me = 1;
 		  break;		// keep trying?
 		} else {
@@ -814,8 +814,8 @@ static void cb_com_out(struct libusb_transfer *transfer) {
     out_timeout = 1;
     printf("com out transfer status %d?\n", transfer->status); 
     //Gaibu Alert
-    sprintf(gaibu_msg_buf,"com out transfer status %d", transfer->status);
-    gaibu_msg(MNOTICE, gaibu_msg_buf);
+    //sprintf(gaibu_msg_buf,"com out transfer status %d", transfer->status);
+    //gaibu_msg(MNOTICE, gaibu_msg_buf);
     kill_me = 1;
   }
   com_out_ready = 1;
@@ -873,8 +873,8 @@ static void check_com_out() {
     if (r < 0) {
       printf("com out: submit error\n"); 
       //Gaibu Alert
-      sprintf(gaibu_msg_buf,"com out: submit error for USB %d", ser_no);
-      gaibu_msg(MNOTICE, gaibu_msg_buf);
+      //sprintf(gaibu_msg_buf,"com out: submit error for USB %d", ser_no);
+      //gaibu_msg(MNOTICE, gaibu_msg_buf);
       kill_me = 1;
     } else {
       com_out_ready = 0;
@@ -928,8 +928,8 @@ static void check_per_out() {
   if (r < 0) {
     printf("per out: submit error\n"); 
     //Gaibu Alert
-    sprintf(gaibu_msg_buf,"per out: submit error for USB");
-    gaibu_msg(MNOTICE, gaibu_msg_buf);
+    //sprintf(gaibu_msg_buf,"per out: submit error for USB");
+    //gaibu_msg(MNOTICE, gaibu_msg_buf);
     kill_me = 1;
   } else {
     per_out_ready = 0;
@@ -996,7 +996,7 @@ int config_int(const char* path, const char* key)
 	return atoi(config_string(path,key));
 }
 
-
+/*
 void get_gaibu_config() {
 
 	char spaceIP_path[BUFSIZE];
@@ -1075,7 +1075,7 @@ int gaibu_msg(int priority, char *gaibu_buf)
 
 	return 0;
 }
-
+*/
 int init_socket(struct sockaddr_in *serveraddr, char *hostname, int portno)
 {
 	int sockfd;
@@ -1117,14 +1117,14 @@ int main(int argc, char **argv)
 	char log_dir[200];
 
 
-	sprintf(log_dir,"%s/DCOV/log",getenv("DCONLINE_PATH"));
-	openlog("OV DAQ Event", LOG_NDELAY, LOG_USER);
+	sprintf(log_dir,"/scratch_local/crt_tests/backend_data/logs/");
+	//openlog("OV DAQ Event", LOG_NDELAY, LOG_USER);
 	
 	// parse command line parameters
 	while ((c = getopt (argc, argv, "d:r:g:")) != -1) {
     	switch (c) {
-		case 'g': inhibit_writetogaibu = atoi(optarg);	break;
-		case 'd': sprintf(target_dir,"../data%d/%s",disk_number,optarg); strcpy(target_path,optarg);	break;
+		//case 'g': inhibit_writetogaibu = atoi(optarg);	break;
+		case 'd': sprintf(target_dir,"/scratch_local/crt_tests/backend_data/runs%d/%s",disk_number,optarg); strcpy(target_path,optarg);	break;
 		case 'r': strcpy(run_number,optarg);  break;
 		default:  show_help = 1;			break;
 		}
@@ -1149,12 +1149,12 @@ int main(int argc, char **argv)
 		exit(0);
 	}
 
-	gaibu_sockfd = -1;
-	if(inhibit_writetogaibu != 1) { 
+	//gaibu_sockfd = -1;
+	/*if(inhibit_writetogaibu != 1) { 
 		get_gaibu_config(); 
 		initialize_gaibu();
 	}
-
+        */
 	//mkdir(target, 0777);
 	//mkdir(baseline, 0777);
 	mkdir(log_dir, 0777);
@@ -1165,8 +1165,8 @@ int main(int argc, char **argv)
 	if (r < 0) {
 		printf("could not open common message queue %d\n", key);
 		//Gaibu Alert
-		sprintf(gaibu_msg_buf,"could not open common message queue %d",key);
-		gaibu_msg(MNOTICE, gaibu_msg_buf);
+		//sprintf(gaibu_msg_buf,"could not open common message queue %d",key);
+		//gaibu_msg(MNOTICE, gaibu_msg_buf);
 		goto m_return;
 	}
 	msq_common = r;
@@ -1187,8 +1187,8 @@ int main(int argc, char **argv)
 	sprintf(out_log, "%s/usb_main_out.log",log_dir);
 	sprintf(err_log, "%s/usb_main_err.log",log_dir);
 	open_log_files();    //open just 1 log file fo the main process
-	sprintf(gaibu_msg_buf,"OV DAQ Process Started");
-	gaibu_msg(MNOTICE,gaibu_msg_buf);
+	//sprintf(gaibu_msg_buf,"OV DAQ Process Started");
+	//gaibu_msg(MNOTICE,gaibu_msg_buf);
 #endif
 	// install our own signal handler
 	struct sigaction sigact;
@@ -1202,19 +1202,19 @@ int main(int argc, char **argv)
 	//
 
 start_over:
-	if(inhibit_writetogaibu != 1) { 
+	/*if(inhibit_writetogaibu != 1) { 
 		if(gaibu_sockfd<0) {
 			initialize_gaibu();
 		}
 	}
-
+        */
 	// initialise libusb
 	r = libusb_init(&ctx);
 	if (r < 0) {
 		printf("failed to initialise libusb\n");
 		//Gaibu Alert
-		sprintf(gaibu_msg_buf,"failed to initialize libusb");
-		gaibu_msg(MNOTICE, gaibu_msg_buf);
+		//sprintf(gaibu_msg_buf,"failed to initialize libusb");
+		//gaibu_msg(MNOTICE, gaibu_msg_buf);
 		goto m_return;
 	}
 	libusb_set_debug(ctx,3); // 0-nothing 1-error 2-warning 3-info
@@ -1224,8 +1224,8 @@ start_over:
 	if (r < 0) {
 		printf("could not get list of devices\n");
 		//Gaibu Alert
-		sprintf(gaibu_msg_buf,"could not get device's list");
-		gaibu_msg(MNOTICE, gaibu_msg_buf);
+		//sprintf(gaibu_msg_buf,"could not get device's list");
+		//gaibu_msg(MNOTICE, gaibu_msg_buf);
 		goto m_deinit;
 	}
 
@@ -1242,8 +1242,8 @@ start_over:
 		if (r < 0) {
 			printf("could not open device\n");
 			//Gaibu Alert
-			sprintf(gaibu_msg_buf,"Could not open device");
-			gaibu_msg(MNOTICE,gaibu_msg_buf);
+			//sprintf(gaibu_msg_buf,"Could not open device");
+			//gaibu_msg(MNOTICE,gaibu_msg_buf);
                         usbsystemdevice--;
 			continue;
 		}
@@ -1262,8 +1262,8 @@ start_over:
 		if(j == 0) {
 			printf("Found USB readout board with no serial number\n");
 			//Gaibu Alert
-			sprintf(gaibu_msg_buf,"Found USB readout board without any serial number");
-			gaibu_msg(MNOTICE, gaibu_msg_buf);
+			//sprintf(gaibu_msg_buf,"Found USB readout board without any serial number");
+			//gaibu_msg(MNOTICE, gaibu_msg_buf);
 			goto m_find_release;
 		}
 
@@ -1278,8 +1278,8 @@ start_over:
 		if (r < 0) {
 			printf("when getting serial number: error %d\n", r);
 			//Gaibu Alert
-			sprintf(gaibu_msg_buf,"Getting serial number problem number: %d",r);
-			gaibu_msg(MNOTICE, gaibu_msg_buf);
+			//sprintf(gaibu_msg_buf,"Getting serial number problem number: %d",r);
+			//gaibu_msg(MNOTICE, gaibu_msg_buf);
 			goto m_find_release;
 		}
 
@@ -1325,8 +1325,8 @@ start_over:
 	  if (timer_zero_reset(T_RESPAWN, 5)) {
 	    if(usbsystemdevice%usb_counter!=0) {  
 	      printf("Error! Number of USBs connected = %d(%d)\n",usb_counter, usbsystemdevice);
-	      sprintf(gaibu_msg_buf,"Number of USBs connected = %d(%d)",usb_counter,usbsystemdevice);
-	      gaibu_msg(MERROR,gaibu_msg_buf);
+	      //sprintf(gaibu_msg_buf,"Number of USBs connected = %d(%d)",usb_counter,usbsystemdevice);
+	      //gaibu_msg(MERROR,gaibu_msg_buf);
 	      goto start_over;
 	    }
 	    //goto start_over;
@@ -1357,8 +1357,8 @@ mh_init:
 	sprintf(err_log, "%s/usb_%d_err.log", log_dir, ser_no);
 	open_log_files();
         usbsystemdevice--;
-	sprintf(gaibu_msg_buf,"OV DAQ USB Stream %d Started", ser_no);
-	gaibu_msg(MNOTICE,gaibu_msg_buf);
+	//sprintf(gaibu_msg_buf,"OV DAQ USB Stream %d Started", ser_no);
+	//gaibu_msg(MNOTICE,gaibu_msg_buf);
 #endif
 		
 	// initialize my variables
@@ -1510,7 +1510,7 @@ mh_free0:
 
         usbsystemdevice--;
 
-	close(gaibu_sockfd);
+	//close(gaibu_sockfd);
 	closelog();
 	return 0;
 }
