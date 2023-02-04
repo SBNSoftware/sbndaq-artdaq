@@ -82,7 +82,7 @@ CRT::FragGen::~FragGen()
 {
   // Stop the backend DAQ.
   stopallboards(configfile.c_str(),indir.c_str());
-
+  sleep(5);
   hardware_interface_->FreeReadoutBuffer(readout_buffer_);
 }
 
@@ -108,7 +108,7 @@ bool CRT::FragGen::getNext_(
     }
 
     //runstarttime is OK if we got this far, so start sending back data.  
-    //If it took more than 1 second to get a "good" runstarttime, then 
+    //If it took more than 14 seconds to get a "good" runstarttime, then 
     //uppertime needs to be updated. 
     uppertime = (uint64_t)(deltaT*1e9/16)/std::numeric_limits<uint32_t>::max();
     TLOG(TLVL_INFO, "CRT") << "Set run start time to " << runstarttime << ", or " 
@@ -222,7 +222,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   // L. Jiang && C. Mariani Oct.2019
   uint64_t currentUNIX = time(nullptr);
 
-  //determine the number of reset that occurred if the time passed is greater than 1s
+  //determine the number of reset that occurred if the time passed is greater than 14s
 
   //int64_t oldtimestamp = lowertime + ((uint64_t)uppertime + runstarttime)*1.e9/16.;  //this is in sec.
 
@@ -233,10 +233,10 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //debug for the moment the new deltaUNIX time constructor
   if (labs(deltaUNIX) > 0) { //there was at least one reset
 
-  if(deltaUNIX > 0 ){ // there is a difference, check if a reset happen ( @1 sec )
-    //deltaUNIX /= (16./1.e9)*pow(2.,32.); //number of clock counter between two consecutive events considering the 16ns ticks=85.89s=1s
+  if(deltaUNIX > 0 ){ // there is a difference, check if a reset happen ( @14 sec )
+    deltaUNIX /= (16./1.e9)*pow(2.,29.); //number of clock counter between two consecutive events considering the 16ns ticks=14s
     deltaUNIX = (int)deltaUNIX; //lower end, need to check if it is off by one additional rollover    
-    newUppertime += deltaUNIX; //adding an intenger number of seconds (1s) corresponding to how many resets we detect (should old do this when pausing the run)
+    newUppertime += deltaUNIX; //adding an intenger number of seconds (14s) corresponding to how many resets we detect (should old do this when pausing the run)
   }
   //else if (deltaUNIX < 0){
   //  deltaUNIX = (int)deltaUNIX;
@@ -284,7 +284,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 			      << " and deltaUNIX = " << deltaUNIX 
 			      << ".  Throwing out this Fragment - out of time.\n";
 
-    if( labs(deltaT) == 1 ) {  //try to realign the time in case we are off by 1 cycle for whatever reason
+    if( labs(deltaT) == 14 ) {  //try to realign the time in case we are off by 1 cycle for whatever reason
 
       if(deltaT<0) {newUppertime++;} //try to futher correct the uppertime for this cycle: + 1 reset that was missed
       if(deltaT>0) {newUppertime--;} //try to futher correct the uppertime for this cycle: - 1 reset that was missed
@@ -294,7 +294,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
       newtimediff = timestamp_*16./1.e9 - currentUNIX; //16 nanosecond ticks, convert timestamp in sec.
 
-      TLOG(TLVL_WARNING, "CRT") << "deltaT=1s. Missed one reset cycle, try to correct it. deltaT = " 
+      TLOG(TLVL_WARNING, "CRT") << "deltaT=14s. Missed one reset cycle, try to correct it. deltaT = " 
 				<< deltaT << ", new deltaT = " << newtimediff << "\n";
 
       if(labs(newtimediff) <= alarmDeltaT) { //repaired time stamp was successfull
