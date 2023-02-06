@@ -233,8 +233,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   if (labs(deltaUNIX) > 0) { //there was at least one reset
 
   if(deltaUNIX > 0 ){ // there is a difference, check if a reset happen ( @14 sec )
-    //deltaUNIX /= (16./1.e9)*pow(2.,29.); //number of clock counter between two consecutive events considering the 16ns ticks=14s
-    deltaUNIX *= (1.e9/16.)/14; //number of clock counter between two consecutive events considering the 16ns ticks=14s
+    deltaUNIX /= (16./1e9)*pow(2.,29.); //number of clock counter between two consecutive events considering the 16ns ticks=8.59=14s
     deltaUNIX = (int)deltaUNIX; //lower end, need to check if it is off by one additional rollover    
     newUppertime += deltaUNIX; //adding an intenger number of seconds (14s) corresponding to how many resets we detect (should old do this when pausing the run)
   }
@@ -244,11 +243,14 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //} 
   //detecting if there is an additional rollover, close to the edge of the clock reset
   else if((uint64_t)(lowertime + rolloverThreshold) < oldlowertime){
-    /*TLOG(TLVL_DEBUG, "CRT") << "lowertime " << lowertime
+    TLOG(TLVL_WARNING, "CRT") << "lowertime " << lowertime
       << " and oldlowertime " << oldlowertime << " caused a rollover.  "
-      "uppertime is now " << uppertime << ".\n";*/
+      "uppertime is now " << uppertime << ".\n";
     newUppertime++;  
   }
+  }
+
+  if (deltaUNIX > 0) {
     TLOG(TLVL_WARNING, "CRT") << "Detected a rollover, current linux time = "
 			   << currentUNIX << " newUppertime is = " 
 			   << newUppertime << " uppertime is = "

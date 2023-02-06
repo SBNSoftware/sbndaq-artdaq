@@ -120,7 +120,7 @@ namespace CRT
     bool gotRunStartTime;
 
     //When should we get worried about timestamps getting out of sync?  In seconds
-    static constexpr int64_t alarmDeltaT = 1; 
+    static constexpr int64_t alarmDeltaT = 14; 
   };
 }
 
