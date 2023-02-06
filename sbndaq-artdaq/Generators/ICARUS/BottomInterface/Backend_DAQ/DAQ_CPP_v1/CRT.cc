@@ -43,19 +43,17 @@ using std::istringstream;
 using std::stringstream;
 using std::to_string;
 
+namespace Bottom {
+
 int pmt;
-int modulenum;
 static int totalpmt;
-static int totalusb;
-int totalboard;
 int usbhowmanyboards[2][10]={0};
 int usbhowmanybox[2][10]={0};
 int usbhowmanyboxcount = 0;
-int usbhowmanyboardscount = 0;
 int boxtousb[128];
 int boxtoboard[128];
-int pmt_local;
-int usb_local;
+//int pmt_local;
+//int usb_local;
 int pmt_usb_conv[100000];
 int pmttousb[10];
 int pmttoboard[10];
@@ -66,28 +64,26 @@ int DACt;
 int trigger_mode;
 int fclload = 0;//mysql load flag set to 0 to start. 
 int gain[65];
-static int pmtserialnumber;
+//static int pmtserialnumber;
 int force_trig;
-int HVsetting;
-string gate;
+//int HVsetting;
+//string gate;
 int filelength = 20;
 int run_length;
 int usb_box;
 int totalbox;
 int usblocal[128];
-int boardnumber;
+//int boardnumber;
 string pmtdata[128][128][11];
-string module;
+//string module;
 int hdelay;
 int gaindata[128][128][64];
 int gapkey;
-int pipedelay;
+//int pipedelay;
 string choice = "";
 char run_number[16];
-string DataFolder;
-string DebugDAC;
 string usemaroc2gainconstantsmb;
-string comments;
+//string comments;
 
 int Year;
 int Mon;
@@ -99,12 +95,6 @@ int Sec;
 
 string mode;
 string Time_Data_Path;
-
-string database = "doublechooz_ov_near";
-string DBhostname = "localhost";
-string user = "dcndaq";
-string password = "137316neutron";
-
 
 int top=-1;
 int pmt_board_array[MAX];
@@ -141,128 +131,20 @@ void getpmtdata(int,int);
 void SplitString(string s, vector<string> &v, string c);
 int scanFiles(string inputDirectory);
 
-////////////////////////////////////////////////////////////////////////////////////
-
-void initializeusb(int usb, int pmt) {
-
-  //now let's initialize everything for the data taking
-    
-  string dir2 = DataFolder + "/Run_" + run_number;
-
-  string summary = "off";                                 // summary file default = off
-    
-  getpmtdata(usb,pmt);    
-  
-  com_usb(usb, pmt, 110, 1);             // turn off the three led on the PMT's board = 1
-  com_usb(usb, pmt, 109, 1);             // vdd_fsb on
-  com_usb(usb, pmt, 73, 0b00000);        // set up pmt module
-  com_usb(usb, pmt, 74, 0b0100000);      // default gain
-  com_usb(usb, pmt, 70, 0);              // load default
-  dac_usb(usb, pmt, DACt);               // threshold value
-  
-  com_usb(usb, pmt, 67, 0b000010);       // statea
-  com_usb(usb, pmt, 68, 0b000000);       // stateb
-  com_usb(usb, pmt, 69, 0b000000);       // statec
-  
-  com_usb(usb, pmt, 71, 0);              // rst_g to maroc
-  com_usb(usb, pmt, 72, 0);              // write config
-  com_usb(usb, pmt, 72, 0);              // write config
-  
-  com_usb(usb, pmt, 73, gateonoff);      // gate
-  com_usb(usb, pmt, 75, trigger_mode);   // trigger mode (gateonoff = 0b01011; trigger_mode = 0b01010000);
-                                         // gate = "triggera"=01111 and trigger_mode=01100000=96
-  com_usb(usb, pmt, 80, 5);              // hold delay is variable. Has been fixed to 5 here
-  com_usb(usb, pmt, 85, hdelay);         // set up pipe delay
-  
-  com_usb(usb, pmt, 86, 1);              // edge strip mode
-  com_usb(usb, pmt, 87, 0b10);           // force readout -> 01: 1msec, 10: 16msec, 11: 256msec
-  
-  if(usemaroc2gainconstantsmb.compare("no")==0){
-    com_usb(usb, pmt, 74, 0b0100000);  // default gain
-  }
-  else if(usemaroc2gainconstantsmb.compare("yes")==0 && fclload == 0){
-    printf("Error cannot load gain constants from FHiCL file\n");
-    com_usb(usb, pmt, 74, 0b0100000);  // default gain
-  }
-  else if(usemaroc2gainconstantsmb.compare("yes")==0 && fclload == 1){
-    for(int index = 1 ; index < 65; index++){
-      com_usb(usb, pmt, index - 1, 2*gain[index]);  // applying gain constants from FHiCL file
-    }
-  }
-  
-  tarry(0.5);
-  
-  com_usb(usb, pmt, 109, 0);              // vdd_fsb off
-  
-  com_usb(usb, pmt, 255, 0);
-  
-  
-  // here create a first summary file or append to an existing one
-  
-  if(summary.compare("on")==0){
-    
-    string summaryfile = dir2 + "/summary" + "_" + to_string(usb) + ".txt";
-    string summaryfile1 = dir2 + "/summary_new" + "_" + to_string(usb) + ".txt";
-    
-    string summaryfile2 = dir2 + "/summary_2" + "_" + to_string(usb) + ".txt";
-
-    ifstream efile(summaryfile.c_str());
-    
-    if(efile.good()){ // summary file already exists
-      
-      FILE * pFile2;
-      pFile2 = fopen(summaryfile1.c_str(),"w");
-      if(pFile2 == NULL){
-	printf("Can not open summaryfile1\n");
-	fclose(pFile2);
-      }
-      fprintf(pFile2,"\n");
-      fprintf(pFile2,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, hdelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
-      if(usemaroc2gainconstantsmb.compare("yes")==0){
-	for(int index = 1; index < 65; index++){
-	  fprintf(pFile2, "%d \t", gain[index]);
-	}
-      }
-      efile.close();
-      fclose(pFile2);
-      string append = "cat " + summaryfile1 + " >> " + summaryfile;
-      system(append.c_str());
-      string move = "rm " + summaryfile1;
-      system(move.c_str());
-    }
-    else{
-      efile.close();  //if summaryfile did not exist
-      FILE * pFile1;
-      pFile1 = fopen(summaryfile.c_str(),"w");
-      if(pFile1 == NULL){
-	printf("Can not open summaryfile\n");
-	perror("Failed: ");
-	fclose(pFile1);
-      }
-      fprintf(pFile1,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, hdelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
-      if(usemaroc2gainconstantsmb.compare("yes")==0){
-	for(int index = 1; index < 65; index++){
-	  fprintf(pFile1, "%d \t", gain[index]);
-	}
-      }
-      fclose(pFile1);
-    }
-            
-  } // end for summary on or off
-           
-}
 ////////////////////////////////////////////////////////////////////////////////
 //Reads fcl file returns vector of values for each line. 
 //Argument 1: Filename for .fcl file to be read.
-vector <vector<string>> fcl_read(string filename)
+vector<vector<string>> fcl_read(string filename)
 {
     vector <vector<string>> output; 
-	ifstream file (filename);
+    ifstream file(filename);
+
     int lineNum = 1;   //Line tracker
     bool keepReading = true; //Keeps track of when to stop reading.
     string line; 
     if (file.is_open()){
         while(getline(file,line)){
+            if (line.length() < 2) { continue; } 
             if (line[line.length()-1] == ']' && line[line.length()-2] == ']'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
             if (line[0] == ']'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
             if (line[0] == '#'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
@@ -310,7 +192,8 @@ vector <vector<string>> fcl_read(string filename)
 }
 ///////////////////////////////////////////////////////////////////////////////
 void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,string filename){
-    usbhowmanyboardscount = 0;
+    int usbhowmanyboardscount = 0;
+
     //Default mode for mode_local paramter.
     if(mode_local == "")
         mode = "fcl";
@@ -318,6 +201,7 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
         mode = mode_local;
     
     totalbox = 0;
+    totalpmt= 0;
 	
         if(mode.compare("debug") == 0){
         if(!usb_board || !pmt_board)
@@ -330,6 +214,7 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
                 pmtdata[usb_board][pmt_board][0] = "none";     //pmt serial number
                 pmtdata[usb_board][pmt_board][1] = to_string(pmt);  //board number
                 pmtdata[usb_board][pmt_board][2] = to_string(0);  //HV
+                string DebugDAC = "999";
                 if(pmt_board == 1)
                     pmtdata[usb_board][pmt_board][3] = "900";        //DAC
                 else if(pmt_board == 11)
@@ -394,7 +279,7 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
         }
     }
 	else if(mode.compare("fcl") == 0){ //read from FiCHL file if mode = fcl        
-        vector< vector<string>> output_fcl = fcl_read(filename);
+        vector<vector<string>> output_fcl = fcl_read(filename);
         totalpmt = 0;
         totalbox = 0;
         usb_box = 0;
@@ -538,6 +423,9 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
    
 
     int pmt1;
+    int usb_local;
+    int pmt_local;
+    
     for(pmt1 = pmtini; pmt1<=pmtfin; pmt1++)
     {
         if(!pmttousb[pmt1] || !pmttoboard[pmt1])
@@ -607,7 +495,7 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     
     if(mode.compare("debug")==0)
     {
-        totalboard = pmtfin - pmtini + 1;
+        int totalboard = pmtfin - pmtini + 1;
         if(totalpmt != totalboard)
         {
             printf("Problem with initialization at stoptakedata \n");
@@ -653,6 +541,9 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     printf("%d sec...", elapsed_time);
     
     int pmt1;
+    int usb_local;
+    int pmt_local;
+    
     for(pmt1 = pmtini; pmt1<=pmtfin; pmt1++)
     {
         if(!pmttousb[pmt1] || !pmttoboard[pmt1])
@@ -702,17 +593,17 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
 
 void getpmtdata(int usbboard, int pmtnumber)
 {
-    pmtserialnumber = atoi(pmtdata[usbboard][pmtnumber][0].c_str());
-    boardnumber = atoi(pmtdata[usbboard][pmtnumber][1].c_str());
-    HVsetting = atoi(pmtdata[usbboard][pmtnumber][2].c_str());
+    int pmtserialnumber = atoi(pmtdata[usbboard][pmtnumber][0].c_str());
+    int boardnumber = atoi(pmtdata[usbboard][pmtnumber][1].c_str());
+    int HVsetting = atoi(pmtdata[usbboard][pmtnumber][2].c_str());
     DACt = atoi(pmtdata[usbboard][pmtnumber][3].c_str());
     usemaroc2gainconstantsmb = pmtdata[usbboard][pmtnumber][4];
-    gate = pmtdata[usbboard][pmtnumber][5];
-    pipedelay = atoi(pmtdata[usbboard][pmtnumber][6].c_str());
+    string gate = pmtdata[usbboard][pmtnumber][5];
+    int pipedelay = atoi(pmtdata[usbboard][pmtnumber][6].c_str());
     force_trig = atoi(pmtdata[usbboard][pmtnumber][7].c_str());
     trigger_mode = atoi(pmtdata[usbboard][pmtnumber][8].c_str());
-    comments = pmtdata[usbboard][pmtnumber][9];
-    module = pmtdata[usbboard][pmtnumber][10];
+    string comments = pmtdata[usbboard][pmtnumber][9];
+    string module = pmtdata[usbboard][pmtnumber][10];
     
     if(gate.compare("on") == 0)
     {
@@ -821,13 +712,10 @@ void SplitString(string s, vector<string> &v, string c)
 
 void initializeboard(string define_runnumber, int trigger_num, int pmtini, int pmtfin, string online_path){
 
-    //online_path: "/scratch_local/crt_tests/backend_data"
-
-
     int disk_num = 1;
-    char DataPath[128] = "/DATA/";
-    DataFolder = online_path + "/runs"+to_string(disk_num)+"/DATA/";
-    pipedelay = 20;
+    char DataPath[256] = "/DATA/";
+    string ScratchLocal = online_path + "/runs"+to_string(disk_num)+"/DATA/";
+    int pipedelay = 20;
     int structure_t0[128] = {-10};
 
     if(!pmtini && !pmtfin){
@@ -835,7 +723,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
         pmtfin = totalpmt;
     }
     if(!mode.compare("debug")){
-        totalboard = pmtfin - pmtini + 1;
+        int totalboard = pmtfin - pmtini + 1;
         if(totalpmt != totalboard){
             printf("totalpmt: %d\t totalboard: %d\n",totalpmt,totalboard);
             printf("Problem with initialization \n");
@@ -861,7 +749,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     
     set_data_path(DataPath);
     //check_diskspace;
-    set_data_disk(disk_num);  //setting $DataFolder
+    set_data_disk(disk_num);  //setting $ScratchLocal
     
     
     //defining the run number
@@ -900,6 +788,9 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     printf("Baseline data taking .");
     
     int t = 0;
+
+    int usb_local;
+    int pmt_local;
     
     for (pmt1 = pmtini; pmt1<=pmtfin; pmt1++){
         if(!(usb_local = pmttousb[pmt1] || !(pmt_local = pmttoboard[pmt1]))){
@@ -993,7 +884,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     
     printf("Initializing .\n");
     
-    string dir2 = DataFolder + "Run_" + run_number;
+    string dir2 = ScratchLocal + "Run_" + run_number;
     string summary = "off";                                 // summary file default = off
  
     for (pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
@@ -1064,7 +955,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
                     fclose(pFile2);
                 }
                 fprintf(pFile2,"\n");
-                fprintf(pFile2,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, pipedelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
+                //fprintf(pFile2,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, pipedelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
                 if(usemaroc2gainconstantsmb.compare("yes")==0){
                     for(int index = 1; index < 65; index++){
                         fprintf(pFile2, "%d \t", gain[index]);
@@ -1082,7 +973,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
                     perror("Failed: ");
                     fclose(pFile1);
                 }
-                fprintf(pFile1,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, pipedelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
+                //fprintf(pFile1,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, pipedelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
                 if(usemaroc2gainconstantsmb.compare("yes")==0){
                     for(int index = 1; index < 65; index++){
                         fprintf(pFile1, "%d \t", gain[index]);
@@ -1165,7 +1056,7 @@ int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
         
         std::stringstream ss;
         auto old_buf = std::cout.rdbuf(ss.rdbuf());
-        dodecode(file.c_str());
+        decode::dodecode(file.c_str());
         std::cout.rdbuf(old_buf);
 	  
 	  int hist[64][2048] = {0};
@@ -1269,4 +1160,5 @@ fclose(OUT);
 
 return 0;
     
+}
 }

@@ -15,6 +15,8 @@ using std::vector;
 using std::ifstream;
 using std::to_string;
 
+namespace Bottom {
+
 void reset();
 
 void initializeboard(string define_runnumber, int trigger_num, int pmtini, int pmtfin, string online_path);
@@ -29,4 +31,5 @@ void getpmtdata(int usbboard, int pmtnumber);
 void SplitString(string s, vector<string> &v, string c);
 int eventbuilder(string DataPath, int totalusb, int totalpmt, string online_path);
 int getnumpmt();
+}
 #endif /* CRT_h */

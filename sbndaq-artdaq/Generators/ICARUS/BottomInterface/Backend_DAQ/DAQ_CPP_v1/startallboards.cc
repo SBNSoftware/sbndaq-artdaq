@@ -43,18 +43,18 @@ int startallboards(const char *argv, const char *online_path)
     //For artdaq: this code creates a link to the latest data run at $(online_path)/bottomCRTreadout/DataFolder
 
     string mode = "fcl";
-    loadconfig(mode,0,0,0,filename);                       //read fcl file and load PMT data
+    Bottom::loadconfig(mode,0,0,0,filename);                       //read fcl file and load PMT data
 
     PMTINI = 1;
-    PMTFIN = getnumpmt();
+    PMTFIN = Bottom::getnumpmt();
     cout << "PMTFIN: " << PMTFIN << endl;
 
 
-    initializeboard("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
+    Bottom::initializeboard("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
 
-    eventbuilder("auto", PMTINI, PMTFIN,online_path);          //Calculates baseline data and writes it to a file
+    Bottom::eventbuilder("auto", PMTINI, PMTFIN,online_path);          //Calculates baseline data and writes it to a file
 
-    starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
+    Bottom::starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
 
     return 0;
 }

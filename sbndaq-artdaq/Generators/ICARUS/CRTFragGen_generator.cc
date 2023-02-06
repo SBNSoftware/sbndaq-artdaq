@@ -82,7 +82,6 @@ CRT::FragGen::~FragGen()
 {
   // Stop the backend DAQ.
   stopallboards(configfile.c_str(),indir.c_str());
-  sleep(5);
   hardware_interface_->FreeReadoutBuffer(readout_buffer_);
 }
 
@@ -234,7 +233,8 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   if (labs(deltaUNIX) > 0) { //there was at least one reset
 
   if(deltaUNIX > 0 ){ // there is a difference, check if a reset happen ( @14 sec )
-    deltaUNIX /= (16./1.e9)*pow(2.,29.); //number of clock counter between two consecutive events considering the 16ns ticks=14s
+    //deltaUNIX /= (16./1.e9)*pow(2.,29.); //number of clock counter between two consecutive events considering the 16ns ticks=14s
+    deltaUNIX *= (1.e9/16.)/14; //number of clock counter between two consecutive events considering the 16ns ticks=14s
     deltaUNIX = (int)deltaUNIX; //lower end, need to check if it is off by one additional rollover    
     newUppertime += deltaUNIX; //adding an intenger number of seconds (14s) corresponding to how many resets we detect (should old do this when pausing the run)
   }

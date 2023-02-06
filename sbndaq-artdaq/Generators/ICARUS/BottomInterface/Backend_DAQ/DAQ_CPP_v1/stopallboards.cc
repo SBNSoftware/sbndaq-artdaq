@@ -17,42 +17,40 @@ using std::string;
 using std::istringstream;
 
 int stopallboards(const char *argv, const char *online_path){ 
-  string filename;
+  string fname;
   int PMTINI,PMTFIN; 
-  filename = argv;
+  fname = argv;
   int disk = 1;                 //Disk number (1 or 2)
     
-  string mode = "fcl";
-  loadconfig(mode,0,0,0,filename);                       //read fcl file and load PMT data
+  //string mode = "fcl";
+  //loadconfig(mode,0,0,0,filename);                       //read fcl file and load PMT data
 
   PMTINI = 1;
-  PMTFIN = getnumpmt();
+  PMTFIN = Bottom::getnumpmt();
 
-  stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
+  Bottom::stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
 
-  string cmd = "killall bottomCRTreadout";
-  system(cmd.c_str());
+  //string cmd = "killall bottomCRTreadout";
+  //system(cmd.c_str());
 
-/*
   char pidline[1024];
   char *pid;
   int sig = 9;
   int i =0;
-  int pidno[5];
+  int pidno[2];
   FILE *fp = popen("pidof bottomCRTreadout","r");
   fgets(pidline,1024,fp);
-
-  printf("%s",pidline);
   pid = strtok(pidline," ");
-
   while (pid != NULL) {
     pidno[i] = atoi(pid);
-    printf("%d\n",pidno[i]);
     pid = strtok(NULL , " ");
-    kill(atoi(pid),sig);
     i++;
   }     
   pclose(fp);
-*/
+
+  for (int id : pidno) {
+    kill(id,sig);
+  }
+
   return 0;
 }

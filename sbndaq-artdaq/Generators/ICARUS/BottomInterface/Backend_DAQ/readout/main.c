@@ -1424,9 +1424,9 @@ mh_init:
 			//printf("%s\n", msg_buf.mdata);
 			send_message();
 		}
-		
+
 		// let library do its thing
-		r = libusb_handle_events(ctx);
+		r = libusb_handle_events_completed(ctx,&kill_me);
 		if (r) {
 			printf("handle events error\n");
 			kill_me = 1;
@@ -1466,7 +1466,7 @@ mh_init:
 	// wait for cancellation
 	int done;
 	do {
-		if (libusb_handle_events(ctx) < 0) break;
+		if (libusb_handle_events_completed(ctx,&done) < 0) break;
 		done = 1;
 		if (!per_out_ready || !com_out_ready || !diag_in_ready) done = 0;
 		for (i = 0; i < BUF_NO; i++)

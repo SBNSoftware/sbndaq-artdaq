@@ -16,7 +16,7 @@
 using std::cout;
 using std::endl;
 using std::string;
-
+namespace decode {
 int datasize = 0;
 int extrasize = 0;
 int check_debug(int);
@@ -273,4 +273,6 @@ int dodecode(const char argv[])
     sscanf(argv,"%s",file);
     decode(file);
     return 0;
+}
+
 }
