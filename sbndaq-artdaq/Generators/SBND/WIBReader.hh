@@ -4,7 +4,7 @@
 
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
-
+#include <semaphore.h>
 #include "WIB.hh"
 
 namespace sbndaq 
@@ -27,10 +27,18 @@ namespace sbndaq
      void stop() override;
      bool getNext_(artdaq::FragmentPtrs& output) override;
      void stopNoMutex() override {}
+     bool acquireSemaphores();
+     bool acquireSemaphores_ThrowOnFailure();
+     void releaseSemaphores();
 
      void setupWIB(fhicl::ParameterSet const& WIB_config);
      void setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config,bool continueOnFEMBRegReadError);
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
+     uint64_t semaphore_acquire_timeout_ms;
+     bool calibration_mode;
+     bool semaphores_acquired;
+     sem_t *sem_wib_lck;
+     sem_t *sem_wib_yld;
      std::unique_ptr<WIB> wib;
   };
 }
