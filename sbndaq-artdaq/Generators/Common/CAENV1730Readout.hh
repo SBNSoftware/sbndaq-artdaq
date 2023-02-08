@@ -228,11 +228,6 @@ namespace sbndaq
     //Animesh & Aiwu add - self trigger polarity
     uint32_t fSelfTrigBit;
     //Animesh & Aiwu add end
-    // Animesh & Aiwu add - dpp algorithm feature 0x1n80
-    uint32_t fChargePedstalBitCh1;
-    //uint32_t fSWTriggerValue;
-    // Animesh & Aiwu add end
-
 
     //internals
     size_t   fNChannels;

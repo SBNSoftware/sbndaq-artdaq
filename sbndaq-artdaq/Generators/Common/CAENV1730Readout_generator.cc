@@ -586,28 +586,19 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
   retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
   TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << (int)CalParams[0];
   sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
+
   // write offset
   retcod = WriteSPIRegister(handle, ch, 0x20, CalParams[0]);
-  
   retcod = WriteSPIRegister(handle, ch, 0x21, CalParams[1]);
-  
   retcod = WriteSPIRegister(handle, ch, 0x26, CalParams[2]);
-  
   retcod = WriteSPIRegister(handle, ch, 0x27, CalParams[3]);
   
   // write gain
   retcod = WriteSPIRegister(handle, ch, 0x22, CalParams[4]);
-  
   retcod = WriteSPIRegister(handle, ch, 0x23, CalParams[5]);
-  
   retcod = WriteSPIRegister(handle, ch, 0x24, CalParams[6]);
-  
-  
   retcod = WriteSPIRegister(handle, ch, 0x28, CalParams[7]);
-  
-  
   retcod = WriteSPIRegister(handle, ch, 0x29, CalParams[8]);
-  
   retcod = WriteSPIRegister(handle, ch, 0x2A, CalParams[9]);
   
   // write skew
@@ -615,10 +606,7 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
   
   // Update parameters
   retcod = WriteSPIRegister(handle, ch, 0xFE, 0x01);
-  
   retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
-  
-  //return CAEN_DGTZ_Success;
   
 }
 
@@ -890,7 +878,6 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
 
   CAEN_DGTZ_ErrorCode retcode;
 
-  //
   retcode = CAEN_DGTZ_SetMaxNumEventsBLT(fHandle,fMaxEventsPerTransfer);
   sbndaq::CAENDecoder::checkError(retcode,"SetMaxNumEventsBLT",fBoardID);
 
@@ -1124,33 +1111,36 @@ void sbndaq::CAENV1730Readout::start()
 
   // Animesh add ADC registers here
 
-  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
-    {
-      retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
-      // TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
-      // sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
-      // write offset
-      retcod = WriteSPIRegister(fHandle, ch, 0x20, 114);
-      retcod = WriteSPIRegister(fHandle, ch, 0x21, 107);
-      retcod = WriteSPIRegister(fHandle, ch, 0x26, 122);
-      retcod = WriteSPIRegister(fHandle, ch, 0x27, 76);
+  if (fWriteCalibration)  
+    { 
+      for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+        {
+          retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
+          // TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
+          // sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
       
-      // write gain
-      retcod = WriteSPIRegister(fHandle, ch, 0x22, 14);
-      retcod = WriteSPIRegister(fHandle, ch, 0x23, 128);
-      retcod = WriteSPIRegister(fHandle, ch, 0x24, 127);
-      retcod = WriteSPIRegister(fHandle, ch, 0x28, 14);
-      retcod = WriteSPIRegister(fHandle, ch, 0x29, 135);
-      retcod = WriteSPIRegister(fHandle, ch, 0x2A, 125);
+          // write offset
+          retcod = WriteSPIRegister(fHandle, ch, 0x20, 114);
+          retcod = WriteSPIRegister(fHandle, ch, 0x21, 107);
+          retcod = WriteSPIRegister(fHandle, ch, 0x26, 122);
+          retcod = WriteSPIRegister(fHandle, ch, 0x27, 76);
       
-      // write skew
-      retcod = WriteSPIRegister(fHandle, ch, 0x70, 129);
+          // write gain
+          retcod = WriteSPIRegister(fHandle, ch, 0x22, 14);
+          retcod = WriteSPIRegister(fHandle, ch, 0x23, 128);
+          retcod = WriteSPIRegister(fHandle, ch, 0x24, 127);
+          retcod = WriteSPIRegister(fHandle, ch, 0x28, 14);
+          retcod = WriteSPIRegister(fHandle, ch, 0x29, 135);
+          retcod = WriteSPIRegister(fHandle, ch, 0x2A, 125);
       
-      // Update parameters
-      retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x01);
-      retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
-    }
-  
+          // write skew
+          retcod = WriteSPIRegister(fHandle, ch, 0x70, 129);
+      
+          // Update parameters
+          retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x01);
+          retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
+        }
+  }
   //  Animesh ends
   
   uint32_t readBack;
