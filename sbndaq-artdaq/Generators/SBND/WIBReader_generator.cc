@@ -31,7 +31,10 @@
 namespace sbndaq 
 {
 
- WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps) 
+ WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps),
+     semaphore_acquire_timeout_ms{ps.get<decltype(calibration_mode)>("semaphore_acquire_timeout_ms", 10000)},
+     calibration_mode{ps.get<decltype(calibration_mode)>("calibration_mode", false)},
+     semaphores_acquired{acquireSemaphores_ThrowOnFailure()}
  {
    time_t start, end;
    time(&start);
@@ -43,6 +46,7 @@ namespace sbndaq
    bool success = false;
    unsigned configuration_tries=5;
    unsigned int success_index=0;
+   
    for(unsigned iTry=1; iTry <= configuration_tries; iTry++){
        try{
           setupWIB(ps);
@@ -73,6 +77,8 @@ namespace sbndaq
        throw excpt;
     }
     
+    if(!calibration_mode) releaseSemaphores();
+
     if(success){
        TLOG_INFO(identification) << "******** Configuration is successful in the " << success_index << " th try ***************" << TLOG_ENDL;
     }
@@ -338,14 +344,14 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 // "shutdown" transition
 WIBReader::~WIBReader() 
 {
-
+ releaseSemaphores();
 }
 
 // "start" transition
 void WIBReader::start() 
 {
   const std::string identification = "WIBReader::start";
-  if (!wib) 
+  if (!wib && calibration_mode) 
   {
     cet::exception excpt(identification);
     excpt << "WIB object pointer NULL";
@@ -357,7 +363,7 @@ void WIBReader::start()
 void WIBReader::stop() 
 {
   const std::string identification = "WIBReader::stop";
-  if (!wib) 
+  if (!wib && calibration_mode ) 
   {
     cet::exception excpt(identification);
     excpt << "WIB object pointer NULL";
@@ -372,6 +378,64 @@ bool WIBReader::getNext_(artdaq::FragmentPtrs& /*frags*/)
   return (! should_stop()); // returning false before should_stop makes all other BRs stop
 }
 
+bool WIBReader::acquireSemaphores(){
+  //Create semaphores
+  TLOG(TLVL_INFO) << "Acquiring semaphores.";
+  sem_t *sem_wib_lck = sem_open(WIB::SEMNAME_WIBLCK, O_CREAT, 0666, 1);
+  sem_t *sem_wib_yld = sem_open(WIB::SEMNAME_WIBYLD, O_CREAT, 0666, 1);
+  if (sem_wib_lck == SEM_FAILED || sem_wib_yld == SEM_FAILED) {
+    TLOG(TLVL_ERROR) << "Failed to create either " << WIB::SEMNAME_WIBLCK << " or " << WIB::SEMNAME_WIBYLD <<".";
+    releaseSemaphores();
+    return false;
+  }
+
+  struct timespec timeout;
+  clock_gettime(CLOCK_REALTIME, &timeout);
+  timeout.tv_nsec += 500000;
+  if (sem_timedwait(sem_wib_yld, &timeout) != 0){
+    TLOG(TLVL_ERROR) << "Failed to acquire " << WIB::SEMNAME_WIBYLD<< " semaphore.";
+    releaseSemaphores();
+    return false;
+  }
+
+  clock_gettime(CLOCK_REALTIME, &timeout);
+  timeout.tv_sec += semaphore_acquire_timeout_ms / 1000;
+  timeout.tv_nsec += (semaphore_acquire_timeout_ms % 1000) * 1000000;
+  if (sem_timedwait(sem_wib_lck, &timeout) != 0){
+    TLOG(TLVL_ERROR) << "Failed to acquire " << WIB::SEMNAME_WIBLCK << " semaphore.";
+    releaseSemaphores();
+    return false;
+  }
+  TLOG(TLVL_INFO) << "Acquired semaphores.";
+  return true;
+}
+
+bool WIBReader::acquireSemaphores_ThrowOnFailure(){
+  if (acquireSemaphores())
+    return true;
+
+  cet::exception excpt("WIBReader::acquireSemaphores_ThrowOnFailure");
+  excpt << "The operation was unsuccessful. Please try the following steps to resolve the issue. Terminate any running instances of the FEMBreceiver (femb), WIBTool.exe, or WIB Boardreader processes. Then, delete the semaphores /dev/shm/sem.WIB_LCK and /dev/shm/sem.WIB_YLD. If you intend to run both FEMBreceiver and WIBTool.exe, start with FEMBreceiver first.";
+  throw excpt;
+}
+
+void WIBReader::releaseSemaphores(){
+  if (nullptr!=sem_wib_yld){
+    sem_post(sem_wib_yld);
+    sem_close(sem_wib_yld);
+    sem_wib_yld=nullptr;
+  }
+
+  if(nullptr!=sem_wib_lck){
+    sem_post(sem_wib_lck);
+    sem_close(sem_wib_lck);
+    sem_wib_lck=nullptr;
+  }
+
+  semaphores_acquired=false;
+
+  TLOG(TLVL_INFO) << "Released semaphores";
+}
 } // namespace
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::WIBReader)
