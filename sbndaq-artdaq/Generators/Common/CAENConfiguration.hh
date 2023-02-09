@@ -60,6 +60,10 @@ class CAENConfiguration
 
     uint32_t  channelEnableMask;
     uint32_t  channelSelfTrgMask;
+  //  int  ovthValue;         
+    int  triggerLogic;  
+    int  majorityLevel; 
+    int  majorityCoincidenceWindow;
 
     void print(std::ostream & os = std::cout);
 };
