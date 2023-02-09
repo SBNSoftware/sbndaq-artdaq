@@ -32,12 +32,14 @@ namespace sbndaq
 {
 
  WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps),
-     semaphore_acquire_timeout_ms{ps.get<decltype(calibration_mode)>("semaphore_acquire_timeout_ms", 10000)},
+     semaphore_acquire_timeout_ms{ps.get<decltype(semaphore_acquire_timeout_ms)>("semaphore_acquire_timeout_ms", 10000)},
      calibration_mode{ps.get<decltype(calibration_mode)>("calibration_mode", false)},
-     semaphores_acquired{acquireSemaphores_ThrowOnFailure()}
+     sem_wib_yld{nullptr},sem_wib_lck{nullptr},
+     semaphores_acquired{acquireSemaphores_ThrowOnFailure()},
+     wib{nullptr}
  {
    const std::string identification = "WIBReader";
-   TLOG_INFO(identification) << "WIBReader constructor" << TLOG_ENDL;
+   TLOG_INFO(identification) << "WIBReader constructor";
    
    //setupWIB(ps);
    
@@ -74,12 +76,13 @@ namespace sbndaq
        excpt << "Failed to configure WIB after " << configuration_tries << " tries";
        throw excpt;
     }
-    
-    if(!calibration_mode) releaseSemaphores();
 
     if(success){
        TLOG_INFO(identification) << "******** Configuration is successful in the " << success_index << " th try ***************" << TLOG_ENDL;
     }
+
+    if(!calibration_mode) disconnectWIB_releaseSemaphores();
+    TLOG_INFO(identification) << "WIBReader constructor completed";
  }
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
@@ -333,7 +336,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 // "shutdown" transition
 WIBReader::~WIBReader() 
 {
- releaseSemaphores();
+  disconnectWIB_releaseSemaphores();
 }
 
 // "start" transition
@@ -370,33 +373,47 @@ bool WIBReader::getNext_(artdaq::FragmentPtrs& /*frags*/)
 bool WIBReader::acquireSemaphores(){
   //Create semaphores
   TLOG(TLVL_INFO) << "Acquiring semaphores.";
-  sem_t *sem_wib_lck = sem_open(WIB::SEMNAME_WIBLCK, O_CREAT, 0666, 1);
-  sem_t *sem_wib_yld = sem_open(WIB::SEMNAME_WIBYLD, O_CREAT, 0666, 1);
+  sem_wib_lck = sem_open(WIB::SEMNAME_WIBLCK, O_CREAT, 0666, 1);
+  sem_wib_yld = sem_open(WIB::SEMNAME_WIBYLD, O_CREAT, 0666, 1);
   if (sem_wib_lck == SEM_FAILED || sem_wib_yld == SEM_FAILED) {
     TLOG(TLVL_ERROR) << "Failed to create either " << WIB::SEMNAME_WIBLCK << " or " << WIB::SEMNAME_WIBYLD <<".";
-    releaseSemaphores();
-    return false;
+    goto release_semaphores;
   }
 
   struct timespec timeout;
-  clock_gettime(CLOCK_REALTIME, &timeout);
+  if ( -1 == clock_gettime(CLOCK_REALTIME, &timeout) ){
+    TLOG(TLVL_ERROR) << "The call to the clock_gettime function has failed.";
+    goto release_semaphores;
+  }
   timeout.tv_nsec += 500000;
   if (sem_timedwait(sem_wib_yld, &timeout) != 0){
     TLOG(TLVL_ERROR) << "Failed to acquire " << WIB::SEMNAME_WIBYLD<< " semaphore.";
-    releaseSemaphores();
-    return false;
+    goto release_semaphores;
   }
 
-  clock_gettime(CLOCK_REALTIME, &timeout);
+  if ( -1 == clock_gettime(CLOCK_REALTIME, &timeout) ){
+    TLOG(TLVL_ERROR) << "The call to the clock_gettime function has failed.";
+    goto release_semaphores;
+  }
   timeout.tv_sec += semaphore_acquire_timeout_ms / 1000;
   timeout.tv_nsec += (semaphore_acquire_timeout_ms % 1000) * 1000000;
   if (sem_timedwait(sem_wib_lck, &timeout) != 0){
     TLOG(TLVL_ERROR) << "Failed to acquire " << WIB::SEMNAME_WIBLCK << " semaphore.";
-    releaseSemaphores();
-    return false;
+    if (errno == ETIMEDOUT) {
+      TLOG(TLVL_ERROR) << "The semaphore timed out. Consider increasing the semaphore_acquire_timeout_ms setting to resolve the issue.";
+    } else if (errno == EINTR) {
+      TLOG(TLVL_ERROR) << "The call was interrupted by a signal.";
+    } else {
+      TLOG(TLVL_ERROR) << "An unknown error occurred.";
+    }
+    goto release_semaphores;
   }
   TLOG(TLVL_INFO) << "Acquired semaphores.";
   return true;
+
+release_semaphores:
+    releaseSemaphores();
+    return false;
 }
 
 bool WIBReader::acquireSemaphores_ThrowOnFailure(){
@@ -409,22 +426,34 @@ bool WIBReader::acquireSemaphores_ThrowOnFailure(){
 }
 
 void WIBReader::releaseSemaphores(){
+  unsigned int sem_release_count=0;
   if (nullptr!=sem_wib_yld){
     sem_post(sem_wib_yld);
     sem_close(sem_wib_yld);
+    sem_release_count++;
     sem_wib_yld=nullptr;
   }
 
   if(nullptr!=sem_wib_lck){
     sem_post(sem_wib_lck);
     sem_close(sem_wib_lck);
+    sem_release_count++;
     sem_wib_lck=nullptr;
   }
 
   semaphores_acquired=false;
 
-  TLOG(TLVL_INFO) << "Released semaphores";
+  if (sem_release_count > 0 ){
+    TLOG(TLVL_INFO) << "Released " << sem_release_count << " semaphore(s).";
+  }
 }
+
+void WIBReader::disconnectWIB_releaseSemaphores(){
+  wib.reset();
+  sleep(2);
+  releaseSemaphores();
+}
+
 } // namespace
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::WIBReader)
