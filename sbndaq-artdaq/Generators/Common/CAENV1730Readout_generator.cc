@@ -235,8 +235,7 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   TLOG(TINFO)<<"SelfTriggerMode=" << fSelfTriggerMode;
 
   fSelfTriggerMask = ps.get<uint32_t>("SelfTriggerMask"); 
-  TLOG(TINFO)<<"SelfTriggerMask=" << std::hex 
-	     << fSelfTriggerMask << std::dec;
+  TLOG(TINFO)<<"SelfTriggerMask=" << std::hex << fSelfTriggerMask << std::dec;
 
   fGetNextSleep = ps.get<uint32_t>("GetNextSleep"); //1000000
   TLOG(TINFO) << "GetNextSleep=" << fGetNextSleep;
@@ -612,8 +611,8 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
 
 // Animesh add ends
 
-
-void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
+// GVS: commented old ConfigureSelfTriggerMode()
+/* void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 {
   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
   uint32_t data,readBack;
@@ -623,6 +622,80 @@ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 					   fSelfTriggerMask);
   sbndaq::CAENDecoder::checkError(retcod,"SetSelfTriggerMask",fBoardID);
 }
+*/
+
+// GVS: new ConfigureSelfTriggerMode() function
+ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
+{
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+
+  retcod = CAEN_DGTZ_SetChannelSelfTrigger(fHandle,
+					   (CAEN_DGTZ_TriggerMode_t)fSelfTriggerMode,
+					   fSelfTriggerMask);
+  sbndaq::CAENDecoder::checkError(retcod,"SetChannelSelfTriggerMode",fBoardID);
+  
+
+  // GVS: the following configuration parameters are for SBND. fModeLVDS must be
+  if(fModeLVDS==0){ 
+  
+     uint32_t data, data2, bitpair, readBack, aux, aux2;
+  
+     // GVS: verify the SelfTrigger values set in each channel.
+     for(uint32_t chn=0; chn<fNChannels; ++chn){
+         retcod = CAEN_DGTZ_GetChannelSelfTrigger(fHandle, chn, (CAEN_DGTZ_TriggerMode_t *)&readBack);
+         sbndaq::CAENDecoder::checkError(retcod,"GetChannelSelfTriggerMode",fBoardID);
+         CheckReadback("ChannelSelfTriggerMode", fBoardID, fSelfTriggerMode, readBack, chn);
+
+    
+        // GVS: inserted triggerLogic for each PAIR of channels.
+        if(chn%2==0){
+      
+           retcod = CAEN_DGTZ_ReadRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),&aux);
+           TLOG_ARB(TCONFIG,TRACE_NAME) << "Self-trigger logic to channel " << chn << " old value " << std::hex << aux << std::dec;
+
+           TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << chn << "/" << chn+1 << " self trigger logic to " << fCAEN.triggerLogic
+				       /* << " self trigger pulse type to " << fCAEN.ovthValue*/ << TLOG_ENDL;
+           retcod = CAEN_DGTZ_WriteRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),
+					(fCAEN.triggerLogic & 0x3)/* + ((fCAEN.ovthValue & 0x1) <<2)*/);
+
+           sbndaq::CAENDecoder::checkError(retcod,"SelfTriggerPulseType",fBoardID);
+           retcod = CAEN_DGTZ_ReadRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),&aux2);
+      
+           TLOG_ARB(TCONFIG,TRACE_NAME) << "Self-trigger logic to channel " << chn << " new value " << std::hex << aux2 << std::dec;
+           CheckReadback("SelfTriggerPulseType", fBoardID, aux2, (fCAEN.triggerLogic & 0x3) /*+ ((fCAEN.ovthValue & 0x1) <<2)*/,chn);
+        }
+     }
+  
+   
+     // GVS: read TRG_OUT register to get enabled/disabled pair of channels.
+     retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_TRG_OUT_CONTROL, &bitpair);
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel TRG-OUT address 0x8110, start value: 0x" << std::hex << data << std::dec;
+				   
+     bitpair &= 0xFF;
+				   
+     retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data2);
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel TRG-OUT address 0x8110, final value: 0x" << std::hex << data2 << std::dec; 
+
+
+     /* Set Majority Mode and Majority Coincidence Window */
+     retcod = CAEN_DGTZ_ReadRegister(fHandle, GLB_TRG_MASK, &data);
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Global Trigger Mask address 0x810C, old value: 0x" << std::hex << data << std::dec;
+  
+     TLOG_ARB(TCONFIG,TRACE_NAME)  << " Set Majority Level to " << fCAEN.majorityLevel << TLOG_ENDL;
+     TLOG_ARB(TCONFIG,TRACE_NAME)  << " Set Maj Coincidence Window to " << fCAEN.majorityCoincidenceWindow << TLOG_ENDL;
+				   
+     data |= ((fCAEN.majorityLevel & 0x7)<<24) + ((fCAEN.majorityCoincidenceWindow & 0xF) <<20) + bitpair;
+				   
+     retcod = CAEN_DGTZ_WriteRegister(fHandle,GLB_TRG_MASK, data);
+
+     sbndaq::CAENDecoder::checkError(retcod,"SetMajCoincWindow",fBoardID);
+     retcod = CAEN_DGTZ_ReadRegister(fHandle,GLB_TRG_MASK,&data2);
+      
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Global Trigger Mask address 0x810C, new value: 0x" << std::hex << data2 << std::dec;
+     CheckReadback("SetMajCoincWindow", fBoardID, data, data2);
+  }
+}
+
 
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
 {
@@ -932,24 +1005,37 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
     retcode = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readback);
     CheckReadback("SetChannelTriggerThreshold",fBoardID,fCAEN.triggerThresholds[ch],readback);
 
+    //GVS: the following configuration parameters are for SBND. fModeLVDS must be 0
+      if(fModeLVDS==0){
+      TLOG_ARB(TCONFIG,TRACE_NAME) << "Set Trigger Polarity " << fCAEN.triggerPolarity << " to channel: " << ch << TLOG_ENDL;
+      retcode = CAEN_DGTZ_SetTriggerPolarity(fHandle, ch,(CAEN_DGTZ_TriggerPolarity_t)(fCAEN.triggerPolarity));
+      sbndaq::CAENDecoder::checkError(retcode,"SetTriggerPolarity",fBoardID);
+      retcode = CAEN_DGTZ_GetTriggerPolarity(fHandle, ch,(CAEN_DGTZ_TriggerPolarity_t *)&readback);
+      CheckReadback("SetTriggerPolarity", fBoardID,fCAEN.triggerPolarity,readback, ch);
 
+    
+      //GVS: pulse width must be set per channel, not per pair of channel. This contradicts what manual says!
+      TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << " trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+      retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH_CH+(ch<<8),fCAEN.triggerPulseWidth);
+      sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
+      retcode = CAEN_DGTZ_ReadRegister(fHandle,TRG_OUT_WIDTH_CH+(ch<<8),&readback);
+      CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback, ch);
 
-    if(fModeLVDS==0){
       //pulse width only set in pairs, but doesn't hurt to do it for all channels I guess
-      TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
+      /* TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
 				   << " trigger pulse width to " << (int)(fCAEN.triggerPulseWidth) << TLOG_ENDL;
       retcode = CAEN_DGTZ_WriteRegister(fHandle,0x1070+(ch<<8),fCAEN.triggerPulseWidth);
       sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
       retcode = CAEN_DGTZ_ReadRegister(fHandle,0x1070+(ch<<8),&readback);
-      CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
+      CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback); */
     }
   }
 
 
   if(fModeLVDS!=0){
-    TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+    /*TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
     retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH,fCAEN.triggerPulseWidth);
-    sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
+    sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);*/
     // Readback must be channel by channel (see reg doc)
     for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
       {
