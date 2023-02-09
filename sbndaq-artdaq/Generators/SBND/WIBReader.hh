@@ -30,15 +30,16 @@ namespace sbndaq
      bool acquireSemaphores();
      bool acquireSemaphores_ThrowOnFailure();
      void releaseSemaphores();
+     void disconnectWIB_releaseSemaphores();
 
      void setupWIB(fhicl::ParameterSet const& WIB_config);
      void setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config,bool continueOnFEMBRegReadError);
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
      uint64_t semaphore_acquire_timeout_ms;
      bool calibration_mode;
-     bool semaphores_acquired;
-     sem_t *sem_wib_lck;
      sem_t *sem_wib_yld;
+     sem_t *sem_wib_lck;
+     bool semaphores_acquired;
      std::unique_ptr<WIB> wib;
   };
 }
