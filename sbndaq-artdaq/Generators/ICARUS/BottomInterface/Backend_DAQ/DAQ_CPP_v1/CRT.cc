@@ -23,6 +23,11 @@
 #include "decode.h"
 #include "CRT.h"
 
+#include <tracemf.h>
+
+#define TRACE_NAME "BottomCRTBackend_CRT_cc"
+
+
 #define foreach(item, array) \
     for(int keep = 1, \
             count = 0,\
@@ -286,7 +291,9 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
         int usbtemp;
         int pmttemp;
         for (unsigned int i=0; i< output_fcl.size(); i++){
+            TLOG(TLVL_DEBUG) << "Attempting to parse fcl parameter ["<<i<<"][0] = \""<<output_fcl[i][0]<<"\"";
             usbtemp = std::stoi(output_fcl[i][0]);        
+            TLOG(TLVL_DEBUG) << "Attempting to parse fcl parameter ["<<i<<"][1] = \""<<output_fcl[i][0]<<"\"";
             pmttemp = std::stoi(output_fcl[i][2]);
 	    pmtdata[usbtemp][pmttemp][0] = output_fcl[i][1];//
 	    pmtdata[usbtemp][pmttemp][1] = output_fcl[i][2];//
@@ -314,6 +321,7 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
             }
             else{
                 for (int j=0;j<64;j++){
+                  TLOG(TLVL_DEBUG) << "Attempting to parse fcl parameter ["<<i<<"]["<<(j+11)<<"] = \""<<output_fcl[i][0]<<"\"";
                 gaindata[usbtemp][pmttemp][j] = std::stoi(output_fcl[i][j+11]);
                 }
                 totalpmt++;				
