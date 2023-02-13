@@ -81,6 +81,9 @@ namespace CRT
     // 32 bits.
     artdaq::Fragment::timestamp_t timestamp_;
 
+    // The list of fragment IDs for the bottom CRT, depending on module numebr
+    std::vector<uint32_t> fragment_ids_;
+
     // The upper 32 bits of the timestamp. We keep track of this in the
     // fragment generator because the CRT hardware only keeps the lower
     // 32 bits.
@@ -102,16 +105,16 @@ namespace CRT
 
     // The partition number from the FCL.  We need to write this into the
     // timing board to be able to retrieve the run start time.
-    int partition_number;
+    // int partition_number;
 
     // True if this process is the one designated to start the backend DAQ.
     bool startbackend;
 
     //Keep track of which USB board this board reader is reading from for debugging
-    const std::string fUSBString; 
+    //const std::string fUSBString; 
 
-    std::string timingXMLfilename;
-    std::string timinghardwarename;
+    //std::string timingXMLfilename;
+    //std::string timinghardwarename;
 /*
     uhal::ConnectionManager timeConnMan;
     uhal::HwInterface timinghw;
@@ -120,7 +123,7 @@ namespace CRT
     bool gotRunStartTime;
 
     //When should we get worried about timestamps getting out of sync?  In seconds
-    static constexpr int64_t alarmDeltaT = 14; 
+    static constexpr int64_t alarmDeltaT = 6; 
   };
 }
 
