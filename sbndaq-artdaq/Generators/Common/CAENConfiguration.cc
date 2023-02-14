@@ -36,7 +36,11 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   eventCounterWarning(0),
   memoryAlmostFull(0),
   analogMode(0),
-  testPattern(0)
+  testPattern(0),
+  //ovthValue(0),
+  triggerLogic(0),
+  majorityLevel(0),
+  majorityCoincidenceWindow(0)
 {
   link                 = ps.get<int>("link");
   enableReadout        = ps.get<int>("enableReadout");
@@ -63,6 +67,10 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   readoutMode          = ps.get<int>("readoutMode");
   analogMode           = ps.get<int>("analogMode");
   testPattern          = ps.get<int>("testPattern");
+ // ovthValue            = ps.get<int>("ovthValue");         
+  triggerLogic         = ps.get<int>("triggerLogic");  
+  majorityLevel        = ps.get<int>("majorityLevel"); 
+  majorityCoincidenceWindow = ps.get<int>("majorityCoincidenceWindow"); 
 
   char tag[1024];
   channelEnableMask = 0;
@@ -121,6 +129,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::IOLevel((CAEN_DGTZ_IOLevel_t)e.ioLevel) << std::endl;
   os << "  TriggerPolarity       " << e.triggerPolarity << " " 
      << sbndaq::CAENDecoder::TriggerPolarity((CAEN_DGTZ_TriggerPolarity_t)e.triggerPolarity) << std::endl;
+  os << "  TriggerPulseWidth     " << e.triggerPulseWidth << std::endl;
   os << "  ExtTrgMode            " << e.extTrgMode << " " 
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.extTrgMode) << std::endl;
   os << "  SWTrgMode             " << e.swTrgMode << " " 
@@ -136,6 +145,10 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;
   os << "  AnalogMode            " << e.analogMode << std::endl;
   os << "  TestPattern           " << e.testPattern << std::endl;
+ // os << "  OvthValue             " << e.ovthValue << std::endl;
+  os << "  TriggerLogic          " << e.triggerLogic << std::endl;
+  os << "  MajorityLevel         " << e.majorityLevel << std::endl;
+  os << "  MajorityCoincidenceWindow " << e.majorityCoincidenceWindow << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )
