@@ -531,7 +531,7 @@ void CRTInterface::SetBaselines()
       TLOG(TLVL_WARNING, "CRTInterface")
         << "Warning: using baseline based on only " << nhit << " hits\n";
 
-    if(stddev > 5.0)
+    if(stddev > 7.0)
       TLOG(TLVL_WARNING, "CRTInterface")
         << "Warning: using baseline with large error: " << stddev << " ADC counts\n";
 

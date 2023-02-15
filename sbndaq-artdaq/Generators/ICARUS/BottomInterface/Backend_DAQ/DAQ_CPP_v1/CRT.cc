@@ -567,7 +567,7 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
         sleep(0.2);                                               // give it some time
     }
     
-    sleep(2.0);
+    sleep(5.0);
     printf("shutting down ");
     
     for(int m = 0;m<=10; m++)
@@ -880,11 +880,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     
     int elapsed_time;
     elapsed_time = (newDay - Day)*24*3600 + (newHour - Hour)*3600 + (newMin - Min)*60 + (newSec - Sec);
-    
-    for(int e = 0; e<=20; e++){
-        sleep(0.1);
-        printf(".");
-    }
+
     
     printf(": %d sec\n",elapsed_time);
     
@@ -943,6 +939,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
         }
         
         sleep(1.0);
+
         
 	com_usb(usb_local, pmt_local, 109, 0);              // vdd_fsb off
         
@@ -996,6 +993,13 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     } //end loop over pmt
     
     printf("finished initializing \n");
+
+    //string cmdq = "ipcs -q";    
+    //for(int e = 0; e<=10; e++){
+    //    sleep(1.0);
+    //    printf(".\n");
+    //system(cmdq.c_str());
+    //}
 
     for( int j = 0; j<t; j++){
         usb_local = usbbase[j];

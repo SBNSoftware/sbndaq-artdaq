@@ -89,6 +89,9 @@ namespace CRT
     // 32 bits.
     uint32_t uppertime;
 
+    //Keep track of the maximum lowertime among all boards
+    uint32_t maxlowertime = 0;
+
     // The previous 32-bit timestamp received from the CRT hardware (or
     // the run start time if no events yet), so we can determine if we
     // rolled over and need to increment uppertime.
