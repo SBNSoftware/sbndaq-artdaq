@@ -1,10 +1,8 @@
-Inhibit: -1
-USB 39: inhibiting writing to file
-Run Number: 0000180
+Run Number: 0000171
 Target Path: /OVDAQ/DATA/
 Targer Directory: ../data1/OVDAQ/DATA/
 Inhibit: -3
-Run number to be assigned: 0000180
+Run number to be assigned: 0000171
 Data folder: ../data1/OVDAQ/DATA/
 Inhibit: -2
 USB 39: releasing inhibit for baseline

@@ -590,9 +590,76 @@ void scanFiles(vector<string> &fileList, string inputDirectory){
     closedir(p_dir);
     return;
 }
+//FCL file reader for bottom CRT backend and gain file.
+vector <vector<string>> fcl_read(string filename)
+{
+    vector <vector<string>> output; 
+	ifstream file (filename);
+    int lineNum = 1;   //Line tracker
+    bool keepReading = true; //Keeps track of when to stop reading.
+    string line; 
+    if (file.is_open()){
+        while(getline(file,line)){
+            if (line[line.length()-1] == ']' && line[line.length()-2] == ']'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
+            if (line[0] == ']'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
+            if (line[0] == '#'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
+            if (line[0] == '[' && line.length()>2){ keepReading = true;  /*cout<<"set to true at line "<<lineNum<<'\n'*/;}
+                if(keepReading){                        
+                    vector<string> v;
+                    stringstream ss(line);
 
+                    while(ss.good()){
+                        string sub;
+                        getline(ss, sub, ',');
+                        if(!sub.empty()){
+                        v.push_back(sub);
+                        }                        
+                    }
+                    if(v[0].length()>0){
+                        v[0] = v[0].substr(1,v[0].length()-1);
+                    }
+                    if(v[v.size()-1].length()>0){
+                        v[v.size()-1] = v[v.size()-1].substr(0,v[v.size()-1].length()-1);
+                    }
+                    //v is a vector where each element is an element of each row starting at usb# and ending at the last gain.
+                    output.push_back(v);       
+                    //cout<<"Pushed line: "<<lineNum<<'\n';                    
+                } 
+        lineNum++;
+        }
+        //Print out vector for debug:
+		/*
+        for (unsigned int i = 0; i < output.size(); i++){
+          cout << "Line: "<<i+1 << "\n";
+          for (unsigned int j = 0; j < output[i].size(); j++){
+            cout<<"Value "<<j+1<<" :"<<output[i][j]<<"\n";
+          }
+        }
+		*/
+        return output;
+		cout<<"Read FCL file succesfully."<<'\n';
+        file.close();
+        keepReading = false;
+    }
+    else{
+        
+        cout << "Unable to open file";
+        //Returns empty 2d vector
+        vector<string> v;
+        v.push_back("");
+        output.push_back(v);
+        return output;
+        
+    }
+        vector<string> v;
+        v.push_back("");
+        output.push_back(v);
+        return output;
+}
+
+///////UNCOMMENT LATER//////////////////////
 //Updates gain constants in fcl file for backend.
-int update_gain(string filename,string gainfile)//filename of fcl file, filename of gain file
+/*int update_gain(string filename,string gainfile)//filename of fcl file, filename of gain file
 {
   //string filename = "crt_daq.fcl";
   //string gainfile = "gainfile.txt";
@@ -633,16 +700,16 @@ int update_gain(string filename,string gainfile)//filename of fcl file, filename
 		}
 	}
 	//Print out gain file contents for debugging.
-	/*
-	for (int i = 0; i<=64;i++){
-		for (int j=0; j<=64;j++){
-			if (!gains[i][j].empty()){
-			cout << "Module Number: "<< i<< " Channel Number: "<<j<<" Gain: "<<gains[i][j]<<'\n';
-			}
-			
-		}
-	}
-	*/
+	
+	//for (int i = 0; i<=64;i++){
+	//	for (int j=0; j<=64;j++){
+	//		if (!gains[i][j].empty()){
+	//		cout << "Module Number: "<< i<< " Channel Number: "<<j<<" Gain: "<<gains[i][j]<<'\n';
+	//		}
+	//		
+	//	}
+	//}
+	
 	
 	cout<< "Closing gain file."<<'\n';
 	file.close();
@@ -717,70 +784,5 @@ int update_gain(string filename,string gainfile)//filename of fcl file, filename
 	}
 	
 return 0;
-}
-//FCL file reader for bottom CRT backend and gain file.
-vector <vector<string>> fcl_read(string filename)
-{
-    vector <vector<string>> output; 
-	ifstream file (filename);
-    int lineNum = 1;   //Line tracker
-    bool keepReading = true; //Keeps track of when to stop reading.
-    string line; 
-    if (file.is_open()){
-        while(getline(file,line)){
-            if (line[line.length()-1] == ']' && line[line.length()-2] == ']'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
-            if (line[0] == ']'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
-            if (line[0] == '#'){ keepReading = false; /*cout<<"set to false at line "<<lineNum<<'\n';*/}
-            if (line[0] == '[' && line.length()>2){ keepReading = true;  /*cout<<"set to true at line "<<lineNum<<'\n'*/;}
-                if(keepReading){                        
-                    vector<string> v;
-                    stringstream ss(line);
+}*/
 
-                    while(ss.good()){
-                        string sub;
-                        getline(ss, sub, ',');
-                        if(!sub.empty()){
-                        v.push_back(sub);
-                        }                        
-                    }
-                    if(v[0].length()>0){
-                        v[0] = v[0].substr(1,v[0].length()-1);
-                    }
-                    if(v[v.size()-1].length()>0){
-                        v[v.size()-1] = v[v.size()-1].substr(0,v[v.size()-1].length()-1);
-                    }
-                    //v is a vector where each element is an element of each row starting at usb# and ending at the last gain.
-                    output.push_back(v);       
-                    //cout<<"Pushed line: "<<lineNum<<'\n';                    
-                } 
-        lineNum++;
-        }
-        //Print out vector for debug:
-		/*
-        for (unsigned int i = 0; i < output.size(); i++){
-          cout << "Line: "<<i+1 << "\n";
-          for (unsigned int j = 0; j < output[i].size(); j++){
-            cout<<"Value "<<j+1<<" :"<<output[i][j]<<"\n";
-          }
-        }
-		*/
-        return output;
-		cout<<"Read FCL file succesfully."<<'\n';
-        file.close();
-        keepReading = false;
-    }
-    else{
-        
-        cout << "Unable to open file";
-        //Returns empty 2d vector
-        vector<string> v;
-        v.push_back("");
-        output.push_back(v);
-        return output;
-        
-    }
-        vector<string> v;
-        v.push_back("");
-        output.push_back(v);
-        return output;
-}

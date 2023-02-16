@@ -27,9 +27,15 @@ using namespace std;
 
 /////need root version >=5.26 to run
 
-void muon_23(const char* lab="1", const char *date="20190709", const int subrunnumber=180, const int howmanyrun=1, const char* onlinedb="doublechooz_ov_near", const int usbnum = 39, const int smodnum = 1)
+void muon_23(const int subrunnumber=171)
 {
 
+  const int usbnum = 39;
+  const int smodnum = 1;
+  //const char* lab = "1";
+  //const char* date = "20190709";
+  //const int howmanyrun=1;
+  //const char* onlinedb = "doublechooz_ov_near";
   time_t start_t;
   time( &start_t );
 
@@ -39,7 +45,8 @@ void muon_23(const char* lab="1", const char *date="20190709", const int subrunn
 
   gErrorIgnoreLevel = kWarning;
  
-  bool debug = false;		      // turn on/off code debugging comments and printout
+  bool debug = false;
+  bool debug1 = true;		      // turn on/off code debugging comments and printout
   bool usesql = false; 
   bool usefcl = true;
   bool test_calib = false; //if this is active the code reads in previously calculated gain constants
@@ -49,9 +56,9 @@ void muon_23(const char* lab="1", const char *date="20190709", const int subrunn
 		      //will suppress most of the plotting at the end
  
   if(debug){
-    cout << "date you input:  " << date << endl;
+    //cout << "date you input:  " << date << endl;
     cout << "subrunnumber you selected:  " << subrunnumber << endl;
-    cout << "howmanyrun you selected:  " << howmanyrun << endl;
+    //cout << "howmanyrun you selected:  " << howmanyrun << endl;
   }
 
   char RunDir[512];
@@ -64,6 +71,8 @@ void muon_23(const char* lab="1", const char *date="20190709", const int subrunn
   double smean[100][65];
   double srms[100][65];
   double ADCv[100][65];
+  double ADCv_mono[100][65];
+  int nz_ch_mono[100];
   double timediff=9999.;
 
   int three_counter = 0; //for testing
@@ -131,6 +140,7 @@ void muon_23(const char* lab="1", const char *date="20190709", const int subrunn
   float pecut = 1.0;  ////// cut in npe /////
   float ADC_calib_target = 300.;
   float baseline_channel[100][65];
+  float baseline_RMS[100][65];
 
   typedef std::multimap<int,int> mymap_t;
 
@@ -140,9 +150,11 @@ void muon_23(const char* lab="1", const char *date="20190709", const int subrunn
   //histogram definition
 
   TH1F *ADCvmean[100];
+  TH1F *ADCvmean_mono[100];
   TH1F *gain_p[100];
 
   TH1F *ADC[100][64]; //histograms of adc counts for 8 different counter positions.
+  TH1F *ADC_mono[100][64];
 
   TH1F *allADCv = new TH1F("allADCv","Mean ADC values, all channels",100,0,1000);
   TH1F *allgain_p = new TH1F("allgain_p","Calculated gain, all channels",10,10,40);  
@@ -361,14 +373,19 @@ void muon_23(const char* lab="1", const char *date="20190709", const int subrunn
     for(int j=0;j<64;j++){
       sprintf(histname,"mod=%d-ch=%d",i,j);
       ADC[i][j]= new TH1F(histname,histname,100,0,1000);
+      sprintf(histname,"mono-mod=%d-ch=%d",i,j);
+      ADC_mono[i][j]=new TH1F(histname,histname,100,0,1000);
       cutnpe[i][j]=0; //for now
     }
+    nz_ch_mono[i]=0;
   }
 
 
   for(int i=1;i<56;i++){
     sprintf(histname,"ADC_mean_value_mod=%d",i);
     ADCvmean[i]= new TH1F(histname,histname,100,0,1000);
+    sprintf(histname,"ADC_mono_mean_value_mod=%d",i);
+    ADCvmean_mono[i] = new TH1F(histname,histname,100,0,1000);
     sprintf(histname,"gain_distribution_mod=%d",i);
     gain_p[i]= new TH1F(histname,histname,10,10,40);
   }
@@ -476,31 +493,33 @@ void muon_23(const char* lab="1", const char *date="20190709", const int subrunn
 
 
 	  	baseline_channel[pmtboardnumber[j]][i] = bmod->GetMean();
+		baseline_RMS[pmtboardnumber[j]][i] = bmod->GetRMS();
 
 
 
 
+	  if(debug1) {cout << modulename << " channel " << i << " baseline=" << baseline_channel[pmtboardnumber[j]][i] << "(RMS = " << baseline_RMS[pmtboardnumber[j]][i] << ") "; }
 
-	  if(debug) {cout << modulename << " channel " << i << " baseline=" << baseline_channel[pmtboardnumber[j]][i]; }
-
-	  sprintf(cutbaseline,"s%d-%f<30",i+1,baseline_channel[pmtboardnumber[j]][i]);
+	  sprintf(cutbaseline,"s%d-%f<50",i+1,baseline_channel[pmtboardnumber[j]][i]);
+	  //sprintf(cutbaseline,"s%d",i+1);
 	  sprintf(snames[i], "s%d-%f", i+1, baseline_channel[pmtboardnumber[j]][i]);
 	  schain.Project(Form("smod"),snames[i],cutbaseline,"",1000000,0); 
 
 	  //smod->Draw();
 	  //c1->Print(Form("smods/smod_%d_%d.png",j,i));
-
+	  //c1->Clear();
 	  //sprintf(cutbaseline2,"s%d-%f>-999",i+1,baseline_channel[pmtboardnumber[j]][i]);
-	  //schain.Project(Form("smod2"),snames[i],cutbaseline2);
+	  //schain.Project(Form("smod2"),snames[i],cutbaseline2,"",1000000,0);
 	  //smod2->Draw();
 	  //c1->Print(Form("smods/smod2_%d_%d.png",j,i));
-
+	  //c1->Clear();
+	  
 	  smean[j][i]= smod->GetMean();
 	  srms[j][i] = smod->GetRMS();
-	  //ADC2PE[j][i] = trunc_mean(smod);	    //truncated mean
-	  ADC2PE[j][i] = 20.0; //testing
+	  ADC2PE[j][i] = trunc_mean(smod);	    //truncated mean
+	  //ADC2PE[j][i] = 20.0; //testing
 
-	  if(debug){ cout << "--mean=" << smean[j][i] <<" trunc.=" << ADC2PE[j][i] << endl; }
+	  if(debug1){ cout << "--mean=" << smean[j][i] <<" trunc.=" << ADC2PE[j][i] << endl; }
           bmod->Reset();
           smod->Reset();
           cutnpe[pmtboardnumber[j]][i] = ADC2PE[j][i]*pecut;  //ADC2PE[j][i] is big a lot of muons
@@ -720,18 +739,18 @@ for(int jj = 0; jj <= channels_in[0].size()/2 - 1; jj++){
     //jj/kk will be the strip geometry (0-11, 0-31, etc.), and j/k will be the pmt channels (0-63)
 
   for(int p=0; p<numberofboardused; p++){ //loop over pmt boards
-    if (smodule == pmtboardnumber[p+1]){  ///  only for pmt board number 3 apply gain corrections
+    if (smodule == pmtboardnumber[p+1]){  
 
-
-      //Single strip event counts
+      //Single strip event counts////////
       for(int s=0; s<64; s++){
 	float tempsf = sfloats[s];
-	//tempsf -= baseline_channel[int(smodule)][s];
-	if(tempsf > 0){
+	tempsf -= baseline_channel[int(smodule)][s];
+	if(tempsf > cutnpe[int(smodule)][s]){
 	  channel_events_mono->Fill(s,p);
+	  ADC_mono[pmtboardnumber[p+1]][channels_in[p][s]-1]->Fill(tempsf);
 	}
       }
-      //////////////////////////////
+      //////////////////////////////////
 
       int pmt_num = p;//number of vector row that corresponds to smodule 3
 
@@ -1046,17 +1065,18 @@ cout << "looping over module 3 ntuple..."<<endl;
   channel_events_bi->Draw("colz");
   channel_events_bi->GetXaxis()->SetTitle("Channel index (compare to fcl file)");
   channel_events_bi->GetYaxis()->SetTitle(Form("PMT index (1-%i)",numberofboardused));
-  c1->Print(Form("plots/%i_channel_events_bi.png",subrunnumber));
+  //c1->Print(Form("plots/%i_channel_events_bi.png",subrunnumber));
   channel_events_mono->Draw("colz");
   channel_events_mono->GetXaxis()->SetTitle("Channel number");
   channel_events_mono->GetYaxis()->SetTitle(Form("PMT index (1-%i)",numberofboardused));
-  c1->Print(Form("plots/%i_channel_events_mono.png",subrunnumber));
+  //c1->Print(Form("plots/%i_channel_events_mono.png",subrunnumber));
 ofstream gain_file;
   if(!test_calib){gain_file.open("gain_file.txt");}
 
   for (int j=1; j<=numberofboardused; j++){ //to be replaced after query on mysql
     for (int i = 0; i < 64; i++){
       ADCv[pmtboardnumber[j]][i]=ADC[pmtboardnumber[j]][i]->GetMean();
+      ADCv_mono[pmtboardnumber[j]][i]=ADC_mono[pmtboardnumber[j]][i]->GetMean();
       if(ADCv[pmtboardnumber[j]][i]>0){
         ADCvmean[pmtboardnumber[j]]->Fill(ADCv[pmtboardnumber[j]][i]);
 	allADCv->Fill(ADCv[pmtboardnumber[j]][i]);
@@ -1067,6 +1087,10 @@ ofstream gain_file;
 	}
         channel_adc->Fill(i,j-1,ADCv[pmtboardnumber[j]][i]);
       }
+      if(ADCv_mono[pmtboardnumber[j]][i]>0){
+        ADCvmean_mono[pmtboardnumber[j]]->Fill(ADCv_mono[pmtboardnumber[j]][i]);
+        nz_ch_mono[pmtboardnumber[j]]++;
+      }
     }
     if(!faster){
       ADCvmean[pmtboardnumber[j]]->Draw();
@@ -1075,13 +1099,15 @@ ofstream gain_file;
     }
   }
   channel_adc->Draw("colz");
-  c1->Print(Form("plots/%i_channel_adc.png",subrunnumber));
+  //c1->Print(Form("plots/%i_channel_adc.png",subrunnumber));
   allADCv->Draw();
-  if(!test_calib){c1->Print("alladcv.png");}
+  //if(!test_calib){c1->Print("alladcv.png");}
   if(test_calib){c1->Print("alladcv_calib.png");}
 
   for (int j=1; j<=numberofboardused; j++){ 
     cout << "ADC mean, board " << pmtboardnumber[j] << ": " << ADCvmean[pmtboardnumber[j]]->GetMean() << endl;
+//    cout << "  Board " << pmtboardnumber[j] << " mono mean: " << ADCvmean_mono[pmtboardnumber[j]]->GetMean() << endl;
+    cout << "  Nonzero channels: " << nz_ch_mono[pmtboardnumber[j]] << endl;
     for (int i = 0; i < 64; i++){
       if(ADCv[pmtboardnumber[j]][i] > 0) {
         if(!test_calib){
@@ -1112,7 +1138,7 @@ ofstream gain_file;
     }
   }
   allgain_p->Draw();
-  if(!test_calib){c1->Print("allgain_p.png");}
+  //if(!test_calib){c1->Print("allgain_p.png");}
   if(test_calib){c1->Print("allgain_p_calib.png");}
   
   time_t end_t;

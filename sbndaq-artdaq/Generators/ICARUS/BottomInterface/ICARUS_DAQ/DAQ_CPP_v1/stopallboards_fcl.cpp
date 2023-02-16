@@ -49,7 +49,7 @@ int main(int argc, char *argv[]){
 
   stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
 
-  string cmd = online_path + "\\/readout\\/script\\/stop_readout.sh \"readout\"";
+  string cmd = online_path + "\\/readout\\/script\\/stop_readout.sh \"readout_old\"";
   system(cmd.c_str()); 
 
  
