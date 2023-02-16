@@ -84,6 +84,11 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
 CRT::FragGen::~FragGen()
 {
   hardware_interface_->FreeReadoutBuffer(readout_buffer_);
+  // Stop the backend DAQ.
+  TLOG(TLVL_INFO, "CRT") << "killing bottom CRT readout processes\n";
+  stopallboards(configfile.c_str(),indir.c_str());
+  string cmd = "killall bottomCRTreadout";
+  system(cmd.c_str());
 }
 
 bool CRT::FragGen::getNext_(
@@ -172,10 +177,10 @@ bool CRT::FragGen::getNext_(
 
     ev_counter_inc(); // from base CommandableFragmentGenerator
 
-    TLOG(TLVL_INFO, "CRT") << "getNext_ is returning with hits in " << fragIt << " Fragments\n";
+    TLOG(TLVL_DEBUG, "CRT") << "getNext_ is returning with hits in " << fragIt << " Fragments\n";
   }
   else{
-    TLOG(TLVL_INFO, "CRT") << "getNext_ is returning with no data\n";
+    TLOG(TLVL_DEBUG, "CRT") << "getNext_ is returning with no data\n";
   }
 
   return true;
@@ -216,7 +221,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     runstarttime = currentUNIX - lowertime*16./1e9;
     gotRunStartTime = true;
     oldUNIX = time(nullptr);
-    TLOG(TLVL_WARNING, "CRT") << "setting the runstarttime to " << runstarttime 
+    TLOG(TLVL_INFO, "CRT") << "setting the runstarttime to " << runstarttime 
                               << " with initial lowertime of  "  <<  lowertime*16./1e9 << " seconds \n";
   }
 
@@ -310,10 +315,11 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
   int delta_now = newtimediff; //this is in sec.  
 
-  if(labs(delta_now) > 3 ){ // there is a difference, check if a reset happen ( @14 sec )
+  if(labs(delta_now) > alarmDeltaT ){ // there is a difference, check if a reset happen ( @7 sec )
     TLOG(TLVL_WARNING, "CRT") << "Detected a difference between currentUNIX = "
 			   << currentUNIX << " and timestamp = " 
-			   << timestamp_*16./1e9 << " \n";
+			   << (uint64_t)(timestamp_*16./1e9) 
+                           << "of " << delta_now << " seconds \n";
   
   }
   metricMan->sendMetric("Timestamp difference", delta_now, "Fragments", 1, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
@@ -380,7 +386,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   fragptr->setSequenceID( ev_counter_inc() );
   fragptr->setFragmentID(fragment_ids_[module_id]); // each board has it's own fragment ID
   fragptr->setUserType( sbndaq::detail::BottomCRT );
-  fragptr->setTimestamp( timestamp_*16. ); // want timestamp, in 1 tick/16ns, in nanoseconds
+  fragptr->setTimestamp( timestamp_*16. ); // want timestamp, in 16 nanosecond ticks, in nanoseconds
   memcpy(fragptr->dataBeginBytes(), readout_buffer_, bytes_read);
 
   return fragptr;
@@ -417,8 +423,6 @@ void CRT::FragGen::start()
 void CRT::FragGen::stop()
 {
   hardware_interface_->StopDatataking();
-  // Stop the backend DAQ.
-  stopallboards(configfile.c_str(),indir.c_str());
 }
 
 // The following macro is defined in artdaq's GeneratorMacros.hh header
