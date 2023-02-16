@@ -76,6 +76,7 @@ void icarus::PhysCrate_GeneratorBase::start() {
 					BoardIDs_);
 
   fCircularBuffer = sbndaq::CircularBuffer<uint16_t>(fCircularBufferSize/sizeof(uint16_t));
+  packSize_zero_counter_=0;
 
   ConfigureStart();
 
@@ -172,13 +173,32 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
       return true;
     }
 
+    if (not fCircularBuffer.Buffer().is_linearized()){
+      TLOG(TLVL_DEBUG + 7)
+        << "fCircularBuffer is not linear. Buffer will be linearized when setting next_dt_begin_ptr";
+    }
+
     //  the Tile Header is at the beginning of the board data:
-    auto const* next_dt_begin_ptr = first_dt_begin_ptr + data_size_bytes/sizeof(uint16_t);
+    auto const* next_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData() + data_size_bytes/sizeof(uint16_t);
     auto const* next_dt = reinterpret_cast< DataTile const* >(next_dt_begin_ptr);
     auto const nt_header = next_dt->Header;
     uint32_t this_data_size_bytes = ntohl( nt_header.packSize );
     TLOG(TLVL_DEBUG +6) << "Board ID: " << (nt_header.info2 & 0x0000000F);
     TLOG(TLVL_DEBUG +6) << "this_data_size_bytes: " << this_data_size_bytes;
+
+    //check if the DataTile is empty. If it is there's an issue
+    if(this_data_size_bytes==0){
+      TLOG(TLVL_DEBUG+6) << "No data in this DataTile? Happened " << packSize_zero_counter_ << " times before.";
+      //don't let this happen too much
+      if(packSize_zero_counter_==10){
+        TLOG(TLVL_ERROR) << "Too many times (10) with zero data size in TileHeader. Exit.";
+        return false;
+      }
+      //give it some time otherwise
+      ++packSize_zero_counter_;
+      usleep(1000);
+      return true;
+    }
 
     //check if there's enogh data for this board.
     //if not, sleep and return.
@@ -190,6 +210,13 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
     data_size_bytes += this_data_size_bytes;
     ++iBoard;
+    if (not fCircularBuffer.Buffer().is_linearized()){
+      TLOG(TLVL_DEBUG + 7)
+        << "fCircularBuffer is not linear. Linearize for debugging statements.";
+      first_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData();
+      next_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData() + data_size_bytes/sizeof(uint16_t);
+      next_dt = reinterpret_cast< DataTile const* >(next_dt_begin_ptr);
+    }
     TLOG(TLVL_DEBUG +7 ) << "iBoard: " << iBoard 
                      << ", this_data_size_bytes: " << this_data_size_bytes 
                      << ", data_size_bytes: " << data_size_bytes
@@ -221,6 +248,8 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 						      0, fragment_id(),
 						      sbndaq::detail::FragmentType::PHYSCRATEDATA, metadata_, ts) );
 
+  //make sure the ptr to the first DataTile is valid
+  first_dt_begin_ptr = fCircularBuffer.LinearizeAndGetData();
   TLOG(TLVL_DEBUG +8 ) << "Initialized data of size " << frags.back()->dataSizeBytes();
   
   TLOG(TLVL_DEBUG +9 ) << "Read data size was " << data_size_bytes;
@@ -236,7 +265,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   frags.back()->resizeBytes( data_size_bytes );
   TLOG(TLVL_DEBUG + 13) << "resized frags.";
 
-	// Erase the copied part of the circular buffer
+  // Erase the copied part of the circular buffer
   fCircularBuffer.Erase( data_size_bytes/sizeof(uint16_t) );
   TLOG(TLVL_DEBUG + 14) << "erazed the circular buffer.";
 
@@ -258,6 +287,7 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   int max_ev_num_diff=0;
   int max_ts_diff=0;
 
+  bool found_inconsistent_boards=false;
 
   for ( uint16_t jBoard = 1; jBoard < nBoards_; ++jBoard ) {
     if ( newfrag.BoardEventNumber(jBoard) != ev_num ) {
@@ -267,10 +297,11 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
       if( std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0))>max_ev_num_diff )
 	max_ts_diff = std::abs((int)newfrag.BoardTimeStamp(jBoard) - (int)newfrag.BoardTimeStamp(0));
 
-      TLOG(TLVL_ERROR + 17) << "Inconsistent event numbers in one fragment: Event " 
+      TLOG(TLVL_ERROR) << "Inconsistent event numbers in one fragment: Event " 
 		       << ev_num << " in Board 0 while Event " 
 		       << newfrag.BoardEventNumber(jBoard) 
 		       << " in Board " << jBoard;
+      found_inconsistent_boards=true;
     }
   }
 
@@ -278,6 +309,17 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
   metricMan->sendMetric("MaxBoardTimeStampDiff",max_ts_diff,"ticks",1,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::Average);
+
+  if(found_inconsistent_boards){
+    TLOG(TLVL_ERROR) << "Inconsistent event numbers within one of the fragments found."
+                     << " Will return false in getNext_ and hopefully stop.";
+
+    for(uint16_t iBoard=0; iBoard<nBoards_; ++iBoard)
+      TLOG(TLVL_ERROR) << "Board " << iBoard << ":\n" << *(newfrag.BoardDataBlock(iBoard));
+
+    return false;
+  }
+
   if(ev_num==0)
     event_offset_ = 1;
 
@@ -297,6 +339,8 @@ bool icarus::PhysCrate_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 		   << " (" << frags.back()->typeString() << "):  "
 		   << " (id,seq,timestamp)=(" << frags.back()->fragmentID() << ","<<frags.back()->sequenceID()<< "," << frags.back()->timestamp();
 
+  //if we're sending out the packet we can reset the counter
+  packSize_zero_counter_=0;
 
   return true;
 

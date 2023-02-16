@@ -66,6 +66,7 @@ namespace icarus {
     std::vector<int> pcieLinks_;
 
     size_t event_offset_;
+    size_t packSize_zero_counter_;
     
   protected:
 

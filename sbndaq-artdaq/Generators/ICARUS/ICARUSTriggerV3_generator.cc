@@ -476,7 +476,7 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 	++fTotalTriggerCalibMaj; 
 	++fTotalTriggerCalib;
 	fTotalGatesCalibMaj += fDeltaGatesCalibMaj;
-	if(fDeltaGatesNuMIOffMinbias <= 0)
+	if(fDeltaGatesCalibMaj <= 0)
           TLOG(TLVL_WARNING) << "Change in total number of beam gates for Calibration Majority <= 0!";
       }
       if(datastream_info.trigger_type == 1)
@@ -485,7 +485,7 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 	++fTotalTriggerCalibMinbias;
 	++fTotalGatesCalibMinbias;
 	++fTotalTriggerCalib;
-	if(fDeltaGatesNuMIOffMinbias <= 0)
+	if(fDeltaGatesCalibMinbias <= 0)
 	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for Calibration Minbias <= 0!";
       } 
       metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
