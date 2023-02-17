@@ -22,6 +22,7 @@
 #include <syslog.h> 
 #include <signal.h> 
 #include <libusb-1.0/libusb.h>
+#include "TRACE/trace.h"
 
 // usb
 //#include "libusb-1.0/libusb.h"
@@ -230,7 +231,7 @@ static void debug() {
 		*/
 
 		if (diag_result & 1) {
-			printf("resending: %d\n",ser_no); 
+			TRACE(TLVL_INFO,"resending: %d\n",ser_no); 
 			//sprintf(gaibu_debug_msg,"resending: %d",ser_no);
 			//gaibu_msg(MWARNING, gaibu_debug_msg);
 		}
