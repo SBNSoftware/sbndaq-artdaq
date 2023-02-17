@@ -1031,18 +1031,19 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
     }
   }
 
-
+  // for ICARUS
   if(fModeLVDS!=0){
-    /*TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+/*
+    TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
     retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH,fCAEN.triggerPulseWidth);
-    sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);*/
+    sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
     // Readback must be channel by channel (see reg doc)
-//    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
-//      {
-//	uint32_t address = TRG_OUT_WIDTH_CH | ( ch << 8 );  
-//	retcode = CAEN_DGTZ_ReadRegister(fHandle,address,&readback);
-//	CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
-//      }    
+    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+      {
+	uint32_t address = TRG_OUT_WIDTH_CH | ( ch << 8 );  
+	retcode = CAEN_DGTZ_ReadRegister(fHandle,address,&readback);
+	CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
+      }*/    
     ConfigureLVDS();
   }
   ConfigureSelfTriggerMode();
