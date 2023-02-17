@@ -62,7 +62,7 @@ void muon_23(const int subrunnumber=171)
   }
 
   char RunDir[512];
-  sprintf(RunDir,"/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/data1/OVDAQ/DATA/Run_0000%i",subrunnumber);
+  sprintf(RunDir,"/home/nfs/icarus/DAQ_DevAreas/DAQ_17Feb2023_MM/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/data1/OVDAQ/DATA/Run_0000%i",subrunnumber);
   
 
   double cutnpe[100][65];   //this line specify the software cut in terms of pe that you would like to apply

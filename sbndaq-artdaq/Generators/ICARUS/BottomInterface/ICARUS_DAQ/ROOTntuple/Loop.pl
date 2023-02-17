@@ -5,7 +5,7 @@ use warnings;
 my $folder = shift;
 my $binfile;
 my $outfile;
-my $ext="/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/ROOTntuple";
+my $ext="/home/nfs/icarus/DAQ_DevAreas/DAQ_17Feb2023_MM/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/ROOTntuple";
 
 my @files = <${folder}/*_39>;
 print "Found " . ($#files+1) . " files.\n";    

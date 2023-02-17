@@ -168,7 +168,7 @@ static char run_number[100]="";
 static int disk_number = 1; //default disk number
 static char directory[300];
 static char target[300];
-static char target_dir[300]= "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/data1/OVDAQ/DATA"; //default data folder
+static char target_dir[300]= "/home/nfs/icarus/DAQ_DevAreas/DAQ_17Feb2023_MM/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/data1/OVDAQ/DATA"; //default data folder
 static char target_path[300]= "OVDAQ/DATA/"; // default relative path
 static char baseline[300];
 static char decoded[200];

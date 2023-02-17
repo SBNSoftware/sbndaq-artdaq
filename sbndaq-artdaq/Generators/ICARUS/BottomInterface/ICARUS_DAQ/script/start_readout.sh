@@ -1,11 +1,11 @@
 #!/bin/bash -l
 
-export HOME="/scratch_local/crt_tests/backend_data"
+export HOME="/home/nfs/icarus/DAQ_DevAreas/DAQ_17Feb2023_MM/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout"
 
 #DC ONLINE
-export DCONLINE_PATH_LOCAL="/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout"
+export DCONLINE_PATH_LOCAL="/home/nfs/icarus/DAQ_DevAreas/DAQ_17Feb2023_MM/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ"
 export DCONLINE_PATH=${HOME}
-export PATH=${PATH}:${DCONLINE_PATH_LOCAL}/bin
+export PATH=${PATH}:${DCONLINE_PATH}/bin
 
 
 tim=`date`
@@ -29,14 +29,14 @@ fi
 
 if [ "$pid" != "" ]; then
 echo "Found previous instances of readout. Killing..."
-cd $DCONLINE_PATH_LOCAL/script
+cd $DCONLINE_PATH_LOCAL/readout/script
 #echo "Stopping readout at $tim" >> $DCONLINE_PATH_LOCAL/DCOV/log/stop_readout.log
 `./stop` 
 #>> $DCONLINE_PATH_LOCAL/DCOV/log/stop_readout.log`
 sleep 2
 fi
 echo "Starting"
-cd $DCONLINE_PATH_LOCAL/bin
+cd $DCONLINE_PATH_LOCAL/readout/bin
 if [ "$4" = "" ]; then
 `./$prog -d $arg`
 sleep 3

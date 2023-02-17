@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     //string DataPath = "/OVDAQ/DATA/Run_0001086";
     //string DataFolder = "/e/h.0/localdev/readout/data" + to_string(disk) + DataPath;
 
-    string online_path = "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ";
-    string DataPath2 = "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/DCOV";
+    string online_path = "/home/nfs/icarus/DAQ_DevAreas/DAQ_17Feb2023_MM/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ";
+    string DataPath2 = "/home/nfs/icarus/DAQ_DevAreas/DAQ_17Feb2023_MM/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/ICARUS_DAQ/readout/DCOV";
 //    string online_path = "/e/h.0/localdev/ICARUS_DAQ";
 //    string DataPath2 = "/e/h.0/localdev/ICARUS_DAQ/DAQ_CPP_v1/readout/DCOV";
 
