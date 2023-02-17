@@ -1,1 +1,0 @@
-# DAQ_protoDUNE
