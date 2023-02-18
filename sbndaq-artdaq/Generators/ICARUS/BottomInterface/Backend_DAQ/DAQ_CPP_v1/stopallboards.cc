@@ -9,6 +9,7 @@
 #include "CRT.h"
 #include <sys/types.h>
 #include <signal.h>
+#include "TRACE/tracemf.h"
 
 //using namespace std;
 using std::cout;
@@ -31,26 +32,38 @@ int stopallboards(const char *argv, const char *online_path){
   Bottom::stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
 
   //string cmd = "killall bottomCRTreadout";
-  //system(cmd.c_str());
+  //string cmd = "pidof bottomCRTreadout";
+  //int rr=system(cmd.c_str());
+  //TLOG_DEBUG(1)<<"system(\""<<cmd<<"\") returned: "<<rr<<" WEXITSTATUS="<<WEXITSTATUS(rr);
 
   char pidline[1024];
   char *pid;
   int sig = 9;
-  int i =0;
+  unsigned pids_found= 0;
   int pidno[2];
   FILE *fp = popen("pidof bottomCRTreadout","r");
-  fgets(pidline,1024,fp);
-  pid = strtok(pidline," ");
-  while (pid != NULL) {
-    pidno[i] = atoi(pid);
-    pid = strtok(NULL , " ");
-    i++;
-  }     
-  pclose(fp);
-
-  for (int id : pidno) {
-    kill(id,sig);
-  }
+  if (fp) {
+    pidline[0]='x'; pidline[1]='\0';
+    char *ret= fgets(pidline,sizeof(pidline),fp);
+    if (ret) {
+      TLOG_DEBUG(1)<<"fp="<<(void*)fp<<" pidline is "<<pidline;
+      pid = strtok(pidline," ");
+      TLOG_DEBUG(1) << "pid is " << pid;
+      while (pid != NULL && pids_found < (sizeof(pidno)/sizeof(pidno[0]))) {
+	pidno[pids_found] = atoi(pid);
+	pid = strtok(NULL , " ");
+	++pids_found;
+      }
+    } else TLOG_DEBUG(1) <<"ret="<<(void*)ret <<" NO (stdout) OUTPUT; pidline[0]="<<pidline[0];
+    for (unsigned id=0; id<pids_found; ++id) {
+      if ( pidno[id] > 0 ) {
+	TLOG_DEBUG()<<"killing pid: "<<pidno[id];
+	kill(pidno[id],sig);
+      }
+    }
+    pclose(fp);
+  } else TLOG_ERROR() <<"attempt to get pids of bottomCRTreadout processes via popen failed. popen(...) returned: "<<(void*)fp;
+  TLOG_DEBUG() << "pids found: " << pids_found;
 
   return 0;
 }

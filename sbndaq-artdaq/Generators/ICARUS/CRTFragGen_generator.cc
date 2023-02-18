@@ -416,9 +416,15 @@ void CRT::FragGen::start()
 
 void CRT::FragGen::stop()
 {
+  TLOG(TLVL_INFO) << "stop() called";
   hardware_interface_->StopDatataking();
   // Stop the backend DAQ.
+  TLOG(TLVL_DEBUG) << "stop() before stopallboards";
   stopallboards(configfile.c_str(),indir.c_str());
+  TLOG(TLVL_DEBUG) << "stop() after stopallboards";
+  string cmd = "killall bottomCRTreadout";
+  int ret=system(cmd.c_str());
+  TLOG(TLVL_DEBUG) << "system("<< cmd << ") returned: " << ret;
 }
 
 // The following macro is defined in artdaq's GeneratorMacros.hh header
