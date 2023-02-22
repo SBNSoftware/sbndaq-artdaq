@@ -284,7 +284,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
        * Display warning if FEB measured no hits during this poll
        */
       if(feb.last_accepted_timestamp > 1) {
-        TLOG(TLVL_WARNING)
+        TLOG(TLVL_DEBUG)
           <<"FEB "<<(int)mac
           <<" sent no hits during this poll. "
           <<" Timestamp of the last hit: "
