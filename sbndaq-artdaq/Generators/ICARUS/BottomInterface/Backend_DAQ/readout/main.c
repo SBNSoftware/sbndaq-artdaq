@@ -281,7 +281,7 @@ static void cb_diag_in(struct libusb_transfer *transfer) {
 			len = transfer->actual_length;
 			break;
 		default:
-			printf("%d diag in error %d\n", ser_no, transfer->status); kill_me = 1;
+		  TRACE(TLVL_ERROR,"%d diag in error %d\n", ser_no, transfer->status); kill_me = 1;
 			len = 0;
 			break;
 	}
@@ -313,6 +313,7 @@ static void cb_diag_in(struct libusb_transfer *transfer) {
 static void check_diag_in() {
 	int len;
 
+	TRACE(TLVL_DEBUG+2,"check_diag_in - Enter");
 	// diag in submit
 	if (!diag_in_ready) return;
 	
@@ -335,7 +336,7 @@ static void check_diag_in() {
 	} else {
 		diag_in_ready = 0;
 	}
-}
+} // check_diag_in()
 
 // data in	--------------------------------------------------------------------
 
@@ -476,6 +477,7 @@ static void check_data_in() {
   int i, len, tmp, active = -1;
   char mymsg[BUFSIZE];
   
+  TRACE(TLVL_DEBUG+2,"check_data_in - Enter");
   // open first file
   for (i = 0; i < 2; i++) if (f[i].state == F_WRITING) active = i; 
   
@@ -617,13 +619,14 @@ static void check_data_in() {
     }
   }
 	  
-}
+} //check_data_in()
 
 
 // data in state machine
 static void read_data_in() {
   int i, r, len, active, start_up;
   
+  TRACE(TLVL_DEBUG+2,"read_data_in - Enter");
 #if 1
   // sometimes a transfer doesn't complete
   if (d[rw].buf_state == BUF_READING) {
@@ -789,7 +792,7 @@ static void read_data_in() {
 		  nr = (nr + 1) % BUF_NO;
 		}
   }
-}
+} // read_data_in()
 
 // com out ---------------------------------------------------------------------
 
@@ -828,6 +831,7 @@ static void cb_com_out(struct libusb_transfer *transfer) {
 static void check_com_out() {
   int i, r, len;
 	
+  TRACE(TLVL_DEBUG+2,"check_com_out - Enter");
   if (!com_out_ready) return;
   
   // resubmit old transfer?
@@ -883,7 +887,7 @@ static void check_com_out() {
       com_out_ready = 0;
     }
   }
-}
+} // check_com_out()
 
 // periodic out callback
 static void cb_per_out(struct libusb_transfer *transfer) { 
@@ -900,6 +904,7 @@ static void check_per_out() {
   unsigned int *p;
   unsigned int t;
   
+  TRACE(TLVL_DEBUG+2,"check_per_out - Enter");
   if (!per_out_ready) return;
   if (!timer_zero_reset(T_TIMESTAMP, 1)) return;
   
@@ -937,7 +942,7 @@ static void check_per_out() {
   } else {
     per_out_ready = 0;
   }
-}
+} // check_per_out()
 
 // log files -------------------------------------------------------------------
 static char out_log[200];
