@@ -47,7 +47,7 @@ void sbndaq::BernCRT_GeneratorBase::Initialize() {
   feb_poll_period_            = 1e6 * ps_.get<uint32_t>("feb_poll_ms");
 
   max_time_with_no_data_ns_   = 1'000'000UL * ps_.get<uint64_t>("max_time_with_no_data_ms", 1000); //set to 0 to disable warning message
-  max_tolerable_t0_           = ps_.get<uint32_t>("max_tolerable_t0_", 1'000'100'000); //set to 1<<30 (or more) to disable error message
+  max_tolerable_t0_           = ps_.get<uint32_t>("max_tolerable_t0_", 1'000'100'000); //'//set to 1<<30 (or more) to disable error message
 
   // new fcl parameter for using older firmware versions.
   // older firmware for which the coinc word is not in the FEB hit structure is used
@@ -186,7 +186,7 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   TLOG(TLVL_DEBUG+1) << "(feb_id=" << feb_id << ") called with starting size of fragments: " << frags.size() << std::endl;
 
   FEB_t & feb = FEBs_[feb_id];
-
+  
   size_t buffer_end = feb.buffer.size();
 
   TLOG(TLVL_DEBUG+5) << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " fragments";
@@ -205,8 +205,11 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
   char missing_t0 = 0;
   char missing_t1 = 0;
-  char num_t1_resets = 0;
-
+  char num_t1_resets=0;
+  char num_t0t1_resets = 0;
+  //std::vector< uint16_t> adc_feb72;
+  uint16_t pedestal_adc_feb[32]= {0};//, squaresum_pedestal_adc_feb[32];
+  //uint16_t sum_pedestal_adc_feb[32], squaresum_pedestal_adc_feb[32];
   if(!discard_data) {
     //loop over all the CRTHit events in our buffer (for this FEB)
     for(size_t i_e=0; i_e<buffer_end; ++i_e) {
@@ -214,10 +217,18 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
       const BernCRTFragmentMetadataV2 & metadata = feb.buffer[i_e].metadata;
       const uint64_t & fragment_timestamp        = feb.buffer[i_e].fragment_timestamp;
 
-      for(auto hit : data){
-        if (hit.flags>>3 != 0){num_t1_resets++;}
+      for(auto hit : data){//hit is a BernCRTHitV2
+	if (hit.flags>>3 != 0){num_t1_resets++;}
         if (hit.flags>>0 == 0){missing_t0++;}
         if (hit.flags>>1 == 0){missing_t1++;}
+	if (hit.flags>>2 !=0 || hit.flags>>3 !=0){
+	  num_t0t1_resets++; 
+	  for(int ch=0; ch<32; ch++){
+	    pedestal_adc_feb[ch]=hit.adc[ch];
+	    //sum_pedestal_adc_feb[ch]+=hit.adc[ch];
+	    //squaresum_pedestal_adc_feb[ch]+=hit.adc[ch]*hit.adc[ch];
+	  }
+	}
       }
 
       if(i_e == 0) { //send metrics only once for each FillFragment call
@@ -252,6 +263,18 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
               std::string("FEB_missing_T1_")+std::to_string(feb.fragment_id & 0xff),
               missing_t1,
               "CRT missing T1 per poll", 1, artdaq::MetricMode::LastPoint);
+
+	  //only send a metric if there actually was a reset event 
+	  if(num_t0t1_resets>0){
+	    for(unsigned int ch=0; ch<32; ch++){
+	      metricMan->sendMetric(
+				    std::string("pedestal_adc_feb")+std::to_string(feb_id)+std::string("_ch")+std::to_string(ch),
+				    //sum_pedestal_adc_feb[ch] /(num_t0t1_resets),
+				    pedestal_adc_feb[ch],
+				    std::string("ADC in FEB ")+std::to_string(feb_id)+std::string(" Ch ")+std::to_string(ch), 5, artdaq::MetricMode::Average);
+	    }
+	  }
+
         }
       }
 
