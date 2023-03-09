@@ -88,14 +88,40 @@ namespace sbndaq
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
  {
+   auto expected_wib_fw_version    = WIB_config.get<uint32_t>("WIB.expected_wib_fw_version");
    auto wib_address                = WIB_config.get<std::string>("WIB.address");
    auto wib_table                  = WIB_config.get<std::string>("WIB.wib_table");
    auto femb_table                 = WIB_config.get<std::string>("WIB.femb_table");
    auto DTS_source                 = WIB_config.get<uint8_t>("WIB.DTS_source");
    auto enable_FEMBs               = WIB_config.get<std::vector<bool> >("WIB.enable_FEMBs");
    auto FEMB_configs               = WIB_config.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
-      
+   
    const std::string identification = "SBNDWIBReader::setupWIB";
+   
+   //wib = std::make_unique<WIB>("192.168.230.50","WIB_SBND_REGS.adt","SBND_FEMB.adt",true);
+   
+   wib = std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
+   
+   uint32_t wib_fw_version = wib->Read("FW_VERSION");
+   wib_fw_version = wib->Read("FW_VERSION");
+   
+   //TLOG_INFO(identification) << "Read value of wib FW : " << wib_fw_version << TLOG_ENDL;
+   //TLOG_INFO(identification) << "Expected value of wib FW : " << expected_wib_fw_version << TLOG_ENDL;
+   
+   if (wib_fw_version != expected_wib_fw_version)
+   {
+    cet::exception excpt(identification);
+    excpt << " WIB Firmware version is "
+        << std::hex << std::setw(8) << std::setfill('0')
+        << wib_fw_version
+        <<" but expect "
+        << std::hex << std::setw(8) << std::setfill('0')
+        << expected_wib_fw_version
+        <<" version in fcl";
+    throw excpt;
+   }
+   
+   //const std::string identification = "SBNDWIBReader::setupWIB";
    TLOG_INFO(identification) << "Now Starting setupWIB " << TLOG_ENDL;
    
    TLOG_INFO(identification) << "WIB DAT SOURCE : " << int(DTS_source) << TLOG_ENDL;
@@ -106,7 +132,7 @@ namespace sbndaq
    
    //TLOG_INFO(identification) << "femb table " << femb_table << TLOG_ENDL;
    
-   wib = std::make_unique<WIB>("192.168.230.50","WIB_SBND_REGS.adt","SBND_FEMB.adt",true);
+   //wib = std::make_unique<WIB>("192.168.230.50","WIB_SBND_REGS.adt","SBND_FEMB.adt",true);
    //wib = std::make_unique<WIB>( wib_address, wib_table, femb_table );
    
    //TLOG_INFO(identification) << "Connected to WIB at " <<  wib_address << TLOG_ENDL;
@@ -120,16 +146,47 @@ namespace sbndaq
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
    
    TLOG_INFO(identification) << "Now Connecting to FEMBs " << TLOG_ENDL;
+   
+   int N_config_FEMBs = 0;
       
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
        TLOG_INFO(identification) << "FEMB No. " << iFEMB << TLOG_ENDL; 
+       
+       //TLOG_INFO(identification) << "FEMB No. " << iFEMB << "  FEMB VERSION ID : " << wib->ReadFEMB(iFEMB,"VERSION_ID") << TLOG_ENDL;
+       
+       //uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+       //femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+       
+       fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
+       auto expected_femb_fw_version = FEMB_config.get<uint32_t>("expected_femb_fw_version");
+       
+       //TLOG_INFO(identification) << "Read value of femb FW : " << femb_fw_version << TLOG_ENDL;
+       //TLOG_INFO(identification) << "Expected value of femb FW : " << expected_femb_fw_version << TLOG_ENDL;
+       
+       /*if(femb_fw_version != expected_femb_fw_version){
+          TLOG_WARNING(identification) << "Skipping powering up/ configuring FEMB " << iFEMB << " due to FW version mismatch " << TLOG_ENDL;
+	  TLOG_WARNING(identification) << "Expected Version : " << std::hex << std::setw(8) << std::setfill('0')
+	                               << expected_femb_fw_version << "  Read FW version : " << std::hex << std::setw(8) << std::setfill('0')
+				       << femb_fw_version << TLOG_ENDL;
+	  continue;
+       }*/
+       
        if(enable_FEMBs.at(iFEMB-1)){
           TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
 	  setupFEMB(iFEMB,FEMB_config);
+	  uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+	  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+	  if(femb_fw_version != expected_femb_fw_version) N_config_FEMBs++;
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
+   }
+   
+   if(N_config_FEMBs==4){
+      cet::exception excpt(identification);
+      excpt << "None of the FEMBs was configured due to firmware mismatch";
+      throw excpt;
    }
    
    TLOG_INFO(identification) << "WIB setup completed " << TLOG_ENDL;
@@ -327,12 +384,30 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   
   TLOG_INFO(identification) << " After powering up the FEMBs" << TLOG_ENDL;
   
+  TLOG_INFO(identification) << " FEMB FW Version : " << wib->ReadFEMB(iFEMB,"VERSION_ID") << TLOG_ENDL;
+  
+  uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+  
+  TLOG_INFO(identification) << " FEMB FW Version (2 nd) : " << femb_fw_version << TLOG_ENDL;
+  
+  auto expected_femb_fw_version = FEMB_configure.get<uint32_t>("expected_femb_fw_version");
+  
+  if(femb_fw_version != expected_femb_fw_version){
+          TLOG_WARNING(identification) << "Skipping powering up/ configuring FEMB " << iFEMB << " due to FW version mismatch " << TLOG_ENDL;
+	  TLOG_WARNING(identification) << "Expected Version : " << std::hex << std::setw(8) << std::setfill('0')
+	                               << expected_femb_fw_version << "  Read FW version : " << std::hex << std::setw(8) << std::setfill('0')
+				       << femb_fw_version << TLOG_ENDL;
+	  return;
+  }
+  
   sleep(5);
       
   std::vector<uint32_t> fe_config = {gain,shape,baselineHigh,leakHigh,leak10X,acCouple,buffer,extClk};
   wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
   
-  TLOG_INFO(identification) << " After configureing FEMBs" << TLOG_ENDL;
+  //TLOG_INFO(identification) << " After configureing FEMBs" << TLOG_ENDL;
+  TLOG_INFO(identification) << " After configuring FEMB " << iFEMB << TLOG_ENDL;
 }
 
 // "shutdown" transition
