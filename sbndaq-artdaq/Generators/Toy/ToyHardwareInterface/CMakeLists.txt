@@ -1,12 +1,5 @@
 art_make(
         LIB_LIBRARIES
-        art_Utilities
-        ${FHICLCPP}
-        ${CETLIB}
-        ${CETLIB_EXCEPT}
-  ${MF_MESSAGELOGGER}
-  artdaq_DAQdata
-	artdaq-core_Data
-	sbndaq-artdaq_Generators_Toy_Overlay
-	${Boost_SYSTEM_LIBRARY}
-        )
+    sbndaq-artdaq_Generators_Toy_Overlay
+    ${BUILD_PLUGIN_CORE_LIB_LIST}
+)
