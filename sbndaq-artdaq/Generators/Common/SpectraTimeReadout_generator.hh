@@ -5,6 +5,10 @@
 #ifndef sbndaq_artdaq_Generators_Common_SpectraTimeReadout_generator
 #define sbndaq_artdaq_Generators_Common_SpectraTimeReadout_generator
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;
+
 #include <memory>
 #include <atomic>
 #include <future>
@@ -21,7 +25,6 @@
 #include "sbndaq-artdaq/Generators/Common/GPS/GPSInfo.hh"
 #include <unistd.h>
 #include <vector>
-
 
 namespace sbndaq
 {

@@ -49,6 +49,7 @@ namespace nevistpc {
     	}
 	mf::LogInfo("TPCFEMStatus")  << strstrm.str();
 	}
+
     bool TPCFEMStatus::isValid() const{
       bool status=true;
       for(size_t i = 0; i < error_flag_v.size(); ++i){
@@ -59,6 +60,7 @@ namespace nevistpc {
       }
       return status;
     }
+
 	void TPCFEMStatus::describe(const FEMErrorFlag_t type, std::ostringstream& strm) const{
  	 	switch(type) {
   			case kModAddressError:
@@ -313,6 +315,7 @@ namespace nevistpc {
 
   void NevisTPCFEM::programStratixFPGAFirmware( std::string const& firmwarename ){
 
+    TLOG(TLVL_INFO) << "NevisTPCFEM: calling " << __func__ << " with args " << firmwarename;
     ControlDataPackets ControlDataPackets;
 
     ControlDataPacket target ( _slot_number, device::STRATIX_FPGA_PROGRAM, stratix_fpga_program::PROGRAM_FIRMWARE );
@@ -514,50 +517,163 @@ namespace nevistpc {
     	TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << flag;
 	}
 
+        void NevisTPCFEM::setFEMBipolar(data_payload_t const &size)
+	{
+	  controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::BIPOLAR, size));
+	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << size;
+	}
+
+        void NevisTPCFEM::setLoadBaseline(data_payload_t const &chan, data_payload_t const &size)
+	{
+	  controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::LOAD_BASELINE_CHANNEL, chan));
+	  usleep(1);
+	  controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::LOAD_BASELINE, size));
+	  usleep(1);
+	  controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::WRITE_BASELINE, size));
+	  usleep(1);
+	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " for ch " << chan << " with " << size;
+	}
+
+	void NevisTPCFEM::enableFEMFakeData(bool const &flag){
+	  // Flag is inverted since FEM uses 0 to enable fake data and 1 to enable optical data (default)
+	  data_payload_bool_t const useOptical = !flag;
+	  controller()->send( ControlDataPacket( _slot_number, device::STRATIX_FPGA, stratix_fpga::INPUT_DATA_SELECTION, useOptical ) );
+	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << flag;
+	}
+
+        void NevisTPCFEM::loadFEMFakeData(std::string const &pattern){
+	  unsigned int fake_data_array[65536];
+
+	  // Create fake data pattern
+	  for( unsigned int channel = 0; channel < 64; channel++ ){
+	    for(unsigned int sample = 0; sample < 1024; sample++ ){
+	      // Fake data is the sum of channel number and sample index
+	      if( pattern == "channel+sample" ) fake_data_array[channel + sample*64]= (channel + sample) & 0xfff;
+	      // Fake data is the channel number
+	      else if( pattern == "channel" ) fake_data_array[channel + sample*64]= channel & 0xfff;
+	      // Fake data is the sample index number
+	      else if( pattern == "sample" ) fake_data_array[channel + sample*64]= sample & 0xfff;
+	      else{
+		mf::LogInfo("NevisTPCFEMs") << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
+		TLOG(TLVL_ERROR) << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
+		fake_data_array[channel+sample*64]= 0 & 0xfff;
+	      }
+	    }
+	  }
+	  // Possible options for future development: load from text file
+
+	  // Load fake data into FEM memory
+	  // ADC samples are 12 bit long but the FEM memory uses 16-bit words
+	  // Store 4 12-bit ADC samples as 3 16-bit words
+	  // 64 channels * 1024 samples/channel * 12 bit/sample * 1 word/16 bit = 49152 words into FEM memory
+	  unsigned int address = 0;
+	  for( unsigned int sample = 0; sample < 1024; sample ++ ){
+	    for( unsigned int channel=0; channel < 64; channel++ ){
+	      unsigned int packing_index = channel%4;
+	      unsigned int packed_word;
+	      if( packing_index == 0 ) packed_word = (fake_data_array[channel+sample*64] & 0xfff) +  ((fake_data_array[channel+sample*64+1] & 0xf) << 12);
+	      else if( packing_index == 1 ) 
+		packed_word = ((fake_data_array[channel+sample*64] & 0xff0) >> 4) +  ((fake_data_array[channel+sample*64+1] & 0xff) << 8);
+	      else if( packing_index == 2 ) 
+		packed_word = ((fake_data_array[channel+sample*64] & 0xf00) >> 8) +  ((fake_data_array[channel+sample*64+1] & 0xfff) << 4);
+	      if(packing_index != 3){
+		controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::LOAD_FAKE_DATA_ADDRESS, address));
+		controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::LOAD_FAKE_DATA_ADC, packed_word));
+		controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::WRITE_FAKE_DATA));
+		address++;
+	      }
+	    }
+	  }
+	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << pattern;
+	}
+
+
 	void NevisTPCFEM::fem_setup(fhicl::ParameterSet const& crateConfig){
-	// Power On arria power supply
-	powerOnArriaFPGA();
-	// config on stratix fpga
-	configOnStratixFPGA();
-	// program stratix firmware
-	programStratixFPGAFirmware(crateConfig.get<std::string>("fem_fpga",""));
-	TLOG(TLVL_INFO)<<crateConfig.get<std::string>("fem_fpga","") ;
+	  mf::LogInfo("NevisTPCFEMs") << "FEM setup for slot " << (int)_slot_number;
+	  // Power On arria power supply
+	  powerOnArriaFPGA();
+	  // config on stratix fpga
+	  configOnStratixFPGA();
+	  // program stratix firmware
+	  programStratixFPGAFirmware(crateConfig.get<std::string>("fem_fpga",""));
+	  TLOG(TLVL_INFO)<<crateConfig.get<std::string>("fem_fpga","") ;
 
-	// Uncomment block when using the FEM JTAG connector to deploy firmware
-	// std::cout << "\nPause for using JTAG connector\n" << std::endl;
-	// int aux;
-	// std::cin >> aux;
+	  // Uncomment block when using the FEM JTAG connector to deploy firmware
+	  // std::cout << "\nPause for using JTAG connector\n" << std::endl;
+	  // int aux;
+	  // std::cin >> aux;
 
-	// Turn DRAM reset on
-	resetDRAM(1);
-	// Turn DRAM reset off
-	resetDRAM(0);
+	  // Turn DRAM reset on
+	  resetDRAM(1);
+	  // Turn DRAM reset off
+	  resetDRAM(0);
+	  
+	  // Set module number
+	  setModuleNumber(_slot_number);
 
-	// Set module number
-	setModuleNumber(_slot_number);
+	  // Set compression
+	  //set whether you want to use huffman compression (mb_feb_a_nocomp)
+	  //0 for use compression, 1 for don't use compression
+	  disableNUChanCompression(!( crateConfig.get<bool>( "nu_compress", false ))); //default off
+	  disableSNChanCompression(!( crateConfig.get<bool>( "sn_compress", true )));
+	  
+	  //set mb_feb_timesize
+	  setDriftTimeSize( crateConfig.get<uint32_t>("timesize",3199) );
+	  
+	  //set mb_feb_b_id to chip3
+	  setSNChannelID(0xf);
+	  //set mb_feb_b_id to chip4 //???there is no chip4?
+	  //going to guess this is what was meant
+	  setNUChannelID(0xf);
+	  
+	  //set mb_feb_max to 8000
+	  setPrebufferSize(8000);
+	  
+	  //set mb_feb_hold_enable
+	  enableLinkPortHold(1);
+	  
+	  // Zero suppression configuration
+	  bool static_baseline = crateConfig.get<bool>("zs_static_baseline", false);
 
-		// Set compression
-		//set whether you want to use huffman compression (mb_feb_a_nocomp)
-  		//0 for use compression, 1 for don't use compression
-  		bool compress = !( crateConfig.get<bool>( "nu_compress", false )); //default off
-  		TLOG(TLVL_INFO)<<"HEY! COMPRESS VALUE IS " << compress << std::endl;
-  		disableNUChanCompression(compress); //default off
-  		disableSNChanCompression(!( crateConfig.get<bool>( "sn_compress", true )));
+	  if( !static_baseline ){
+	    mf::LogInfo("NevisTPCFEMs")  << "Configuring dynamic-baseline zero suppression for SN stream...";
+	    TLOG(TLVL_INFO) << "NevisTPCFEM: Configuring dynamic-baseline zero suppression for SN stream...";
+	  } else {
+	    mf::LogInfo("NevisTPCFEMs") << "Configuring static-baseline zero suppression for SN stream...";
+	    TLOG(TLVL_INFO) << "NevisTPCFEM: Configuring static-baseline zero suppression for SN stream...";
+	  }
 
-  		//set mb_feb_timesize
-  		setDriftTimeSize( crateConfig.get<uint32_t>("timesize",3199) );
+	  // To do: set the threshold (and baseline values) in the fcl file (current values correspond to the WIB fake data pattern)
+	  for (unsigned int chan_it = 0; chan_it < 64; ++chan_it) {
+	    if( !static_baseline ){ // Dynamic baseline thresholds
+	      // the WIB fake data requires a 475 ADC threshold
+	      unsigned int i = (1 << 12) + 475; // 1: Unipolar (+) 475 ADC threshold
+	      //unsigned int i = (3 << 12) + 475; // 1: Bipolar (+) 475 ADC threshold // overflows memory
+	      setLoadThreshold( chan_it, i );
+	    } else { // Static baseline values and thresholds
+	      unsigned int threshold = (chan_it%2 == 0)? 500 : 2039; // 500 ADC for even channels, 2039 ADC for odd channels
+	      unsigned int baseline = (chan_it%2 == 0)? 767 : 2040; // 767 ADC for even channels,  2040 ADC for odd channels
+	      //unsigned int threshold = 2046; // Aggressive threshold for all channels
+	      //unsigned int baseline = 2047; // Aggressive threshold for all channels
+	      setLoadThreshold( chan_it, threshold );
+	      setLoadBaseline( chan_it, baseline );
+	    }
+	  }
+	  // To do: write the values on the fcl file
+	  if( !static_baseline ){ // Dynamic baseline estimation tolerances
+	    setLoadThresholdMean( crateConfig.get<int>( "load_threshold_mean", 0x1024 )); // large value since since the fake WIB data has no quiet region
+	    setLoadThresholdVariance( crateConfig.get<int> ("load_threshold_variance", 0xFFF )); // maximum value since the fake WIB data has no quiet region
+	  }
+	  setLoadPresample( crateConfig.get<int>( "presample", 0 )); // can't take more with the WIB fake data 
+	  setLoadPostsample( crateConfig.get<int>( "postsample", 0 )); // gives 1 postsample, can't take more with the WIB fake data
+	  setChannelThreshold( crateConfig.get<bool>( "channel_threshold", true ));
+	  if( static_baseline ) setFEMBipolar( 2 ); // all bipolar since channelwise polarity not supported
 
-  		//set mb_feb_b_id to chip3
-  		setSNChannelID(0xf);
-  		//set mb_feb_b_id to chip4 //???there is no chip4?
-  		//going to guess this is what was meant
-  		setNUChannelID(0xf);
-
-  		//set mb_feb_max to 8000
-  		setPrebufferSize(8000);
-
-  		//set mb_feb_hold_enable
-  		enableLinkPortHold(1);
-
-    }
+	  // Fake data configuration
+	  bool use_fake_data = crateConfig.get<bool>("fem_fake_data", false);
+	  enableFEMFakeData( use_fake_data );
+	  if( use_fake_data ){
+	    loadFEMFakeData( crateConfig.get<std::string>( "fem_fake_data_pattern", "channel" ) );
+	  }
+	}
 }

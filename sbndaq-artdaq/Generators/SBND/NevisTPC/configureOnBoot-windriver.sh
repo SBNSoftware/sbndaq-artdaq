@@ -1,8 +1,20 @@
+#!/bin/bash
 # set up drivers for sbnd
 #GAL: instructions https://cdcvs.fnal.gov/redmine/projects/sbndaq/wiki/Rebuild_the_windriver
 
 install_windriver1260="\
-sbn-daq01"
+sbn-daq01,\
+sbnd-tpc01,\
+sbnd-tpc02,\
+sbnd-tpc03,\
+sbnd-tpc04,\
+sbnd-tpc05,\
+sbnd-tpc06,\
+sbnd-tpc07,\
+sbnd-tpc08,\
+sbnd-tpc09,\
+sbnd-tpc10,\
+sbnd-tpc11"
 
 
 if [[ $install_windriver1260 =~ (^|,)$(hostname -s)($|,) ]]; then

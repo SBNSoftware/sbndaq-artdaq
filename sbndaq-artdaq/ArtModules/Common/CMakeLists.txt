@@ -1,29 +1,27 @@
-art_make(NO_PLUGINS # WAnt different link lists for modues
+
+
+cet_make(
+ NO_PLUGINS # WAnt different link lists for modues
  BASENAME_ONLY
- LIBRARY_NAME sbndaq-artdaq_ArtModules_Common
- LIB_LIBRARIES sbndaq-artdaq-core_Overlays
- 	       sbndaq-artdaq-core_Overlays_Common
+ LIBRARY_NAME
+   sbndaq-artdaq_ArtModules_Common
+ LIB_LIBRARIES
+   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND
 )
 
-simple_plugin( CAENV1730Dump "module"
-  art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_Framework_Services_Optional
-  #art_Framework_Services_Optional_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-  sbndaq-artdaq-core_Overlays_Common 
-)
+list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND)
+list(APPEND BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND)
 
-simple_plugin( CAENV1730WaveformAna "module"
-  art_Framework_Services_Registry
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
-  #art_Framework_Services_Optional
-  #art_Framework_Services_Optional_TFileService_service
-  ${ROOT_BASIC_LIB_LIST}
-  sbndaq-artdaq-core_Overlays_Common 
-)
 
-# Subdirectories.
-#add_subdirectory(DQM)
+build_plugin( EventAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( MultiDump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( IncompleteEventAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( CAENV1730Dump "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( CAENV1730WaveformAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( BernCRTZMQAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( BernCRTAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( BernCRTAnaV2 "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+build_plugin( BernCRTDumpV2 "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+

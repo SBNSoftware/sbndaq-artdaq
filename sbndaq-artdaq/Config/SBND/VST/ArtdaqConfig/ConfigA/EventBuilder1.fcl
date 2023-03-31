@@ -82,7 +82,7 @@ my_output_modules: [rootNetOutput]
 }
 source: {
 
-module_type: SBNDDAQInput 
+module_type: SBNDInput 
 
 waiting_time: 2500000 
 

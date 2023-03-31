@@ -14,7 +14,7 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateStatFragment.hh"
 
-#include "icarus-artdaq-base/common.h"
+#include "artdaq/DAQdata/Globals.hh"
 
 #include "artdaq-core/Data/Fragment.hh"
 
@@ -64,7 +64,7 @@ icarus::PhysCrateDump::~PhysCrateDump()
 
 void icarus::PhysCrateDump::analyze(art::Event const & evt)
 {
-  
+    
   art::EventNumber_t eventNumber = evt.event();
   
   // ***********************

@@ -1,7 +1,14 @@
+/**
+ * Obsolete fragment generator using zeromq to communicate with febdrv
+ * Use BernCRT generator which has integrated febdrv instead
+ */
+
+
 #ifndef sbndaq_artdaq_Generators_Common_BernCRTZMQData_hh
 #define sbndaq_artdaq_Generators_Common_BernCRTZMQData_hh
 
 #include "sbndaq-artdaq/Generators/Common/BernCRTZMQ_GeneratorBase.hh"
+
 
 #include "zmq.h"
 
@@ -19,16 +26,21 @@ namespace sbndaq {
     void ConfigureStop();  //called in stop()
 
     size_t GetZMQData();
-    int    GetDataSetup();
-    int    GetDataComplete();
 
-    int    zmq_data_receive_timeout_ms_;
+    void StartFebdrv();
+    uint64_t GetTimeSinceLastRestart();
+    std::chrono::time_point<std::chrono::system_clock> last_restart_time;
+
+    std::string zmq_listening_port_;
     std::string zmq_data_pub_port_;
     void*  zmq_context_;
     void*  zmq_subscriber_;
-    
+    void*  zmq_requester_;
 
+    enum feb_command { DAQ_BEG, DAQ_END, BIAS_ON, BIAS_OF, GETINFO };
+    void febctl(feb_command command, uint8_t mac5 = 255);
 
+    void feb_send_bitstreams(uint8_t mac5);
   };
 }
 

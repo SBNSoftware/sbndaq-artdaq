@@ -15,10 +15,9 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateStatFragment.hh"
 
 #include "artdaq-core/Data/Fragment.hh"
-#include "icarus-artdaq-base/common.h"
+#include "artdaq/DAQdata/Globals.hh"
 
-
-#include "art/Framework/Services/Optional/TFileService.h"
+#include "art_root_io/TFileService.h"
 
 #include <algorithm>
 #include <cassert>

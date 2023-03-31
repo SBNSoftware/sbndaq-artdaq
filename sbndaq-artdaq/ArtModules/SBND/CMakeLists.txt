@@ -1,40 +1,21 @@
-art_make(NO_PLUGINS # WAnt different link lists for modues
+cet_make(
+ NO_PLUGINS # WAnt different link lists for modues
  BASENAME_ONLY
- LIBRARY_NAME sbndaq-artdaq_ArtModules_SBND
- LIB_LIBRARIES sbndaq-artdaq-core_Overlays
- 	       sbndaq-artdaq-core_Overlays_Common
- 	       sbndaq-artdaq-core_Overlays_SBND
+ LIBRARY_NAME
+    sbndaq-artdaq_ArtModules_SBND
+ LIB_LIBRARIES
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND
+ EXCLUDE
+    SBND_fragmentNameHelper.cc
 )
 
-simple_plugin(SBNDDAQArtdaqBuildInfo "module"
-  artdaq_DAQdata
-  artdaq_BuildInfo
-  artdaq-core_BuildInfo
-  sbndaq-artdaq_BuildInfo
-  sbndaq-artdaq-core_BuildInfo
-  ${MF_MESSAGELOGGER}
-  ${FHICLCPP}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
-)
+list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND)
+list(APPEND BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST  sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND)
 
-simple_plugin(SBNDDAQInput "source"
-  sbndaq-artdaq-core_Overlays
-  sbndaq-artdaq-core_Overlays_Common
-  sbndaq-artdaq-core_Overlays_SBND
-  artdaq-core_Core
-  artdaq_DAQdata
-  artdaq-utilities_Plugins
-  artdaq-core_Utilities
-  artdaq_ArtModules
-  art_Framework_Core
-  art_Framework_IO_Sources
-  art_Framework_Principal
-  art_Persistency_Provenance
-  art_Utilities
-  MF_MessageLogger
-  ${CETLIB_EXCEPT}
-)
+build_plugin(SBNDArtdaqBuildInfo "module" LIBRARIES REG ${BUILD_PLUGIN_BUILDINFO_LIB_LIST})
 
-# Subdirectories.
-#add_subdirectory(DQM)
+basic_plugin(SBND "fragmentNameHelper" LIBRARIES REG ${BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST})
+
+add_subdirectory(testStandTrigger)

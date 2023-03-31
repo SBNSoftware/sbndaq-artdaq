@@ -1,7 +1,8 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
-parent sbndaq_artdaq	v0_02_02
-defaultqual	e17
+parent sbndaq_artdaq
+defaultqual     e20:s112
+
 
 # These optional lines define the installed directories where
 # headers, libraries, and executables will be found
@@ -17,49 +18,40 @@ bindir      fq_dir      bin
 fcldir      -
 
 #
-product		      version	   optional
-artdaq                v3_05_00
-sbndaq_artdaq_core    v0_02_02
-caencomm	      v1_2a
-caenvme		      v2_50
-caendigitizer	      v2_12_0
-pqxx		      v6_2_5a      s67
-pqxx                  v6_2_5c      s82
-epics                 v3_16_2
-jsoncpp		      v1_7_7c
-wibtools	      v0_00_04     -
-windriver	      v12_06_00	   -
-icarus_artdaq_base    v0_08_00     -
-cetbuildtools         v7_11_00     -       only_for_build
-smc_compiler	      v6_6_0	   -nq-	   only_for_build
+product               version      optional
+artdaq                v3_12_02
+sbndaq_artdaq_core    v1_05_00
+caencomm              v1_2a
+caenvme               v2_50
+caendigitizer         v2_12_0
+pqxx                  v6_2_5e
+epics                 v7_0_7
+zmq                   v4_3_1
+jsoncpp               v1_7_7e
+wibtools              v1_05_00     -
+windriver             v12_06_00    -
+redis                 v5_0_5       -
+cetmodules            v3_19_02     -       only_for_build
+smc_compiler          v6_6_0       -nq-    only_for_build
 end_product_list
 
 # s* - see artdaq-core's product_deps
 # -nq- here means there is no qualifier
 # a "-" here means the dependent product is not required by the parent and will not be setup
 
-qualifier		artdaq	 	  sbndaq_artdaq_core  caenvme caencomm caendigitizer icarus_artdaq_base   pqxx               epics jsoncpp    wibtools  windriver
-e17:prof:s67		e17:s67:prof      e17:prof:s67        -nq-    -nq-     -nq-          e17:prof		  e17:p2715a:prof    e17   e17:prof   e17       prof
-e17:debug:s67		e17:s67:debug     e17:debug:s67       -nq-    -nq-     -nq-          e17:debug		  e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:prof:s67:icarus	e17:s67:prof      e17:prof:s67        -nq-    -nq-     -nq-          e17:prof		  e17:p2715a:prof    e17   e17:prof   -         -
-e17:debug:s67:icarus	e17:s67:debug     e17:debug:s67       -nq-    -nq-     -nq-          e17:debug		  e17:p2715a:debug   e17   e17:debug  -         -
-e17:prof:s67:sbnd	e17:s67:prof      e17:prof:s67        -nq-    -nq-     -nq-          -	    		  e17:p2715a:prof    e17   e17:prof   e17       prof
-e17:debug:s67:sbnd	e17:s67:debug     e17:debug:s67       -nq-    -nq-     -nq-          -	    		  e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:debug:s67		e17:s67:debug     e17:debug:s67       -nq-    -nq-     -nq-          e17:debug		  e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:prof:s82		e17:s82:prof      e17:prof:s82        -nq-    -nq-     -nq-          e17:prof		  e17:p2715a:prof    e17   e17:prof   e17       prof
-e17:debug:s82		e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          e17:debug		  e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:prof:s82:icarus	e17:s82:prof      e17:prof:s82        -nq-    -nq-     -nq-          e17:prof		  e17:p2715a:prof    e17   e17:prof   -         -
-e17:debug:s82:icarus	e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          e17:debug		  e17:p2715a:debug   e17   e17:debug  -         -
-e17:prof:s82:sbnd	e17:s82:prof      e17:prof:s82        -nq-    -nq-     -nq-          -	    		  e17:p2715a:prof    e17   e17:prof   e17       prof
-e17:debug:s82:sbnd	e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          -	    		  e17:p2715a:debug   e17   e17:debug  e17       debug
-e17:debug:s82		e17:s82:debug     e17:debug:s82       -nq-    -nq-     -nq-          e17:debug		  e17:p2715a:debug   e17   e17:debug  e17       debug
-e19:prof:s82		e19:s82:prof      e19:prof:s82        -nq-    -nq-     -nq-          e19:prof		  e19:p2715a:prof    e19   e19:prof   e19       prof
-e19:debug:s82		e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          e19:debug		  e19:p2715a:debug   e19   e19:debug  e19       debug
-e19:prof:s82:icarus	e19:s82:prof      e19:prof:s82        -nq-    -nq-     -nq-          e19:prof		  e19:p2715a:prof    e19   e19:prof   -         -
-e19:debug:s82:icarus	e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          e19:debug		  e19:p2715a:debug   e19   e19:debug  -         -
-e19:prof:s82:sbnd	e19:s82:prof      e19:prof:s82        -nq-    -nq-     -nq-          -	    		  e19:p2715a:prof    e19   e19:prof   e19       prof
-e19:debug:s82:sbnd	e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          -	    		  e19:p2715a:debug   e19   e19:debug  e19       debug
-e19:debug:s82		e19:s82:debug     e19:debug:s82       -nq-    -nq-     -nq-          e19:debug		  e19:p2715a:debug   e19   e19:debug  e19       debug
+qualifier                   artdaq               sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx              epics  zmq   jsoncpp    wibtools        windriver redis
+e20:prof:s112               e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s112   prof      prof
+e20:debug:s112              e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s112  debug     debug
+e20:prof:s112:icarus        e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   -              -          prof
+e20:debug:s112:icarus       e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
+e20:prof:s112:sbnd          e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s112   prof      prof
+e20:debug:s112:sbnd         e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s112  debug     debug
+e20:prof:s117               e20:s117:prof        e20:prof:s117         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s117   prof      prof
+e20:debug:s117              e20:s117:debug       e20:debug:s117        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s117  debug     debug
+e20:prof:s117:icarus        e20:s117:prof        e20:prof:s117         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   -              -          prof
+e20:debug:s117:icarus       e20:s117:debug       e20:debug:s117        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
+e20:prof:s117:sbnd          e20:s117:prof        e20:prof:s117         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s117   prof      prof
+e20:debug:s117:sbnd         e20:s117:debug       e20:debug:s117        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s117  debug     debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
@@ -67,7 +59,6 @@ envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
 # Preserve tabs and formatting in emacs and vi / vim:
 
 ### Local Variables:
-### tab-width: 8
+### tab-width: 4
 ### End:
 
-# vi:set ts=8 noexpandtab:

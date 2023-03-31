@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+    echo $0: usage: start_febstore filename
+    exit 1
+fi
+
+name=$1
+
+##echo "starting storage client for $name-crt01" 
+##./febstore tcp://ubdaq-prod-crt01-priv.fnal.gov:5556 $name-crt01 >/dev/null &
+echo "starting storage client for $name-sbndcrt02" 
+./febstore tcp://sbnd-prod-crtevb.fnal.gov:5556 $name-sbndcrt02 >/dev/null &
+
+echo "starting storage client for $name-sbndcrt01" 
+./febstore tcp://sbnd-prod-crt01.fnal.gov:5556 $name-sbndcrt01 >/dev/null &
+
+
+ps -aux |grep ./febstore

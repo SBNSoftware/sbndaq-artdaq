@@ -1,0 +1,11 @@
+echo "Stopping DAQ at all FEBs"
+./daq_stop_global
+sleep 3
+echo "Stopping storage (killall febstore)" 
+killall febstore
+killall febctl
+./logevent Run_Stopped
+sleep 1
+echo "Done."
+
+

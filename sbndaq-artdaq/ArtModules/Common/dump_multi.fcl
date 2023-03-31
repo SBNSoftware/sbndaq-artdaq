@@ -1,0 +1,50 @@
+process_name: Dump
+
+services: {
+  TFileService: { fileName: "processed_data_result.root" }
+}
+
+#source is a root file
+source:
+{
+  module_type: RootInput
+  maxEvents:   1000        # Number of events to create
+}
+
+outputs:
+{
+ out1: {
+  module_type: FileDumperOutput
+  wantProductFullClassName:     true
+  wantProductFriendlyClassName: false
+ }
+}
+
+physics:
+{
+
+ producers:{}
+
+ filters:{}
+
+ analyzers:{
+
+   dumpall: {
+     module_type: MultiDump
+     include_caen: false
+     shift_fragment_id: 1  # fcl for caen frags
+     include_wr: true
+     window_wr: 1000000000  # in ns, range is 0 to 1 second
+     verbose: true
+   }
+
+ }
+
+ #define the output stream, there could be more than one if using filters 
+ stream1:  [ out1 ]
+ ana: [ dumpall ]
+
+ #end_paths is a keyword and contains the paths that do not modify the art::Event, 
+ #ie analyzers and output streams.  these all run simultaneously
+ end_paths:     [ ana ]  
+}

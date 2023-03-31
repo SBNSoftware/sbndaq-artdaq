@@ -32,6 +32,8 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 
   // Read out stuff from fhicl
   FEMIDs_ = ps_.get< std::vector<uint64_t> >("FEMIDs",{0});
+  fragment_ids = ps_.get< std::vector<artdaq::Fragment::fragment_id_t> >("fragment_ids");
+
   CircularBufferSizeBytes_ = ps_.get<uint32_t>("CircularBufferSizeBytes_",1e9); 
   EventsPerSubrun_ = ps_.get<int32_t>("EventsPerSubrun",-1);
 
@@ -181,9 +183,12 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     return false;
   }  
  // Theoretically, we should have a header, but there may be a problem with the data. Sometimes we get a big discrepancy between the number of ADC words described in the header and the actual number of words and it causes the next header to be out of line. So let's check that the header is  lined up right. Otherwise, we'll just throw a fit and crash the run.
-  if(CircularBuffer_.buffer[0] != 0xFFFF){
-    TRACE(TFILLFRAG,"Header out of sync, tanking the run.");
-    throw "Header out of sync, tanking the run. Goodnight everybody!";
+  if(CircularBuffer_.buffer[0] != 0xFFFF)
+  {
+    char line [132];
+    sprintf(line,"Header out of sync: %X", CircularBuffer_.buffer[0]);
+    TRACE(TERROR,line);
+    throw std::runtime_error(line);
     return false;
   }
 
@@ -196,9 +201,12 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     if(current_event < 0){
       current_event = header->getEventNum();
     }
-    else if((uint)current_event != header->getEventNum()){
-      TRACE(TFILLFRAG,"FEM event num out of sync, tanking the run.");
-      throw "FEM event num out of sync, tanking the run. Goodnight everybody!";
+    else if((uint)current_event != header->getEventNum())
+    {
+      char line[132];
+      sprintf(line,"FEM event num out of sync, tanking the run. Current: %d, header: %d",current_event,header->getEventNum());
+      TRACE(TERROR,line);
+      throw std::runtime_error(line);
       return false;
     }
 
@@ -206,8 +214,10 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
       current_framenum = header->getFrameNum();
     }
     else if((uint)current_framenum != header->getFrameNum()){
-      TRACE(TFILLFRAG,"FEM framenum out of sync, tanking the run.");
-      throw "FEM framenum out of sync, tanking the run. Goodnight everybody!";
+      char line[132];
+      sprintf(line,"FEM framenum out of sync, tanking the run. Current: %d, Header :%d", current_framenum,header->getFrameNum());
+      TRACE(TERROR,line);
+      throw std::runtime_error(line);
       return false;
     }
   }
@@ -217,7 +227,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   }
 
   TRACE(TFILLFRAG,"TPC data with total expected size %lu,FEMID=%u,Slot=%u,ADCWordCount=%u,Event=%u,Frame=%u",
-	expected_size,header->getFEMID(),header->getSlot(),
+	expected_size,
+	header->getFEMID(),
+	header->getSlot(),
 	header->getADCWordCount(),
 	header->getEventNum(),
 	header->getFrameNum());
@@ -261,11 +273,24 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   artdaq::Fragment::timestamp_t unixtime_ns = static_cast<artdaq::Fragment::timestamp_t>(unixtime.tv_sec)*1000000000 + 
     static_cast<artdaq::Fragment::timestamp_t>(unixtime.tv_nsec);
 
+  artdaq::Fragment::fragment_id_t fragment_id;
+  uint32_t index = header->getSlot() - FEM_BASE_SLOT;
+
+  if (( header->getSlot() >= FEM_BASE_SLOT ) && ( index < fragment_ids.size()))
+  {
+    fragment_id = fragment_ids[index];
+  }
+  else
+  {
+    TRACE(TERROR,"NevisTPC::FillFragment() : illegal FEM slot number");
+    return(false);
+  }
+
   metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),fNChannels,fSamplesPerChannel,fUseCompression);
   frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
-                                                      metadata_.EventNumber(),
-                                                      (2&0xffff)+((1&0xffff)<16),
-                                                      detail::FragmentType::NevisTPC,
+                                                      metadata_.EventNumber(),          // Sequence ID
+						      fragment_id,                      // Fragment ID
+                                                      detail::FragmentType::NevisTPC,   // Fragment Type
 						      metadata_,
 						      unixtime_ns) );
   std::copy(CircularBuffer_.buffer.begin(),

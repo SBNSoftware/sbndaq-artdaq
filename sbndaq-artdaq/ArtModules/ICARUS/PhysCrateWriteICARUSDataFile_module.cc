@@ -16,7 +16,8 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateStatFragment.hh"
 #include "artdaq-core/Data/Fragment.hh"
 
-#include "icarus-artdaq-base/common.h"
+#include "artdaq/DAQdata/Globals.hh"
+#include "sbndaq-artdaq-core/Overlays/ICARUS/packs.h"
 
 
 #include <algorithm>
@@ -30,8 +31,6 @@
 #include <sstream>
 
 #include <arpa/inet.h>
-
-#include "icarus-artdaq-base/packs.h"
 
 #define EVEN 0x4556454E
 #define DATA 0x44415441

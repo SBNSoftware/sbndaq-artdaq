@@ -134,13 +134,21 @@ namespace nevistpc {
 	NU_MAX_BUFFER = 40,
 	SN_MAX_BUFFER,
 	LINK_PORT_HOLD_ENABLE,
+	INPUT_DATA_SELECTION = 44,
 	LOAD_THRESHOLD = 100,
 	LOAD_THRESHOLD_MEAN = 164,
 	LOAD_THRESHOLD_VARIANCE,
   	BIPOLAR = 167,
 	LOAD_PRESAMPLE,
 	LOAD_POSTSAMPLE,
-	CHANNEL_THRESHOLD
+	CHANNEL_THRESHOLD,
+	LOAD_FAKE_DATA_ADDRESS = 240,
+	LOAD_FAKE_DATA_ADC = 241,
+	WRITE_FAKE_DATA = 242,
+	LOAD_BASELINE_CHANNEL = 245,
+	LOAD_BASELINE = 246,
+	WRITE_BASELINE = 247
+
 	  };
     typedef chip_3 stratix_fpga;
 
@@ -248,6 +256,10 @@ namespace nevistpc {
     void setLoadPresample(data_payload_t const &size);
     void setLoadPostsample(data_payload_t const &size);
     void setChannelThreshold(data_payload_bool_t const &flag);
+    void setFEMBipolar(data_payload_t const &size);
+    void setLoadBaseline(data_payload_t const &chan, data_payload_t const &size);
+    void enableFEMFakeData(bool const &flag);
+    void loadFEMFakeData(std::string const &pattern);
 
     void runDefaultNUConfig(data_payload_t const&febChanID);
     void fem_setup(fhicl::ParameterSet const& configParams);

@@ -1,0 +1,11 @@
+BEGIN_PROLOG
+ 
+testStandTriggerProducer:
+{
+  module_type: "testStandTriggerProducer"
+  threshold: 7800
+  shift_fragment_id: 1  # caen fragments
+  verbose: true
+}
+
+END_PROLOG

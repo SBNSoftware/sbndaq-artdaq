@@ -17,11 +17,11 @@ icarus::PhysCrateFakeData::PhysCrateFakeData(fhicl::ParameterSet const & ps)
 }
 
 void icarus::PhysCrateFakeData::ConfigureStart(){
-  TRACE(TR_LOG,"PhysCrateFakeData::ConfigureStart() called.");
+  TRACE(TLVL_INFO,"PhysCrateFakeData::ConfigureStart() called.");
   engine_ = std::mt19937(ps_.get<int64_t>("random_seed", 314159));
   uniform_distn_.reset(new std::uniform_int_distribution<int>(0, std::pow(2,metadata_.num_adc_bits() - 1 )));
   event_number_ = 1;
-  TRACE(TR_LOG,"PhysCrateFakeData::ConfigureStart() completed.");
+  TRACE(TLVL_INFO,"PhysCrateFakeData::ConfigureStart() completed.");
 
 }
 
@@ -67,7 +67,7 @@ int icarus::PhysCrateFakeData::GetData(size_t & data_size, uint32_t* data_loc){
 
 void icarus::PhysCrateFakeData::FillStatPack( statpack & pack )
 {
-  TRACE(TR_LOG,"PhysCrateFakeData::FillStatPack(pack) called.");
+  TRACE(TLVL_INFO,"PhysCrateFakeData::FillStatPack(pack) called.");
   memcpy(&(pack.token), "STAT", 4);
   pack.crateid = htonl(158);
   //pack.crateid = htonl(physCr->getId());
@@ -75,7 +75,7 @@ void icarus::PhysCrateFakeData::FillStatPack( statpack & pack )
   pack.memstat2 = 0;
   pack.size = htonl(28);
 
-  TRACE(TR_LOG,"PhysCrateFakeData::FillStatPack(pack) completed.");
+  TRACE(TLVL_INFO,"PhysCrateFakeData::FillStatPack(pack) completed.");
 }
 
 

@@ -5,7 +5,7 @@
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/ICARUS/PhysCrateStatFragment.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
-#include "icarus-artdaq-base/packs.h"
+//#include "icarus-base/packs.h"
 #include <unistd.h>
 #include <vector>
 #include <atomic>
@@ -39,6 +39,10 @@ namespace icarus {
 
     uint8_t  CrateID_;
     std::vector<PhysCrateFragmentMetadata::id_t> BoardIDs_;
+    bool assignBoardID_;
+
+    std::vector<uint8_t> BoardTemps1_; //value of temp sensor 1 on each board
+    std::vector<uint8_t> BoardTemps2_; //value of temp sensor 2 on each board
 
     std::size_t throttle_usecs_;        // Sleep at start of each call to getNext_(), in us
     std::size_t throttle_usecs_check_;  // Period between checks for stop/pause during the sleep (must be less than, and an integer divisor of, throttle_usecs_)
@@ -60,6 +64,9 @@ namespace icarus {
     statpack last_stat_pack_;
 
     std::vector<int> pcieLinks_;
+
+    size_t event_offset_;
+    size_t packSize_zero_counter_;
     
   protected:
 
@@ -73,9 +80,14 @@ namespace icarus {
     sbndaq::CircularBuffer<uint16_t> fCircularBuffer;
     size_t fCircularBufferSize;
 
+    uint32_t fTimeOffsetNanoSec; //offset to be used for fragment timestamp    
+
   private:
     
     share::WorkerThreadUPtr Monitor_thread_;
+
+    std::chrono::high_resolution_clock::time_point _tloop_getnext_start;
+    std::chrono::high_resolution_clock::time_point _tloop_getnext_end;
     
   };
 }

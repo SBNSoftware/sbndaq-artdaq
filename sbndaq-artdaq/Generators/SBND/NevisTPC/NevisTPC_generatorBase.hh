@@ -49,19 +49,24 @@ namespace sbndaq
     virtual int    GetDataComplete() { return 1; }
     
     enum {
-      TERROR=0,
-      TWARNING=1,
-      TINFO=2,
-      TDEBUG=3,
-      TCONFIG=4,
-      TSTART=5,
-      TSTOP=6,
-      TSTATUS=7,
-      TGETNEXT=16,
-      TFILLFRAG=17,
+      TERROR    = TLVL_ERROR,
+      TWARNING  = TLVL_WARNING,
+      TINFO     = TLVL_INFO,
+      TDEBUG    = TLVL_DEBUG,
+      TCONFIG=9,
+      TSTART=10,
+      TSTOP=11,
+      TSTATUS=12,
+      TGETNEXT=13,
+      TFILLFRAG=14,
       TGETDATA=24
     };
-    
+
+    enum
+    {
+      FEM_BASE_SLOT = 3
+    };
+   
     uint32_t current_subrun_;
     size_t events_seen_;
     bool look_for_xmit_header_;
@@ -73,7 +78,8 @@ namespace sbndaq
     uint32_t fSamplesPerChannel;
     uint32_t fNChannels;
     bool     fUseCompression;
-    
+
+    std::vector<artdaq::Fragment::fragment_id_t> fragment_ids;    
     std::vector<uint64_t> FEMIDs_;
     uint32_t RunNumber_;
     int32_t EventsPerSubrun_;
