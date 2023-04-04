@@ -611,19 +611,6 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
 
 // Animesh add ends
 
-// GVS: commented old ConfigureSelfTriggerMode()
-/* void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
-{
-  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
-  uint32_t data,readBack;
-
-  retcod = CAEN_DGTZ_SetChannelSelfTrigger(fHandle,
-					   (CAEN_DGTZ_TriggerMode_t)fSelfTriggerMode,
-					   fSelfTriggerMask);
-  sbndaq::CAENDecoder::checkError(retcod,"SetSelfTriggerMask",fBoardID);
-}
-*/
-
 // GVS: new ConfigureSelfTriggerMode() function
  void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 {
@@ -1032,20 +1019,8 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   }
 
   // for ICARUS
-  if(fModeLVDS!=0){
-/*
-    TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
-    retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH,fCAEN.triggerPulseWidth);
-    sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
-    // Readback must be channel by channel (see reg doc)
-    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
-      {
-	uint32_t address = TRG_OUT_WIDTH_CH | ( ch << 8 );  
-	retcode = CAEN_DGTZ_ReadRegister(fHandle,address,&readback);
-	CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
-      }*/    
-    ConfigureLVDS();
-  }
+  if(fModeLVDS!=0){ ConfigureLVDS();  }
+
   ConfigureSelfTriggerMode();
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;
