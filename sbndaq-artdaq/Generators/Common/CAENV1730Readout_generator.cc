@@ -1540,7 +1540,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     //check trigger counter gaps
     auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
-    if( readoutwindow_trigger_counter_gap > 1u ){
+    if( readoutwindow_trigger_counter_gap > 1u && last_rcvd_rwcounter < max_rwcounter ){
       TLOG (TLVL_DEBUG) << "(FragID=" << fFragmentID << ")"
 			<< "Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
 			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
@@ -1729,7 +1729,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     
     if( readoutwindow_event_counter_gap > 1u ){
-      if ( last_sent_rwcounter > 0 )
+      if ( last_sent_rwcounter > 0 && last_sent_rwcounter < max_rwcounter )
       {
 	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
                         << readoutwindow_event_counter_gap;
@@ -1737,7 +1737,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       }
     }
 
-    if( readoutwindow_event_counter < last_sent_rwcounter )
+    if( readoutwindow_event_counter < last_sent_rwcounter && last_sent_rwcounter < max_rwcounter )
       {
 	TLOG(TLVL_ERROR) << "SequnceIDs processed out of order!! "
 			 << readoutwindow_event_counter << " < " << last_sent_rwcounter << TLOG_ENDL;
