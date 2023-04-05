@@ -1,3 +1,4 @@
+
 //
 // sbndaq-artdaq/Generators/SBND/NevisTPC_generatorBase.cc (D.Cianci,W.Badgett)
 //
@@ -6,6 +7,8 @@
 
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC_generatorBase.hh"
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
+
+using artdaq::MetricMode;
 
 #include <fstream>
 #include <iomanip>
@@ -45,12 +48,23 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
 
   desyncCrash = ps_.get<bool>("desyncCrash",false);
+
+  current_subrun_ = 0;
+  events_seen_ = 0;
+
+  // intialize event counting
+  _subrun_event_0 = -1;
+  _this_event = -1;
+
   
   // Build our buffer
   if( CircularBufferSizeBytes_%sizeof(uint16_t)!=0)
     TRACE(TWARNING,"NevisTPC::Initialize() : CircularBufferSize_ not multiple of size uint16_t. Rounding down.");
   CircularBuffer_ = CircularBuffer(CircularBufferSizeBytes_/sizeof(uint16_t));
   
+  // Initialize our buffer 
+  CircularBuffer_.Init();
+
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&NevisTPC_generatorBase::GetData,this);
   auto worker_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(functor,"GetDataWorkerThread"));
@@ -59,21 +73,23 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 }
 
 void sbndaq::NevisTPC_generatorBase::start(){
-  
-  current_subrun_ = 0;
-  events_seen_ = 0;
+  TLOG(TLVL_DEBUG) << "************** Called 1. start transition";  
+
+  //  current_subrun_ = 0;
+  //events_seen_ = 0;
 
   // intialize event counting
-  _subrun_event_0 = -1;
-  _this_event = -1;
+  // _subrun_event_0 = -1;
+  //_this_event = -1;
   
-  ConfigureStart();
+  //  ConfigureStart();
   
   // Initialize our buffer
-  CircularBuffer_.Init();	
-  
+  // CircularBuffer_.Init();	  
+
   // Magically start getdata thread
   GetData_thread_->start();
+
 }
 
 void sbndaq::NevisTPC_generatorBase::stopAll(){
@@ -126,10 +142,15 @@ size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
 bool sbndaq::NevisTPC_generatorBase::GetData(){
   
   TRACE(TGETDATA,"GetData() called");
+  //TLOG(TLVL_DEBUG) << "************** Called 2. GetData thread";
+  //TLOG(TLVL_DEBUG) << "************** Called 3. Going to read FEM Crate data";
   
   size_t n_words = GetFEMCrateData()/sizeof(uint16_t);
   TRACE(TGETDATA,"GetFEMCrateData() return %lu words",n_words);
+  //  TLOG(TLVL_DEBUG) << "************* Called 8. Read n_words" << n_words ;
+
   if(n_words==0)
+
       return false;
 
   size_t new_buffer_size = CircularBuffer_.Insert(n_words,DMABuffer_);	
@@ -140,7 +161,7 @@ bool sbndaq::NevisTPC_generatorBase::GetData(){
 }
 
 bool sbndaq::NevisTPC_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
-  
+  //this function doesn't run over event by event. 
   while(true)
     if(!FillFragment(frags)) break;
   
@@ -299,6 +320,8 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   TRACE(TFILLFRAG,"Created fragment with sequenceID=%lu, fragmentID=%u, TimeStamp=%lu",
 	frags.back()->sequenceID(),frags.back()->fragmentID(),frags.back()->timestamp());
 
+
+
   new_buffer_size = CircularBuffer_.Erase(expected_size/sizeof(uint16_t));
   TRACE(TFILLFRAG,"Successfully erased %lu words. Buffer occupancy now %lu",
 	expected_size/sizeof(uint16_t),new_buffer_size);
@@ -315,6 +338,22 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     frags.emplace_back(std::move(endOfSubrunFrag));
   }
 
-  ++events_seen_;
+  if (artdaq::Globals::metricMan_) {
+
+    //    for(size_t ifrag=0; ifrag<=frags.size(); ifrag++){
+    for(const auto & frag : frags) {
+      //Number of fragments accumulated with specific fragmentID , accumulate counter increments by a number of fragments                                                    
+      artdaq::Globals::metricMan_->sendMetric("fragment."+std::to_string(frag->fragmentID()), 1, "fragment",0,artdaq::MetricMode::Accumulate);
+    }
+
+
+
+    //    artdaq::Globals::metricMan_->sendMetric("Nevis Fragmemt size: ", frags.size(),"Fragments", 0, artdaq::MetricMode::Average); //Rate, Maximum, LastPoint            
+    // artdaq::Globals::metricMan_->sendMetric("Nevis Fragmemt ID: ", frags.back()->fragmentID(),"Fragments", 0, artdaq::MetricMode::Average);
+    //artdaq::Globals::metricMan_->sendMetric("Nevis Fragmemt rate: ", frags.size(),"Fragments", 0, artdaq::MetricMode::Rate); //Rate, Maximum, LastPoint                    
+
+  }
+
+  ++events_seen_; // hoe many times, fragments are successfully transferred to board reader, not used in this code anywhere, just a counter.
   return true;
 }

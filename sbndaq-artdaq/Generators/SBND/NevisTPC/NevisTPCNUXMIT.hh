@@ -30,6 +30,13 @@ namespace sbndaq {
     
   private:
     void ConfigureStart();
+    void FireTriggers(){
+      TLOG(TLVL_WARNING)<< "This function is not implemented. Ask Daisy K. for details.";
+};
+    void ReportTPCCrateInfo(){
+      TLOG(TLVL_WARNING) << "This function is not implemented. Ask Daisy K. for details.";
+    };
+
     void ConfigureStop();
     
     size_t GetFEMCrateData();

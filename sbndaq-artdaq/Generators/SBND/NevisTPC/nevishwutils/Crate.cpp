@@ -192,6 +192,7 @@ namespace nevistpc{
       }
     */
     
+
     getTriggerModule()->enableTriggers();
     getTriggerModule()->runOnSyncOn();
 
@@ -202,6 +203,8 @@ namespace nevistpc{
   // It would be good to consolidate all the Crate::run... functions into a single one, with portions enabled by fcl parameters
   void Crate::run2Stream(fhicl::ParameterSet const& _p){ 
     
+    TLOG(TLVL_INFO) << "RUN 2 STREAM *****************************************************";
+
     fhicl::ParameterSet crateconfig;
     // NOTE: the name of the block in the fcl file must match 
     if( ! _p.get_if_present<fhicl::ParameterSet> ( "nevis_crate", crateconfig ) ){
@@ -299,7 +302,8 @@ namespace nevistpc{
     getControllerModule()->runOff(); // using Controller triggers
     //getControllerModule()->testOff(); // using CALIB triggers
     // To do: move instructions below to fcl
-    getControllerModule()->setFrameLength(0xffff & 20479);
+    //getControllerModule()->setFrameLength(0xffff & 20479);
+    getControllerModule()->setFrameLength(0xffff & 28799);
     getControllerModule()->setNUTrigPosition(0xa);
     
     // Load xmit firmware
@@ -376,8 +380,9 @@ namespace nevistpc{
       getTriggerModule()->setDeadtimeSize(0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20479);
-      ///////////////////////
+      //      getTriggerModule()->setFrameLength(0xffff & 20479);
+      //Shorter readout window
+      getTriggerModule()->setFrameLength(0xffff & 28799); // for framesize = drift size   
 
       getTriggerModule()->disableTriggers(false);
       // getTriggerModule()->setDeadtimeSize(100); using CALIB triggers
@@ -426,10 +431,11 @@ namespace nevistpc{
       
       }
     */
-    
-    getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
 
+    
+      getTriggerModule()->enableTriggers();
+      getTriggerModule()->runOnSyncOn();
+    
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
 
@@ -465,7 +471,9 @@ namespace nevistpc{
       getTriggerModule()->setDeadtimeSize(0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20479);
+      //      getTriggerModule()->setFrameLength(0xffff & 20479);
+      getTriggerModule()->setFrameLength(0xffff & 28799);
+
       //getTriggerModule()->runOnSyncOn(); //v
       //usleep(5000);
       getTriggerModule()->disableTriggers(false);
@@ -504,8 +512,9 @@ namespace nevistpc{
     getXMITReader()->setupTXModeRegister();
     getControllerModule()->setupTXModeRegister();
 
-    getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+
+      getTriggerModule()->enableTriggers();
+      getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }

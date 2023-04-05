@@ -272,12 +272,17 @@ namespace nevistpc {
   void XMITModule::readStatus()
   {
     loadStatus();
-    
+   
     getStatus().report();
-    
     TLOG(TLVL_INFO) << "XMITModule: called " <<  __func__ ;
   }
-  
+
+  void XMITModule::reportStatus()
+  {
+    getStatus().report();
+    TLOG(TLVL_INFO) << "XMITModule: called " <<  __func__ ;
+
+  }
   void XMITModule::resetLink()
   {
     controller()->send ( ControlDataPacket( _slot_number, device::XMIT_CHIP, xmit_chip::XMIT_LINK_RESET, 1 ) );

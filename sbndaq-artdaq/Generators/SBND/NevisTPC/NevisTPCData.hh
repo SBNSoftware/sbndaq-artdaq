@@ -19,16 +19,20 @@ namespace sbndaq {
 
   		private:
 
-			void ConfigureStart();
-			void ConfigureStop(){};
+	  void ConfigureStart();
+	  void FireTriggers(){};
+	  void ReportTPCCrateInfo(){
+	    TLOG(TLVL_WARNING) << "This function is not implemented. Ask Daisy K. for details.";
+	  };
+	  void ConfigureStop(){};
 
-			size_t GetFEMCrateData();
+	  size_t GetFEMCrateData();
 
-			std::mt19937 engine_;
-			int data_wait_time_;
-			size_t events_per_packet_;
-			unsigned int time_increment_per_event_;
-			int cp;
+	  std::mt19937 engine_;
+	  int data_wait_time_;
+	  size_t events_per_packet_;
+	  unsigned int time_increment_per_event_;
+	  int cp;
 	  uint32_t local_event_number;
 	};
 }

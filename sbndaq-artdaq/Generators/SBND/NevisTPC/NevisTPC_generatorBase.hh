@@ -41,8 +41,11 @@ namespace sbndaq
     
     //These functions MUST be defined by the derived classes
     virtual void ConfigureStart() = 0; //called in start()
+    virtual void FireTriggers() = 0;
+    virtual void ReportTPCCrateInfo() = 0;
     virtual void ConfigureStop() = 0;  //called in stop()
-    
+       
+
     //gets the data. Output is size of data filled. Input is FEM ID.	 	
     virtual size_t GetFEMCrateData() = 0;
     virtual int    GetDataSetup() { return 1; }

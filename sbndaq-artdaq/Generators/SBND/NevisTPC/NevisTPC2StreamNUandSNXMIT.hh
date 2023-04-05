@@ -27,11 +27,20 @@ namespace sbndaq {
       fNUXMITReader( new nevistpc::XMITReader("nu_xmit_reader", _p) ),
       fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) )
     {
+      ConfigureStart();
     }
     virtual ~NevisTPC2StreamNUandSNXMIT() {}
     
   private:
     void ConfigureStart();
+    void FireTriggers(){
+      TLOG(TLVL_WARNING)<< "This function is not implemented. Ask Daisy K. for details.";
+    };
+
+    void ReportTPCCrateInfo(){
+      TLOG(TLVL_WARNING)<< "This function is not implemented. Ask Daisy K. for details.";
+    };
+
     void ConfigureStop();
     
     size_t GetFEMCrateData();

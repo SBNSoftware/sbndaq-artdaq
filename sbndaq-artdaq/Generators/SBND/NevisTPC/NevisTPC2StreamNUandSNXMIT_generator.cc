@@ -69,10 +69,10 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   auto GetSNData_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( GetSNData_functor, "GetSNDataWorkerThread" ) );
   auto GetSNData_worker = share::WorkerThread::createWorkerThread( GetSNData_worker_functor );
   GetSNData_thread_.swap(GetSNData_worker);
-  if( fSNReadout ){
-    GetSNData_thread_->start();
-    TLOG(TLVL_INFO) << "Started GetSNData thread" << TLOG_ENDL;
-  }
+   if( fSNReadout ){
+  GetSNData_thread_->start();
+   TLOG(TLVL_INFO) << "Started GetSNData thread" << TLOG_ENDL;
+   }
 
   // Set up worker WriteSNData thread.
   share::ThreadFunctor WriteSNData_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::WriteSNData, this );
@@ -80,9 +80,9 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   auto WriteSNData_worker = share::WorkerThread::createWorkerThread( WriteSNData_worker_functor );
   WriteSNData_thread_.swap(WriteSNData_worker);
   if( fSNReadout ){
-    WriteSNData_thread_->start();
-    TLOG(TLVL_INFO) << "Started WriteSNData thread" << TLOG_ENDL;
-  }
+   WriteSNData_thread_->start();
+   TLOG(TLVL_INFO) << "Started WriteSNData thread" << TLOG_ENDL;
+   }
 
   // Set up worker MonitorCrate thread.
   share::ThreadFunctor MonitorCrate_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::MonitorCrate, this );
@@ -92,6 +92,8 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   MonitorCrate_thread_->start();
   TLOG(TLVL_INFO) << "Started MonitorCrate thread" << TLOG_ENDL;
 
+
+
   // Set up worker FireCALIB thread.
   share::ThreadFunctor FireCALIB_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::FireCALIB, this );
   auto FireCALIB_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( FireCALIB_functor, "FireCALIBWorkerThread" ) );
@@ -99,8 +101,11 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   FireCALIB_thread_.swap(FireCALIB_worker);
   if( fCALIBFreq > 0 ){
     FireCALIB_thread_->start();
-    TLOG(TLVL_INFO) << "Started FireCALIB thread" << TLOG_ENDL;
-  }
+   TLOG(TLVL_INFO) << "Started FireCALIB thread" << TLOG_ENDL;
+   }
+
+
+
   // Set up worker FireController thread.
   share::ThreadFunctor FireController_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::FireController, this );
   auto FireController_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( FireController_functor, "FireControllerWorkerThread" ) );
@@ -114,6 +119,49 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   TLOG(TLVL_INFO)<< "Successful " << __func__ ; 
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
 }
+
+/*
+//Test only to fire triggers
+void sbndaq::NevisTPC2StreamNUandSNXMIT::FireTriggers() {
+  //fCALIBFreq = ps_.get<double>("CALIBTriggerFrequency", -1);
+  //fSNReadout = ps_.get<bool>("DoSNReadout", true);
+  fCrate = std::make_shared<nevistpc::Crate>( fControllerModule, fNUXMITReader, ps_, fSNXMITReader );
+   fCrate->getXMITModule()->readStatus();
+
+   //  TLOG(TLVL_INFO) << "FireTrigger: function not implemented at the moment" <<  TLOG_ENDL; 
+
+  fCrate->getTriggerModule()->enableTriggers();
+  fCrate->getTriggerModule()->runOnSyncOn();
+
+   if( fSNReadout ){
+     GetSNData_thread_->start();
+     TLOG(TLVL_INFO) << "Started GetSNData thread" << TLOG_ENDL;
+   }
+   if( fSNReadout ){
+     WriteSNData_thread_->start();
+     TLOG(TLVL_INFO) << "Started WriteSNData thread" << TLOG_ENDL;
+   }
+  
+   //MonitorCrate_thread_->start();
+   //TLOG(TLVL_INFO) << "Started MonitorCrate thread" << TLOG_ENDL;
+ if( fCALIBFreq > 0 ){                                                                                              
+   FireCALIB_thread_->start();                                                                                          
+   TLOG(TLVL_INFO) << "Started FireCALIB thread" << TLOG_ENDL;                                                         
+   
+    } 
+  //fCrate->getTriggerModule()->enableTriggers();
+  //fCrate->getTriggerModule()->runOnSyncOn();
+  //  MonitorCrate_thread_->start();
+
+}
+
+void sbndaq::NevisTPC2StreamNUandSNXMIT::ReportTPCCrateInfo() {
+  fCrate = std::make_shared<nevistpc::Crate>( fControllerModule, fNUXMITReader, ps_, fSNXMITReader );
+  fCrate->getXMITModule()->reportStatus();
+
+}
+*/
+
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
   if( fSNReadout ){
@@ -142,11 +190,18 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::FireCALIB() {
   static int fCALIBPeriod_us = 1./fCALIBFreq * 1e6;
   static std::chrono::steady_clock::time_point next_trigger_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fCALIBPeriod_us)};
-  if( next_trigger_time > std::chrono::steady_clock::now() ) return false;
 
+  auto now = std::chrono::steady_clock::now();
+  int elapsed_ticks = static_cast<int>(now.time_since_epoch().count());
+  TLOG(TLVL_INFO) << " time now 1: " << elapsed_ticks ;
+
+  if( next_trigger_time > std::chrono::steady_clock::now() ) return false;
+  TLOG(TLVL_INFO) << " time now 2: " << elapsed_ticks ;
   fCrate->getTriggerModule()->sendOutCalibTrigger();
+
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "CALIB Trigger ";
   TLOG(TLVL_INFO) << "Called " << __func__ ;
+
   next_trigger_time = std::chrono::steady_clock::now() + std::chrono::microseconds( fCALIBPeriod_us );
   usleep(10000);
 
@@ -183,6 +238,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::MonitorCrate() {
 size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
+  TLOG(TLVL_DEBUG) << "************** Called 4. Get femcratedata in board reader";
 
   // Just for tests
   // Taken from NevisTPCFile_generator and adapted to use an XMITReader
@@ -196,8 +252,17 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   //std::copy(buffer, buffer + wordsRead, &DMABuffer_[0]);
 
   //if( fDumpBinary ) binFileNU.write( (char*)buffer, fChunkSize );
+  //  TLOG(TLVL_DEBUG) << "************* Called 5. Number of bytes read (in get femcratedata):  " << bytesRead;
+
+
+  //  TLOG(TLVL_DEBUG) << "************* Called 6. Memory address: " << &DMABuffer_[0] ;
+
+
   if( fDumpBinary ) binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
+
+  binFileNU.flush();
   
+  TLOG(TLVL_DEBUG) << "************* Called 7. Read from circular buffer and  Wrote to binary file";
   //delete[] buffer;
 
   return bytesRead;
@@ -234,10 +299,14 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
   binFileSN.write((char*)SNBuffer_, fSNChunkSize );
 
+  binFileSN.flush();
+
   size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize);
   TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize << " . SN Buffer occupancy now " << new_buffer_size;
 
   return true;
 }
+
+
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::NevisTPC2StreamNUandSNXMIT)

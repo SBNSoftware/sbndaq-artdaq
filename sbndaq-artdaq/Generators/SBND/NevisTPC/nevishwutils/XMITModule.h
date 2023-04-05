@@ -133,6 +133,7 @@ namespace nevistpc {
     void uploadTestDataPacket ( data_payload_t const& packet );
     void loadStatus();
     void readStatus();
+    void reportStatus();
     XMITModuleStatus const& getStatus() const { return _status; }
 
     void resetLink();
