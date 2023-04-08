@@ -1739,7 +1739,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     if( readoutwindow_event_counter < last_sent_rwcounter && last_sent_rwcounter < max_rwcounter )
       {
-	TLOG(TLVL_ERROR) << "SequnceIDs processed out of order!! "
+	TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! "
 			 << readoutwindow_event_counter << " < " << last_sent_rwcounter << TLOG_ENDL;
       }
     if( last_sent_ts > ts_frag)
