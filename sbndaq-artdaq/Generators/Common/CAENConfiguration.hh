@@ -48,7 +48,6 @@ class CAENConfiguration
     int  debugLevel;
     int  runSyncMode;
     int  outputSignalMode;
-    int  eventCounterWarning;
     int  memoryAlmostFull;
     int  readoutMode;
     int  analogMode;
