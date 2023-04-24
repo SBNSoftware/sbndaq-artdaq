@@ -33,7 +33,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   debugLevel(0),
   runSyncMode(0),
   outputSignalMode(0),
-  eventCounterWarning(0),
   memoryAlmostFull(0),
   analogMode(0),
   testPattern(0),
@@ -62,7 +61,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   debugLevel           = ps.get<int>("debugLevel");
   postPercent          = ps.get<int>("postPercent");
   irqWaitTime          = ps.get<int>("irqWaitTime");
-  eventCounterWarning  = ps.get<int>("eventCounterWarning");
   memoryAlmostFull     = ps.get<int>("memoryAlmostFull");
   readoutMode          = ps.get<int>("readoutMode");
   analogMode           = ps.get<int>("analogMode");
@@ -139,7 +137,6 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  AcqMode               " << e.acqMode << " " 
      << sbndaq::CAENDecoder::AcquisitionMode((CAEN_DGTZ_AcqMode_t)e.acqMode) << std::endl;
   os << "  DebugLevel            " << e.debugLevel << std::endl;
-  os << "  EventCounterWarning   " << e.eventCounterWarning << std::endl;
   os << "  MemoryAlmostFull      " << e.memoryAlmostFull << std::endl;
   os << "  ReadoutMode           " << e.readoutMode << " " 
      << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;

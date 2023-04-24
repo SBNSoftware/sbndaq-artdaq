@@ -37,7 +37,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   loadConfiguration(ps);
   
   last_rcvd_rwcounter=0x0;
-  last_sent_rwcounter=0x1;
+  last_sent_seqid=0x1;
   last_sent_ts=0;
   CAEN_DGTZ_ErrorCode retcode;
 
@@ -611,19 +611,6 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
 
 // Animesh add ends
 
-// GVS: commented old ConfigureSelfTriggerMode()
-/* void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
-{
-  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
-  uint32_t data,readBack;
-
-  retcod = CAEN_DGTZ_SetChannelSelfTrigger(fHandle,
-					   (CAEN_DGTZ_TriggerMode_t)fSelfTriggerMode,
-					   fSelfTriggerMask);
-  sbndaq::CAENDecoder::checkError(retcod,"SetSelfTriggerMask",fBoardID);
-}
-*/
-
 // GVS: new ConfigureSelfTriggerMode() function
  void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 {
@@ -1028,20 +1015,8 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   }
 
   // for ICARUS
-  if(fModeLVDS!=0){
-/*
-    TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
-    retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH,fCAEN.triggerPulseWidth);
-    sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
-    // Readback must be channel by channel (see reg doc)
-    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
-      {
-	uint32_t address = TRG_OUT_WIDTH_CH | ( ch << 8 );  
-	retcode = CAEN_DGTZ_ReadRegister(fHandle,address,&readback);
-	CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
-      }*/    
-    ConfigureLVDS();
-  }
+  if(fModeLVDS!=0){ ConfigureLVDS();  }
+
   ConfigureSelfTriggerMode();
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;
@@ -1179,7 +1154,7 @@ void sbndaq::CAENV1730Readout::start()
   
   ConfigureDataBuffer();
   total_data_size = 0;
-  last_sent_rwcounter = 0;
+  last_sent_seqid = 0;
   
   if((CAEN_DGTZ_AcqMode_t)(fCAEN.acqMode)==CAEN_DGTZ_AcqMode_t::CAEN_DGTZ_SW_CONTROLLED)
     {
@@ -1190,6 +1165,7 @@ void sbndaq::CAENV1730Readout::start()
     }
   
   fEvCounter=0;
+  fOverflowCounter=0;
   CAEN_DGTZ_ErrorCode retcod;
 
   // Animesh add ADC registers here
@@ -1439,7 +1415,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     auto block =  fPoolBuffer.takeFreeBlock();
     if(!block) {
       TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		       << "PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
+		       << "PoolBuffer is empty; last received trigger eventCounter=" <<last_rcvd_rwcounter;
       TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
 		       << "PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
                        << "(FragID=" << fFragmentID << ")"
@@ -1559,11 +1535,12 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
 
 
-    //check trigger counter gaps
+    //check trigger event counter gaps: this is a 24-bit counter in the CAEN board
+    //if the run is long, it can overflow --> do not throw errors in that case
     auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
-    if( readoutwindow_trigger_counter_gap > 1u ){
+    if( readoutwindow_trigger_counter_gap > 1u && last_rcvd_rwcounter < max_rwcounter ){
       TLOG (TLVL_DEBUG) << "(FragID=" << fFragmentID << ")"
-			<< "Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
+			<< "Missing triggers; previous trigger eventCounter / gap  = " << last_rcvd_rwcounter << " / "
 			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
 			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
     }    
@@ -1599,17 +1576,17 @@ bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments){
 bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & fragments){
   TLOG(TGETNEXT) << "Begin of readSingleWindowFragments()" ;
 
-	static auto start= std::chrono::steady_clock::now();
+  static auto start= std::chrono::steady_clock::now();
 
- 	std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
+  std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
 
   if (delta.count() >0.005*fGetNextFragmentBunchSize) {
      metricMan->sendMetric("Laggy getNext",1,"count",1,artdaq::MetricMode::Accumulate);
-     TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_rwcounter;
+     TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_seqid;
    }
 
   if(fPoolBuffer.activeBlockCount() == 0){
-    TLOG(TGETNEXT) << "PoolBuffer has no data.  Laast last seen fragment sequenceID=" <<last_sent_rwcounter
+    TLOG(TGETNEXT) << "PoolBuffer has no data.  Laast last seen fragment sequenceID=" << last_sent_seqid
                    << "; Sleep for " << fGetNextSleep << " us and return.";
     ::usleep(fGetNextSleep);
     start= std::chrono::steady_clock::now();
@@ -1631,19 +1608,22 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   while(fPoolBuffer.activeBlockCount()){
 
     start= std::chrono::steady_clock::now();
-//    TLOG(21) << "b4 FragmentBytes";
     auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,fEvCounter,fFragmentID,sbndaq::detail::FragmentType::CAENV1730,metadata);
 
 
     using sbndaq::PoolBuffer;
     PoolBuffer::DataRange<decltype(artdaq::Fragment())> range{fragment_uptr->dataBegin(),fragment_uptr->dataEnd()};
 
-//	TLOG(21) << "b4 fPoolBuffer.read(range)";
     if(!fPoolBuffer.read(range)) break;
 
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(fragment_uptr->dataBeginBytes());
+   
+    // get eventCounter, which is the key to get the correct timestamp from the map
+    // for longer runs it can overflow (24 bit) --> play safe and don't use it as sequence id
+    // build sequence id keeping track of overflows (avoids repeated seqIDs in the same run)
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
-    fragment_uptr->setSequenceID(readoutwindow_event_counter);
+    uint64_t readoutwindow_sequence_id = uint64_t{readoutwindow_event_counter + fOverflowCounter*(max_rwcounter+1u)};
+    fragment_uptr->setSequenceID(readoutwindow_sequence_id);
 
     size_t ts_count;
     {
@@ -1653,7 +1633,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     int ts_loop=0;
 
     while(ts_loop<3 && ts_count==0){
-      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
 			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
       ts_loop++;
@@ -1688,7 +1668,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       fTimestampMap.erase(readoutwindow_event_counter);
     }
     else{
-      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
 		       << " Will generate new one now...";
 
       if(fUseTimeTagForTimeStamp){
@@ -1743,25 +1723,26 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     fragment_uptr->setTimestamp( ts_frag );
 
-    auto readoutwindow_event_counter_gap= readoutwindow_event_counter - last_sent_rwcounter;
+    // check for possible gaps in the sequence IDs: compare current one with last sent
+    // throw errors if gap > 1 or order is not correct
+    auto readoutwindow_sequence_id_gap= readoutwindow_sequence_id - last_sent_seqid;
 
-    TLOG(TMAKEFRAG)<<"Created fragment " << fFragmentID << " for event " << readoutwindow_event_counter
+    TLOG(TMAKEFRAG)<<"Created fragment " << fFragmentID << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
                    << " triggerTimeTag " << header->triggerTimeTag << " ts=" << ts_frag;
-
     
-    if( readoutwindow_event_counter_gap > 1u ){
-      if ( last_sent_rwcounter > 0 )
+    if( readoutwindow_sequence_id_gap > 1u ){
+      if ( last_sent_seqid > 0 )
       {
-	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
-                        << readoutwindow_event_counter_gap;
-	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / "
+                        << readoutwindow_sequence_id_gap;
+	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
       }
     }
 
-    if( readoutwindow_event_counter < last_sent_rwcounter )
+    if( readoutwindow_sequence_id < last_sent_seqid )
       {
-	TLOG(TLVL_ERROR) << "SequnceIDs processed out of order!! "
-			 << readoutwindow_event_counter << " < " << last_sent_rwcounter << TLOG_ENDL;
+	TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! "
+			 << readoutwindow_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
       }
     if( last_sent_ts > ts_frag)
       {
@@ -1771,9 +1752,13 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     fragments.emplace_back(nullptr);
     std::swap(fragments.back(),fragment_uptr);
-    
+   
+    // keep track of CAEN event counter overflows
+    // this is important to avoid repeating sequenceIDs
+    if( readoutwindow_event_counter == max_rwcounter ) fOverflowCounter++;
     fEvCounter++;
-    last_sent_rwcounter = readoutwindow_event_counter;
+
+    last_sent_seqid = readoutwindow_sequence_id;
     last_sent_ts = ts_frag;
     delta = std::chrono::steady_clock::now()-start;
 
@@ -1782,7 +1767,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     if (delta.count() >0.0005 ) {
       metricMan->sendMetric("Laggy Fragments",1,"frags",1,artdaq::MetricMode::Maximum);
-      TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_rwcounter <<  " took " << delta.count()*1000 << " ms";
+      TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_seqid <<  " took " << delta.count()*1000 << " ms";
 //TRACE_CNTL("modeM", 0);
     }
   }
