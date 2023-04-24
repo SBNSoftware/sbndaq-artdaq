@@ -667,14 +667,10 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
      }
   
    
-     // GVS: read TRG_OUT register to get enabled/disabled pair of channels.
+     // GVS: read TRG_OUT register to monitor enabled/disabled pair of channels.
      retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_TRG_OUT_CONTROL, &bitpair);
-     TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel TRG-OUT address 0x8110, start value: 0x" << std::hex << data << std::dec;
-				   
-     bitpair &= 0xFF;
-				   
-     retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data2);
-     TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel TRG-OUT address 0x8110, final value: 0x" << std::hex << data2 << std::dec; 
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel TRG-OUT address 0x8110, value: 0x" << std::hex << bitpair << std::dec;
+				    
 
 
      /* Set Majority Mode and Majority Coincidence Window */
@@ -684,7 +680,7 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
      TLOG_ARB(TCONFIG,TRACE_NAME)  << " Set Majority Level to " << fCAEN.majorityLevel << TLOG_ENDL;
      TLOG_ARB(TCONFIG,TRACE_NAME)  << " Set Maj Coincidence Window to " << fCAEN.majorityCoincidenceWindow << TLOG_ENDL;
 				   
-     data |= ((fCAEN.majorityLevel & 0x7)<<24) + ((fCAEN.majorityCoincidenceWindow & 0xF) <<20) + bitpair;
+     data |= ((fCAEN.majorityLevel & 0x7)<<24) + ((fCAEN.majorityCoincidenceWindow & 0xF) <<20);
 				   
      retcod = CAEN_DGTZ_WriteRegister(fHandle,GLB_TRG_MASK, data);
 
