@@ -102,18 +102,35 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
     
     size_t nChannels = md->nChannels; //fixme
     fWvfmsVec.resize(nChannels);
-    
+
+    const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() 
+								   + sizeof(CAENV1730EventHeader));
+    std::cout<<" DATA BEGIN: "<<data_begin<<std::endl;
     //use that to get the number of 16-bit words for each channel
     size_t n_samples = (ev_size - sizeof(CAENV1730EventHeader)/sizeof(uint32_t))*2/nChannels;
     const uint16_t* data = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes() + sizeof(CAENV1730EventHeader));
-    
+    std::cout<<"NCh:"<<nChannels<<" nSamples: "<<n_samples<<std::endl;
+
+    const uint16_t* value_ptr =  data_begin;
+    uint16_t value = 0;
+
     for(size_t i_ch=0; i_ch<nChannels; ++i_ch){
       fWvfmsVec[i_ch].resize(n_samples);
       
       //fill...
+      size_t ch_offset = i_ch * n_samples;
+      std::cout<<"WFANA "<< i_ch << " off="<<ch_offset<<std::endl;
       for (size_t i_t=0; i_t<n_samples; ++i_t){
-	if(i_t%2==0) fWvfmsVec[i_ch][i_t] = *(data+n_samples+i_t+1);
-	else if(i_t%2==1) fWvfmsVec[i_ch][i_t] = *(data+n_samples+i_t-1);
+	//std::cout<<"NNN "<<n_samples<<std::endl;
+	/*if(i_t%2==0) {
+	  fWvfmsVec[i_ch][i_t] = *(data+ch_offset+i_t+1);
+	  if(i_t<15) std::cout<<*(data+ch_offset+i_t+1)<<std::endl;
+	}
+	else if(i_t%2==1) fWvfmsVec[i_ch][i_t] = *(data+ch_offset+i_t-1);*/
+	value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
+	value = *(value_ptr);
+	//std::cout<<"WFANA "<< i_ch << " off="<<ch_offset<<std::endl;
+	fWvfmsVec[i_ch][i_t] = value;
       }
 
       //by here you have a vector<uint16_t> that is the waveform, in fWvfmsVec[i_ch]
@@ -128,6 +145,8 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
 	wvfm_rms += (val-wvfm_mean)*(val-wvfm_mean);
       wvfm_rms = std::sqrt(wvfm_rms/fWvfmsVec[i_ch].size());
       
+      std::cout<<"Temp Monitor..ch "<<i_ch<<":"<<md->chTemps[i_ch]<<std::endl;
+ 
       nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,
 		    i_ch,wvfm_mean,wvfm_rms,md->chTemps[i_ch]);
     }
