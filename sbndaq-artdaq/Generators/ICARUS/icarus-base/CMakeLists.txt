@@ -1,5 +1,7 @@
 link_directories($ENV{CAENCOMM_LIB})
 
+cet_add_compiler_flags(-Wno-deprecated-declarations )
+
 cet_make_library(
   LIBRARY_NAME
     icarus-base_A2795Board
