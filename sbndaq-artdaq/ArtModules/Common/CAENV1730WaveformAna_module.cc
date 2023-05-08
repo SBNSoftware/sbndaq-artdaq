@@ -46,9 +46,11 @@ public:
 private:
   
   TNtuple* nt_header; //Ntuple header
-  TNtuple* nt_wvfm;
+  TTree* nt_wvfm;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
   
+  int fArt_ev, fCaen_ev, fCh;
+  double fCaen_ev_tts, fPed, fRMS, fTemp, fStampTime;
 };
 
 //Define the constructor
@@ -57,7 +59,17 @@ sbndaq::CAENV1730WaveformAna::CAENV1730WaveformAna(fhicl::ParameterSet const & p
 {
   art::ServiceHandle<art::TFileService> tfs; //pointer to a file named tfs
   nt_header = tfs->make<TNtuple>("nt_header","CAENV1730 Header Ntuple","art_ev:caen_ev:caen_ev_tts");
-  nt_wvfm = tfs->make<TNtuple>("nt_wvfm","Waveform information Ntuple","art_ev:caen_ev:caen_ev_tts:ch:ped:rms:temp");
+  //nt_wvfm = tfs->make<TNtuple>("nt_wvfm","Waveform information Ntuple","art_ev:caen_ev:caen_ev_tts:ch:ped:rms:temp:stamp_time");
+  nt_wvfm = tfs->make<TTree>("nt_wvfm","Waveform information TTree");
+  nt_wvfm->Branch("art_ev",&fArt_ev,"art_ev/I");
+  nt_wvfm->Branch("caen_ev",&fCaen_ev,"caen_ev/I");
+  nt_wvfm->Branch("caen_ev_tts",&fCaen_ev_tts,"caen_ev_tts/D");
+  nt_wvfm->Branch("ch",&fCh,"ch/I");
+  nt_wvfm->Branch("ped",&fPed,"ped/D");
+  nt_wvfm->Branch("rms",&fRMS,"rms/D");
+  nt_wvfm->Branch("temp",&fTemp,"temp/D");
+  nt_wvfm->Branch("stamp_time",&fStampTime,"stamp_time/D");
+
 }
 
 sbndaq::CAENV1730WaveformAna::~CAENV1730WaveformAna()
@@ -135,20 +147,26 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
 
       //by here you have a vector<uint16_t> that is the waveform, in fWvfmsVec[i_ch]
 
-      
+      fArt_ev = eventNumber;
+      fCaen_ev = header.eventCounter;
+      fCaen_ev_tts = header.triggerTimeTag;
+      fCh = i_ch;
       //get mean
-      float wvfm_mean = std::accumulate(fWvfmsVec[i_ch].begin(),fWvfmsVec[i_ch].end(),0.0) / fWvfmsVec[i_ch].size();
+      fPed = std::accumulate(fWvfmsVec[i_ch].begin(),fWvfmsVec[i_ch].end(),0.0) / fWvfmsVec[i_ch].size();
       
       //get rms
-      float wvfm_rms=0.0;
+      fRMS =0.0;
       for(auto const& val : fWvfmsVec[i_ch])
-	wvfm_rms += (val-wvfm_mean)*(val-wvfm_mean);
-      wvfm_rms = std::sqrt(wvfm_rms/fWvfmsVec[i_ch].size());
+	fRMS += (val-fPed)*(val-fPed);
+      fRMS = std::sqrt(fRMS/fWvfmsVec[i_ch].size());
       
-      std::cout<<"Temp Monitor..ch "<<i_ch<<":"<<md->chTemps[i_ch]<<std::endl;
+      fTemp = md->chTemps[i_ch];
+      fStampTime = md->timeStampSec;
+      
+      std::cout<<"Temp Monitor..ch "<<i_ch<<":"<<fTemp<<" TS:"<<fStampTime<<std::endl;
  
-      nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,
-		    i_ch,wvfm_mean,wvfm_rms,md->chTemps[i_ch]);
+      //nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,i_ch,wvfm_mean,wvfm_rms,md->chTemps[i_ch], ts);
+      nt_wvfm->Fill();
     }
   }
   
