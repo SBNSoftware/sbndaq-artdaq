@@ -63,6 +63,7 @@ class CAENConfiguration
     int  triggerLogic;  
     int  majorityLevel; 
     int  majorityCoincidenceWindow;
+    uint32_t  maxTemp;
 
     void print(std::ostream & os = std::cout);
 };

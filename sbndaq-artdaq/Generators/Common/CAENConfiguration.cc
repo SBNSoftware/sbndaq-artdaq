@@ -39,7 +39,8 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   //ovthValue(0),
   triggerLogic(0),
   majorityLevel(0),
-  majorityCoincidenceWindow(0)
+  majorityCoincidenceWindow(0),
+  maxTemp(0)
 {
   link                 = ps.get<int>("link");
   enableReadout        = ps.get<int>("enableReadout");
@@ -69,6 +70,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   triggerLogic         = ps.get<int>("triggerLogic");  
   majorityLevel        = ps.get<int>("majorityLevel"); 
   majorityCoincidenceWindow = ps.get<int>("majorityCoincidenceWindow"); 
+  maxTemp              = ps.get<int>("maxTempCelsius");
 
   char tag[1024];
   channelEnableMask = 0;
@@ -146,6 +148,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  TriggerLogic          " << e.triggerLogic << std::endl;
   os << "  MajorityLevel         " << e.majorityLevel << std::endl;
   os << "  MajorityCoincidenceWindow " << e.majorityCoincidenceWindow << std::endl;
+  os << "  MaxTempCelsius        " << e.maxTemp << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )

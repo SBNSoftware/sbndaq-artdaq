@@ -1306,9 +1306,9 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
 			  artdaq::MetricMode::Average);
 
-    if( ch_temps[ch] > 65 ){ // digitizers shut down at 70 celsius
+    if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
       TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
-                       << "Temperature above 65 degrees Celsius for channel " << ch
+                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
 		       << TLOG_ENDL;
     }
 
