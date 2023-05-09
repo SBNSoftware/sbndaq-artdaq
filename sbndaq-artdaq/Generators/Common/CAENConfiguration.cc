@@ -13,7 +13,6 @@
 // Constructor
 sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   link(0),
-  firstBoardId(0),
   nBoards(0),
   enableReadout(0),
   boardId(0),
@@ -21,8 +20,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   postPercent(0),
   irqWaitTime(0),
   allowTriggerOverlap(true),
-  usePedestals(0),
-  dacValue(0),
   dynamicRange(0),
   ioLevel(0),
   nChannels(0),
@@ -32,8 +29,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   acqMode(0),
   debugLevel(0),
   runSyncMode(0),
-  outputSignalMode(0),
-  memoryAlmostFull(0),
   analogMode(0),
   testPattern(0),
   //ovthValue(0),
@@ -47,10 +42,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   boardId              = ps.get<int>("board_id");
   recordLength         = ps.get<int>("recordLength");
   runSyncMode          = ps.get<int>("runSyncMode");
-  outputSignalMode     = ps.get<int>("outputSignalMode");
   allowTriggerOverlap  = ps.get<bool>("allowTriggerOverlap");
-  usePedestals         = ps.get<bool>("usePedestals");
-  dacValue             = ps.get<int>("dacValue");
   dynamicRange         = ps.get<int>("dynamicRange");
   ioLevel              = ps.get<int>("ioLevel");
   nChannels            = ps.get<int>("nChannels");
@@ -62,7 +54,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   debugLevel           = ps.get<int>("debugLevel");
   postPercent          = ps.get<int>("postPercent");
   irqWaitTime          = ps.get<int>("irqWaitTime");
-  memoryAlmostFull     = ps.get<int>("memoryAlmostFull");
   readoutMode          = ps.get<int>("readoutMode");
   analogMode           = ps.get<int>("analogMode");
   testPattern          = ps.get<int>("testPattern");
@@ -119,8 +110,6 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  EnableReadout         " << e.enableReadout << std::endl;
   os << "  RecordLength          " << e.recordLength << std::endl;
   os << "  AllowTriggerOverlap   " << e.allowTriggerOverlap << std::endl;
-  os << "  UsePedestals          " << e.usePedestals << std::endl;
-  os << "  DacValue              " << e.dacValue << std::endl;
   os << "  DynamicRange          " << e.dynamicRange << std::endl;
   os << "  nChannels             " << e.nChannels << std::endl;
   os << "  PostPercent           " << e.postPercent << "%" << std::endl;
@@ -139,7 +128,6 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  AcqMode               " << e.acqMode << " " 
      << sbndaq::CAENDecoder::AcquisitionMode((CAEN_DGTZ_AcqMode_t)e.acqMode) << std::endl;
   os << "  DebugLevel            " << e.debugLevel << std::endl;
-  os << "  MemoryAlmostFull      " << e.memoryAlmostFull << std::endl;
   os << "  ReadoutMode           " << e.readoutMode << " " 
      << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;
   os << "  AnalogMode            " << e.analogMode << std::endl;
