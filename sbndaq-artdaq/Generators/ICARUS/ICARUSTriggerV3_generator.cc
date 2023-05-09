@@ -809,7 +809,6 @@ int sbndaq::ICARUSTriggerV3::initialization(int retries, int sleep_time_ms)
 
 int sbndaq::ICARUSTriggerV3::send_stop(int retries, int sleep_time_ms)
 {   
-   // while(retries>-1){
     char cmd[7];
     sprintf(cmd,"%s","STOP  ");
     
@@ -820,22 +819,10 @@ int sbndaq::ICARUSTriggerV3::send_stop(int retries, int sleep_time_ms)
     TLOG(TLVL_INFO) << "sent:: COMMAND " << cmd << "  to " << ip_config_.c_str() << ":" << configport_ << "\n";
     //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
     //
-    int doThis = 0;
-    if (doThis == 1) {
-    int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, sleep_time_ms);
-    if(size_bytes>0){
-      buffer[size_bytes+1] = {'\0'};
-      readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
-      TLOG(TLVL_INFO) << "STOP  step - received:: " << buffer;
-      return 0;
-    }
-    }
-    
+
     retries--;
-   //}
  
-  //return -1;
-  return 0;
+     return 0;
  
 }
 
