@@ -43,7 +43,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
 {
   link                 = ps.get<int>("link");
   enableReadout        = ps.get<int>("enableReadout");
-  boardId              = ps.get<int>("board_id");
+  boardId              = ps.get<int>("boardId");
   recordLength         = ps.get<int>("recordLength");
   runSyncMode          = ps.get<int>("runSyncMode");
   outputSignalMode     = ps.get<int>("outputSignalMode");
