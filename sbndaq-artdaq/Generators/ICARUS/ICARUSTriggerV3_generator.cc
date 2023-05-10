@@ -673,7 +673,7 @@ void sbndaq::ICARUSTriggerV3::start()
 
 void sbndaq::ICARUSTriggerV3::stop()
 {
-  if(send_stop(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
+  if(send_stop(n_init_retries_) < 0) //comment out for fake trigger tests
   {  
      TLOG(TLVL_ERROR) << "Was not able to STOP LabVIEW: closing socket  " << "\n";
      close(datafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
@@ -807,7 +807,7 @@ int sbndaq::ICARUSTriggerV3::initialization(int retries, int sleep_time_ms)
 }
 
 
-int sbndaq::ICARUSTriggerV3::send_stop(int retries, int sleep_time_ms)
+int sbndaq::ICARUSTriggerV3::send_stop(int retries)
 {   
     char cmd[7];
     sprintf(cmd,"%s","STOP  ");
@@ -820,7 +820,7 @@ int sbndaq::ICARUSTriggerV3::send_stop(int retries, int sleep_time_ms)
     //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
     //
 
-    retries--;
+    retries--; //AA: this is leftover from tests, should be removed in the future
  
      return 0;
  
