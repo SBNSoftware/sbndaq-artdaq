@@ -33,10 +33,13 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   debugLevel(0),
   runSyncMode(0),
   outputSignalMode(0),
-  eventCounterWarning(0),
   memoryAlmostFull(0),
   analogMode(0),
-  testPattern(0)
+  testPattern(0),
+  //ovthValue(0),
+  triggerLogic(0),
+  majorityLevel(0),
+  majorityCoincidenceWindow(0)
 {
   link                 = ps.get<int>("link");
   enableReadout        = ps.get<int>("enableReadout");
@@ -58,11 +61,14 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   debugLevel           = ps.get<int>("debugLevel");
   postPercent          = ps.get<int>("postPercent");
   irqWaitTime          = ps.get<int>("irqWaitTime");
-  eventCounterWarning  = ps.get<int>("eventCounterWarning");
   memoryAlmostFull     = ps.get<int>("memoryAlmostFull");
   readoutMode          = ps.get<int>("readoutMode");
   analogMode           = ps.get<int>("analogMode");
   testPattern          = ps.get<int>("testPattern");
+ // ovthValue            = ps.get<int>("ovthValue");         
+  triggerLogic         = ps.get<int>("triggerLogic");  
+  majorityLevel        = ps.get<int>("majorityLevel"); 
+  majorityCoincidenceWindow = ps.get<int>("majorityCoincidenceWindow"); 
 
   char tag[1024];
   channelEnableMask = 0;
@@ -121,6 +127,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::IOLevel((CAEN_DGTZ_IOLevel_t)e.ioLevel) << std::endl;
   os << "  TriggerPolarity       " << e.triggerPolarity << " " 
      << sbndaq::CAENDecoder::TriggerPolarity((CAEN_DGTZ_TriggerPolarity_t)e.triggerPolarity) << std::endl;
+  os << "  TriggerPulseWidth     " << e.triggerPulseWidth << std::endl;
   os << "  ExtTrgMode            " << e.extTrgMode << " " 
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.extTrgMode) << std::endl;
   os << "  SWTrgMode             " << e.swTrgMode << " " 
@@ -130,12 +137,15 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  AcqMode               " << e.acqMode << " " 
      << sbndaq::CAENDecoder::AcquisitionMode((CAEN_DGTZ_AcqMode_t)e.acqMode) << std::endl;
   os << "  DebugLevel            " << e.debugLevel << std::endl;
-  os << "  EventCounterWarning   " << e.eventCounterWarning << std::endl;
   os << "  MemoryAlmostFull      " << e.memoryAlmostFull << std::endl;
   os << "  ReadoutMode           " << e.readoutMode << " " 
      << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;
   os << "  AnalogMode            " << e.analogMode << std::endl;
   os << "  TestPattern           " << e.testPattern << std::endl;
+ // os << "  OvthValue             " << e.ovthValue << std::endl;
+  os << "  TriggerLogic          " << e.triggerLogic << std::endl;
+  os << "  MajorityLevel         " << e.majorityLevel << std::endl;
+  os << "  MajorityCoincidenceWindow " << e.majorityCoincidenceWindow << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )
