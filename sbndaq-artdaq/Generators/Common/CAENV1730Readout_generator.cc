@@ -1281,6 +1281,8 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
+// This function is called internally by the art framework and should not be called in the boardreader itself
+// The two relevant fcl parameters are: "poll_hardware_status" (true/false) and "hardware_poll_interval_us" (period in us)
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
   for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
@@ -1304,6 +1306,11 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
 			  artdaq::MetricMode::Average);
 
+    if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
+      TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
+                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
+		       << TLOG_ENDL;
+    }
 
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
     TLOG_ARB(TTEMP,TRACE_NAME) << statStream.str()

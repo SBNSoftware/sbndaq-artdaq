@@ -62,6 +62,7 @@ namespace sbndaq
     void configure_socket(int, struct sockaddr_in&);
     
     //int send_TTLK_INIT(int, int);
+    int send_stop(int);
     int initialization(int, int);
     void send_TRIG_VETO();
     void send_TRIG_ALLW();
