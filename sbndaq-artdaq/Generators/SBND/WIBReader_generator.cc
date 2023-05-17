@@ -145,6 +145,8 @@ namespace sbndaq
    
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
    
+   setupWIBFakeData(1);
+   
    TLOG_INFO(identification) << "Now Connecting to FEMBs " << TLOG_ENDL;
    
    int N_config_FEMBs = 0;
@@ -154,14 +156,14 @@ namespace sbndaq
        
        //TLOG_INFO(identification) << "FEMB No. " << iFEMB << "  FEMB VERSION ID : " << wib->ReadFEMB(iFEMB,"VERSION_ID") << TLOG_ENDL;
        
-       //uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+       uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
        //femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
        
        fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
        auto expected_femb_fw_version = FEMB_config.get<uint32_t>("expected_femb_fw_version");
        
-       //TLOG_INFO(identification) << "Read value of femb FW : " << femb_fw_version << TLOG_ENDL;
-       //TLOG_INFO(identification) << "Expected value of femb FW : " << expected_femb_fw_version << TLOG_ENDL;
+       /*TLOG_INFO(identification) << "Read value of femb FW : " << femb_fw_version << TLOG_ENDL;
+       TLOG_INFO(identification) << "Expected value of femb FW : " << expected_femb_fw_version << TLOG_ENDL;*/
        
        /*if(femb_fw_version != expected_femb_fw_version){
           TLOG_WARNING(identification) << "Skipping powering up/ configuring FEMB " << iFEMB << " due to FW version mismatch " << TLOG_ENDL;
@@ -175,19 +177,19 @@ namespace sbndaq
           TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
-	  setupFEMB(iFEMB,FEMB_config);
-	  uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
-	  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+	  //setupFEMB(iFEMB,FEMB_config);
+	  /*uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+	  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");*/
 	  if(femb_fw_version != expected_femb_fw_version) N_config_FEMBs++;
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
    }
    
-   if(N_config_FEMBs==4){
+   /*if(N_config_FEMBs==4){
       cet::exception excpt(identification);
       excpt << "None of the FEMBs was configured due to firmware mismatch";
       throw excpt;
-   }
+   }*/
    
    TLOG_INFO(identification) << "WIB setup completed " << TLOG_ENDL;
  }
@@ -282,6 +284,89 @@ void WIBReader::setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_
   wib->ConfigFEMBFakeData(iFEMB,fake_mode,fake_word,femb_number,fake_waveform);
 }
 
+void WIBReader::setupWIBFakeData(int datamode)
+{
+    const std::string identification = "WIBReader::setupWIBFakeData";
+    int ver_value = wib->Read(0xFF);
+    if (datamode == 1){
+        std::vector<unsigned int> wfs = { 0x2FF, 0x2FE, 0x2FB, 0x2FF, 0x300, 0x303, 0x301, 0x301,
+        0x2FF, 0x2FE, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF,
+        0x301, 0x301, 0x301, 0x301, 0x301, 0x301, 0x300, 0x301,
+        0x301, 0x301, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF,
+        0x2FF, 0x2FF, 0x300, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x300,
+        0x2FF, 0x300, 0x301, 0x301, 0x301, 0x2FF, 0x2FF, 0x2FF,
+        0x2FE, 0x2FE, 0x301, 0x302, 0x303, 0x301, 0x2FF, 0x2FB,
+        0x2FE, 0x2FF, 0x301, 0x306, 0x304, 0x321, 0x39D, 0x455,
+        0x4DF, 0x501, 0x4C1, 0x454, 0x3DF, 0x37F, 0x340, 0x31A,
+        0x308, 0x300, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x300, 0x300,
+        0x2FF, 0x300, 0x301, 0x300, 0x2FF, 0x2FF, 0x2FF, 0x2FF,
+        0x300, 0x2FF, 0x303, 0x301, 0x302, 0x301, 0x300, 0x2FF,
+        0x2FF, 0x300, 0x2FF, 0x2FF, 0x2FF, 0x2DF, 0x264, 0x1B9,
+        0x13F, 0x122, 0x150, 0x1B8, 0x228, 0x281, 0x2C3, 0x2E8,
+        0x2FB, 0x2FF, 0x2FF, 0x300, 0x300, 0x301, 0x301, 0x2FF,
+        0x2FF, 0x2FF, 0x300, 0x300, 0x300, 0x2FF, 0x2FF, 0x2FF,
+        0x2FE, 0x2FF, 0x2FF, 0x300, 0x2FF, 0x302, 0x302, 0x301,
+        0x301, 0x2FF, 0x2FE, 0x2FE, 0x2FE, 0x2FE, 0x2FD, 0x2FF,
+        0x2FF, 0x2FF, 0x2FF, 0x2FE, 0x2FE, 0x2FF, 0x301, 0x304,
+        0x304, 0x302, 0x2FF, 0x2FB, 0x2FA, 0x2FF, 0x300, 0x301,
+        0x302, 0x301, 0x301, 0x301, 0x301, 0x301, 0x301, 0x301,
+        0x301, 0x301, 0x301, 0x302, 0x301, 0x301, 0x300, 0x301,
+        0x301, 0x300, 0x301, 0x301, 0x300, 0x2FF, 0x2FF, 0x2FF,
+        0x301, 0x301, 0x301, 0x301, 0x301, 0x303, 0x302, 0x300,
+        0x301, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x300, 0x301, 0x301,
+        0x2FF, 0x2FE, 0x2FE, 0x2FF, 0x300, 0x303, 0x306, 0x304,
+        0x302, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF,
+        0x2FF, 0x2FF, 0x301, 0x300, 0x2FF, 0x2FF, 0x301, 0x301,
+        0x300, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x2FF, 0x301,
+        0x303, 0x306, 0x303, 0x302, 0x2FF, 0x2FF, 0x2FF, 0x300,
+        0x2FF, 0x2FF, 0x2FF, 0x301, 0x301, 0x303, 0x301, 0x2FF,
+        0x2FF, 0x2FF, 0x301, 0x302, 0x304, 0x2FF, 0x2FF, 0x2FB };
+	
+	std::vector<unsigned int> datas;
+	for (int i = 0; i < 256; i++){
+	     datas.push_back( (wfs[i]<<12) + ((i&0xfff)<<4));
+	}
+	
+	for (int i = 0; i < 256; i++){
+	     int adr1 = i + 0x300;
+	     wib->Write(adr1, datas[i]);
+	     int adr2 = i + 0x200;
+	     wib->Write(adr2, datas[i]);
+	}
+	
+	wib->Write(9, 0x10);
+	if (wib->Read(9) != 0x10){
+	    cet::exception excpt(identification);
+            excpt << "WIB register is not properly written. Written value : " << std::hex << 0x10 << " Read value : " << std::hex << wib->Read(9);
+            throw excpt;
+	}
+    }
+    
+    else if(datamode == 2){
+        wib->Write(9, 0x20);
+	if (wib->Read(9) != 0x20){
+	    cet::exception excpt(identification);
+	    excpt << "WIB register 9 is not properly written. Written value : " << std::hex << 0x20 << " Read value : " << std::hex << wib->Read(9);
+	}
+    }
+    
+    else{
+      wib->Write(9, 0x0);
+      if (wib->Read(9) != 0x0){
+          cet::exception excpt(identification);
+	  excpt << "WIB register 9 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(9);
+      }
+      return;
+    }
+    
+    wib->Write(8, 0x0);
+    if (wib->Read(8) != 0x0){
+        cet::exception excpt(identification);
+	excpt << "WIB register 8 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(8);
+    }
+    sleep(0.1);
+}
+
 void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure)
 {
   const std::string identification = "WIBReader::setupFEMB";
@@ -360,7 +445,13 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      throw excpt;
   }
   
-  if(signed(pls_dac_val)!=0){
+  /*if(signed(pls_dac_val)!=0){
+     cet::exception excpt(identification);
+     excpt << "FEMB calibration pulser amplitude setting is not acceptable";
+     throw excpt;
+  }*/
+  
+  if(signed(pls_dac_val)<0 || signed(pls_dac_val)>63){
      cet::exception excpt(identification);
      excpt << "FEMB calibration pulser amplitude setting is not acceptable";
      throw excpt;
@@ -384,12 +475,12 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   
   TLOG_INFO(identification) << " After powering up the FEMBs" << TLOG_ENDL;
   
-  TLOG_INFO(identification) << " FEMB FW Version : " << wib->ReadFEMB(iFEMB,"VERSION_ID") << TLOG_ENDL;
+  //TLOG_INFO(identification) << " FEMB FW Version : " << wib->ReadFEMB(iFEMB,"VERSION_ID") << TLOG_ENDL;
   
   uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
-  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+  //femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
   
-  TLOG_INFO(identification) << " FEMB FW Version (2 nd) : " << femb_fw_version << TLOG_ENDL;
+  //TLOG_INFO(identification) << " FEMB FW Version (2 nd) : " << femb_fw_version << TLOG_ENDL;
   
   auto expected_femb_fw_version = FEMB_configure.get<uint32_t>("expected_femb_fw_version");
   
@@ -404,7 +495,43 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   sleep(5);
       
   std::vector<uint32_t> fe_config = {gain,shape,baselineHigh,leakHigh,leak10X,acCouple,buffer,extClk};
-  wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+  
+  // This section was added by reading the BNL CE code
+  //Exact file, I am looking in BNL CE code is ce_runs.py line 619
+  //Added by Varuna 03/15/2023
+  
+  //wib->WriteFEMB(iFEMB, 42, 0);
+  //sleep(0.5);
+  //if(wib->ReadFEMB(iFEMB, 42) != 0) TLOG_WARNING(identification) << "Read value and Write value does not agree for register 42 " << TLOG_ENDL;
+  
+  // End of comment
+  
+  //TLOG_INFO(identification) << "After reading register 42" << TLOG_ENDL;
+  
+  wib->WriteFEMB(iFEMB,0x09,0x09); // Added as part of Shanshan's Minimum configuration.
+  sleep(10);
+  //wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+  
+  TLOG_INFO(identification) << "After ConfigWIB function" << TLOG_ENDL;
+  
+  // Adding this line after looking into the BNL_CE code
+  // Exact piece of code in the BNL_CE corresponds to line 631-635 in ce_runs.py
+  // By Varuna Meddage 03/15/2023
+  
+  //wib->Write(20, 0x00);
+  //sleep(0.1);
+  //if(wib->Read(20) != 0) TLOG_WARNING(identification) << "Read value and Write value does not agree for register 20 of WIB. " << TLOG_ENDL;
+  //TLOG_INFO(identification) << "After reading register 20 (1 st)" << TLOG_ENDL;
+  //wib->Write(20, 0x02);
+  //sleep(0.1);
+  //if(wib->Read(20) != 2) TLOG_WARNING(identification) << "Read value and Write value does not agree for register 20 of WIB. " << TLOG_ENDL;
+  //TLOG_INFO(identification) << "After reading register 20 (2 nd)" << TLOG_ENDL;
+  //wib->Write(20, 0x00);
+  //sleep(0.1);
+  //if(wib->Read(20) != 0) TLOG_WARNING(identification) << "Read value and Write value does not agree for register 20 of WIB. " << TLOG_ENDL;
+  //TLOG_INFO(identification) << "After reading register 20 (3 rd)" << TLOG_ENDL;
+  
+  // End of comment
   
   //TLOG_INFO(identification) << " After configureing FEMBs" << TLOG_ENDL;
   TLOG_INFO(identification) << " After configuring FEMB " << iFEMB << TLOG_ENDL;
