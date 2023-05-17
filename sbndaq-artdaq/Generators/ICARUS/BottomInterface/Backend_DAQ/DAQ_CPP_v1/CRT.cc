@@ -182,7 +182,8 @@ vector<vector<string>> fcl_read(string filename)
     }
     else{
         
-        cout << "Unable to open file";
+        TLOG(TLVL_WARNING) << "Unable to open FHiCL file";
+        //cout << "Unable to open file";
         //Returns empty 2d vector
         vector<string> v;
         v.push_back("");
@@ -211,11 +212,13 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
         if(mode.compare("debug") == 0){
         if(!usb_board || !pmt_board)
         {
-            cout << "error cannot initialize need USB board and PMT board ! \n";
+            //cout << "error cannot initialize need USB board and PMT board ! \n";
+            TLOG(TLVL_WARNING) << "Loadconfig: cannot initialize - need USB board and PMT board.\n";
         }
         else{
             if(!triggerbox){
-                cout << "Board " << pmt_board << " on USB " << usb_board << " parameters loaded \n";
+                //cout << "Board " << pmt_board << " on USB " << usb_board << " parameters loaded \n";
+                TLOG(TLVL_DEBUG) << "Board " << pmt_board << " on USB " << usb_board << " parameters loaded.\n";
                 pmtdata[usb_board][pmt_board][0] = "none";     //pmt serial number
                 pmtdata[usb_board][pmt_board][1] = to_string(pmt);  //board number
                 pmtdata[usb_board][pmt_board][2] = to_string(0);  //HV
@@ -251,7 +254,7 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
                 totalpmt++;
                 pmttousb[totalpmt] = usb_board;
                 pmttoboard[totalpmt] = pmt_board;
-                cout << "totalpmt = " << totalpmt << "\n";
+                //cout << "totalpmt = " << totalpmt << "\n";
                 // should see what to do in initializeboard
                 structure[usb_board] = 0;
                 usbhowmanyboards[1][usbhowmanyboardscount] = usb_board;
@@ -352,7 +355,8 @@ int scanFiles(string inputDirectory){
     p_dir = opendir(str);
     if( p_dir == NULL)
     {
-        cout << "can't open :" << inputDirectory << endl;
+        //cout << "can't open :" << inputDirectory << endl;
+        TLOG(TLVL_WARNING) << "scanFiles: can't open: " << inputDirectory << endl;
     }
     
     struct dirent *p_dirent;
@@ -396,10 +400,12 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
     if(mode.compare("debug")==0)
     {
         int totalboard = pmtfin - pmtini + 1;
-        printf("%d \t %d \t\n",totalpmt, totalboard);
+        //printf("%d \t %d \t\n",totalpmt, totalboard);
+        TRACE(TLVL_DEBUG,"%d \t %d \t\n",totalpmt, totalboard);
         if(totalpmt != totalboard)
         {
-            printf("Problem with initialization at starttakedata \n");
+            //printf("Problem with initialization at starttakedata \n");
+            TRACE(TLVL_DEBUG,"Problem with initialization at starttakedata\n");
         }
     }
     else
@@ -417,10 +423,12 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
     if(mode.compare("debug")==0)
     {
         int totalfans = boxfin - boxini + 1;
-        printf("%d\t %d\t \n", totalfans, totalbox);
+        //printf("%d\t %d\t \n", totalfans, totalbox);
+        TRACE(TLVL_DEBUG,"%d\t %d\t \n", totalfans, totalbox);
         if(totalbox != totalfans)
         {
-            printf("Problem with initialization of fan-in modules at starttakedata \n");
+            //printf("Problem with initialization of fan-in modules at starttakedata \n");
+            TRACE(TLVL_DEBUG,"Problem with initialization of fan-in modules at starttakedata\n");
         }
     }
     else
@@ -433,13 +441,30 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
     int pmt1;
     int usb_local;
     int pmt_local;
+
+   for(int pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
+        usb_local = pmttousb[pmt1];
+        pmt_local = pmttoboard[pmt1];
+        if(structure[usb_local] == -1)                // only trigger box!!
+        {
+            set_inhibit_usb(usb_local, 0);            // -2; release inhibit for baseline
+            					      // -1; inhibit writing data
+            					      // 0; release inhibit for writing data
+            structure[usb_local] = 1;
+            //printf("File open for writing for USB: %d\n",usb_local);
+            TRACE(TLVL_INFO,"File open for writing for USB: %d\n",usb_local);
+	    sleep(0.1);
+        }
+    }
+    sleep(2.0);
     
     for(pmt1 = pmtini; pmt1<=pmtfin; pmt1++)
     {
         if(!pmttousb[pmt1] || !pmttoboard[pmt1])
         {
             if(pmttoboard[pmt1] != 0)
-                printf("usb_local or pmt_local not defined.\n");
+                //printf("usb_local or pmt_local not defined.\n");
+                TRACE(TLVL_WARNING,"Starttakedata: usb_local or pmt_local not defined.\n");
         }
 
         usb_local = pmttousb[pmt1];
@@ -455,24 +480,11 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
     {
         if(!boxtousb[box1] || !boxtoboard[box1])
         {
-            printf("usb_local or pmt_local not defined.\n");
+            //printf("usb_local or pmt_local not defined.\n");
+            TRACE(TLVL_WARNING,"Starttakedata: usb_local or pmt_local not defined.\n");
         }
     }
     
-   for(int pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1];
-        if(structure[usb_local] == -1)                // only trigger box!!
-        {
-            set_inhibit_usb(usb_local, 0);            // -2; release inhibit for baseline
-            					      // -1; inhibit writing data
-            					      // 0; release inhibit for writing data
-            structure[usb_local] = 1;
-            printf("File open for writing for USB: %d\n",usb_local);
-	    sleep(0.1);
-        }
-    }
-    sleep(1.);
 
     time_t t1 = time(0);   //get time now
     struct tm * now = localtime( & t1 );
@@ -484,7 +496,8 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
     Mon = now->tm_mon;
     Year = now->tm_year;
     
-    printf("..... Taking data .....\n");
+    //printf("..... Taking data .....\n");
+    TRACE(TLVL_INFO,"Data taking begun\n");
     
     
 }
@@ -506,7 +519,8 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
         int totalboard = pmtfin - pmtini + 1;
         if(totalpmt != totalboard)
         {
-            printf("Problem with initialization at stoptakedata \n");
+            //printf("Problem with initialization at stoptakedata \n");
+            TRACE(TLVL_DEBUG,"Problem with initialization at stoptakedata\n");
         }
     }
     else
@@ -527,7 +541,8 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
         int totalfans = boxfin - boxini + 1;
         if(totalbox != totalfans)
         {
-            printf("Problem with initialization at stoptakedata \n");
+            //printf("Problem with initialization at stoptakedata \n");
+            TRACE(TLVL_DEBUG,"Problem with initialization at stoptakedata\n");
         }
     }
     else{
@@ -546,7 +561,8 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     int elapsed_time;
     elapsed_time = (newDay - Day)*24*3600 + (newHour - Hour)*3600 + (newMin - Min)*60 + (newSec - Sec);
     
-    printf("%d sec...", elapsed_time);
+    //printf("%d sec...", elapsed_time);
+    TRACE(TLVL_INFO,"Elapsed time since start of data taking: %d sec", elapsed_time);
     
     int pmt1;
     int usb_local;
@@ -557,7 +573,8 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
         if(!pmttousb[pmt1] || !pmttoboard[pmt1])
         {
             if(pmttoboard[pmt1] != 0)
-                printf("usb_local or pmt_local not defined.\n");
+                TRACE(TLVL_WARNING,"Stoptakedata: usb_local or pmt_local not defined.\n");
+                //printf("usb_local or pmt_local not defined.\n");
         }
         usb_local = pmttousb[pmt1];
         pmt_local = pmttoboard[pmt1];
@@ -568,14 +585,15 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     }
     
     sleep(5.0);
-    printf("shutting down ");
+    //printf("shutting down ");
+    TRACE(TLVL_INFO,"Shutting down\n");
     
     for(int m = 0;m<=10; m++)
     {
-        printf(".");
+        //printf(".");
         sleep(0.3);
     }
-    printf("\n");
+    //printf("\n");
     
   for(int pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
         usb_local = pmttousb[pmt1];
@@ -676,7 +694,8 @@ int scanCheckrateFiles(vector<string> &fileList, string inputDirectory){
     p_dir = opendir(str);
     if( p_dir == NULL)
     {
-        cout << "can't open :" << inputDirectory << endl;
+        //cout << "can't open :" << inputDirectory << endl;
+        TLOG(TLVL_WARNING) << "scanCheckrateFiles: can't open: " << inputDirectory << endl;
     }
     
     struct dirent *p_dirent;
@@ -733,8 +752,10 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     if(!mode.compare("debug")){
         int totalboard = pmtfin - pmtini + 1;
         if(totalpmt != totalboard){
-            printf("totalpmt: %d\t totalboard: %d\n",totalpmt,totalboard);
-            printf("Problem with initialization \n");
+            //printf("totalpmt: %d\t totalboard: %d\n",totalpmt,totalboard);
+            TRACE(TLVL_DEBUG,"totalpmt: %d\t totalboard: %d\n",totalpmt,totalboard);
+            //printf("Problem with initialization \n");
+            TRACE(TLVL_DEBUG,"Problem with initialization \n");
         }
     }
     int pmt1;
@@ -753,7 +774,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     
     //now the new folder and the new data path will be passed to the DAQ
     
-    printf("DataPath=%s, Disk=%d\n",DataPath,disk_num);
+    //printf("DataPath=%s, Disk=%d\n",DataPath,disk_num);
+    TRACE(TLVL_DEBUG,"DataPath=%s, Disk=%d\n",DataPath,disk_num);
     
     set_data_path(DataPath);
     //check_diskspace;
@@ -788,12 +810,15 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     
     set_run_number(run_number);
     
-    printf("pmtini = %d, pmtfin = %d\n", pmtini, pmtfin);
+    //printf("pmtini = %d, pmtfin = %d\n", pmtini, pmtfin);
+    TRACE(TLVL_DEBUG,"pmtini = %d, pmtfin = %d\n", pmtini, pmtfin);
     
-    printf("run number = %s\n",run_number);
+    //printf("run number = %s\n",run_number);
+    TRACE(TLVL_DEBUG,"run number = %s\n",run_number);
 
 
-    printf("Baseline data taking .");
+    //printf("Baseline data taking .");
+    TRACE(TLVL_INFO,"Baseline data taking.\n");
     
     int t = 0;
 
@@ -802,7 +827,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     
     for (pmt1 = pmtini; pmt1<=pmtfin; pmt1++){
         if(!(usb_local = pmttousb[pmt1] || !(pmt_local = pmttoboard[pmt1]))){
-            printf("usb_local or pmt_local not defined.\n");
+            //printf("usb_local or pmt_local not defined.\n");
+            TRACE(TLVL_WARNING,"Initializeboard: usb_local or pmt_local not defined.\n");
         }
         usb_local = pmttousb[pmt1];
         pmt_local = pmttoboard[pmt1];
@@ -835,7 +861,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
         sleep(1.0);
 	for ( int i = 0; i < 10 ; i++){
             com_usb(usb_local, pmt_local, 81, 0);       // avoid first packets
-	    printf(".");
+	    //printf(".");
         }
         usbbase[t] = usb_local;
         t++;
@@ -852,11 +878,14 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
             set_inhibit_usb(usb_local, -2);              // -2; release inhibit for baseline
             						 // -1; inhibit writing data
             						 // 0; release inhibit for writing data
-            cout << "Baseline data taking, releasing inhibit for USB " << usb_local << endl;
+            //cout << "Baseline data taking, releasing inhibit for USB " << usb_local << endl;
+            TLOG(TLVL_INFO) << "Baseline data taking, releasing inhibit for USB " << usb_local << endl;
 	    structure[usb_local] = -2;
 	    sleep(0.5);
         }
     }
+
+    sleep(2.0);
 
     for(pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
         usb_local = pmttousb[pmt1];
@@ -882,11 +911,13 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     elapsed_time = (newDay - Day)*24*3600 + (newHour - Hour)*3600 + (newMin - Min)*60 + (newSec - Sec);
 
     
-    printf(": %d sec\n",elapsed_time);
+    //printf(": %d sec\n",elapsed_time);
+    TRACE(TLVL_INFO,"Elapsed time for baseline data taking: %d sec\n",elapsed_time);
     
     //now let's initialize everything for the data taking
     
-    printf("Initializing .\n");
+    //printf("Initializing.\n");
+    TRACE(TLVL_INFO,"Initializing.\n");
     
     string dir2 = ScratchLocal + "Run_" + run_number;
     string summary = "off";                                 // summary file default = off
@@ -896,7 +927,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
         usb_local = pmttousb[pmt1];
         pmt_local = pmttoboard[pmt1];
         
-        printf("Loading PMT: %d\n", pmt_local);
+        //printf("Loading PMT: %d\n", pmt_local);
+        TRACE(TLVL_DEBUG,"Loading PMT: %d\n", pmt_local);
         
         getpmtdata(usb_local,pmt_local);
         com_usb(usb_local, pmt_local, 110, 1);             // turn off the three led on the PMT's board = 1
@@ -929,7 +961,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
             com_usb(usb_local, pmt_local, 74, 0b0100000);  // default gain
         }
         else if(usemaroc2gainconstantsmb.compare("yes")==0 && fclload == 0){
-            printf("Error cannot load mysql gain constants from MYSQL\n");
+            //printf("Error cannot load mysql gain constants from MYSQL\n");
+            TRACE(TLVL_WARNING,"Error cannot load mysql gain constants from MYSQL, using default gain\n");
             com_usb(usb_local, pmt_local, 74, 0b0100000);  // default gain
         }
         else if(usemaroc2gainconstantsmb.compare("yes")==0 && fclload == 1){
@@ -956,7 +989,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
                 FILE * pFile2;
                 pFile2 = fopen(summaryfile.c_str(),"a+");
                 if(pFile2 == NULL){
-                    printf("Can not open summaryfile1\n");
+                    //printf("Can not open summaryfile1\n");
+                    TRACE(TLVL_WARNING,"Initializeboard: Can not open existing summaryfile\n");
                     fclose(pFile2);
                 }
                 fprintf(pFile2,"\n");
@@ -974,7 +1008,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
                 FILE * pFile1;
                 pFile1 = fopen(summaryfile.c_str(),"w");
                 if(pFile1 == NULL){
-                    printf("Can not open summaryfile\n");
+                    //printf("Can not open summaryfile\n");
+                    TRACE(TLVL_WARNING,"Can not open new summaryfile\n");
                     perror("Failed: ");
                     fclose(pFile1);
                 }
@@ -992,7 +1027,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
         
     } //end loop over pmt
     
-    printf("finished initializing \n");
+    //printf("finished initializing \n");
+    TRACE(TLVL_INFO,"Finished initializing.\n");
 
     //string cmdq = "ipcs -q";    
     //for(int e = 0; e<=10; e++){
@@ -1014,7 +1050,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
         }
     }
 
-    sleep(1.0);
+    sleep(2.0);
     
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1044,7 +1080,8 @@ int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
      string cmd1 = DataPath + "/baselines.dat"; //define the dir
      OUT = fopen(cmd1.c_str(),"w");
      if(OUT == NULL){
-         printf("Can not open file - eventbuilder\n");
+         //printf("Can not open file - eventbuilder\n");
+         TRACE(TLVL_WARNING,"Can not open baseline file - eventbuilder\n");
          fclose(OUT);
      }
      else //baselines.dat is open
@@ -1059,7 +1096,8 @@ int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
 	if(!pmttousb[pmt1] || !pmttoboard[pmt1])
         {
             if(pmttoboard[pmt1] != 0)
-                printf("usb_local or pmt_local not defined.\n");
+                TRACE(TLVL_WARNING,"Eventbuilder: usb_local or pmt_local not defined.\n");
+                //printf("usb_local or pmt_local not defined.\n");
         }
 
 	string file = DataPath + "/binary/baseline_" + to_string(pmttousb[pmt1]);
@@ -1077,7 +1115,8 @@ int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
       	  char buf[buf_size];//buf_size
           if(!ss)
 	  {
-	    cout << "Can not open file\n";
+	    //cout << "Can not open file\n";
+	    TLOG(TLVL_WARNING) << "Eventbuilder: can not open file\n";
 	  }
           else
 	  { //get characters from stream
@@ -1164,7 +1203,8 @@ int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
 		min = n;
 	      }//loop over all the pm channels
 
-		cout << "PMT " << pmttousb[pmt1] << "-" << pmttoboard[pmt1] << ":\t baseline hits: " << min << "\n";
+		//cout << "PMT " << pmttousb[pmt1] << "-" << pmttoboard[pmt1] << ":\t baseline hits: " << min << "\n";
+		TLOG(TLVL_INFO) << "PMT " << pmttousb[pmt1] << "-" << pmttoboard[pmt1] << ":\t baseline hits: " << min << "\n";
 	  
      }//end of loop over all PMTs (for loop pmt1++)
    }//end of else (putting things in baselines.dat)

@@ -58,6 +58,7 @@ void CRTInterface::StartDatataking()
 
 void CRTInterface::StopDatataking()
 {
+  errno = 0;
   if(-1 == inotify_rm_watch(inotifyfd, inotify_watchfd))
     TLOG(TLVL_WARNING, "CRTInterface") << "StopDatataking: " << strerror(errno);
 }
@@ -192,7 +193,7 @@ bool CRTInterface::try_open_file()
   // for watching it with inotify.  So, remove the inotify watch on the old file.
   inotify_rm_watch(inotifyfd, inotify_watchfd);
   close(datafile_fd);
-  TLOG(TLVL_INFO, "CRTInterface") << "Closed file " << datafile_name << " and "
+  TLOG(TLVL_DEBUG, "CRTInterface") << "Closed file " << datafile_name << " and "
                                   << "removed inotify watch on it.\n";
 
   // Start watching the new file for IN_MODIFY events.  If we can't
@@ -273,7 +274,7 @@ bool CRTInterface::check_events()
   if(inotify_bread == inotifybufsize)
     TLOG(TLVL_WARNING, "CRTInterface")
       << "Filled buf when reading from inotify!  We might have missed some events.\n";
-  TLOG(TLVL_INFO, "CRTInterface") << "Got " << inotify_bread/sizeof(struct inotify_event) << " inotify events.\n";
+  TLOG(TLVL_DEBUG, "CRTInterface") << "Got " << inotify_bread/sizeof(struct inotify_event) << " inotify events.\n";
   /*const struct inotify_event* event;
   for(auto ptr = filechange;
       ptr < filechange + inotify_bread;
@@ -309,7 +310,7 @@ bool CRTInterface::check_events()
   //
   //      Looks like problem is instead that raw2cook() is returning 0 bytes despite 
   //      full buffer.  
-  TLOG(TLVL_INFO, "CRTInterface") << "Got a \"modified\" event from inotify.\n";
+  TLOG(TLVL_DEBUG, "CRTInterface") << "Got a \"modified\" event from inotify.\n";
   if(state & CRT_READ_ACTIVE) return true; //Note: Without the below error check, we remove an 
                                            //      if statement by returning state & CRT_READ_ACTIVE
                                            //      cast to bool directly.  
@@ -361,7 +362,7 @@ size_t CRTInterface::read_everything_from_file(char * cooked_data)
   if(bytesleft > 0) state |= CRT_DRAIN_BUFFER;
 
   return CRT::raw2cook(cooked_data, COOKEDBUFSIZE,
-                       rawfromhardware, next_raw_byte, baselines);
+                       rawfromhardware, next_raw_byte, baselines, tpacket);
 }
 
 void CRTInterface::FillBuffer(char* cooked_data, size_t* bytes_ret)
@@ -375,8 +376,11 @@ void CRTInterface::FillBuffer(char* cooked_data, size_t* bytes_ret)
   const auto bytesBefore = next_raw_byte - rawfromhardware;
   if(state & CRT_DRAIN_BUFFER){
     if((*bytes_ret = CRT::raw2cook(cooked_data, COOKEDBUFSIZE,
-                                   rawfromhardware, next_raw_byte, baselines)))
-      return;
+                                   rawfromhardware, next_raw_byte, baselines, tpacket)))
+      {
+      //  TLOG(TLVL_WARNING, "CRTInterface") << "Tpacket is " << tpacket << "\n";
+        return;
+      }
     else
       state &= ~CRT_DRAIN_BUFFER;
   }
@@ -482,7 +486,7 @@ void CRTInterface::SetBaselines()
         // File isn't there.  This probably means that we are not the process
         // that started up the backend. We'll just wait for the backend to
         // finish starting and the file to appear.
-        TLOG(TLVL_INFO, "CRTInterface") << "Waiting for baseline file to appear\n";
+        TLOG(TLVL_DEBUG, "CRTInterface") << "Waiting for baseline file to appear\n";
         sleep(1);
       }
       else{
@@ -529,11 +533,11 @@ void CRTInterface::SetBaselines()
 
     if(nhit < 100)
       TLOG(TLVL_WARNING, "CRTInterface")
-        << "Warning: using baseline based on only " << nhit << " hits\n";
+        << "Warning: using baseline based on only " << nhit << " hits (PMT " << module << ", Ch. " << channel << ")\n";
 
     if(stddev > 7.0)
       TLOG(TLVL_WARNING, "CRTInterface")
-        << "Warning: using baseline with large error: " << stddev << " ADC counts\n";
+        << "Warning: using baseline with large error: " << stddev << " ADC counts (PMT " << module << ", Ch. " << channel << ")\n"; 
 
     baselines[module][channel] = int(fbaseline + 0.5);
   }
@@ -552,4 +556,9 @@ void CRTInterface::AllocateReadoutBuffer(char** cooked_data)
 void CRTInterface::FreeReadoutBuffer(char* cooked_data)
 {
   delete[] cooked_data;
+}
+
+uint64_t CRTInterface::GetTpacket()
+{
+  return tpacket;
 }

@@ -9,7 +9,7 @@
 //#include "eventbuilder.h"
 
 //using namespace std;
-using std::cout;
+//using std::cout;
 using std::endl;
 using std::string;
 
@@ -47,7 +47,7 @@ int startallboards(const char *argv, const char *online_path)
 
     PMTINI = 1;
     PMTFIN = Bottom::getnumpmt();
-    cout << "PMTFIN: " << PMTFIN << endl;
+    //cout << "PMTFIN: " << PMTFIN << endl;
 
 
     Bottom::initializeboard("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing

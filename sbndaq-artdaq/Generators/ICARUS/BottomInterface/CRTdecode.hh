@@ -22,10 +22,12 @@ namespace CRT{
   next_raw_byte to rawfromhardware and returns zero.  This should never
   happen as long as a reaosnable max_cooked is given.
 */
+//uint64_t tpacket = 0;
 unsigned int raw2cook(char * const cooked_data,
                       const unsigned int max_cooked,
                       char * rawfromhardware,
                       char * & next_raw_byte,
-                      const int baselines[64 /*maxModules*/][64 /*numChannels*/]);
+                      const int baselines[64 /*maxModules*/][64 /*numChannels*/],
+		      uint64_t &tpacket);
 
 }

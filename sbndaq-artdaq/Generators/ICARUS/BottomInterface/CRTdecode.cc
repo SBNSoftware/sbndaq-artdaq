@@ -15,7 +15,6 @@ namespace CRT{
 const int numChannels=64; // Number of channels in M64
 const int maxModules=64; // Maximum number of modules PER USB
                          // (okay if less than total number of modules)
-
 // A hit after decoding.
 struct decoded_hit {
   uint8_t channel;
@@ -36,6 +35,8 @@ struct decoded_packet {
   std::vector<decoded_hit> hits;
 };
 
+uint64_t tpacket_hi = 0;
+uint64_t tpacket_raw = 0;
 
 /*
   Return whether the input 24 bit word is part of a Unix timestamp packet, as
@@ -72,14 +73,22 @@ bool raw24bit_to_raw16bit(std::deque<uint16_t> & raw16bitdata,
   // than 11b, but we just ignore them.
   if(((in24bitword >> 22) & 3) != 3) 
   {
-    TLOG(TLVL_WARNING, "CRTdecode") << "Got a 24-bit word that starts with " << ((in24bitword >> 22) & 3) << "\n";
+    TLOG(TLVL_DEBUG, "CRTdecode") << "Got a 24-bit word that starts with " << ((in24bitword >> 22) & 3) << "\n";
     return false;
   }
 
   // In ProtoDUNE, we have no interest in Unix time stamp packets.
   if(is_unix_time_word(in24bitword)) 
   {
-    TLOG(TLVL_WARNING, "CRTdecode") << "Throwing out a UNIX time word\n";
+    //TLOG(TLVL_WARNING, "CRTdecode") << "Throwing out a UNIX time word\n";
+    //TLOG(TLVL_WARNING, "CRTdecode") << "Found a UNIX time word (in24bitword << 16):"<< (in24bitword << 16)  
+    //				    <<", (in24bitword >> 16) & 0xff: " << ((in24bitword >> 16) & 0xff) << "\n";
+    if(((in24bitword >> 16) & 0xff) == 200){
+      tpacket_hi = in24bitword & 65535;
+    }
+    else if(tpacket_hi > 0 && ((in24bitword >> 16) & 0xff) == 201) {
+      tpacket_raw = (tpacket_hi << 16) | (in24bitword & 65535);
+    }
     return false;
   }
 
@@ -87,7 +96,7 @@ bool raw24bit_to_raw16bit(std::deque<uint16_t> & raw16bitdata,
   // other codes in the comments above is_unix_time_word()), discard it.
   if((in24bitword >> 16) != 0xc0) 
   {
-    TLOG(TLVL_WARNING, "CRTdecode") << "Throwing out a word that is not a UNIX time word or hit data: " << (in24bitword << 16) << "\n";
+    TLOG(TLVL_DEBUG+1, "CRTdecode") << "Throwing out a word that is not a UNIX time word or hit data: " << (in24bitword << 16) << "\n";
     return false;
   }
 
@@ -311,7 +320,8 @@ unsigned int raw2cook(char * const cooked_data,
                       const unsigned int max_cooked,
                       char * rawfromhardware,
                       char * & next_raw_byte,
-                      const int baselines[maxModules][numChannels])
+                      const int baselines[maxModules][numChannels],
+		      uint64_t &tpacket)
 {
   /*
     Undocumented input file format is revealed by inspection to be
@@ -371,7 +381,7 @@ unsigned int raw2cook(char * const cooked_data,
           // incurs many buffer rotations below.
           break;
         }
-        TLOG(TLVL_WARNING, "CRTdecode") << "Throwing out word " << word << " in raw2cook() because "
+        TLOG(TLVL_DEBUG+1, "CRTdecode") << "Throwing out word " << word << " in raw2cook() because "
                                       << (raw24bit_success?"make_a_packet()":"raw24bit_to_raw16bit()") << " failed\n";
       }
     }
@@ -384,16 +394,20 @@ unsigned int raw2cook(char * const cooked_data,
   // Rotate buffer in the most wasteful way possible, by actually moving
   // the undecoded bytes to the front.
   if(used_raw_bytes){
-    TLOG(TLVL_WARNING, "CRT") << "Used " << used_raw_bytes << "bytes, and rotating " << next_raw_byte - rawfromhardware - used_raw_bytes << " to front for later use.\n";
+    TLOG(TLVL_DEBUG+1, "CRT") << "Used " << used_raw_bytes << "bytes, and rotating " << next_raw_byte - rawfromhardware - used_raw_bytes << " to front for later use.\n";
     memmove(rawfromhardware, rawfromhardware + used_raw_bytes,
             next_raw_byte - rawfromhardware - used_raw_bytes);
   }
   else{
-    TLOG(TLVL_WARNING, "CRTdecode") << "Used 0 bytes\n";
+    TLOG(TLVL_DEBUG+1, "CRTdecode") << "Used 0 bytes\n";
   }
 
   next_raw_byte -= used_raw_bytes;
   //TLOG(TLVL_DEBUG, "CRTdecode") << "Cooked bytes: " << cooked_bytes<< "\n";
+  tpacket = tpacket_raw;
+  if(tpacket == 1){
+    TLOG(TLVL_DEBUG, "CRTdecode") << "Tpacket error: " << tpacket <<"\n";
+  }
   return cooked_bytes;
 }
 

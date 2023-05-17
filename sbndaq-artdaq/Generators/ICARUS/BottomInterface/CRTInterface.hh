@@ -70,6 +70,8 @@ public:
 
   void SetBaselines();
 
+  uint64_t GetTpacket();
+  
 private:
 
   // Baselines, a.k.a. pedestals, for all of the channels in the run,
@@ -81,6 +83,8 @@ private:
   // something like Run_0000123/binary/. It can be an absolute or relative
   // path.
   std::string indir;
+
+  uint64_t tpacket = 0;
 
   // One of {3, 13, 14, 22}, each of which is a USB stream with 8 modules
   // on it.

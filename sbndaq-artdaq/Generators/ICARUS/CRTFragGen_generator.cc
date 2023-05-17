@@ -37,10 +37,10 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   , hardware_interface_(new CRTInterface(ps))
   , timestamp_(0)
   , fragment_ids_(ps.get<std::vector<uint32_t>>("fragment_ids"))
-  , uppertime(0)
-  , oldlowertime(0)
+  //, uppertime(0)
+  //, oldlowertime(0)
   , indir(ps.get<std::string>("indir"))
-  , runstarttime(0)
+  , runstarttime_ns(0)
   //, partition_number(ps.get<int>("partition_number"))
   , startbackend(ps.get<bool>("startbackend"))
   //, fUSBString(ps.get<std::string>("usbnumber"))
@@ -89,43 +89,9 @@ CRT::FragGen::~FragGen()
 bool CRT::FragGen::getNext_(
   std::list< std::unique_ptr<artdaq::Fragment> > & frags)
 {
-  /*if(!gotRunStartTime) 
-  {
-    //getRunStartTime();
-
-    //Make sure runstarttime isn't too different from current UNIX timestamp.  If it 
-    //is, then we probably won't write any useful data. When maintaining this code,  
-    //remember that the timing endpoint won't give us a good runstarttime until 
-    //everything has finished the start() transition.
-    const uint64_t deltaT = labs(runstarttime*16/1.e9 - time(nullptr));
-    if(deltaT > alarmDeltaT) //Hardcoded 16 ns per timestamp tick for ProtoDUNE-SP timing system
-    {
-      TLOG(TLVL_WARNING, "CRT") << "CRT board reader failed to get reasonable run start time "
-                                << "from timing endpoint.  Difference from UNIX time of " << deltaT
-                                << " > tolerance of " << alarmDeltaT << "\n";
-      return true; //Keep trying to take data, but don't try to form any timestamps until we have 
-                   //a "good" run start time
-    }
-
-    //runstarttime is OK if we got this far, so start sending back data.  
-    //If it took more than 14 seconds to get a "good" runstarttime, then 
-    //uppertime needs to be updated. 
-    uppertime = (uint64_t)(deltaT*1e9/16)/std::numeric_limits<uint32_t>::max();
-    TLOG(TLVL_INFO, "CRT") << "Set run start time to " << runstarttime << ", or " 
-                              << (uint64_t)(runstarttime*16./1.e9) << " seconds at UNIX timestamp of "
-                              << time(nullptr) << " seconds.  Looks like we skipped " << uppertime 
-                              << " 32-bit rollovers, so set uppertime to " << uppertime << ".\n";
-    gotRunStartTime = true;
-
-    //CM 11/2019
-    //initializing oldUNIX time
-    oldUNIX = time(nullptr);
-
-  }
-   */
-  oldUNIX = time(nullptr);
+  //oldUNIX_ns = time(nullptr);// seconds //*1.e9; //ns
   if(should_stop()){
-    TLOG(TLVL_INFO, "CRT") << "getNext_ returning on should_stop()\n";
+    TLOG(TLVL_INFO, "BottomFragGen") << "getNext_ returning on should_stop()\n";
     return false;
   }
 
@@ -148,12 +114,26 @@ bool CRT::FragGen::getNext_(
       // at least one.
       break;
     }
+  
 
     // I have kept the following NOTE for historical purposes.  This
     // loop generalizes what it suggests.
     //     NOTE: we are always returning zero or one fragments, but we
     //     could return more at the cost of some complexity, maybe getting
     //     an efficiency gain.  Check back here if things are too slow.
+   
+    //A tpacket is injected into the data stream every second by the USB board, with the current UNIX time in seconds 
+    tpacket_sec = hardware_interface_->GetTpacket();
+   
+    if(tpacket_sec != 0 && !gotRunStartTime){
+       TLOG(TLVL_WARNING, "BottomFragGen") << "Got first tpacket: " << tpacket_sec << " seconds.\n"; 
+    } 
+ 
+    if(tpacket_sec == 0){ //waiting for the first tpacket 
+      usleep(10);
+      break;
+    }
+
     frags.emplace_back(buildFragment(bytes_read));
   } //for each Fragment
 
@@ -172,10 +152,10 @@ bool CRT::FragGen::getNext_(
 
     ev_counter_inc(); // from base CommandableFragmentGenerator
 
-    TLOG(TLVL_INFO, "CRT") << "getNext_ is returning with hits in " << fragIt << " Fragments\n";
+    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getNext_ is returning with hits in " << fragIt << " Fragments\n";
   }
   else{
-    TLOG(TLVL_INFO, "CRT") << "getNext_ is returning with no data\n";
+    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getNext_ is returning with no data\n";
   }
 
   return true;
@@ -189,7 +169,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   // (1B), module number (2B) and timestamps (8B).
   const std::size_t minsize = 4 + sizeof(timestamp_);
   if(bytes_read < minsize){
-    throw cet::exception("CRT") << "Bad result with only " << bytes_read
+    throw cet::exception("BottomFragGen") << "Bad result with only " << bytes_read
        << " < " << minsize << " bytes from CRTInterface::FillBuffer.\n";
   }
 
@@ -208,162 +188,107 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   // the backend, where files are about 20 seconds long).
 
   // L. Jiang && C. Mariani Oct.2019
-  uint64_t currentUNIX = time(nullptr);
 
-  const uint64_t lowertime = *(uint32_t*)(readout_buffer_ + 4 + sizeof(uint64_t));
 
-  if (!gotRunStartTime) {
-    runstarttime = currentUNIX - lowertime*16./1e9;
-    gotRunStartTime = true;
-    oldUNIX = time(nullptr);
-    TLOG(TLVL_WARNING, "CRT") << "setting the runstarttime to " << runstarttime 
-                              << " with initial lowertime of  "  <<  lowertime*16./1e9 << " seconds \n";
-  }
-
-  //const uint64_t module = *(uint16_t*)(readout_buffer_ + 2 + sizeof(uint16_t));
-  const uint64_t module_id = *(uint16_t*)(readout_buffer_ + 2) - 1; //numbers in the buffer start at 1
-  //const uint64_t module = 0;
-    TLOG(TLVL_DEBUG, "CRT") << "getting data packet from module # = "
-			   << module_id << " \n"; 
   // rolloverThreshold combats out-of-order data causing rollovers in the
   // timestamp.  Tuned by increasing by orders of magnitude until I saw the
   // number of rollovers so far match the total run time.  Lots of things have
   // changed since the last tuning, so we can probably back off on
   // rolloverThreshold.  Whatever we do, it should never be >
   // std::numeric_limits<uint32_t>::max().
+  const uint64_t rolloverThreshold = 5000000; //was 100000000
+  
+  //uint64_t currentUNIX_ns = time(nullptr);
+  //uint64_t currentUNIX_ns = std::chrono::steady_clock::now().time_since_epoch().count();
+  uint64_t currentUNIX_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-  const uint64_t rolloverThreshold = 10000000; //was 100000000
 
-  int64_t newUppertime = uppertime;
+  const uint64_t lowertime_tick = *(uint32_t*)(readout_buffer_ + 4 + sizeof(uint64_t));
+  const uint64_t module_id = *(uint16_t*)(readout_buffer_ + 2) - 1; //numbers in the buffer start at 1
 
+  uint64_t lowertime_ns = lowertime_tick*16.; //Convert to ns
 
-  //determine the number of reset that occurred if the time passed is greater than 7s
-
-  //int64_t oldtimestamp = lowertime + ((uint64_t)uppertime + runstarttime)*1.e9/16.;  //this is in sec.
-
-  int64_t deltaUNIX = currentUNIX - oldUNIX; //this is in sec.  
-  //uint64_t deltaUNIX = currentUNIX - oldtimestamp; //difference in time in sec.
-
-  //debug for the moment the new deltaUNIX time constructor
-//  if (labs(deltaUNIX) > 0) { //there was at least one reset
-
-  if(deltaUNIX > 3 ){ // there is a difference, check if a reset happen ( @14 sec )
-    TLOG(TLVL_WARNING, "CRT") << "Detected a difference between currentUNIX = "
-			   << currentUNIX << " and oldUNIX = " 
-			   << oldUNIX << " \n";
-    //deltaUNIX /= 7; //number of clock counter between two consecutive events considering the 16ns ticks=7s
-    //deltaUNIX = (int)deltaUNIX; //lower end, need to check if it is off by one additional rollover    
-    //newUppertime += deltaUNIX*7; //adding an intenger number of seconds (7s) corresponding to how many resets we detect (should old do this when pausing the run)
+  //uint64_t deltaT_process = 0;
+  
+  if (!gotRunStartTime && tpacket_sec > 0) {
+    runstarttime_ns = tpacket_sec*1.e9 - lowertime_ns - cable_offset_ns; //ns
+    gotRunStartTime = true;
+    //oldUNIX_ns = time(nullptr); //seconds
+    oldUNIX_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    //deltaT_process = oldUNIX_ns - runstarttime;
+    TLOG(TLVL_WARNING, "BottomFragGen") << "setting the runstarttime to " << runstarttime_ns 
+                              << " ns, with tpacket: "<< tpacket_sec << " s, and initial lowertime of  "  <<  lowertime_ns << " ns\n";
   }
 
-  if(lowertime > maxlowertime){
-    maxlowertime = lowertime;
-    metricMan->sendMetric("Highest 32bit timestamp (in seconds):", maxlowertime*16./1.e9, "Fragments", 1, artdaq::MetricMode::Accumulate); 
+  if(tpacket_sec > 0 && tpacket_sec > old_tpacket_sec){
+    old_tpacket_sec = tpacket_sec;
+    TLOG(TLVL_DEBUG, "BottomFragGen") << "Found new tpacket: " << tpacket_sec 
+			      << " seconds, currentUNIX is: " << (uint64_t)(currentUNIX_ns/1.e9)
+			      << " seconds, diff is: " << (uint64_t)(currentUNIX_ns/1.e9 - tpacket_sec) << " s\n";
   }
 
-  if(lowertime * 16./1e9 > 7.1) {
-    TLOG(TLVL_WARNING, "CRT") << "module did not receive a sync. Module # "
+  if(lowertime_per_mod_ns[module_id]==0){ //First event in each module
+    lowertime_per_mod_ns[module_id]=lowertime_ns;
+    timestamp_=lowertime_per_mod_ns[module_id]+runstarttime_ns;
+    TLOG(TLVL_DEBUG, "BottomFragGen") << "setting first event timestamp for module " << module_id << " to " << timestamp_ 
+                              << " ns, with initial lowertime of "  <<  lowertime_per_mod_ns[module_id] << " ns\n";
+  }  
+  else{ //Any other event
+    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getting data packet from module # = "
+			   << module_id << "\n"; 
+
+    if(lowertime_ns+rolloverThreshold<lowertime_per_mod_ns[module_id]){
+      //increase the uppertime because we have received a sync pulse
+      uppertime_per_mod_syncs[module_id]++; 
+      TLOG(TLVL_DEBUG, "BottomFragGen") << "Module " << module_id <<" received a sync. "
+      				<< "Uppertime is now " << uppertime_per_mod_syncs[module_id] << " syncs\n";
+    }
+    timestamp_ = lowertime_ns + runstarttime_ns + uppertime_per_mod_syncs[module_id]*1.e9*sync;
+
+    if(module_id == 5){timestamp_ -= 14; } //Module 6 sync is wired directly to the doublechooz module
+
+    int64_t deltaUNIX_sec = timestamp_/1.e9 - oldUNIX_ns/1.e9; //this is in sec.  
+    int64_t consec_event_thres = 2;//TODO
+    if(labs(deltaUNIX_sec) > consec_event_thres){ // there is a difference between two consecutive processed events
+      TLOG(TLVL_WARNING, "BottomFragGen") << "Detected a difference between consecutive events of " 
+                           << deltaUNIX_sec << " seconds. currentUNIX = "
+			   << currentUNIX_ns/1.e9 << " sec, and timestamp = "
+			   << int64_t(timestamp_/1.e9) << " sec, and oldUNIX = "
+                           << oldUNIX_ns/1.e9 
+      			   << " sec. Tpacket is " << tpacket_sec 
+      			   << " sec, uppertime is " << uppertime_per_mod_syncs[module_id] 
+			   << " syncs, lowertime is " << lowertime_ns << " ns.\n";
+    }
+
+  //Safety check that all modules receive a sync 
+  //Tracks the highest lowertime each module has seen, verifies that it does not go above (sync+0.1) seconds
+  if(lowertime_ns > maxlowertime_ns[module_id]){
+    maxlowertime_ns[module_id] = lowertime_ns;
+    metricMan->sendMetric("Highest 32bit timestamp (in seconds):", maxlowertime_ns[module_id]/1.e9, "Fragments", 1, artdaq::MetricMode::Accumulate); 
+  }
+
+  if(lowertime_ns > (sync + 0.1)*1.e9) {
+    TLOG(TLVL_WARNING, "BottomFragGen") << "Module did not receive a sync. Module # "
 			   << module_id << " and lowertime is = " 
-                           << lowertime << "( " << lowertime*16./1e9 << " seconds )"<< " \n";
+                           << lowertime_ns << " ns ( " << lowertime_ns/1.e9 << " seconds )"<< " \n";
   }
-  //detecting if there is an additional rollover, close to the edge of the clock reset
-  /*if(lowertime + rolloverThreshold < oldlowertime && module_id == 1){ // TODO check we get events in order
-    newUppertime+=7;  
-    TLOG(TLVL_WARNING, "CRT") << "Detected a sync, current linux time = "
-			   << currentUNIX << " lowertime is = " 
-			   << lowertime << " old lowertime is = " 
-			   << oldlowertime << " newUppertime is = " 
-			   << newUppertime << " module # is = " 
-                           << module_id << ", syncs so far: " 
-			   << newUppertime/7 <<" \n";
-  }*/
+
+  //Sanity check on timestamps, check that the distance in time between when the event was acquired and processed stays within alarmDeltaT
+
+  //const int64_t deltaT = currentUNIX_ns/1.e9 - timestamp_/1.e9; //In seconds
+  
+  //if(labs(deltaT) > alarmDeltaT + deltaT_process) {
+  //  TLOG(TLVL_WARNING, "BottomFragGen") << "Problem with timestamp in module " << module_id << ". Uppertime set to = "
+  //                            << uppertime_per_mod[module_id]  << " lowertime set to = "
+  //                            << lowertime << ",deltaT_process is: " << deltaT_process << ", deltaT is " << deltaT << "  \n";
   //}
 
-  //building the new timestamp with the rollover if any
-  //timestamp_ = lowertime + ((uint64_t)newUppertime + runstarttime)*1.e9/16.;
-  timestamp_ = lowertime + (runstarttime)*1.e9/16.; //in ticks
+  metricMan->sendMetric("Timestamp difference", int(deltaUNIX_sec), "Fragments", 1, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
 
-
-  //Sanity check on timestamps, repeating somehow what we did before to cross check - TBF
-
-  const uint64_t inSeconds = timestamp_*16./1.e9; //convert to seconds using 16 nanosecond ticks in the ICARUS timing system
-
-  const int64_t deltaT = currentUNIX - inSeconds; //In seconds
-
-  int64_t newtimediff;
-
-  uppertime = (int)(labs(deltaT)/7);
-
-  timestamp_ += uppertime*7*1.e9/16.; //in ticks
-
-  newtimediff = currentUNIX - timestamp_*16./1.e9; //16 nanosecond ticks, convert timestamp in sec.
-      
-  if(labs(newtimediff) <= alarmDeltaT) { //repaired time stamp was successfull
-    //TLOG(TLVL_WARNING, "CRT") << "Repaired time stamp was successful in module " << module_id << ". Uppertime set to = "
-    //                          << uppertime  << ", newtimediff is now " << newtimediff <<" lowertime set to = "
-    //                          << lowertime << ", deltaT was " << deltaT << "  \n";
+  oldUNIX_ns = timestamp_; // in nanoseconds
+  lowertime_per_mod_ns[module_id] = lowertime_ns;
   }
-  else{
-      TLOG(TLVL_WARNING, "CRT") << "Generated time stamp was unsuccessful in module " << module_id <<". Newtimediff is "
-			        << newtimediff << ", uppertime: " << uppertime << ", deltaT: " << deltaT << ", lowertime: " << lowertime << "\n";
-  }  
-
-  int delta_now = newtimediff; //this is in sec.  
-
-  if(labs(delta_now) > 3 ){ // there is a difference, check if a reset happen ( @14 sec )
-    TLOG(TLVL_WARNING, "CRT") << "Detected a difference between currentUNIX = "
-			   << currentUNIX << " and timestamp = " 
-			   << timestamp_*16./1e9 << " \n";
   
-  }
-  metricMan->sendMetric("Timestamp difference", delta_now, "Fragments", 1, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
-
-/*  if(labs(deltaT) > alarmDeltaT) //Print a warning and don't update uppertime.  This might make us 
-                                 //a little more robust against one or two boards having internal timing 
-                                 //problems.  If it happens to all boards for too long, I won't try to 
-                                 //recover.  
-  {
-
-    TLOG(TLVL_WARNING, "CRT") << "Got a large time difference of " << deltaT << " between CRT timestamp of " 
-			      << timestamp_ << "( " << inSeconds << " seconds) - lowertime = " 
-			      << lowertime
-			      << ", old lowertime= " << oldlowertime
-			      << ", uppertime = " << uppertime 
-			      << " and deltaUNIX = " << deltaUNIX 
-			      << " and currentUNIX = " << currentUNIX
-			      << " and oldUNIX = " << oldUNIX 
-                              << " and module # = " << module_id
-			      << ".  Throwing out this Fragment - out of time.\n";
-
-    if( labs(deltaT) == 7 && lowertime + rolloverThreshold < oldlowertime ) {  //try to realign the time in case we are off by 1 cycle for whatever reason
-
-      //if(deltaT<0) {newUppertime+=7;} //try to futher correct the uppertime for this cycle: + 1 reset that was missed
-      //if(deltaT>0) {newUppertime-=7;} //try to futher correct the uppertime for this cycle: - 1 reset that was missed
-
-      timestamp_ = lowertime + ((uint64_t)newUppertime + runstarttime)*1.e9/16.;
-
-      newtimediff = timestamp_*16./1.e9 - currentUNIX; //16 nanosecond ticks, convert timestamp in sec.
-
-      TLOG(TLVL_WARNING, "CRT") << "deltaT=7s. Missed one reset cycle, try to correct it. deltaT = " 
-				<< deltaT << ", new deltaT = " << newtimediff << "\n";
-
-      if(labs(newtimediff) <= alarmDeltaT) { //repaired time stamp was successfull
-        TLOG(TLVL_WARNING, "CRT") << "Repaired time stamp was successful. Uppertime set to = "
-                                << newUppertime  << " oldlowertime set to = "
-                                << lowertime << "  \n";
-	      uppertime = newUppertime;
-	      oldUNIX = currentUNIX;
-	      oldlowertime = lowertime;
-      }//if not move on and try with the next event
-    }
-  }
-
-  else { 
-    uppertime = newUppertime; //This timestamp "makes sense", so keep track of 32-bit rollovers.
-    oldUNIX = timestamp_*16./1.e9;
-    oldlowertime = lowertime;
-  }
-*/
 
   // And also copy the repaired timestamp into the buffer itself.
   // Code downstream in artdaq reads timestamp_, but both will always be
@@ -378,50 +303,36 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     = artdaq::Fragment::FragmentBytes(bytes_read);
 
   fragptr->setSequenceID( ev_counter_inc() );
-  fragptr->setFragmentID(fragment_ids_[module_id]); // each board has it's own fragment ID
+  fragptr->setFragmentID(fragment_ids_[module_id]); // each board has its own fragment ID
   fragptr->setUserType( sbndaq::detail::BottomCRT );
-  fragptr->setTimestamp( timestamp_*16. ); // want timestamp, in 1 tick/16ns, in nanoseconds
+  fragptr->setTimestamp( timestamp_ ); //Timestamp is in ns
   memcpy(fragptr->dataBeginBytes(), readout_buffer_, bytes_read);
 
   return fragptr;
 }
-/*
-void CRT::FragGen::getRunStartTime()
-{
-  uhal::ValWord<uint32_t> status
-    = timinghw.getNode("endpoint0.csr.stat.ep_stat").read();
-  timinghw.dispatch();
-  if(status != 8){
-    throw cet::exception("CRT") << "CRT timing board in bad state, 0x"
-      << std::hex << (int)status << ", can't read run start time\n";
-  }
 
-  uhal::ValWord<uint32_t> rst_l = timinghw.getNode("endpoint0.pulse.ts_l").read();
-  timinghw.dispatch();
-  uhal::ValWord<uint32_t> rst_h = timinghw.getNode("endpoint0.pulse.ts_h").read();
-  timinghw.dispatch();
-  runstarttime = ((uint64_t)rst_h << 32) + rst_l;
-}
-*/
 void CRT::FragGen::start()
 { 
   hardware_interface_->StartDatataking();
+ 
+  for(int i=0;i<(int)fragment_ids_.size();i++){
+    lowertime_per_mod_ns.push_back(0);
+    uppertime_per_mod_syncs.push_back(0);
+    maxlowertime_ns.push_back(0);
+  }
 
   //runstarttime = time(nullptr);
-  //TLOG(TLVL_INFO, "CRT") << "runstarttime set to " << runstarttime << "\n";
+  //TLOG(TLVL_INFO, "BottomFragGen") << "runstarttime set to " << runstarttime << "\n";
 
-  uppertime = 0;
-  oldlowertime = 0;
+  //uppertime = 0;
+  //oldlowertime = 0;
 }
 
 void CRT::FragGen::stop()
 {
-  TLOG(TLVL_INFO) << "stop() called";
   hardware_interface_->StopDatataking();
   // Stop the backend DAQ.
-  TLOG(TLVL_DEBUG) << "stop() before stopallboards";
   stopallboards(configfile.c_str(),indir.c_str());
-  TLOG(TLVL_DEBUG) << "stop() after stopallboards";
   string cmd = "killall bottomCRTreadout";
   int ret=system(cmd.c_str());
   TLOG(TLVL_DEBUG) << "system("<< cmd << ") returned: " << ret;

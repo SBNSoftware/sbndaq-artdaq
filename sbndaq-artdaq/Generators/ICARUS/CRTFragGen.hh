@@ -62,11 +62,6 @@ namespace CRT
        And then all the rest of the members are here to deal with fixing
        the CRT hardware's 32-bit time stamp.
     *********************************************************************/
-
-    // Gets the full 64-bit run start time, measured in 50MHz clock ticks,
-    // from a timing board and puts it in runstarttime.
-    void getRunStartTime();
-
     // Emits one Fragment from hardware_interface_.  It seems like we'll ideally 
     // only call this once in GetNext_(), but we can call it multiple times when 
     // able to speed things up if we're too slow. 
@@ -87,10 +82,13 @@ namespace CRT
     // The upper 32 bits of the timestamp. We keep track of this in the
     // fragment generator because the CRT hardware only keeps the lower
     // 32 bits.
-    uint32_t uppertime;
+    std::vector<uint32_t> uppertime_per_mod_syncs;
+    std::vector<uint32_t> lowertime_per_mod_ns;
+    uint64_t tpacket_sec = 0;
+    uint64_t old_tpacket_sec = 0;
 
     //Keep track of the maximum lowertime among all boards
-    uint32_t maxlowertime = 0;
+    std::vector<uint32_t> maxlowertime_ns;
 
     // The previous 32-bit timestamp received from the CRT hardware (or
     // the run start time if no events yet), so we can determine if we
@@ -100,11 +98,11 @@ namespace CRT
     // Directory on local scratch to store backend DAQ data and logs
     std::string indir;
 
-    uint64_t oldUNIX = 0;
+    uint64_t oldUNIX_ns = 0;
 
     // The 64-bit global timestamp of the start of the run. We need to
     // retrieve and store this to repair the CRT's internal 32-bit time.
-    uint64_t runstarttime;
+    uint64_t runstarttime_ns;
 
     // The partition number from the FCL.  We need to write this into the
     // timing board to be able to retrieve the run start time.
@@ -126,7 +124,17 @@ namespace CRT
     bool gotRunStartTime;
 
     //When should we get worried about timestamps getting out of sync?  In seconds
-    static constexpr int64_t alarmDeltaT = 6; 
+    static constexpr int64_t alarmDeltaT = 2; 
+    static constexpr int64_t sync = 7;
+
+    //Breakdown of cable offsets: 
+    //225 +/- 0.2 ns SPEXI to West CRT TDU +
+    //10 ns time for gate generator to get the signal out (needs check)+
+    //50 ns coincidence module (needs check)+
+    //15 +/- 5 ns doublechooz module +
+    //15 +/- 5 ns fan in/out + (not applicable for module 6)
+    //99 ns for 70 ft. of cable at 1.42 ns/ft =
+    static constexpr int64_t cable_offset_ns = 414; //ns, +/-30
   };
 }
 

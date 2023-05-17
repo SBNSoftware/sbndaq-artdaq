@@ -31,17 +31,14 @@ int stopallboards(const char *argv, const char *online_path){
 
   Bottom::stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
 
-  //string cmd = "killall bottomCRTreadout";
-  //string cmd = "pidof bottomCRTreadout";
-  //int rr=system(cmd.c_str());
-  //TLOG_DEBUG(1)<<"system(\""<<cmd<<"\") returned: "<<rr<<" WEXITSTATUS="<<WEXITSTATUS(rr);
+  sleep(2);
 
   char pidline[1024];
   char *pid;
   int sig = 9;
   unsigned pids_found= 0;
   int pidno[2];
-  FILE *fp = popen("pidof bottomCRTreadout","r");
+  FILE *fp = popen("/sbin/pidof bottomCRTreadout","r");
   if (fp) {
     pidline[0]='x'; pidline[1]='\0';
     char *ret= fgets(pidline,sizeof(pidline),fp);

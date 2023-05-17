@@ -1,7 +1,7 @@
 #define DAEMONIZE 1 // 0
 #define BUF_NO (8) //256               -- 32 ok
 #define BUF_SIZE (16 * 1024)//32 * 1024 -- 64 *1024 ok	
-#define DATA_IN_TIMEOUT 250 // 500     -- 1000 ok
+#define DATA_IN_TIMEOUT 1000 // 500     -- 1000 ok
 
 #include <aio.h>
 #include <errno.h>
