@@ -135,7 +135,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   // Check and print firmware version
   uint32_t mbb_fw_version = mbb->Read("FIRMWARE_VERSION");
   
-  TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
+  /*TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
         << std::hex << std::setw(8) << std::setfill('0')
         <<  mbb_fw_version
         << " Synthesized: " 
@@ -152,9 +152,9 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
         << std::hex << std::setw(2) << std::setfill('0')
         << mbb->Read("SYSTEM.SYNTH_TIME.MINUTE") << ":"
         << std::hex << std::setw(2) << std::setfill('0')
-        << mbb->Read("SYSTEM.SYNTH_TIME.SECOND")  << TLOG_ENDL; 
+        << mbb->Read("SYSTEM.SYNTH_TIME.SECOND")  << TLOG_ENDL;*/ 
   
-  if (expected_mbb_fw_version != mbb_fw_version)
+  /*if (expected_mbb_fw_version != mbb_fw_version)
   {
     cet::exception excpt(identification);
     excpt << "MBB Firmware version is "
@@ -165,7 +165,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
         << expected_mbb_fw_version
         <<" version in fcl";
     throw excpt;
-  }
+  }*/
 
   // Throwing errors if the argument is not logical.
   if (PULSE_SOURCE > 1){
