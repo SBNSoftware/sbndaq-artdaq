@@ -37,7 +37,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   loadConfiguration(ps);
   
   last_rcvd_rwcounter=0x0;
-  last_sent_rwcounter=0x1;
+  last_sent_seqid=0x1;
   last_sent_ts=0;
   CAEN_DGTZ_ErrorCode retcode;
 
@@ -73,14 +73,14 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   Configure();
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
+  TLOG(TLVL_INFO) << "FP_TRG_OUT_CONTROL Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
     "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
+  TLOG(TLVL_INFO) << "FP_IO_CONTROL Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
 
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_LVDS_CONTROL,&data);
-  TLOG(TLVL_INFO) << "Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
+  TLOG(TLVL_INFO) << "FP_LVDS_CONTROL Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
     data << std::dec;
 
   if(!fOK)
@@ -202,7 +202,7 @@ void sbndaq::CAENV1730Readout::configureInterrupts()
 void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 {
   // initialize the fhicl parameters (see CAENV1730Readout.hh)
-  // the obj ps has a member method that gets he private members
+  // the obj ps has a member method that gets the private members
   // fVerbosity, etc.. are priv memb in CAENV1730Readout.hh
   //
   // wes, 16Jan2018: disabling default parameters
@@ -235,8 +235,7 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   TLOG(TINFO)<<"SelfTriggerMode=" << fSelfTriggerMode;
 
   fSelfTriggerMask = ps.get<uint32_t>("SelfTriggerMask"); 
-  TLOG(TINFO)<<"SelfTriggerMask=" << std::hex 
-	     << fSelfTriggerMask << std::dec;
+  TLOG(TINFO)<<"SelfTriggerMask=" << std::hex << fSelfTriggerMask << std::dec;
 
   fGetNextSleep = ps.get<uint32_t>("GetNextSleep"); //1000000
   TLOG(TINFO) << "GetNextSleep=" << fGetNextSleep;
@@ -244,21 +243,23 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fCircularBufferSize = ps.get<uint32_t>("CircularBufferSize"); //1000000
   TLOG(TINFO) << "CircularBufferSize=" << fCircularBufferSize;
 
-  fCombineReadoutWindows = ps.get<bool>("CombineReadoutWindows");
-  TLOG(TINFO) <<"CombineReadoutWindows=" << fCombineReadoutWindows;
-
+  // force ADC calibration on config
   fCalibrateOnConfig = ps.get<bool>("CalibrateOnConfig");
   TLOG(TINFO) <<"CalibrateOnConfig=" << fCalibrateOnConfig;
 
+  // disable temperature calibration
   fLockTempCalibration = ps.get<bool>("LockTempCalibration");
   TLOG(TINFO) <<"LockTempCalibration=" << fLockTempCalibration;
+
+  // read/write ADC calibration parameters
+  fWriteCalibration = ps.get<bool>("AdcCalibration");
+  TLOG(TINFO) <<"WriteCalibration=" << fWriteCalibration;
 
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<"fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
   fMaxEventsPerTransfer = ps.get<uint32_t>("maxEventsPerTransfer",1);
   TLOG(TINFO) <<"fMaxEventsPerTransfer=" << fMaxEventsPerTransfer;
-
 
   //Animesh & Aiwu add - for LVDS logic settings
   fLVDSLogicValueG1 = ps.get<uint32_t>("LVDSLogicValueG1"); // LVDS logic value for G1
@@ -278,6 +279,7 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fLVDSLogicValueG8 = ps.get<uint32_t>("LVDSLogicValueG8"); // LVDS logic value for G8
   TLOG(TINFO)<<"LVDSLogicValueG8=" << fLVDSLogicValueG8;
   //Animesh & Aiwu add end
+
   //Animesh & Aiwu add - for LVDS output width
   fLVDSOutWidthC1 = ps.get<uint32_t>("LVDSOutWidthC1"); // LVDS output width Ch1
   TLOG(TINFO)<<"LVDSOutWidthC1=" << fLVDSOutWidthC1;
@@ -312,45 +314,10 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fLVDSOutWidthC16 = ps.get<uint32_t>("LVDSOutWidthC16"); // LVDS output width Ch16
   TLOG(TINFO)<<"LVDSOutWidthC16=" << fLVDSOutWidthC16;
   //Animesh & Aiwu add end
+
   //Animesh & Aiwu add - self trigger polarity
   fSelfTrigBit = ps.get<uint32_t>("SelfTrigBit"); // LVDS output width Ch16
   TLOG(TINFO)<<"SelfTrigBit=" << fSelfTrigBit;
-  fChargePedstalBitCh1 = ps.get<uint32_t>("ChargePedstalBitCh1"); // DPP algorithm feature
-  TLOG(TINFO)<<"ChargePedstalBitCh1=" << fChargePedstalBitCh1;
-  // dc offset or baseline
-  fBaselineCh1 = ps.get<uint32_t>("BaselineCh1"); // ch1 baseline
-  TLOG(TINFO)<<"BaselineCh1=" << fBaselineCh1;
-  fBaselineCh2 = ps.get<uint32_t>("BaselineCh2"); // ch2 baseline
-  TLOG(TINFO)<<"BaselineCh2=" << fBaselineCh2;
-  fBaselineCh3 = ps.get<uint32_t>("BaselineCh3"); // ch3 baseline
-  TLOG(TINFO)<<"BaselineCh3=" << fBaselineCh3;
-  fBaselineCh4 = ps.get<uint32_t>("BaselineCh4"); // ch4 baseline
-  TLOG(TINFO)<<"BaselineCh4=" << fBaselineCh4;
-  fBaselineCh5 = ps.get<uint32_t>("BaselineCh5"); // ch5 baseline
-  TLOG(TINFO)<<"BaselineCh5=" << fBaselineCh5;
-  fBaselineCh6 = ps.get<uint32_t>("BaselineCh6"); // ch6 baseline
-  TLOG(TINFO)<<"BaselineCh6=" << fBaselineCh6;
-  fBaselineCh7 = ps.get<uint32_t>("BaselineCh7"); // ch7 baseline
-  TLOG(TINFO)<<"BaselineCh7=" << fBaselineCh7;
-  fBaselineCh8 = ps.get<uint32_t>("BaselineCh8"); // ch8 baseline
-  TLOG(TINFO)<<"BaselineCh8=" << fBaselineCh8;
-  fBaselineCh9 = ps.get<uint32_t>("BaselineCh9"); // ch9 baseline
-  TLOG(TINFO)<<"BaselineCh9=" << fBaselineCh9;
-  fBaselineCh10 = ps.get<uint32_t>("BaselineCh10"); // ch10 baseline
-  TLOG(TINFO)<<"BaselineCh10=" << fBaselineCh10;
-  fBaselineCh11 = ps.get<uint32_t>("BaselineCh11"); // ch11 baseline
-  TLOG(TINFO)<<"BaselineCh11=" << fBaselineCh11;
-  fBaselineCh12 = ps.get<uint32_t>("BaselineCh12"); // ch12 baseline
-  TLOG(TINFO)<<"BaselineCh12=" << fBaselineCh12;
-  fBaselineCh13 = ps.get<uint32_t>("BaselineCh13"); // ch13 baseline
-  TLOG(TINFO)<<"BaselineCh13=" << fBaselineCh13;
-  fBaselineCh14 = ps.get<uint32_t>("BaselineCh14"); // ch14 baseline
-  TLOG(TINFO)<<"BaselineCh14=" << fBaselineCh14;
-  fBaselineCh15 = ps.get<uint32_t>("BaselineCh15"); // ch15 baseline
-  TLOG(TINFO)<<"BaselineCh15=" << fBaselineCh15;
-  fBaselineCh16 = ps.get<uint32_t>("BaselineCh16"); // ch16 baseline
-  TLOG(TINFO)<<"BaselineCh16=" << fBaselineCh16;
-  //Aimesh & Aiwu addd end
 
   fUseTimeTagForTimeStamp = ps.get<bool>("UseTimeTagForTimeStamp",true);
   TLOG(TINFO) <<"fUseTimeTagForTimeStamp=" << fUseTimeTagForTimeStamp;
@@ -398,6 +365,7 @@ void sbndaq::CAENV1730Readout::Configure()
   configureInterrupts();
 
   if (fCalibrateOnConfig)     { RunADCCalibration();  }
+
   // Does lock bit clear on V1730 reset?   If not, always call this routine
   if (fLockTempCalibration )  
   { 
@@ -407,24 +375,20 @@ void sbndaq::CAENV1730Readout::Configure()
     }
   }
 
-// Calibration added by Animesh
-   uint8_t fCalParams;
+  // Calibration added by Animesh
+  uint8_t fCalParams;
   if (fWriteCalibration)  
-  { 
-  
-     TLOG(TINFO)<<"maximum ch is = " <<CAENConfiguration::MAX_CHANNELS<<TLOG_ENDL;
-    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
-    {
-
-      TLOG(TINFO)<<"Chnumber is" <<ch<<TLOG_ENDL;
-      Read_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
-    //  Write_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
+    { 
+      
+      for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+	{
+	  TLOG(TINFO)<<"Chnumber is " <<ch<<TLOG_ENDL;
+	  Read_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
+	  //  Write_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
+	}
+      
     }
-
-  }
-
-
-
+  
   TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure() done." << TLOG_ENDL;
 }
 
@@ -435,79 +399,6 @@ void sbndaq::CAENV1730Readout::RunADCCalibration()
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
 }
 
-//Animesh & Aiwu added function
-void sbndaq::CAENV1730Readout::ConfigureOthers(){
-  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
-  uint32_t data,readBack,ioMode;
-
-  // Always set output to "New features"
-
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G8, fLVDSLogicValueG8);
-
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, DPP_Alo_Feature_Ch1, fChargePedstalBitCh1);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, DPP_Alo_Feature_Ch1, &readBack);
-  sbndaq::CAENDecoder::checkError(retcod,"Read_DPP_Algorithm_feature_0x1n80",fBoardID);
-  TLOG(TINFO) << "DPP Algorithm feature ch1: 0x" << std::hex << readBack << std::dec;
-
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, DPP_Alo_Feature_Ch2, &readBack);
-  TLOG(TINFO) << "DPP Algorithm feature ch2: 0x" << std::hex << readBack << std::dec;
-
-  // set DC offset, or baseline
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch1, fBaselineCh1);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch1, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch1: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch2, fBaselineCh2);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch2, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch2: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch3, fBaselineCh3);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch3, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch3: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch4, fBaselineCh4);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch4, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch4: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch5, fBaselineCh5);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch5, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch5: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch6, fBaselineCh6);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch6, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch6: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch7, fBaselineCh7);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch7, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch7: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch8, fBaselineCh8);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch8, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch8: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch9, fBaselineCh9);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch9, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch9: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch10, fBaselineCh10);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch10, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch10: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch11, fBaselineCh11);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch11, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch11: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch12, fBaselineCh12);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch12, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch12: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch13, fBaselineCh13);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch13, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch13: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch14, fBaselineCh14);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch14, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch14: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch15, fBaselineCh15);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch15, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch15: 0x" << std::hex << readBack << std::dec;
-  //retcod = CAEN_DGTZ_WriteRegister(fHandle, Baseline_Ch16, fBaselineCh16);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, Baseline_Ch16, &readBack);
-  TLOG(TINFO) << "DC offset, or baseline of ch16: 0x" << std::hex << readBack << std::dec;
-
-  // test software trigger
-  //retcod = CAEN_DGTZ_ReadRegister(fHandle, SWTriggerValue, &readBack);
-  //TLOG(TINFO) << "send a software trigger (whatever value is fine): 0x" << std::hex << readBack << std::dec;
-
-}
-//Animesh & Aiwu add end
 
 void CAENV1730Readout::ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status)
 {
@@ -688,61 +579,106 @@ void sbndaq::CAENV1730Readout::Read_ADC_CalParams_V1730(int handle, int ch, uint
 
 void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams)
 {
- //int retcod = 0;
- CAEN_DGTZ_ErrorCode retcod;
-// Keep parameters frozen
- retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
- TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << (int)CalParams[0];
- sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
- // write offset
- retcod = WriteSPIRegister(handle, ch, 0x20, CalParams[0]);
- 
- retcod = WriteSPIRegister(handle, ch, 0x21, CalParams[1]);
- 
- retcod = WriteSPIRegister(handle, ch, 0x26, CalParams[2]);
+  //int retcod = 0;
+  CAEN_DGTZ_ErrorCode retcod;
+  // Keep parameters frozen
+  retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
+  TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << (int)CalParams[0];
+  sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
 
- retcod = WriteSPIRegister(handle, ch, 0x27, CalParams[3]);
-
-// write gain
- retcod = WriteSPIRegister(handle, ch, 0x22, CalParams[4]);
- 
- retcod = WriteSPIRegister(handle, ch, 0x23, CalParams[5]);
- 
- retcod = WriteSPIRegister(handle, ch, 0x24, CalParams[6]);
- 
-
- retcod = WriteSPIRegister(handle, ch, 0x28, CalParams[7]);
- 
-
- retcod = WriteSPIRegister(handle, ch, 0x29, CalParams[8]);
-
- retcod = WriteSPIRegister(handle, ch, 0x2A, CalParams[9]);
- 
- // write skew
- retcod = WriteSPIRegister(handle, ch, 0x70, CalParams[10]);
- 
- // Update parameters
- retcod = WriteSPIRegister(handle, ch, 0xFE, 0x01);
- 
- retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
- 
-//return CAEN_DGTZ_Success;
-
+  // write offset
+  retcod = WriteSPIRegister(handle, ch, 0x20, CalParams[0]);
+  retcod = WriteSPIRegister(handle, ch, 0x21, CalParams[1]);
+  retcod = WriteSPIRegister(handle, ch, 0x26, CalParams[2]);
+  retcod = WriteSPIRegister(handle, ch, 0x27, CalParams[3]);
+  
+  // write gain
+  retcod = WriteSPIRegister(handle, ch, 0x22, CalParams[4]);
+  retcod = WriteSPIRegister(handle, ch, 0x23, CalParams[5]);
+  retcod = WriteSPIRegister(handle, ch, 0x24, CalParams[6]);
+  retcod = WriteSPIRegister(handle, ch, 0x28, CalParams[7]);
+  retcod = WriteSPIRegister(handle, ch, 0x29, CalParams[8]);
+  retcod = WriteSPIRegister(handle, ch, 0x2A, CalParams[9]);
+  
+  // write skew
+  retcod = WriteSPIRegister(handle, ch, 0x70, CalParams[10]);
+  
+  // Update parameters
+  retcod = WriteSPIRegister(handle, ch, 0xFE, 0x01);
+  retcod = WriteSPIRegister(handle, ch, 0xFE, 0x00);
+  
 }
 
 // Animesh add ends
 
-
-void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
+// GVS: new ConfigureSelfTriggerMode() function
+ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 {
   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
-  uint32_t data,readBack;
 
   retcod = CAEN_DGTZ_SetChannelSelfTrigger(fHandle,
 					   (CAEN_DGTZ_TriggerMode_t)fSelfTriggerMode,
 					   fSelfTriggerMask);
-  sbndaq::CAENDecoder::checkError(retcod,"SetSelfTriggerMask",fBoardID);
+  sbndaq::CAENDecoder::checkError(retcod,"SetChannelSelfTriggerMode",fBoardID);
+  
+
+  // GVS: the following configuration parameters are for SBND. fModeLVDS must be
+  if(fModeLVDS==0){ 
+  
+     uint32_t data, data2, bitpair, readBack, aux, aux2;
+  
+     // GVS: verify the SelfTrigger values set in each channel.
+     for(uint32_t chn=0; chn<fNChannels; ++chn){
+         retcod = CAEN_DGTZ_GetChannelSelfTrigger(fHandle, chn, (CAEN_DGTZ_TriggerMode_t *)&readBack);
+         sbndaq::CAENDecoder::checkError(retcod,"GetChannelSelfTriggerMode",fBoardID);
+         CheckReadback("ChannelSelfTriggerMode", fBoardID, fSelfTriggerMode, readBack, chn);
+
+    
+        // GVS: inserted triggerLogic for each PAIR of channels.
+        if(chn%2==0){
+      
+           retcod = CAEN_DGTZ_ReadRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),&aux);
+           TLOG_ARB(TCONFIG,TRACE_NAME) << "Self-trigger logic to channel " << chn << " old value " << std::hex << aux << std::dec;
+
+           TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << chn << "/" << chn+1 << " self trigger logic to " << fCAEN.triggerLogic
+				       /* << " self trigger pulse type to " << fCAEN.ovthValue*/ << TLOG_ENDL;
+           retcod = CAEN_DGTZ_WriteRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),
+					(fCAEN.triggerLogic & 0x3)/* + ((fCAEN.ovthValue & 0x1) <<2)*/);
+
+           sbndaq::CAENDecoder::checkError(retcod,"SelfTriggerPulseType",fBoardID);
+           retcod = CAEN_DGTZ_ReadRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),&aux2);
+      
+           TLOG_ARB(TCONFIG,TRACE_NAME) << "Self-trigger logic to channel " << chn << " new value " << std::hex << aux2 << std::dec;
+           CheckReadback("SelfTriggerPulseType", fBoardID, aux2, (fCAEN.triggerLogic & 0x3) /*+ ((fCAEN.ovthValue & 0x1) <<2)*/,chn);
+        }
+     }
+  
+   
+     // GVS: read TRG_OUT register to monitor enabled/disabled pair of channels.
+     retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_TRG_OUT_CONTROL, &bitpair);
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel TRG-OUT address 0x8110, value: 0x" << std::hex << bitpair << std::dec;
+				    
+
+
+     /* Set Majority Mode and Majority Coincidence Window */
+     retcod = CAEN_DGTZ_ReadRegister(fHandle, GLB_TRG_MASK, &data);
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Global Trigger Mask address 0x810C, old value: 0x" << std::hex << data << std::dec;
+  
+     TLOG_ARB(TCONFIG,TRACE_NAME)  << " Set Majority Level to " << fCAEN.majorityLevel << TLOG_ENDL;
+     TLOG_ARB(TCONFIG,TRACE_NAME)  << " Set Maj Coincidence Window to " << fCAEN.majorityCoincidenceWindow << TLOG_ENDL;
+				   
+     data |= ((fCAEN.majorityLevel & 0x7)<<24) + ((fCAEN.majorityCoincidenceWindow & 0xF) <<20);
+				   
+     retcod = CAEN_DGTZ_WriteRegister(fHandle,GLB_TRG_MASK, data);
+
+     sbndaq::CAENDecoder::checkError(retcod,"SetMajCoincWindow",fBoardID);
+     retcod = CAEN_DGTZ_ReadRegister(fHandle,GLB_TRG_MASK,&data2);
+      
+     TLOG_ARB(TCONFIG,TRACE_NAME) << "Global Trigger Mask address 0x810C, new value: 0x" << std::hex << data2 << std::dec;
+     CheckReadback("SetMajCoincWindow", fBoardID, data, data2);
+  }
 }
+
 
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
 {
@@ -998,7 +934,6 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
 
   CAEN_DGTZ_ErrorCode retcode;
 
-  //
   retcode = CAEN_DGTZ_SetMaxNumEventsBLT(fHandle,fMaxEventsPerTransfer);
   sbndaq::CAENDecoder::checkError(retcode,"SetMaxNumEventsBLT",fBoardID);
 
@@ -1053,32 +988,35 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
     retcode = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readback);
     CheckReadback("SetChannelTriggerThreshold",fBoardID,fCAEN.triggerThresholds[ch],readback);
 
-    //pulse width only set in pairs
-    /* //Aiwu commented out this because LVDS output width is set elsewhere in the ConfigureLVDS() function
-    if(ch%2==0)
-    {
-      TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
+    //GVS: the following configuration parameters are for SBND. fModeLVDS must be 0
+      if(fModeLVDS==0){
+      TLOG_ARB(TCONFIG,TRACE_NAME) << "Set Trigger Polarity " << fCAEN.triggerPolarity << " to channel: " << ch << TLOG_ENDL;
+      retcode = CAEN_DGTZ_SetTriggerPolarity(fHandle, ch,(CAEN_DGTZ_TriggerPolarity_t)(fCAEN.triggerPolarity));
+      sbndaq::CAENDecoder::checkError(retcode,"SetTriggerPolarity",fBoardID);
+      retcode = CAEN_DGTZ_GetTriggerPolarity(fHandle, ch,(CAEN_DGTZ_TriggerPolarity_t *)&readback);
+      CheckReadback("SetTriggerPolarity", fBoardID,fCAEN.triggerPolarity,readback, ch);
+
+    
+      //GVS: pulse width must be set per channel, not per pair of channel. This contradicts what manual says!
+      TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << " trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
+      retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH_CH+(ch<<8),fCAEN.triggerPulseWidth);
+      sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
+      retcode = CAEN_DGTZ_ReadRegister(fHandle,TRG_OUT_WIDTH_CH+(ch<<8),&readback);
+      CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback, ch);
+
+      //pulse width only set in pairs, but doesn't hurt to do it for all channels I guess
+      /* TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
 				   << " trigger pulse width to " << (int)(fCAEN.triggerPulseWidth) << TLOG_ENDL;
       retcode = CAEN_DGTZ_WriteRegister(fHandle,0x1070+(ch<<8),fCAEN.triggerPulseWidth);
       sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
       retcode = CAEN_DGTZ_ReadRegister(fHandle,0x1070+(ch<<8),&readback);
-      CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
+      CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback); */
     }
-    */
-  }
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set global trigger pulse width to " << fCAEN.triggerPulseWidth << TLOG_ENDL;
-  retcode = CAEN_DGTZ_WriteRegister(fHandle,TRG_OUT_WIDTH,fCAEN.triggerPulseWidth);
-  sbndaq::CAENDecoder::checkError(retcode,"SetGlobalTriggerPulseWidth",fBoardID);
-  // Readback must be channel by channel (see reg doc)
-  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
-  {
-    uint32_t address = TRG_OUT_WIDTH_CH | ( ch << 8 );  
-    retcode = CAEN_DGTZ_ReadRegister(fHandle,address,&readback);
-    CheckReadback("SetGlobalTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback);
   }
 
-  ConfigureLVDS();
-  ConfigureOthers(); // Animesh & Aiwu added new function
+  // for ICARUS
+  if(fModeLVDS!=0){ ConfigureLVDS();  }
+
   ConfigureSelfTriggerMode();
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerMode" << fCAEN.extTrgMode << TLOG_ENDL;
@@ -1115,6 +1053,7 @@ void sbndaq::CAENV1730Readout::ConfigureReadout()
   CAEN_DGTZ_ErrorCode retcode;
   uint32_t readback;
   uint32_t addr,mask;
+  uint32_t value=0;
   
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetRunSyncMode " << (CAEN_DGTZ_RunSyncMode_t)(fCAEN.runSyncMode) << TLOG_ENDL;
   retcode = CAEN_DGTZ_SetRunSynchronizationMode(fHandle,
@@ -1141,8 +1080,6 @@ void sbndaq::CAENV1730Readout::ConfigureReadout()
   addr = ACQ_CONTROL;
   retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,uint32_t{0x28});
   sbndaq::CAENDecoder::checkError(retcode,"SetTriggerMode",fBoardID);
-
-  uint32_t value =0;
   retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
   sbndaq::CAENDecoder::checkError(retcode,"GetTriggerMode",fBoardID);
 
@@ -1177,7 +1114,6 @@ void sbndaq::CAENV1730Readout::ConfigureAcquisition()
   sbndaq::CAENDecoder::checkError(retcode,"SetAnalogMonOutputMode",fBoardID);
   
   // GetAnalogMonOutput function does not work for V1730s, use register access instead
-  //retcode = CAEN_DGTZ_GetAnalogMonOutput(fHandle,(CAEN_DGTZ_AnalogMonitorOutputMode_t*)&readback);
   retcode = CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_MON_MODE_ADD,&readback);
   CheckReadback("SetAnalogMonOutputMode",fBoardID,fCAEN.analogMode,readback);
 
@@ -1211,14 +1147,15 @@ bool sbndaq::CAENV1730Readout::WaitForTrigger()
 
 void sbndaq::CAENV1730Readout::start()
 {
+
   if(fVerbosity>0)
     TLOG_INFO("CAENV1730Readout") << "start()" << TLOG_ENDL;
   TLOG_ARB(TSTART,TRACE_NAME) << "start()" << TLOG_ENDL;
-
+  
   ConfigureDataBuffer();
   total_data_size = 0;
-  last_sent_rwcounter = 0;
-
+  last_sent_seqid = 0;
+  
   if((CAEN_DGTZ_AcqMode_t)(fCAEN.acqMode)==CAEN_DGTZ_AcqMode_t::CAEN_DGTZ_SW_CONTROLLED)
     {
       CAEN_DGTZ_ErrorCode retcode;
@@ -1226,177 +1163,100 @@ void sbndaq::CAENV1730Readout::start()
       retcode = CAEN_DGTZ_SWStartAcquisition(fHandle);
       sbndaq::CAENDecoder::checkError(retcode,"SWStartAcquisition",fBoardID);
     }
-
+  
   fEvCounter=0;
+  fOverflowCounter=0;
   CAEN_DGTZ_ErrorCode retcod;
 
   // Animesh add ADC registers here
 
-  for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
-     {
- retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
- // TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
- // sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
- // write offset
- retcod = WriteSPIRegister(fHandle, ch, 0x20, 114);
- 
- retcod = WriteSPIRegister(fHandle, ch, 0x21, 107);
- 
- retcod = WriteSPIRegister(fHandle, ch, 0x26, 122);
-
- retcod = WriteSPIRegister(fHandle, ch, 0x27, 76);
-
-// write gain
- retcod = WriteSPIRegister(fHandle, ch, 0x22, 14);
- 
- retcod = WriteSPIRegister(fHandle, ch, 0x23, 128);
- 
- retcod = WriteSPIRegister(fHandle, ch, 0x24, 127);
- 
-
- retcod = WriteSPIRegister(fHandle, ch, 0x28, 14);
- 
-
- retcod = WriteSPIRegister(fHandle, ch, 0x29, 135);
-
- retcod = WriteSPIRegister(fHandle, ch, 0x2A, 125);
- 
- // write skew
- retcod = WriteSPIRegister(fHandle, ch, 0x70, 129);
- 
- // Update parameters
- retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x01);
- 
- retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
-       
-
-      }
-
-  //  Animesh ends
-
-uint32_t readBack;
- // Animesh start reading the baseline values 
- // dc offset or baseline
- // fBaselineCh1 = ps.get<uint32_t>("BaselineCh1"); // ch1 baseline
-  TLOG(TINFO)<<"Check_BaselineCh1=" << fBaselineCh1;
-//  fBaselineCh2 = ps.get<uint32_t>("BaselineCh2"); // ch2 baseline
-  TLOG(TINFO)<<"Check_BaselineCh2=" << fBaselineCh2;
-//  fBaselineCh3 = ps.get<uint32_t>("BaselineCh3"); // ch3 baseline
-  TLOG(TINFO)<<"Check_BaselineCh3=" << fBaselineCh3;
-//  fBaselineCh4 = ps.get<uint32_t>("BaselineCh4"); // ch4 baseline
-  TLOG(TINFO)<<"Check_BaselineCh4=" << fBaselineCh4;
-//  fBaselineCh5 = ps.get<uint32_t>("BaselineCh5"); // ch5 baseline
-  TLOG(TINFO)<<"Check_BaselineCh5=" << fBaselineCh5;
-//  fBaselineCh6 = ps.get<uint32_t>("BaselineCh6"); // ch6 baseline
-  TLOG(TINFO)<<"Check_BaselineCh6=" << fBaselineCh6;
-//  fBaselineCh7 = ps.get<uint32_t>("BaselineCh7"); // ch7 baseline
-  TLOG(TINFO)<<"Check_BaselineCh7=" << fBaselineCh7;
-//  fBaselineCh8 = ps.get<uint32_t>("BaselineCh8"); // ch8 baseline
-  TLOG(TINFO)<<"Check_BaselineCh8=" << fBaselineCh8;
-//  fBaselineCh9 = ps.get<uint32_t>("BaselineCh9"); // ch9 baseline
-  TLOG(TINFO)<<"Check_BaselineCh9=" << fBaselineCh9;
-//  fBaselineCh10 = ps.get<uint32_t>("BaselineCh10"); // ch10 baseline
-  TLOG(TINFO)<<"Check_BaselineCh10=" << fBaselineCh10;
-//  fBaselineCh11 = ps.get<uint32_t>("BaselineCh11"); // ch11 baseline
-  TLOG(TINFO)<<"Check_BaselineCh11=" << fBaselineCh11;
-//  fBaselineCh12 = ps.get<uint32_t>("BaselineCh12"); // ch12 baseline
-  TLOG(TINFO)<<"Check_BaselineCh12=" << fBaselineCh12;
-//  fBaselineCh13 = ps.get<uint32_t>("BaselineCh13"); // ch13 baseline
-  TLOG(TINFO)<<"Check_BaselineCh13=" << fBaselineCh13;
-//  fBaselineCh14 = ps.get<uint32_t>("BaselineCh14"); // ch14 baseline
-  TLOG(TINFO)<<"Check_BaselineCh14=" << fBaselineCh14;
-//  fBaselineCh15 = ps.get<uint32_t>("BaselineCh15"); // ch15 baseline
-  TLOG(TINFO)<<"Check_BaselineCh15=" << fBaselineCh15;
-//  fBaselineCh16 = ps.get<uint32_t>("BaselineCh16"); // ch16 baseline
-  TLOG(TINFO)<<"Check_BaselineCh16=" << fBaselineCh16;
-
-// Animesh ends here
-
-
-// Animesh Check trigger threshold here
-
- for(uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
-  {
-
-    TLOG(TINFO) << "Trigger threshold before run start for ch " <<ch<<"is "<< fCAEN.triggerThresholds[ch];
-
-   
+  if (fWriteCalibration)  
+    { 
+      for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+        {
+          retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
+          // TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
+          // sbndaq::CAENDecoder::checkError(retcod,"Write_ADC_CalParams_0x20",handle);
+      
+          // write offset
+          retcod = WriteSPIRegister(fHandle, ch, 0x20, 114);
+          retcod = WriteSPIRegister(fHandle, ch, 0x21, 107);
+          retcod = WriteSPIRegister(fHandle, ch, 0x26, 122);
+          retcod = WriteSPIRegister(fHandle, ch, 0x27, 76);
+      
+          // write gain
+          retcod = WriteSPIRegister(fHandle, ch, 0x22, 14);
+          retcod = WriteSPIRegister(fHandle, ch, 0x23, 128);
+          retcod = WriteSPIRegister(fHandle, ch, 0x24, 127);
+          retcod = WriteSPIRegister(fHandle, ch, 0x28, 14);
+          retcod = WriteSPIRegister(fHandle, ch, 0x29, 135);
+          retcod = WriteSPIRegister(fHandle, ch, 0x2A, 125);
+      
+          // write skew
+          retcod = WriteSPIRegister(fHandle, ch, 0x70, 129);
+      
+          // Update parameters
+          retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x01);
+          retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
+        }
   }
+  //  Animesh ends
+  
+  uint32_t readBack;
+  
+  // Animesh Check trigger threshold here
+  
+  for(uint32_t ch=0; ch<fNChannels; ++ch)
+    {
+      retcod = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readBack);
+      TLOG(TINFO) << "Trigger threshold before run start for ch " << ch << " is " << readBack << TLOG_ENDL;    
+    }
+  
+  
+  // Animesh end 
+  
+  //  uint32_t readBack;
+  //Animesh & Aiwu add - to set/read registers for LVDS logic values setting
 
-
-// Animesh end 
-
-//  uint32_t readBack;
- //Animesh & Aiwu add - to set/read registers for LVDS logic values setting
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G1, fLVDSLogicValueG1);
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G2, fLVDSLogicValueG2);
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G3, fLVDSLogicValueG3);
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G4, fLVDSLogicValueG4);
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G5, fLVDSLogicValueG5);
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G6, fLVDSLogicValueG6);
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G7, fLVDSLogicValueG7);
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G8, fLVDSLogicValueG8);
-
-
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
-  TLOG(TINFO) << "After Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
-  TLOG(TINFO) << " After Start Register for G2: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
-  TLOG(TINFO) << " After Start Register for G3: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
-  TLOG(TINFO) << " After Start Register for G4: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
-  TLOG(TINFO) << " After Start Register for G5: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
-  TLOG(TINFO) << " After Start Register for G6: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
-  TLOG(TINFO) << "After Start Register for G7: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
-  TLOG(TINFO) << "After Start Register for G8: 0x" << std::hex << readBack << std::dec;
-
+  if(fModeLVDS!=0){
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G1, fLVDSLogicValueG1);
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G2, fLVDSLogicValueG2);
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G3, fLVDSLogicValueG3);
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G4, fLVDSLogicValueG4);
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G5, fLVDSLogicValueG5);
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G6, fLVDSLogicValueG6);
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G7, fLVDSLogicValueG7);
+    retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_Logic_G8, fLVDSLogicValueG8);
+    
+    
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
+    TLOG(TINFO) << "After Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
+    TLOG(TINFO) << " After Start Register for G2: 0x" << std::hex << readBack << std::dec;
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
+    TLOG(TINFO) << " After Start Register for G3: 0x" << std::hex << readBack << std::dec;
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
+    TLOG(TINFO) << " After Start Register for G4: 0x" << std::hex << readBack << std::dec;
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
+    TLOG(TINFO) << " After Start Register for G5: 0x" << std::hex << readBack << std::dec;
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
+    TLOG(TINFO) << " After Start Register for G6: 0x" << std::hex << readBack << std::dec;
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
+    TLOG(TINFO) << "After Start Register for G7: 0x" << std::hex << readBack << std::dec;
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
+    TLOG(TINFO) << "After Start Register for G8: 0x" << std::hex << readBack << std::dec;
+  }
 
 
   fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
   GetData_thread_->start();
-
-// Animesh Check the trigger difference value
-uint32_t Diff_ch1 = fBaselineCh1 - fCAEN.triggerThresholds[0];
-TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch 1 is" << Diff_ch1;
-uint32_t Diff_ch2 = fBaselineCh2 - fCAEN.triggerThresholds[1];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 2 is" << Diff_ch2;
-uint32_t Diff_ch3 = fBaselineCh3 - fCAEN.triggerThresholds[2];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 3 is" << Diff_ch3;
-uint32_t Diff_ch4 = fBaselineCh4 - fCAEN.triggerThresholds[3];
-TLOG(TINFO)<<"Difference between Baseline and Trig  for Ch 4 is" << Diff_ch4;
-uint32_t Diff_ch5 = fBaselineCh5 - fCAEN.triggerThresholds[4];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 5 is" << Diff_ch5;
-uint32_t Diff_ch6 = fBaselineCh6 - fCAEN.triggerThresholds[5];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 6 is" << Diff_ch6;
-uint32_t Diff_ch7 = fBaselineCh7 - fCAEN.triggerThresholds[6];
-TLOG(TINFO)<<"Difference between Baseline and Trig for Ch 7 is" << Diff_ch7;
-// Animesh
-   
-
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
-  TLOG(TINFO) << "After0 Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
-  TLOG(TINFO) << " After0 Start Register for G2: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
-  TLOG(TINFO) << " After0 Start Register for G3: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
-  TLOG(TINFO) << " After0 Start Register for G4: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
-  TLOG(TINFO) << " After0 Start Register for G5: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
-  TLOG(TINFO) << " After0 Start Register for G6: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
-  TLOG(TINFO) << "After0 Start Register for G7: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
-  TLOG(TINFO) << "After0 Start Register for G8: 0x" << std::hex << readBack << std::dec;
-
-
-
+  
+  // Check the baseline values
+  for(uint32_t i_ch=0; i_ch<fNChannels; ++i_ch)
+  {
+    retcod = CAEN_DGTZ_GetChannelDCOffset(fHandle,i_ch,&readBack);
+    TLOG(TINFO)<<"DC offset or baseline before run start for Ch " << i_ch << " is " << readBack << TLOG_ENDL;    
+  }   
 
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
 }
@@ -1406,30 +1266,6 @@ void sbndaq::CAENV1730Readout::stop()
   if(fVerbosity>0)
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
-
-
- // Animesh add
-  CAEN_DGTZ_ErrorCode retcod;
-  uint32_t readBack;
-
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G1, &readBack);
-  TLOG(TINFO) << "After Start Register for G1: 0x" <<retcod<< std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G2, &readBack);
-  TLOG(TINFO) << " After Start Register for G2: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G3, &readBack);
-  TLOG(TINFO) << " After Start Register for G3: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G4, &readBack);
-  TLOG(TINFO) << " After Start Register for G4: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G5, &readBack);
-  TLOG(TINFO) << " After Start Register for G5: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G6, &readBack);
-  TLOG(TINFO) << " After Start Register for G6: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G7, &readBack);
-  TLOG(TINFO) << "After Start Register for G7: 0x" << std::hex << readBack << std::dec;
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_LVDS_Logic_G8, &readBack);
-  TLOG(TINFO) << "After Start Register for G8: 0x" << std::hex << readBack << std::dec;
-
-// Animesh ends
 
 
   GetData_thread_->stop();
@@ -1445,6 +1281,8 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
+// This function is called internally by the art framework and should not be called in the boardreader itself
+// The two relevant fcl parameters are: "poll_hardware_status" (true/false) and "hardware_poll_interval_us" (period in us)
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
   for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
@@ -1468,6 +1306,11 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
 			  artdaq::MetricMode::Average);
 
+    if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
+      TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
+                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
+		       << TLOG_ENDL;
+    }
 
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
     TLOG_ARB(TTEMP,TRACE_NAME) << statStream.str()
@@ -1518,8 +1361,6 @@ bool sbndaq::CAENV1730Readout::GetData() {
 
   // read the data from the buffer of the card
   // this_data_size is the size of the acq window
-
-  //return readSingleWindowDataBlock();
 
   return readWindowDataBlocks();
 
@@ -1581,7 +1422,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     auto block =  fPoolBuffer.takeFreeBlock();
     if(!block) {
       TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		       << "PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
+		       << "PoolBuffer is empty; last received trigger eventCounter=" <<last_rcvd_rwcounter;
       TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
 		       << "PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
                        << "(FragID=" << fFragmentID << ")"
@@ -1701,11 +1542,12 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
 
 
-    //check trigger counter gaps
+    //check trigger event counter gaps: this is a 24-bit counter in the CAEN board
+    //if the run is long, it can overflow --> do not throw errors in that case
     auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
-    if( readoutwindow_trigger_counter_gap > 1u ){
+    if( readoutwindow_trigger_counter_gap > 1u && last_rcvd_rwcounter < max_rwcounter ){
       TLOG (TLVL_DEBUG) << "(FragID=" << fFragmentID << ")"
-			<< "Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
+			<< "Missing triggers; previous trigger eventCounter / gap  = " << last_rcvd_rwcounter << " / "
 			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
 			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
     }    
@@ -1730,196 +1572,28 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   return true;
 }
 
-//old single block code ... probably should not be used anymore
-bool sbndaq::CAENV1730Readout::readSingleWindowDataBlock() {
-
-  if(fail_GetNext) {
-    TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		     << "Not calling CAEN_DGTZ_ReadData due a previous critical error...";
-    ::usleep(50000);
-    return false;
-  }
-
-  TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")" << "Begin of readSingleWindowDataBlock()";
-
-  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, fIRQTimeoutMS);
-
-  fTimePollEnd = boost::posix_time::microsec_clock::universal_time();
-  
-  fTimeDiffPollBegin = fTimePollBegin - fTimeEpoch;
-  fTimeDiffPollEnd = fTimePollEnd - fTimeEpoch;
-  
-  fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
-  
-  if (retcode == CAEN_DGTZ_Timeout) {
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   << "Exiting after a timeout. Poll time was " 
-		   << (fTimeDiffPollEnd - fTimeDiffPollBegin).total_milliseconds() << " ms.";
-    return true;
-  }
-  else if(retcode !=CAEN_DGTZ_Success) {
-    TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		     << "CAEN_DGTZ_IRQWait returned non zero return code; return code=" << int{retcode};
-    std::this_thread::yield();
-    return false;
-  }
-
-  auto fragment_count=fGetNextFragmentBunchSize;
-
-  metricMan->sendMetric("Free DataBlocks",fPoolBuffer.freeBlockCount(),"fragments",1,artdaq::MetricMode::LastPoint);
-  while (--fragment_count) {
-    auto block =  fPoolBuffer.takeFreeBlock();
-
-    if(!block) {
-      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		       << "PoolBuffer is empty; last received trigger sequenceID=" <<last_rcvd_rwcounter;
-      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		       << "PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
-                       << "(FragID=" << fFragmentID << ")"
-		       <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
-      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		       << "Critical error; aborting boardreader process....";				
-
-      fail_GetNext = true;
-
-      std::this_thread::yield();
-      return false;
-    }
-
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   << "Got a free DataBlock from PoolBuffer";
-
-    uint32_t read_data_size =0;
-
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
-                   << ",&block.size="<<(void*)&(block->size) << ")";
-
-    retcode = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
-                                (char*)block->begin,&read_data_size);
-
-    block->verify_redzone();
-    block->data_size= read_data_size;
-
-    if (retcode !=CAEN_DGTZ_Success) {
-        TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-			 << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
-        fPoolBuffer.returnFreeBlock(block);
-				std::this_thread::yield();
-        return false;
-    }
-
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   << "CAEN_DGTZ_ReadData complete with returned data size " << block->data_size
-                   << " retcod=" << int{retcode};
-
-    if (block->data_size == 0) { 
-      TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		     << "CAEN_DGTZ_ReadData returned zero data size";
-      fPoolBuffer.returnFreeBlock(block);
-			std::this_thread::yield();
-      return false;
-    }
-
-    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(block->begin);
-    const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
-
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   
-		   << ": PMT_EVENT_COUNTER=" << header->eventCounter
-		   << ", PMT_EVENT_SIZE=" << header->eventSize
-		   << ", PMT_TIME_TAG=" << header->triggerTimeTag;
-
-    if(block->data_size != header_event_size ) {
-      TLOG(TLVL_ERROR) << "(FragID=" << fFragmentID << ")"
-		       <<"Wrong event size; returned="
-                       << block->data_size << ", header=" << header_event_size;
-    }
-
-    fMeanPollTime = fTimeDiffPollBegin.total_nanoseconds()/2 + fTimeDiffPollEnd.total_nanoseconds()/2;
-    fMeanPollTimeNS = fMeanPollTime%(1000000000);
-    fTTT=0;
-    fTTT_ns = -1;
-
-    if(fUseTimeTagForTimeStamp){
-      fTTT = uint32_t{header->triggerTimeTag}; // 
-      fTTT_ns = fTTT*8;
-      
-
-      // Scheme borrowed from what Antoni developed for CRT.
-      // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
-      fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
-	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
-	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
-	- fTimeOffsetNanoSec;
-
-    }
-    else{
-      fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
-    }
-
-    {
-      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
-      fTimestampMap[uint32_t{header->eventCounter}] = fTS;
-    }
-
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   
-		   << "TIMESTAMP " <<  fFragmentID 
-		   << ": Poll begin/end/mean/ns = " << fTimeDiffPollBegin.total_nanoseconds()
-		   << "/" << fTimeDiffPollEnd.total_nanoseconds() 
-		   << "/" << fMeanPollTime
-		   << "/" << fMeanPollTimeNS;
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   << "TIMESTAMP " << fFragmentID 
-		   << ": TTT/TTT_ns/TS_ns = " << fTTT << "/" << fTTT_ns << "/" << fTS;
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   << "TIMESTAMP " << fFragmentID 
-		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
-
-
-    
-    auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
-        
-    if( readoutwindow_trigger_counter_gap > 1u ){
-      TLOG (TLVL_DEBUG) << "(FragID=" << fFragmentID << ")"
-			<< "Missing triggers; previous trigger sequenceID / gap  = " << last_rcvd_rwcounter << " / "
-			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
-			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
-    }
-    
-    last_rcvd_rwcounter = uint32_t{header->eventCounter};
-    fPoolBuffer.returnActiveBlock(block);
-    
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   << "CAEN_DGTZ_ReadData returned DataBlock header.eventCounter=" 
-		   << header->eventCounter << ", header.eventSize=" << header_event_size;
-  }
-  
-  return true;
-}
 
 // this is really the DAQ part where the server reads data from 
 // the card and stores them
 bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments){
   if(fail_GetNext) throw std::runtime_error("Critical error; stopping boardreader process...." ) ;
-  return fCombineReadoutWindows ? readCombinedWindowFragments(fragments): readSingleWindowFragments(fragments);
+  return readSingleWindowFragments(fragments);
 }
 
 bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & fragments){
   TLOG(TGETNEXT) << "Begin of readSingleWindowFragments()" ;
 
-	static auto start= std::chrono::steady_clock::now();
+  static auto start= std::chrono::steady_clock::now();
 
- 	std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
+  std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
 
   if (delta.count() >0.005*fGetNextFragmentBunchSize) {
      metricMan->sendMetric("Laggy getNext",1,"count",1,artdaq::MetricMode::Accumulate);
-     TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_rwcounter;
+     TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_seqid;
    }
 
   if(fPoolBuffer.activeBlockCount() == 0){
-    TLOG(TGETNEXT) << "PoolBuffer has no data.  Laast last seen fragment sequenceID=" <<last_sent_rwcounter
+    TLOG(TGETNEXT) << "PoolBuffer has no data.  Laast last seen fragment sequenceID=" << last_sent_seqid
                    << "; Sleep for " << fGetNextSleep << " us and return.";
     ::usleep(fGetNextSleep);
     start= std::chrono::steady_clock::now();
@@ -1941,19 +1615,22 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   while(fPoolBuffer.activeBlockCount()){
 
     start= std::chrono::steady_clock::now();
-//    TLOG(21) << "b4 FragmentBytes";
     auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,fEvCounter,fFragmentID,sbndaq::detail::FragmentType::CAENV1730,metadata);
 
 
     using sbndaq::PoolBuffer;
     PoolBuffer::DataRange<decltype(artdaq::Fragment())> range{fragment_uptr->dataBegin(),fragment_uptr->dataEnd()};
 
-//	TLOG(21) << "b4 fPoolBuffer.read(range)";
     if(!fPoolBuffer.read(range)) break;
 
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(fragment_uptr->dataBeginBytes());
+   
+    // get eventCounter, which is the key to get the correct timestamp from the map
+    // for longer runs it can overflow (24 bit) --> play safe and don't use it as sequence id
+    // build sequence id keeping track of overflows (avoids repeated seqIDs in the same run)
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
-    fragment_uptr->setSequenceID(readoutwindow_event_counter);
+    uint64_t readoutwindow_sequence_id = uint64_t{readoutwindow_event_counter + fOverflowCounter*(max_rwcounter+1u)};
+    fragment_uptr->setSequenceID(readoutwindow_sequence_id);
 
     size_t ts_count;
     {
@@ -1963,7 +1640,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     int ts_loop=0;
 
     while(ts_loop<3 && ts_count==0){
-      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
 			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
       ts_loop++;
@@ -1998,7 +1675,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       fTimestampMap.erase(readoutwindow_event_counter);
     }
     else{
-      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
 		       << " Will generate new one now...";
 
       if(fUseTimeTagForTimeStamp){
@@ -2053,25 +1730,26 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     fragment_uptr->setTimestamp( ts_frag );
 
-    auto readoutwindow_event_counter_gap= readoutwindow_event_counter - last_sent_rwcounter;
+    // check for possible gaps in the sequence IDs: compare current one with last sent
+    // throw errors if gap > 1 or order is not correct
+    auto readoutwindow_sequence_id_gap= readoutwindow_sequence_id - last_sent_seqid;
 
-    TLOG(TMAKEFRAG)<<"Created fragment " << fFragmentID << " for event " << readoutwindow_event_counter
+    TLOG(TMAKEFRAG)<<"Created fragment " << fFragmentID << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
                    << " triggerTimeTag " << header->triggerTimeTag << " ts=" << ts_frag;
-
     
-    if( readoutwindow_event_counter_gap > 1u ){
-      if ( last_sent_rwcounter > 0 )
+    if( readoutwindow_sequence_id_gap > 1u ){
+      if ( last_sent_seqid > 0 )
       {
-	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_rwcounter << " / "
-                        << readoutwindow_event_counter_gap;
-	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_event_counter_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / "
+                        << readoutwindow_sequence_id_gap;
+	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
       }
     }
 
-    if( readoutwindow_event_counter < last_sent_rwcounter )
+    if( readoutwindow_sequence_id < last_sent_seqid )
       {
-	TLOG(TLVL_ERROR) << "SequnceIDs processed out of order!! "
-			 << readoutwindow_event_counter << " < " << last_sent_rwcounter << TLOG_ENDL;
+	TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! "
+			 << readoutwindow_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
       }
     if( last_sent_ts > ts_frag)
       {
@@ -2081,9 +1759,13 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     fragments.emplace_back(nullptr);
     std::swap(fragments.back(),fragment_uptr);
-    
+   
+    // keep track of CAEN event counter overflows
+    // this is important to avoid repeating sequenceIDs
+    if( readoutwindow_event_counter == max_rwcounter ) fOverflowCounter++;
     fEvCounter++;
-    last_sent_rwcounter = readoutwindow_event_counter;
+
+    last_sent_seqid = readoutwindow_sequence_id;
     last_sent_ts = ts_frag;
     delta = std::chrono::steady_clock::now()-start;
 
@@ -2092,7 +1774,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     if (delta.count() >0.0005 ) {
       metricMan->sendMetric("Laggy Fragments",1,"frags",1,artdaq::MetricMode::Maximum);
-      TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_rwcounter <<  " took " << delta.count()*1000 << " ms";
+      TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_seqid <<  " took " << delta.count()*1000 << " ms";
 //TRACE_CNTL("modeM", 0);
     }
   }
@@ -2110,10 +1792,6 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   return true;
 }
 
-
-bool  sbndaq::CAENV1730Readout::readCombinedWindowFragments(artdaq::FragmentPtrs &){
-throw std::runtime_error("Implement me correctly!");
-}
 
 void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
 					      int boardID,

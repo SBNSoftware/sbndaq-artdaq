@@ -24,7 +24,6 @@ class CAENConfiguration
   CAENConfiguration(fhicl::ParameterSet const & ps);
 
     int  link;
-    int  firstBoardId;
     int  nBoards;
     int  enableReadout;
     int  boardId;
@@ -33,8 +32,6 @@ class CAENConfiguration
     int  eventsPerInterrupt;
     int  irqWaitTime;
     bool allowTriggerOverlap;
-    bool usePedestals;
-    int  dacValue;
     int  dynamicRange;
     int  ioLevel;
     int  nChannels;
@@ -47,9 +44,6 @@ class CAENConfiguration
     int  acqMode;
     int  debugLevel;
     int  runSyncMode;
-    int  outputSignalMode;
-    int  eventCounterWarning;
-    int  memoryAlmostFull;
     int  readoutMode;
     int  analogMode;
     int  testPattern;
@@ -60,6 +54,11 @@ class CAENConfiguration
 
     uint32_t  channelEnableMask;
     uint32_t  channelSelfTrgMask;
+  //  int  ovthValue;         
+    int  triggerLogic;  
+    int  majorityLevel; 
+    int  majorityCoincidenceWindow;
+    uint32_t  maxTemp;
 
     void print(std::ostream & os = std::cout);
 };

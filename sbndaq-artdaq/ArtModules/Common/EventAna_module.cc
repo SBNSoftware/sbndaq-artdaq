@@ -551,9 +551,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 {
   fRun = evt.run();
   fEvent = evt.event();
-  if (fverbose)   std::cout << "Run " << fRun << " event " << fEvent << std::endl;
-  std::cout << "\n" <<std::endl;
-  std::cout << "Run " << fRun << " event " << fEvent << std::endl;
+  if (fverbose)
+    std::cout << "\n\nRun " << fRun << " event " << fEvent << std::endl;
 
   /************************************************************************************************/
   // need to clear tree variables at the beginning of the event
@@ -579,6 +578,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   lost_hits.clear()            ;   run_start_time.clear() ;    this_poll_start.clear()        ;   this_poll_end.clear();
   last_poll_start.clear()      ;   last_poll_end.clear()  ;    system_clock_deviation.clear();    feb_hits_in_poll.clear();
   feb_hits_in_fragment.clear() ;   sequence_id.clear();
+
   /************************************************************************************************/
 
   // Reset PTB variables

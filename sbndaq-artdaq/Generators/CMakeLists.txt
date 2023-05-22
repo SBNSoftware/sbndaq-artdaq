@@ -1,6 +1,6 @@
 set ( LIBRARY_CORE_LIB_LIST
       artdaq_DAQdata
-      artdaq_Generators
+      artdaq_CommandableFragmentGenerator
       artdaq-utilities_Plugins
       artdaq_core::artdaq-core_Utilities
       artdaq_core::artdaq-core_Data
