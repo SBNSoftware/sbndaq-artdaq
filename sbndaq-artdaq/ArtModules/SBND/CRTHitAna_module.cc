@@ -109,6 +109,32 @@ public:
 	fhicl::Comment("if true make additional output tree"),
 	false
 	};
+    fhicl::Atom<bool> MakeAnaTree {
+      fhicl::Name("MakeAnaTree"),
+	fhicl::Comment("if true make original ana tree"),
+	true
+	};
+    fhicl::Atom<bool> MakeHistos {
+      fhicl::Name("MakeHistos"),
+	fhicl::Comment("if true make adc histos for each sipm"),
+	false
+	};
+    fhicl::Sequence<int> LeftAframeHList {
+      fhicl::Name("LeftAframeHList"),
+	fhicl::Comment("list of horizontal modules on left side of Aframe")
+	};
+    fhicl::Sequence<int> LeftAframeVList {
+      fhicl::Name("LeftAframeVList"),
+	fhicl::Comment("list of vertical modules on left side of Aframe")
+	};
+    fhicl::Sequence<int> RightAframeHList {
+      fhicl::Name("RightAframeHList"),
+	fhicl::Comment("list of horizontal modules on right side of Aframe")
+	};
+    fhicl::Sequence<int> RightAframeVList {
+      fhicl::Name("RightAframeVList"),
+	fhicl::Comment("list of vertical modules on right side of Aframe")
+	};
 
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
@@ -122,6 +148,7 @@ public:
 
 private:
 
+  bool checkList(int thisfeb,std::vector<int> feblist);
   void analyze_caen_fragment(artdaq::Fragment & frag);
   void analyze_wr_fragment_dio(artdaq::Fragment & frag);
   void analyze_bern_fragment(artdaq::Fragment & frag);
@@ -247,26 +274,27 @@ private:
   std::vector<int>  sequence_id;
 
   //crt hit information
-  int febid_h;
-  int strip_h;
-  int ts0_h;
-  int ts1_h;
-  int adcA_h;
-  int adcB_h;
-  int febid_v;
-  int strip_v;
-  int ts0_v;
-  int ts1_v;
-  int adcA_v;
-  int adcB_v;
+  std::vector<int> febid_h;
+  std::vector<int> strip_h;
+  std::vector<int> ts0_h;
+  std::vector<int> ts1_h;
+  std::vector<int> adcA_h;
+  std::vector<int> adcB_h;
+  std::vector<int> febid_v;
+  std::vector<int> strip_v;
+  std::vector<int> ts0_v;
+  std::vector<int> ts1_v;
+  std::vector<int> adcA_v;
+  std::vector<int> adcB_v;
   std::map<int,std::vector<int>> CrossingFEBs;
-  int horiz[4];
+  std::vector<int> horiz;
 
   // new fcls for crt hit tree
   int fBeamTimeWindowStart; 
   int fBeamTimeWindowEnd;
   int fTimeCoinc;
   bool fMakeCRTHitTree;
+  bool fMakeAnaTree;
 
   bool finclude_caen;
   bool fcaen_keepwaveforms;
@@ -276,6 +304,10 @@ private:
   bool finclude_berncrt;
   bool fcrt_keepall;
   bool fverbose;
+  std::vector<int> fRightAframeVList;
+  std::vector<int> fLeftAframeVList;
+  std::vector<int> fRightAframeHList;
+  std::vector<int> fLeftAframeHList;
 
 }; //--class CRTHitAna
 
@@ -300,11 +332,18 @@ sbndaq::CRTHitAna::CRTHitAna(CRTHitAna::Parameters const& pset): art::EDAnalyzer
   fBeamTimeWindowEnd= pset().BeamTimeWindowEnd(); 
   fTimeCoinc= pset().TimeCoinc(); 
   fMakeCRTHitTree= pset().MakeCRTHitTree(); 
+  fMakeAnaTree= pset().MakeAnaTree(); 
+  //fMakeHistos=pset().MakeHistos(); 
+  fRightAframeVList=pset().RightAframeVList();
+  fLeftAframeVList=pset().LeftAframeVList();
+  fRightAframeHList=pset().RightAframeHList();
+  fLeftAframeHList=pset().LeftAframeHList();
 
 }
 
 void sbndaq::CRTHitAna::beginJob()
 {
+  std::cout << "here" << std::endl;
   art::ServiceHandle<art::TFileService> tfs;
   nt_header       = tfs->make<TNtuple>("nt_header","Multi Header Ntuple","art_ev:caen_ev:caenv_ev_tts");
   /************************************************************************************************/
@@ -312,6 +351,12 @@ void sbndaq::CRTHitAna::beginJob()
   hTriggerTimeTag = tfs->make<TH1D>("hTriggerTimeTag","Trigger Time Tag Histogram",12500,0,125000000);
   h_wvfm_ev0_ch0  = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",2000,0,2000);
   /************************************************************************************************/
+
+
+
+  /************************************************************************************************/
+
+  //  if (fMakeAnaTree) {
   //--make tree to store the channel waveform info:
   events = tfs->make<TTree>("events","waveform tree");
   events->Branch("fRun",&fRun,"fRun/I");
@@ -402,45 +447,75 @@ void sbndaq::CRTHitAna::beginJob()
       events->Branch("sequence_id",               &sequence_id);
     }
   }
+  //  }
+
   //--make tree to store the channel waveform info:
   if (fMakeCRTHitTree) {
     crthits = tfs->make<TTree>("crthits","beam muon hit tree");
     crthits->Branch("Run",&fRun,"fRun/I");
     crthits->Branch("Event",&fEvent,"fEvent/I");
-    crthits->Branch("febid_h",&febid_h,"febid_h/I");
-    crthits->Branch("strip_h",&strip_h,"strip_h/I");
-    crthits->Branch("ts0_h",&ts0_h,"ts0_h/I");
-    crthits->Branch("ts1_h",&ts1_h,"ts1_h/I");
-    crthits->Branch("adcA_h",&adcA_h,"adcA_h/I");
-    crthits->Branch("adcB_h",&adcB_h,"adcB_h/I");
-    crthits->Branch("febid_v",&febid_v,"febid_v/I");
-    crthits->Branch("strip_v",&strip_v,"strip_v/I");
-    crthits->Branch("ts0_v",&ts0_v,"ts0_v/I");
-    crthits->Branch("ts1_v",&ts1_v,"ts1_v/I");
-    crthits->Branch("adcA_v",&adcA_v,"adcA_v/I");
-    crthits->Branch("adcB_v",&adcB_v,"adcB_v/I");
+    crthits->Branch("febid_h",&febid_h);
+    crthits->Branch("strip_h",&strip_h);
+    crthits->Branch("ts0_h",&ts0_h);
+    crthits->Branch("ts1_h",&ts1_h);
+    crthits->Branch("adcA_h",&adcA_h);
+    crthits->Branch("adcB_h",&adcB_h);
+    crthits->Branch("febid_v",&febid_v);
+    crthits->Branch("strip_v",&strip_v);
+    crthits->Branch("ts0_v",&ts0_v);
+    crthits->Branch("ts1_v",&ts1_v);
+    crthits->Branch("adcA_v",&adcA_v);
+    crthits->Branch("adcB_v",&adcB_v);
 
   }
 
-  // hardcode the module number/geometry here
-  // upstream #
-  std::vector<int> match;  match.push_back(193);match.push_back(87);
-  CrossingFEBs.insert(std::make_pair(88,match));
-  CrossingFEBs.insert(std::make_pair(85,match));
-  match.clear(); match.push_back(88);match.push_back(85);
-  CrossingFEBs.insert(std::make_pair(193,match));
-  CrossingFEBs.insert(std::make_pair(87,match));
-  // downstream #
-  match.clear(); match.push_back(80);match.push_back(81);
-  CrossingFEBs.insert(std::make_pair(79,match));
-  CrossingFEBs.insert(std::make_pair(89,match));
-  match.clear(); match.push_back(79);match.push_back(89);
-  CrossingFEBs.insert(std::make_pair(80,match));
-  CrossingFEBs.insert(std::make_pair(81,match));
 
-  horiz[0] = 79; horiz[1]= 89; horiz[2]=88; horiz[3]= 85;
+  // left Aframe
+  horiz.clear();
+  std::vector<int> match;  
+  for (int i=0;i<(int)fRightAframeVList.size();i++) match.push_back(fRightAframeVList.at(i));
+  for (int i=0;i<(int)fRightAframeHList.size();i++) { 
+    int thisfebh=fRightAframeHList.at(i);
+    //    std::cout << " horiz " << thisfebh << std::endl;
+    CrossingFEBs.insert(std::make_pair(thisfebh,match));
+    horiz.push_back(thisfebh);
+  }
+    match.clear(); 
+  for (int i=0;i<(int)fRightAframeHList.size();i++) match.push_back(fRightAframeHList.at(i));
+  for (int i=0;i<(int)fRightAframeVList.size();i++) { 
+    int thisfebh=fRightAframeVList.at(i);
+    CrossingFEBs.insert(std::make_pair(thisfebh,match));
+  }
+  // right Aframe#
+  match.clear(); 
+  for (int i=0;i<(int)fLeftAframeVList.size();i++) match.push_back(fLeftAframeVList.at(i));
+  for (int i=0;i<(int)fLeftAframeHList.size();i++) { 
+    int thisfebh=fLeftAframeHList.at(i);
+    //    std::cout << " horiz2 " << thisfebh << std::endl;
+    CrossingFEBs.insert(std::make_pair(thisfebh,match));
+    horiz.push_back(thisfebh);
+  }
+    match.clear(); 
+  for (int i=0;i<(int)fLeftAframeHList.size();i++) match.push_back(fLeftAframeHList.at(i));
+  for (int i=0;i<(int)fLeftAframeVList.size();i++) { 
+    int thisfebh=fLeftAframeVList.at(i);
+    CrossingFEBs.insert(std::make_pair(thisfebh,match));
+  }
+
+
+
 
 }
+
+bool sbndaq::CRTHitAna::checkList(int thisfeb,std::vector<int> feblist)
+{
+  bool retval = false;
+  for (int i=0;i<(int)feblist.size();++i) {
+    if (thisfeb==feblist.at(i)) retval=true;
+  }
+  return(retval);
+}
+
 
 void sbndaq::CRTHitAna::endJob()
 {
@@ -476,7 +551,7 @@ void sbndaq::CRTHitAna::analyze(const art::Event& evt)
   first_wr_ch4=0;
   /************************************************************************************************/
 
-  mac5.clear(); flags.clear();   lostcpu.clear();   lostfpga.clear();   ts0.clear();   ts1.clear();
+  mac5.clear(); flags.clear();   lostcpu.clear();   lostfpga.clear();   ts0.clear();   ts1.clear(); 
   adc0.clear();   adc1.clear();   adc2.clear();   adc3.clear();   adc4.clear();   adc5.clear();   adc6.clear();
   adc7.clear();   adc8.clear();   adc9.clear();   adc10.clear();   adc11.clear();   adc12.clear();   adc13.clear();
   adc14.clear();   adc15.clear();   adc16.clear();   adc17.clear();   adc18.clear();   adc19.clear();   adc20.clear();
@@ -486,8 +561,9 @@ void sbndaq::CRTHitAna::analyze(const art::Event& evt)
   feb_hit_number.clear()          ;    timestamp.clear()               ;    last_accepted_timestamp.clear() ; 
   lost_hits.clear()               ;   run_start_time.clear();   this_poll_start.clear();   this_poll_end.clear();
   last_poll_start.clear();   last_poll_end.clear();    system_clock_deviation.clear();    feb_hits_in_poll.clear();
-  feb_hits_in_fragment.clear();
+  feb_hits_in_fragment.clear(); sequence_id.clear();
   /************************************************************************************************/
+
 
   //  Note that this code expects exactly 1 CAEN fragment per event
   TTT_ns=0;  // will be set to value in CAEN fragement header
@@ -529,7 +605,6 @@ void sbndaq::CRTHitAna::analyze(const art::Event& evt)
       }
     } // loop over frag handles
   }  // if include caen
-  
   
   if (finclude_wr) {
     for (auto handle : fragmentHandles) {
@@ -594,7 +669,7 @@ void sbndaq::CRTHitAna::analyze(const art::Event& evt)
     }  //  loop over frag handles
   }// if include_berncrt
   
-  events->Fill();
+  if (fMakeAnaTree) events->Fill();
   if (fMakeCRTHitTree) CRTmaketree();
 
   
@@ -609,54 +684,72 @@ void sbndaq::CRTHitAna::CRTmaketree()  {
   if (nhits<=0) { std::cout << " no crt hits in event " << fEvent << std::endl; return;}
   int thisFEB1,thisFEB2;
   int thistime1,thistime2;
+  strip_h.clear(); febid_h.clear(); adcA_h.clear(); adcB_h.clear();
+  strip_v.clear(); febid_v.clear(); adcA_v.clear(); adcB_v.clear();
+  ts0_h.clear();   ts1_h.clear();
+  ts0_v.clear();   ts1_v.clear();
+  
+  /************************************************************************************************/
+
   std::vector<int> match;
   for (int ih1=0;ih1<nhits-1;++ih1) {
     thisFEB1=mac5.at(ih1);
-    thistime1=ts1.at(ih1);
     // check that time is in beam window
-    if (thistime1<fBeamTimeWindowEnd && thistime1>fBeamTimeWindowStart && (!((flags.at(ih1) & 4) || (flags.at(ih1) & 8))) ) {
+    //    thistime1=ts1.at(ih1);
+    thistime1=ts0.at(ih1)-TTT_ns;
+    if (thistime1>1000000000) thistime1-=1000000000;
+    else if (thistime1<-1000000000) thistime1+=1000000000;
+    if (thistime1<fBeamTimeWindowEnd && thistime1>fBeamTimeWindowStart && flags.at(ih1)==3) {
+    //if (thistime1<fBeamTimeWindowEnd && thistime1>fBeamTimeWindowStart && (!((flags.at(ih1) & 4) || (flags.at(ih1) & 8))) ) {
       std::map<int, std::vector<int>>::iterator it = CrossingFEBs.find(thisFEB1);
       if(it != CrossingFEBs.end()) {
-	match = it->second;
-	for (int ih2=ih1+1;ih2<nhits;++ih2) {
-	  thistime2=ts1.at(ih2);
-	  if (thistime2<fBeamTimeWindowEnd && thistime2>fBeamTimeWindowStart && (!(flags.at(ih2) & 4 || flags.at(ih2) & 8))) {
-	      thisFEB2=mac5.at(ih2);
-	    // are hits 100 ns apart or less in time?
-	    float tdiff = fabs(thistime1-thistime2);	
-	    if (tdiff>500000000) {tdiff-=1000000000; tdiff*=-1.0;}
-	    if (tdiff<fTimeCoinc) {
-	      // next check if they are from crossing strips
-	      if (thisFEB2==match[0] || thisFEB2==match[1]) {
-		hitcount++;
-		if (thisFEB1==horiz[0] || thisFEB1==horiz[1] || thisFEB1==horiz[2] || thisFEB1==horiz[3]) {
-		  strip_h=getstrip(ih1);
-		  febid_h=thisFEB1;  adcA_h=adca; adcB_h=adcb;
-		  strip_v=getstrip(ih2);
-		  febid_v=thisFEB2; adcA_v=adca; adcB_v=adcb;
-		  ts0_h=ts0.at(ih1); ts0_v=ts0.at(ih2);
-		  ts1_h=thistime1; ts1_v=thistime2;
-		}
-		else {
-		  strip_h=getstrip(ih2);
-		  febid_h=thisFEB2;  adcA_h=adca; adcB_h=adcb;
-		  strip_v=getstrip(ih1);
-		  febid_v=thisFEB1;  adcA_v=adca; adcB_v=adcb;
-		  ts0_h=ts0.at(ih2); ts0_v=ts0.at(ih1);
-		  ts1_h=thistime2; ts1_v=thistime1;
-		}
-		crthits->Fill();
-	      } // if hits are from crossing strips
-	    } // if hits are at the same time
-	  } // if second hit is in beam window
-	}  // loop over hits after hit in outer loop	
+      	match = it->second;
+      	for (int ih2=ih1+1;ih2<nhits;++ih2) {
+	  // use trigger time
+	  thistime2=ts0.at(ih2)-TTT_ns;
+	  if (thistime2>1000000000) thistime2-=1000000000;
+	  else if (thistime2<-1000000000) thistime2+=1000000000;
+	  // use beam spill
+	  //    thistime2=ts1.at(ih2);
+      	  if (thistime2<fBeamTimeWindowEnd && thistime2>fBeamTimeWindowStart && flags.at(ih2)==3) {
+    	      thisFEB2=mac5.at(ih2);
+      	    // are hits 100 ns apart or less in time?
+      	    float tdiff = fabs(thistime1-thistime2);	
+      	    if (tdiff>500000000) {tdiff-=1000000000; tdiff*=-1.0;}
+      	    if (tdiff<fTimeCoinc) {
+        	      // next check if they are from crossing strips
+      	      if (checkList(thisFEB2,match)) {
+      		      hitcount++;
+		      if (checkList(thisFEB1,horiz)) {
+            		  strip_h.push_back(getstrip(ih1));
+            		  febid_h.push_back(thisFEB1);  
+			  adcA_h.push_back(adca); adcB_h.push_back(adcb);
+            		  strip_v.push_back(getstrip(ih2));
+            		  febid_v.push_back(thisFEB2); 
+			  adcA_v.push_back(adca); adcB_v.push_back(adcb);
+            		  ts0_h.push_back(ts0.at(ih1)); ts0_v.push_back(ts0.at(ih2));
+            		  ts1_h.push_back(thistime1); ts1_v.push_back(thistime2);
+            		}
+            		else {
+            		  strip_h.push_back(getstrip(ih2));
+            		  febid_h.push_back(thisFEB2);  
+			  adcA_h.push_back(adca); adcB_h.push_back(adcb);
+            		  strip_v.push_back(getstrip(ih1));
+            		  febid_v.push_back(thisFEB1);  
+			  adcA_v.push_back(adca); adcB_v.push_back(adcb);
+            		  ts0_h.push_back(ts0.at(ih2)); ts0_v.push_back(ts0.at(ih1));
+            		  ts1_h.push_back(thistime2); ts1_v.push_back(thistime1);
+            		}
+      	      } // if hits are from crossing strips
+      	    } // if hits are at the same time
+      	  } // if second hit is in beam window
+      	}  // loop over hits after hit in outer loop	
       } //if feb is valid
     } // if hit time in beam window
   }//loop over hits
+  crthits->Fill();
   
-  if (hitcount>1) std::cout << "event " << fEvent << " has " << hitcount << " crt hits " << std::endl;
-
-
+  //  if (hitcount>1) std::cout << "event " << fEvent << " has " << hitcount << " crt hits " << std::endl;
 }
 
 int sbndaq::CRTHitAna::getstrip(int ihit) 
@@ -870,6 +963,7 @@ void sbndaq::CRTHitAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   uint32_t wfm_length = data_size_double_bytes/nChannels;
   //--note, needs to take into account channel mask
   if (fverbose) std::cout << "Channel waveform length = " << wfm_length << "\n";
+  /*
   
   //--store the tick value for each acquisition
   fTicksVec.resize(wfm_length);
@@ -877,6 +971,7 @@ void sbndaq::CRTHitAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes()
 								 + sizeof(CAENV1730EventHeader));
   
+
   const uint16_t* value_ptr =  data_begin;
   uint16_t value = 0;
   size_t ch_offset = 0;
@@ -887,8 +982,8 @@ void sbndaq::CRTHitAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
     
     //--loop over waveform samples
     for(size_t i_t=0; i_t<wfm_length; ++i_t){
-      fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   /*timestamps, event level*/
-      value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
+      fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   //timestamps, event level
+      value_ptr = data_begin + ch_offset + i_t; //pointer arithmetic
       value = *(value_ptr);
       if (i_ch == 0 && firstEvt) {
 	h_wvfm_ev0_ch0->SetBinContent(i_t,value);
@@ -1109,7 +1204,7 @@ void sbndaq::CRTHitAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
     if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
   }
   
-
+*/
 
 
 }

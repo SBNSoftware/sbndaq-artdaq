@@ -128,6 +128,8 @@ public:
   fhicl::Comment("pmt software trigger module label name"),
   "pmttriggerproducer"
   };
+
+
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
 
@@ -312,6 +314,7 @@ private:
   bool finclude_pmtsoft;
   std::string fcrtSoftTriggerModuleLabel;
   std::string fpmtSoftTriggerModuleLabel;
+
 
   // including ptb information on the tree
   bool unknown_or_error_word; // flag to indicate the event has
@@ -565,17 +568,17 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   ftdc_ch0_utc.clear();   ftdc_ch1_utc.clear();   ftdc_ch2_utc.clear();   ftdc_ch3_utc.clear();   ftdc_ch4_utc.clear();
   /************************************************************************************************/
   //BERN CRT 
-  mac5.clear(); flags.clear();   lostcpu.clear();   lostfpga.clear();   ts0.clear();   ts1.clear();
-  adc0.clear();   adc1.clear();   adc2.clear();   adc3.clear();   adc4.clear();   adc5.clear();   adc6.clear();
-  adc7.clear();   adc8.clear();   adc9.clear();   adc10.clear();   adc11.clear();   adc12.clear();   adc13.clear();
-  adc14.clear();   adc15.clear();   adc16.clear();   adc17.clear();   adc18.clear();   adc19.clear();   adc20.clear();
-  adc21.clear();   adc22.clear();   adc23.clear();   adc24.clear();   adc25.clear();   adc26.clear();   adc27.clear();
-  adc28.clear();   adc29.clear();   adc30.clear();   adc31.clear();   coinc.clear();
+  mac5.clear();    flags.clear();   lostcpu.clear();   lostfpga.clear();   ts0.clear();     ts1.clear();
+  adc0.clear();    adc1.clear();    adc2.clear();      adc3.clear();       adc4.clear();    adc5.clear();    adc6.clear();
+  adc7.clear();    adc8.clear();    adc9.clear();      adc10.clear();      adc11.clear();   adc12.clear();   adc13.clear();
+  adc14.clear();   adc15.clear();   adc16.clear();     adc17.clear();      adc18.clear();   adc19.clear();   adc20.clear();
+  adc21.clear();   adc22.clear();   adc23.clear();     adc24.clear();      adc25.clear();   adc26.clear();   adc27.clear();
+  adc28.clear();   adc29.clear();   adc30.clear();     adc31.clear();      coinc.clear();
 
-  feb_hit_number.clear()          ;    timestamp.clear()               ;    last_accepted_timestamp.clear() ;
-  lost_hits.clear()               ;   run_start_time.clear();   this_poll_start.clear();   this_poll_end.clear();
-  last_poll_start.clear();   last_poll_end.clear();    system_clock_deviation.clear();    feb_hits_in_poll.clear();
-  feb_hits_in_fragment.clear();
+  feb_hit_number.clear()       ;   timestamp.clear()      ;    last_accepted_timestamp.clear();
+  lost_hits.clear()            ;   run_start_time.clear() ;    this_poll_start.clear()        ;   this_poll_end.clear();
+  last_poll_start.clear()      ;   last_poll_end.clear()  ;    system_clock_deviation.clear();    feb_hits_in_poll.clear();
+  feb_hits_in_fragment.clear() ;   sequence_id.clear();
   /************************************************************************************************/
 
   // Reset PTB variables
@@ -994,15 +997,21 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
     firstEvt = false;
   } //--end channels loop 
 
-  int threshold[]= { 10000, 5000, 10000, 5000,10000, 5000, 10000, 5000,10000, 5000, 10000, 5000, 10000, 5000, 10000, 5000};
+  // threshold values and fragID are hardcoded, should be fcl params instead.
+  int threshold[]= { 9000, 9000, 9000, 9000,9000, 9000, 9000, 9000,9000, 9000, 9000, 9000, 9000, 9000, 9000, 9000};
 
+  int thisind = ffragID.size();
+  thisind--;
+  if (ffragID.at(thisind)==9) {
   // find leading edges in waveforms
   int toggle=0;
   int i_ch =0 ;
-  auto this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  auto this_wf = fWvfmsVec_ch0.at(thisind);
+  wfm_length=this_wf.size();
+  auto this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch0.emplace_back(i_t);
@@ -1012,10 +1021,13 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 1; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch1.at(thisind);
+  this_value =this_wf[0];
+  //  std::cout << "starting : this+value " << this_value << " thresh " << threshold[i_ch] << std::endl;
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
+    //    std::cout << " i_t " << i_t << " this_value " << this_value << " toggle " << toggle << std::endl;
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch1.emplace_back(i_t);
@@ -1025,10 +1037,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 2; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch2.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch2.emplace_back(i_t);
@@ -1038,10 +1051,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 3; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch2.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch3.emplace_back(i_t);
@@ -1051,10 +1065,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 4; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch4.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch4.emplace_back(i_t);
@@ -1064,10 +1079,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 5; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch5.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch5.emplace_back(i_t);
@@ -1077,10 +1093,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 6; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch6.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch6.emplace_back(i_t);
@@ -1090,10 +1107,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 7; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch7.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch7.emplace_back(i_t);
@@ -1103,10 +1121,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 8; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch8.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch8.emplace_back(i_t);
@@ -1116,10 +1135,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 9; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch9.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch9.emplace_back(i_t);
@@ -1129,10 +1149,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 10; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch10.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch10.emplace_back(i_t);
@@ -1142,10 +1163,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 11; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch11.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch11.emplace_back(i_t);
@@ -1155,10 +1177,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 12; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch12.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch12.emplace_back(i_t);
@@ -1168,10 +1191,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 13; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch13.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch13.emplace_back(i_t);
@@ -1181,10 +1205,11 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 14; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch14.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch14.emplace_back(i_t);
@@ -1194,17 +1219,18 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   // find leading edges in waveforms
   i_ch = 15; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fShift][0];
+  this_wf = fWvfmsVec_ch15.at(thisind);
+  this_value =this_wf[0];
   if (this_value>threshold[i_ch]) toggle=1;
   for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fShift][i_t];
+    this_value = this_wf[i_t];
     if (toggle==0 && this_value>threshold[i_ch]) {
       toggle=1;
       fPMT_ch15.emplace_back(i_t);
     }
     if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
   }
-
+  }// end if fragID==9
   fShift++;
 
 }
@@ -1298,25 +1324,25 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
 
 
     if (fverbose) {
-      std::cout <<   " mac5             "   <<    (int)(md->MAC5())                   << std::endl;
-      std::cout << " run_start_time      "    <<  md->run_start_time()              << std::endl;
-      std::cout << " this_poll_start     "    << md->this_poll_start()            << std::endl;
-      std::cout << " this_poll_end        "   << md->this_poll_end()              << std::endl;
-      std::cout << "  last_poll_start      "   << md->last_poll_start()            << std::endl;
-      std::cout << "  last_poll_end          " << md->last_poll_end()              << std::endl;
-      std::cout << "  system_clock_deviation " << md->system_clock_deviation()     << std::endl;
-      std::cout << "  feb_hits_in_poll       " << md->hits_in_poll()           << std::endl;
-      std::cout << "  feb_hits_in_fragment  "  << md->hits_in_fragment()       << std::endl;
-      std::cout << "  flags  "                << (int)(bevt->flags)                   << std::endl;
-      std::cout << "lostcpu         "        << bevt->lostcpu                 << std::endl;
-      std::cout <<     "lostfpga    "<<     bevt->lostfpga     << std::endl;
-      std::cout <<     "ts0         "<<     bevt->ts0          << std::endl;
-      std::cout <<     "ts1                    "<<     bevt->ts1             << std::endl;
-      std::cout <<     "coinc                  "<<     bevt->coinc                   << std::endl;
-      std::cout <<     "feb_hit_number         "<<     bevt->feb_hit_number          << std::endl;
-      std::cout <<     "timestamp              "<<     bevt->timestamp               << std::endl;
-      std::cout <<     "last_accepted_timestamp"<<     bevt->last_accepted_timestamp << std::endl;
-      std::cout <<     "lost_hits              "<<     bevt->lost_hits               << std::endl;
+      std::cout << "  mac5                "     <<    (int)(md->MAC5())                   << std::endl;
+      std::cout << "  run_start_time      "     <<  md->run_start_time()              << std::endl;
+      std::cout << "  this_poll_start     "     << md->this_poll_start()            << std::endl;
+      std::cout << "  this_poll_end        "    << md->this_poll_end()              << std::endl;
+      std::cout << "  last_poll_start      "    << md->last_poll_start()            << std::endl;
+      std::cout << "  last_poll_end          "  << md->last_poll_end()              << std::endl;
+      std::cout << "  system_clock_deviation "  << md->system_clock_deviation()     << std::endl;
+      std::cout << "  feb_hits_in_poll       "  << md->hits_in_poll()           << std::endl;
+      std::cout << "  feb_hits_in_fragment  "   << md->hits_in_fragment()       << std::endl;
+      std::cout << "  flags  "                  << (int)(bevt->flags)                   << std::endl;
+      std::cout << "  lostcpu         "         << bevt->lostcpu                 << std::endl;
+      std::cout << "  lostfpga    "             <<     bevt->lostfpga     << std::endl;
+      std::cout << "  ts0         "             <<     bevt->ts0          << std::endl;
+      std::cout << "  ts1                    "  <<     bevt->ts1             << std::endl;
+      std::cout << "  coinc                  "  <<     bevt->coinc                   << std::endl;
+      std::cout << "  feb_hit_number         "  <<     bevt->feb_hit_number          << std::endl;
+      std::cout << "  timestamp              "  <<     bevt->timestamp               << std::endl;
+      std::cout << "  last_accepted_timestamp"  <<     bevt->last_accepted_timestamp << std::endl;
+      std::cout << "  lost_hits              "  <<     bevt->lost_hits               << std::endl;
 
       for(int ch=0; ch<32; ch++)
 	std::cout << "channel " << ch << " has adc value " << bevt->adc[ch] << std::endl;
@@ -1388,6 +1414,7 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
         break;
       case 0x2 : // HL Trigger
         if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
+        if (fverbose) std::cout << "HLT ts: " << ptb_fragment.TimeStamp(i) << std::endl;
         hlt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF );
         hlt_ts.emplace_back( ptb_fragment.TimeStamp(i) * 20 );
         ptb_frag_ts = frag.timestamp();
