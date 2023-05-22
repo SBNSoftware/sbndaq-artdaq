@@ -37,6 +37,7 @@
 #include <vector>
 #include <iostream>
 #include <bitset>
+#include <numeric>
 
 namespace sbndaq {
   class CAENV1730Dump;
@@ -57,6 +58,10 @@ public:
       fhicl::Name("verbose"), 
       fhicl::Comment("toggle for additional text output")
     };
+    fhicl::Atom<bool> SaveWaveforms {
+      fhicl::Name("SaveWaveforms"),
+      fhicl::Comment("save aveforms in TTree")
+    };
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
 
@@ -66,7 +71,7 @@ public:
   void analyze(const art::Event& evt) override;
   void beginJob() override;
   void endJob() override;
-  void analyze_caen_fragment(artdaq::Fragment & frag);
+  void analyze_caen_fragment(artdaq::Fragment & frag, art::EventNumber_t eventNumber);
 
 
 private:
@@ -91,12 +96,17 @@ private:
   int seqID;
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
+
+  TTree* nt_wvfm;
+  int fArt_ev, fCaen_ev, fBoardId, fFragmentId, fCh;
+  double fCaen_ev_tts, fPed, fRMS, fTemp, fStampTime;
   
   bool firstEvt = true;
 
   // fcl params
   art::InputTag fDataLabel;
   bool fverbose;
+  bool fSaveWaveforms;
 
 }; //--class CAENV1730Dump
 
@@ -105,6 +115,7 @@ sbndaq::CAENV1730Dump::CAENV1730Dump(CAENV1730Dump::Parameters const& pset): art
 {
   fDataLabel = pset().DataLabel();
   fverbose = pset().Verbose();
+  fSaveWaveforms = pset().SaveWaveforms();
 }
 
 
@@ -117,14 +128,30 @@ void sbndaq::CAENV1730Dump::beginJob()
   hTriggerTimeTag = tfs->make<TH1F>("hTriggerTimeTag","Trigger Time Tag Histogram",10,2000000000,4500000000);
   h_wvfm_ev0_ch0  = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",2000,0,2000);  
   /************************************************************************************************/
-  //--make tree to store the channel waveform info:
-  fEventTree = tfs->make<TTree>("events","waveform tree");
-  fEventTree->Branch("fRun",&fRun,"fRun/I");
-  fEventTree->Branch("fEvent",&fEvent,"fEvent/I");
-  fEventTree->Branch("fragID",&fragID,"fragID/I");
-  fEventTree->Branch("seqID",&seqID,"seqID/I");
-  fEventTree->Branch("fTicksVec",&fTicksVec);
-  fEventTree->Branch("fWvfmsVec",&fWvfmsVec);
+  if(fSaveWaveforms){
+    //--make tree to store the channel waveform info:
+    fEventTree = tfs->make<TTree>("events","waveform tree");
+    fEventTree->Branch("fRun",&fRun,"fRun/I");
+    fEventTree->Branch("fEvent",&fEvent,"fEvent/I");
+    fEventTree->Branch("fragID",&fragID,"fragID/I");
+    fEventTree->Branch("seqID",&seqID,"seqID/I");
+    fEventTree->Branch("fTicksVec",&fTicksVec);
+    fEventTree->Branch("fWvfmsVec",&fWvfmsVec);
+  }
+
+  //--ana tree
+  nt_wvfm = tfs->make<TTree>("nt_wvfm","Waveform information TTree");
+  nt_wvfm->Branch("art_ev",&fArt_ev,"art_ev/I");
+  nt_wvfm->Branch("caen_ev",&fCaen_ev,"caen_ev/I");
+  nt_wvfm->Branch("caen_ev_tts",&fCaen_ev_tts,"caen_ev_tts/D");
+  nt_wvfm->Branch("boardId",&fBoardId,"boardId/I");
+  nt_wvfm->Branch("fragmentId",&fFragmentId,"fragmentId/I");
+  nt_wvfm->Branch("ch",&fCh,"ch/I");
+  nt_wvfm->Branch("ped",&fPed,"ped/D");
+  nt_wvfm->Branch("rms",&fRMS,"rms/D");
+  nt_wvfm->Branch("temp",&fTemp,"temp/D");
+  nt_wvfm->Branch("stamp_time",&fStampTime,"stamp_time/D");
+
 }
 
 void sbndaq::CAENV1730Dump::endJob()
@@ -184,7 +211,7 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
 	  if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
 	  fWvfmsVec.resize(16*contf.block_count());
 	  for (size_t ii = 0; ii < contf.block_count(); ++ii)
-	  	analyze_caen_fragment(*contf[ii].get());
+	    analyze_caen_fragment(*contf[ii].get(), evt.event());
 	}
       }
     }
@@ -194,7 +221,7 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
 	if (fverbose) std::cout << "   found normal caen fragments " << handle->size() << std::endl;
 	fWvfmsVec.resize(16*handle->size());
 	for (auto frag : *handle)
-	  analyze_caen_fragment(frag);
+	  analyze_caen_fragment(frag, evt.event());
       }
     }
   } // loop over frag handles
@@ -203,7 +230,7 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
 
 }
 
-void sbndaq::CAENV1730Dump::analyze_caen_fragment(artdaq::Fragment & frag)  {
+void sbndaq::CAENV1730Dump::analyze_caen_fragment(artdaq::Fragment & frag, art::EventNumber_t eventNumber)  {
 
 
     CAENV1730Fragment bb(frag);
@@ -213,6 +240,10 @@ void sbndaq::CAENV1730Dump::analyze_caen_fragment(artdaq::Fragment & frag)  {
     CAENV1730EventHeader header = event_ptr->Header;
     
     fragID = static_cast<int>(frag.fragmentID()); 
+
+    size_t const fragment_id = frag.fragmentID();
+    size_t const eff_fragment_id = fragment_id & 0x0fff;
+
     seqID = static_cast<int>(frag.sequenceID()); 
     
     if (fverbose) std::cout << "\tFrom header, event counter is "  << header.eventCounter   << "\n";
@@ -265,11 +296,32 @@ void sbndaq::CAENV1730Dump::analyze_caen_fragment(artdaq::Fragment & frag)  {
 	
       } //--end loop samples
       firstEvt = false;
-      //      std::cout << " channel finished " << std::endl;
+
+      fArt_ev = eventNumber;
+      fCaen_ev = header.eventCounter;
+      fCaen_ev_tts = header.triggerTimeTag;
+      fBoardId = header.boardID;
+      fFragmentId = fragID;
+      //fCh = i_ch;
+      fCh = i_ch + nChannels*eff_fragment_id;
+      //get mean
+      fPed = std::accumulate(fWvfmsVec[i_ch].begin(),fWvfmsVec[i_ch].end(),0.0) / fWvfmsVec[i_ch].size();
+      
+      //get rms
+      fRMS = 0.0;
+      for(auto const& val : fWvfmsVec[i_ch])
+	fRMS += (val-fPed)*(val-fPed);
+      fRMS = std::sqrt(fRMS/fWvfmsVec[i_ch].size());
+      
+      fTemp = md->chTemps[i_ch];
+      fStampTime = md->timeStampSec;
+      
+      std::cout<<"Temp Monitor..ch "<<i_ch<<":"<<fTemp<<" TS:"<<fStampTime<<std::endl;
+      
+      nt_wvfm->Fill();
     } //--end loop channels
     
-    fEventTree->Fill();
-      
+    if(fSaveWaveforms) fEventTree->Fill();
 }
 
 DEFINE_ART_MODULE(sbndaq::CAENV1730Dump)
