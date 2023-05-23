@@ -274,9 +274,9 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
 
     int nAboveThreshold = 0;
     // find the waveform bins that correspond to the start and end of the extended spill window (0 -> 1.8 us) within the 10 us waveform
-    // if the triggerTimeStamp < 1000, the beginning of the beam spill is *not* contained within the waveform
-    int windowStartBin = (triggerTimeStamp >= 1000)? 0 : int(500 - abs((triggerTimeStamp-1000)/2));
-    int windowEndBin   = (triggerTimeStamp >= 1000)? int(500 + (fWindowLength*1e3 - triggerTimeStamp)/2) : (windowStartBin + (fWindowLength*1e3)/2);
+    // if the triggerTimeStamp > 1000, the beginning of the beam spill is *not* contained within the waveform
+    int windowStartBin = (triggerTimeStamp >= 1000)? 0 : int(500 - abs((triggerTimeStamp)/2));
+    int windowEndBin   = (triggerTimeStamp >= 1000)? int(500 + (fWindowLength*1e3 - (triggerTimeStamp-1000))/2) : (windowStartBin + (fWindowLength*1e3)/2);
     if (fVerbose) std::cout << "windowStartBin " << windowStartBin << " windowEndBin " << windowEndBin  <<
 		    " trigger time stamp " << triggerTimeStamp << " window length " << fWindowLength << std::endl;
 
@@ -592,39 +592,41 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::SimpleThreshAlgo(int i_ch){
   auto wvfm = fWvfmsVec[i_ch];
   auto &pmtInfo = fpmtInfoVec[i_ch];
   double baseline = pmtInfo.baseline;
-  double baseline_sigma = pmtInfo.baselineSigma;
+//   double baseline_sigma = pmtInfo.baselineSigma;
 
   bool fire = false; // bool for if pulse has been detected
   int counter = 0; // counts the bin of the waveform
 
-  // these should be fcl parameters
-  double start_adc_thres = 5, end_adc_thres = 2;
-  double nsigma_start = 5, nsigma_end = 3;
-
-  auto start_threshold = ( start_adc_thres > (nsigma_start * baseline_sigma) ? (baseline-start_adc_thres) : (baseline-(nsigma_start * baseline_sigma)));
-  auto end_threshold = ( end_adc_thres > (nsigma_end * baseline_sigma) ? (baseline - end_adc_thres) : (baseline - (nsigma_end * baseline_sigma)));
+  // these should be fcl parameters 
+  double start_adc_thres = 5, end_adc_thres = 2; 
+  // double nsigma_start = 5, nsigma_end = 3; 
+  
+  // auto start_threshold = ( start_adc_thres > (nsigma_start * baseline_sigma) ? (baseline-start_adc_thres) : (baseline-(nsigma_start * baseline_sigma)));
+  // auto end_threshold = ( end_adc_thres > (nsigma_end * baseline_sigma) ? (baseline - end_adc_thres) : (baseline - (nsigma_end * baseline_sigma)));
+  auto start_threshold = baseline-start_adc_thres;
+  auto end_threshold   = baseline-end_adc_thres; 
 
   std::vector<sbnd::trigger::pmtPulse> pulse_vec;
-  sbnd::trigger::pmtPulse pulse;
+  sbnd::trigger::pmtPulse pulse; 
   pulse.area = 0; pulse.peak = 0; pulse.t_start = 0; pulse.t_end = 0; pulse.t_peak = 0;
   for (auto const &adc : wvfm){
-    if ( !fire && ((double)adc) <= start_threshold ){ // if its a new pulse
+    if ( !fire && ((double)adc) <= start_threshold ){ // if its a new pulse 
       fire = true;
       //vic: i move t_start back one, this helps with porch
-      pulse.t_start = counter - 1 > 0 ? counter - 1 : counter;
+      pulse.t_start = counter - 1 > 0 ? counter - 1 : counter;    
     }
 
-    if( fire && ((double)adc) > end_threshold ){ // found end of a pulse
+    else if( fire && ((double)adc) > end_threshold ){ // found end of a pulse
       fire = false;
       //vic: i move t_start forward one, this helps with tail
       pulse.t_end = counter < ((int)wvfm.size())  ? counter : counter - 1;
       pulse_vec.push_back(pulse);
       pulse.area = 0; pulse.peak = 0; pulse.t_start = 0; pulse.t_end = 0; pulse.t_peak = 0;
-    }
+    }   
 
-    if(fire){ // if we're in a pulse
+    else if(fire){ // if we're in a pulse 
       pulse.area += (baseline-(double)adc);
-      if (pulse.peak > (baseline-(double)adc)) { // Found a new maximum
+      if ((baseline-(double)adc) > pulse.peak) { // Found a new maximum
         pulse.peak = (baseline-(double)adc);
         pulse.t_peak = counter;
       }
@@ -640,7 +642,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::SimpleThreshAlgo(int i_ch){
   }
 
   pmtInfo.pulseVec = pulse_vec;
-  // calculate PE from area
+  // calculate PE from area 
   for (auto &pulse : pmtInfo.pulseVec){pulse.pe = pulse.area/fPEArea;}
 }
 
