@@ -87,6 +87,9 @@ namespace sbndaq
       DYNAMIC_RANGE      = 0x8028,
       TRG_OUT_WIDTH      = 0x8070,
       TRG_OUT_WIDTH_CH   = 0x1070,
+      SLF_TRG_LG_CH      = 0x1084,
+      SLF_TRG_LG_GLB     = 0x8084,
+      GLB_TRG_MASK       = 0x810C,
       ACQ_CONTROL        = 0x8100,
       FP_TRG_OUT_CONTROL = 0x8110,
       FP_IO_CONTROL      = 0x811C,
@@ -228,27 +231,6 @@ namespace sbndaq
     //Animesh & Aiwu add - self trigger polarity
     uint32_t fSelfTrigBit;
     //Animesh & Aiwu add end
-    // Animesh & Aiwu add - dpp algorithm feature 0x1n80
-    uint32_t fChargePedstalBitCh1;
-    uint32_t fBaselineCh1;
-    uint32_t fBaselineCh2;
-    uint32_t fBaselineCh3;
-    uint32_t fBaselineCh4;
-    uint32_t fBaselineCh5;
-    uint32_t fBaselineCh6;
-    uint32_t fBaselineCh7;
-    uint32_t fBaselineCh8;
-    uint32_t fBaselineCh9;
-    uint32_t fBaselineCh10;
-    uint32_t fBaselineCh11;
-    uint32_t fBaselineCh12;
-    uint32_t fBaselineCh13;
-    uint32_t fBaselineCh14;
-    uint32_t fBaselineCh15;
-    uint32_t fBaselineCh16;
-    //uint32_t fSWTriggerValue;
-    // Animesh & Aiwu add end
-
 
     //internals
     size_t   fNChannels;
@@ -256,8 +238,10 @@ namespace sbndaq
     bool     fOK;
     bool     fail_GetNext;
     uint32_t fEvCounter; // set to zero at the beginning
+    uint32_t fOverflowCounter; //count overflows of fEvCounter
     uint32_t last_rcvd_rwcounter;
-    uint32_t last_sent_rwcounter;
+    uint32_t last_sent_seqid;
+    const uint32_t max_rwcounter = 0xFFFFFF; //24-bit
     uint32_t last_sent_ts;
     uint32_t total_data_size;
     //uint32_t event_size;	
@@ -274,7 +258,6 @@ namespace sbndaq
     void ConfigureReadout();
     void ConfigureAcquisition();
     void ConfigureLVDS();
-    void ConfigureOthers();
     void ConfigureSelfTriggerMode();
     void RunADCCalibration();
     void SetLockTempCalibration(bool onOff, uint32_t ch);
