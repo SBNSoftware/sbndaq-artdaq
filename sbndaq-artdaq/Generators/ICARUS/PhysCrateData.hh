@@ -44,6 +44,7 @@ namespace icarus {
     void SetDCOffset();
     void ForceClear();
     void ForceReset();
+    void SetCompressionBits();
 
     std::unique_ptr<PhysCrate> physCr;
 
@@ -87,6 +88,9 @@ namespace icarus {
 
     //if we want to read board temps
     bool _readTemps;
+
+    //is the crate's data compressed? size_t for future-proofing
+    size_t _compressionScheme;
 
  };
 }
