@@ -332,7 +332,9 @@ static void check_diag_in() {
 	// submit transfers
 	int r = libusb_submit_transfer(diag_in_transfer);
 	if (r < 0) {
-		printf("com in: submit error\n"); kill_me = 1;
+		//printf("com in: submit error\n"); 
+		TRACE(TLVL_WARNING,"com in: submit error\n"); 
+		kill_me = 1;
 	} else {
 		diag_in_ready = 0;
 	}
@@ -369,13 +371,15 @@ static void cb_data_in(struct libusb_transfer *transfer)
 	struct buf_t *p = transfer->user_data;
 	
 	//printf("read cb i=%d\n", p->index);
+
 	switch(transfer->status) {
 		case LIBUSB_TRANSFER_COMPLETED:
 		case LIBUSB_TRANSFER_TIMED_OUT:
 			p->len = transfer->actual_length;
 			break;
 		default:
-			printf("%d data in error %d\n", ser_no, transfer->status); 
+			//printf("%d data in error %d\n", ser_no, transfer->status); 
+			TRACE(TLVL_WARNING,"%d data in error %d\n", ser_no, transfer->status); 
 			kill_me = 1;
 			p->len = 0;
 			break;
@@ -427,7 +431,8 @@ int try_to_open(int file) {
   int fd = creat(f[file].name_tmp, 0666);
 
   if (fd < 0) {
-    printf("error creating file %s\n", f[file].name_tmp);
+    //printf("error creating file %s\n", f[file].name_tmp);
+    TRACE(TLVL_WARNING,"error creating file %s\n", f[file].name_tmp);
     kill_me = 1;
     //Gaibu Alert
     //sprintf(g_msg_buf,"Error creating file for USB %d",ser_no);
@@ -451,7 +456,8 @@ void try_to_close(int file) {
   
   res = close(f[file].desc);
   if (res) {
-    printf("closing file error %d\n", errno); 
+    //printf("closing file error %d\n", errno); 
+    TRACE(TLVL_WARNING,"closing file error %d\n", errno); 
     kill_me = 1; 
     //Gaibu Alert
     char mymsg[BUFSIZE];
@@ -509,7 +515,8 @@ static void check_data_in() {
   
   if (len >= 0) {
 	  sprintf(target_path,"%s",msg_buf.mdata);
-	  printf("Target Path: %s\n",target_path);
+	  //printf("Target Path: %s\n",target_path);
+	  TRACE(TLVL_INFO,"Target Path: %s\n",target_path);
   }
 
 
@@ -521,7 +528,8 @@ static void check_data_in() {
     disk_number = *((int *) msg_buf.mdata);
     //sprintf(target_dir,"/data%d/OVDAQ/DATA",disk_number);
     sprintf(target_dir,"/scratch_local/crt_tests/backend_data/runs%d%s",disk_number,target_path);
-    printf("Target Directory: %s\n",target_dir);
+    //printf("Target Directory: %s\n",target_dir);
+    TRACE(TLVL_INFO,"Target Directory: %s\n",target_dir);
   }
   
   // Get inhibit
@@ -570,8 +578,10 @@ static void check_data_in() {
       time ( &rawtime );
       timeinfo = localtime ( &rawtime );
       
-      printf("Run number to be assigned: %s\n",run_number);
-      printf("Data folder: %s\n",target_dir);
+      //printf("Run number to be assigned: %s\n",run_number);
+      TRACE(TLVL_INFO,"Run number to be assigned: %s\n",run_number);
+      //printf("Data folder: %s\n",target_dir);
+      TRACE(TLVL_INFO,"Data folder: %s\n",target_dir);
       //read the run number from input line
       if( strcmp(run_number,"") == 0 ) { //automatic run number is assigned
 		  sprintf(directory,"%s/Run_%0.4d%0.2d%0.2d%0.2d%0.2d",target_dir,
@@ -638,7 +648,8 @@ static void read_data_in() {
     if (total >= 1) {
       r = libusb_cancel_transfer(d[rw].usb_transfer);
       if (r < 0){ 
-	printf("error cancelling data in\n");
+	//printf("error cancelling data in\n");
+	TRACE(TLVL_WARNING,"error cancelling data in\n");
 	//Gaibu Alert
 	//sprintf(g_msg_buf,"Error deleting data IN for USB %d",ser_no);
 	//gaibu_msg(MNOTICE, g_msg_buf);
@@ -660,7 +671,8 @@ static void read_data_in() {
       if (active == -1) {
 	//CM&MD 09142009				
 	if( inhibit_writetofile == 0) {
-	  printf("no file to write to\n"); 
+	  //printf("no file to write to\n"); 
+	  TRACE(TLVL_WARNING,"No file to write to\n"); 
 	  //Gaibu Alert
 	  //sprintf(g_msg_buf,"Error:no file to write to for USB %d",ser_no);
 	  //gaibu_msg(MNOTICE, g_msg_buf);
@@ -692,7 +704,8 @@ static void read_data_in() {
 			
 	int ret = aio_write(p);
 	if (ret) {
-	  printf("aio write submit error: %d\n", errno); 
+	  //printf("aio write submit error: %d\n", errno); 
+	  TRACE(TLVL_WARNING,"aio write submit error: %d\n", errno); 
 	  //Gaibu Alert
 	  //sprintf(g_msg_buf,"aio write submit error for USB %d",ser_no);
 	  //gaibu_msg(MNOTICE, g_msg_buf);
@@ -730,7 +743,8 @@ static void read_data_in() {
 	//printf("aio cb %d\n", i);
       } else {
 	// oops
-	printf("aio error1 %d\n", errno);
+	//printf("aio error1 %d\n", errno);
+	TRACE(TLVL_WARNING,"aio error1 %d\n", errno);
 	//Gaibu Alert
 	//sprintf(g_msg_buf,"aio error1 %d",errno);
 	//gaibu_msg(MNOTICE, g_msg_buf);
@@ -748,7 +762,8 @@ static void read_data_in() {
     case -1:
     default:
       // oops
-      printf("aio error2 %d\n", errno);
+      //printf("aio error2 %d\n", errno);
+      TRACE(TLVL_WARNING,"aio error2 %d\n", errno);
       //Gaibu Alert
       //sprintf(g_msg_buf,"aio error2 %d",errno);
       //gaibu_msg(MNOTICE, g_msg_buf);
@@ -781,7 +796,8 @@ static void read_data_in() {
 					  );
 		int r = libusb_submit_transfer(d[nr].usb_transfer);
 		if (r < 0) {
-		  printf("data in: submit error\n"); 
+		  //printf("data in: submit error\n"); 
+		  TRACE(TLVL_WARNING,"data in: submit error\n"); 
 		  //Gaibu Alert
 		  //sprintf(g_msg_buf,"data in submit error for USB %d",ser_no);
 		  //gaibu_msg(MNOTICE, g_msg_buf);
@@ -818,7 +834,8 @@ static void cb_com_out(struct libusb_transfer *transfer) {
     com_out_attempt = 0;
   } else {
     out_timeout = 1;
-    printf("com out transfer status %d?\n", transfer->status); 
+    //printf("com out transfer status %d?\n", transfer->status); 
+    TRACE(TLVL_DEBUG+1,"com out transfer status %d?\n", transfer->status); 
     //Gaibu Alert
     //sprintf(g_msg_buf,"com out transfer status %d", transfer->status);
     //gaibu_msg(MNOTICE, g_msg_buf);
@@ -878,7 +895,8 @@ static void check_com_out() {
   if (com_out_attempt) {
     r = libusb_submit_transfer(com_out_transfer);
     if (r < 0) {
-      printf("com out: submit error\n"); 
+      //printf("com out: submit error\n"); 
+      TRACE(TLVL_WARNING,"com out: submit error\n"); 
       //Gaibu Alert
       //sprintf(g_msg_buf,"com out: submit error for USB %d", ser_no);
       //gaibu_msg(MNOTICE, g_msg_buf);
@@ -934,7 +952,8 @@ static void check_per_out() {
   
   r = libusb_submit_transfer(per_out_transfer);
   if (r < 0) {
-    printf("per out: submit error\n"); 
+    //printf("per out: submit error\n"); 
+    TRACE(TLVL_WARNING,"per out: submit error\n"); 
     //Gaibu Alert
     //sprintf(g_msg_buf,"per out: submit error for USB");
     //gaibu_msg(MNOTICE, g_msg_buf);
@@ -993,7 +1012,8 @@ char * config_string(const char* path, const char* key)
     fclose(file);
   }
   else { 
-	  printf("Unable to open %s\n",path);
+	  //printf("Unable to open %s\n",path);
+	  TRACE(TLVL_WARNING,"Unable to open %s\n",path);
 	  exit(1);
   }
 }
@@ -1091,7 +1111,8 @@ int init_socket(struct sockaddr_in *serveraddr, char *hostname, int portno)
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-		printf("ERROR opening socket");
+		//printf("ERROR opening socket");
+		TRACE(TLVL_WARNING,"ERROR opening socket");
         //error("ERROR opening socket");
 	}
 	
@@ -1176,7 +1197,8 @@ int main(int argc, char **argv)
 	key = key_base - 1;
 	r = msgget(key, IPC_CREAT | 0666);
 	if (r < 0) {
-		printf("could not open common message queue %d\n", key);
+		//printf("could not open common message queue %d\n", key);
+		TRACE(TLVL_WARNING,"Could not open common message queue %d\n", key);
 		//Gaibu Alert
 		//sprintf(g_msg_buf,"could not open common message queue %d",key);
 		//gaibu_msg(MNOTICE, g_msg_buf);
@@ -1191,10 +1213,17 @@ int main(int argc, char **argv)
 	// daemonize
 	pid_t pid, sid;
 	pid = fork();
-	if (pid < 0) { perror("fork"); exit(errno); }
+	if (pid < 0) {
+	  perror("fork");
+	  exit(errno);
+	}
 	if (pid > 0) exit(0);
 	sid = setsid();
-	if (sid < 0) { printf("sid"); exit(errno); }
+	if (sid < 0) {
+	  //printf("sid");
+	  TRACE(TLVL_DEBUG+1,"sid");
+	  exit(errno);
+	}
 	umask(0);
 	freopen("/dev/null", "a", stdin);
 	sprintf(out_log, "%s/usb_main_out.log",log_dir);
@@ -1224,7 +1253,8 @@ start_over:
 	// initialise libusb
 	r = libusb_init(&ctx);
 	if (r < 0) {
-		printf("failed to initialise libusb\n");
+		//printf("failed to initialise libusb\n");
+		TRACE(TLVL_WARNING,"Failed to initialise libusb\n");
 		//Gaibu Alert
 		//sprintf(g_msg_buf,"failed to initialize libusb");
 		//gaibu_msg(MNOTICE, g_msg_buf);
@@ -1235,7 +1265,8 @@ start_over:
 	// get device list
 	r = libusb_get_device_list(ctx,&devs);
 	if (r < 0) {
-		printf("could not get list of devices\n");
+		//printf("could not get list of devices\n");
+		TRACE(TLVL_WARNING,"Could not get list of devices\n");
 		//Gaibu Alert
 		//sprintf(g_msg_buf,"could not get device's list");
 		//gaibu_msg(MNOTICE, g_msg_buf);
@@ -1253,7 +1284,8 @@ start_over:
 		// open device
 		r = libusb_open(dev, &devh);
 		if (r < 0) {
-			printf("could not open device\n");
+			//printf("could not open device\n");
+			TRACE(TLVL_WARNING,"Could not open device\n");
 			//Gaibu Alert
 			//sprintf(g_msg_buf,"Could not open device");
 			//gaibu_msg(MNOTICE,g_msg_buf);
@@ -1273,7 +1305,8 @@ start_over:
 		// device and its serial number
 		j = desc.iSerialNumber;
 		if(j == 0) {
-			printf("Found USB readout board with no serial number\n");
+			//printf("Found USB readout board with no serial number\n");
+			TRACE(TLVL_WARNING,"Found USB readout board with no serial number\n");
 			//Gaibu Alert
 			//sprintf(g_msg_buf,"Found USB readout board without any serial number");
 			//gaibu_msg(MNOTICE, g_msg_buf);
@@ -1289,7 +1322,8 @@ start_over:
 				sizeof(data)	// length
 			);
 		if (r < 0) {
-			printf("when getting serial number: error %d\n", r);
+			//printf("when getting serial number: error %d\n", r);
+			TRACE(TLVL_WARNING,"When getting serial number: error %d\n", r);
 			//Gaibu Alert
 			//sprintf(g_msg_buf,"Getting serial number problem number: %d",r);
 			//gaibu_msg(MNOTICE, g_msg_buf);
@@ -1301,13 +1335,15 @@ start_over:
 		for (k = 0; k < len; k++) {
 		  ser_no = 10 * ser_no + (data[k] - '0');
 		}
-		printf("Found USB readout board serial #%d\n", ser_no);
+		//printf("Found USB readout board serial #%d\n", ser_no);
+		TRACE(TLVL_INFO,"Found USB readout board serial #%d\n", ser_no);
 		usbsystemdevice++;
 		// set up message queue for given thread
 		key = key_base + ser_no;
 		r = msgget(key, IPC_CREAT | 0666);
 		if (r < 0) {
-		  printf("Com out: could not open message queue %d\n", key);
+		  //printf("Com out: could not open message queue %d\n", key);
+		  TRACE(TLVL_WARNING,"Com out: could not open message queue %d\n", key);
 		  goto m_find_release;
 		}
 		msqid = r;  //one for each serial number
@@ -1315,7 +1351,8 @@ start_over:
 		// fork off a process to handle this device
 		pid_t pid = fork();
 		if (pid < 0) {			// failed to fork
-		  printf("Failed to fork usb %d\n", ser_no);
+		  //printf("Failed to fork usb %d\n", ser_no);
+		  TRACE(TLVL_WARNING,"Failed to fork usb %d\n", ser_no);
 		  goto m_find_release;
 		  } else if (pid == 0) {	// child
 		  goto mh_init;
@@ -1337,7 +1374,8 @@ start_over:
 	  //    gaibu_msg(MERROR,g_msg_buf);
 	  if (timer_zero_reset(T_RESPAWN, 5)) {
 	    if(usbsystemdevice%usb_counter!=0) {  
-	      printf("Error! Number of USBs connected = %d(%d)\n",usb_counter, usbsystemdevice);
+	      //printf("Error! Number of USBs connected = %d(%d)\n",usb_counter, usbsystemdevice);
+	      TRACE(TLVL_WARNING,"Error! Number of USBs connected = %d(%d)\n",usb_counter, usbsystemdevice);
 	      //sprintf(g_msg_buf,"Number of USBs connected = %d(%d)",usb_counter,usbsystemdevice);
 	      //gaibu_msg(MERROR,g_msg_buf);
 	      goto start_over;
@@ -1393,24 +1431,32 @@ mh_init:
 	// allocate transfers
 	com_out_transfer = libusb_alloc_transfer(0);
 	if (!com_out_transfer) { 
-		printf("com out: not enough memory\n"); goto mh_free0; 
+		//printf("com out: not enough memory\n"); 
+		TRACE(TLVL_DEBUG,"com out: not enough memory\n"); 
+		goto mh_free0; 
 	}
 	
 	per_out_transfer = libusb_alloc_transfer(0);
 	if (!per_out_transfer) { 
-		printf("per out: not enough memory\n"); goto mh_free1;
+		//printf("per out: not enough memory\n");
+		TRACE(TLVL_DEBUG,"per out: not enough memory\n");
+		goto mh_free1;
 	}
 
 	diag_in_transfer = libusb_alloc_transfer(0);
 	if (!diag_in_transfer) {	
-		printf("diag in: not enough memory\n"); goto mh_free2; 
+		//printf("diag in: not enough memory\n");
+		TRACE(TLVL_DEBUG,"diag in: not enough memory\n");
+		goto mh_free2; 
 	}
 	
 	for (i = 0; i < BUF_NO; i++) {
 		d[i].usb_transfer = libusb_alloc_transfer(0);
 		d[i].disk_transfer = malloc(sizeof(struct aiocb));
 		if (!d[i].usb_transfer || !d[i].disk_transfer) {
-			printf("alloc: not enough memory\n"); goto mh_free3;
+			//printf("alloc: not enough memory\n");
+			TRACE(TLVL_DEBUG,"alloc: not enough memory\n");
+			goto mh_free3;
 		}
 	}
 
@@ -1441,7 +1487,8 @@ mh_init:
 		// let library do its thing
 		r = libusb_handle_events_completed(ctx,&kill_me);
 		if (r) {
-			printf("handle events error\n");
+			//printf("handle events error\n");
+			TRACE(TLVL_DEBUG,"handle events error\n");
 			kill_me = 1;
 			break;
 		}
@@ -1450,28 +1497,41 @@ mh_init:
 	// clean up
 	if (!com_out_ready) {
 		r = libusb_cancel_transfer(com_out_transfer);
-		if (r < 0) printf("error cancelling com out\n");
+		if (r < 0) {
+			//printf("error cancelling com out\n");
+			TRACE(TLVL_DEBUG,"error cancelling com out\n");
+		}
 	}
 
 	if (!per_out_ready) {
 		r = libusb_cancel_transfer(per_out_transfer);
-		if (r < 0) printf("error cancelling per out\n");
+		if (r < 0) {
+			 //printf("error cancelling per out\n");
+			 TRACE(TLVL_DEBUG,"error cancelling per out\n");
+		}
 	}
 
 	if (!diag_in_ready) {
 		r = libusb_cancel_transfer(diag_in_transfer);
-		if (r < 0) printf("error cancelling com in\n");
+		if (r < 0) {
+			//printf("error cancelling com in\n");
+			TRACE(TLVL_DEBUG,"error cancelling com in\n");
+		}
 	}
 
 	for (i = 0; i < BUF_NO; i++) {
 		if (d[i].buf_state == BUF_READING) {
 			r = libusb_cancel_transfer(d[i].usb_transfer);
-			if (r < 0) printf("error cancelling data in\n");
+			if (r < 0) {
+				//printf("error cancelling data in\n");
+				TRACE(TLVL_DEBUG,"error cancelling data in\n");
+			}
 			else d[i].buf_state = BUF_CANCELLING;
 		}
 		if (d[i].buf_state == BUF_WRITING) {
 			r = aio_cancel(d[i].f, d[i].disk_transfer);	
-			printf("aio cancel %d: %d\n", i, r);
+			//printf("aio cancel %d: %d\n", i, r);
+			TRACE(TLVL_DEBUG,"aio cancel %d: %d\n", i, r);
 			d[i].buf_state = BUF_NOTHING;
 		}
 	}
@@ -1505,16 +1565,28 @@ mh_free0:
 	
 	// clear stalls on endpoints & reset device
 	r = libusb_clear_halt(devh, EP_DATA_IN);
-	if (r < 0) { printf("couldn't clear stall ep_data_in %d\n", r); }
+	if (r < 0) { 
+		//printf("couldn't clear stall ep_data_in %d\n", r); 
+		TRACE(TLVL_DEBUG,"couldn't clear stall ep_data_in %d\n", r); 
+	}
 
 	r = libusb_clear_halt(devh, EP_DIAG_IN);
-	if (r < 0) { printf("couldn't clear stall ep_com_in %d\n", r); }
+	if (r < 0) {
+		 //printf("couldn't clear stall ep_com_in %d\n", r); 
+		 TRACE(TLVL_DEBUG,"couldn't clear stall ep_com_in %d\n", r); 
+	}
 
 	r = libusb_clear_halt(devh, EP_COM_OUT);
-	if (r < 0) { printf("couldn't clear stall ep_com_out %d\n", r); }
+	if (r < 0) { 
+		//printf("couldn't clear stall ep_com_out %d\n", r); 
+		TRACE(TLVL_DEBUG,"couldn't clear stall ep_com_out %d\n", r); 
+	}
 
 	r = libusb_reset_device(devh);
-	if (r < 0) { printf("couldn't reset device %d\n", r); }
+	if (r < 0) { 
+		//printf("couldn't reset device %d\n", r); 
+		TRACE(TLVL_DEBUG,"couldn't reset device %d\n", r); 
+	}
 	 
 	libusb_release_interface(devh, 0);
 	libusb_close(devh);
