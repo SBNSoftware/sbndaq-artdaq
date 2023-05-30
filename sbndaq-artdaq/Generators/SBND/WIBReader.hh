@@ -6,6 +6,8 @@
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
 
 #include "WIB.hh"
+//#include "WIBBase.hh"
+//#include "WIBStatus.hh"
 
 namespace sbndaq 
 {
@@ -31,6 +33,10 @@ namespace sbndaq
      void setupWIB(fhicl::ParameterSet const& WIB_config);
      void setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config,bool continueOnFEMBRegReadError);
      void setupWIBFakeData(int datamode); // This function is developed by looking into Modified_WIB_fake_data.py at "/home/nfs/sbnd/BNL_CE/SBND_CE"
+     void setupNoiseMinConfig(int FEMB_NO, int tries); // This is the Minimum configuration suggested by Shanshan to see FEMB noise after WIB config
+     void IssueWIBSYNC();
+     void FEMBHsLinkCheck(int FEMB_NO, int tries);
+     void InitFEMBRegCheck(uint32_t expected_val, std::string reg_addrs, int FEMB_NO, int tries);
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
      std::unique_ptr<WIB> wib;
   };
