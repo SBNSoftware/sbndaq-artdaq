@@ -84,6 +84,24 @@ namespace sbndaq
     TLOG_INFO(identification) << "SLOT ADDRESS : " << std::hex << int(wib->Read("SLOT_ADDR")) << TLOG_ENDL;
     TLOG_INFO(identification) << "CRATE ADDRESS : " << std::hex << int(wib->Read("CRATE_ADDR")) << TLOG_ENDL;
     TLOG_INFO(identification) << "FIRMWARE TRACKER : " << std::hex << int(wib->Read(0x100)) << TLOG_ENDL;
+    
+    /*std::string sync_ans = "YES";
+    std::string quit_ans = "NO";
+    while (true){
+      std::cout << "Do you want sync WIB (Y/N) : ";
+      std::cin >> sync_ans;
+      if (sync_ans == "Y" || sync_ans == "y"){
+         IssueWIBSYNC();
+      }
+      
+      else{
+        std::cout << "Do you want quit communication with WIB (Y/N) : ";
+	std::cin >> quit_ans;
+	if (quit_ans == "N" || quit_ans == "n"){
+	    break;
+	}
+      }
+    }*/
  }
 
  void WIBReader::setupWIB(fhicl::ParameterSet const& WIB_config) 
@@ -143,24 +161,28 @@ namespace sbndaq
    
    wib->configWIB(DTS_source);
    
+   //TLOG_INFO(identification) << "UDP DISABLE register value :  " << int(wib->Read("UDP_DISABLE")) << TLOG_ENDL;
+   //wib->UDP_enable(true);
+   //TLOG_INFO(identification) << "UDP DISABLE register value :  " << int(wib->Read("UDP_DISABLE")) << TLOG_ENDL;
+   
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
    
-   setupWIBFakeData(1);
+   //setupWIBFakeData(2); // Uncomment this line to run Shanshan's WIB fake data patterns (1 - sawtooth, 2 - channel ID)
    
    TLOG_INFO(identification) << "Now Connecting to FEMBs " << TLOG_ENDL;
    
-   int N_config_FEMBs = 0;
+   //int N_config_FEMBs = 0;
       
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
        TLOG_INFO(identification) << "FEMB No. " << iFEMB << TLOG_ENDL; 
        
        //TLOG_INFO(identification) << "FEMB No. " << iFEMB << "  FEMB VERSION ID : " << wib->ReadFEMB(iFEMB,"VERSION_ID") << TLOG_ENDL;
        
-       uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+       //uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
        //femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
        
        fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
-       auto expected_femb_fw_version = FEMB_config.get<uint32_t>("expected_femb_fw_version");
+       //auto expected_femb_fw_version = FEMB_config.get<uint32_t>("expected_femb_fw_version");
        
        /*TLOG_INFO(identification) << "Read value of femb FW : " << femb_fw_version << TLOG_ENDL;
        TLOG_INFO(identification) << "Expected value of femb FW : " << expected_femb_fw_version << TLOG_ENDL;*/
@@ -177,10 +199,10 @@ namespace sbndaq
           TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
-	  //setupFEMB(iFEMB,FEMB_config);
+	  setupFEMB(iFEMB,FEMB_config);
 	  /*uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
 	  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");*/
-	  if(femb_fw_version != expected_femb_fw_version) N_config_FEMBs++;
+	  //if(femb_fw_version != expected_femb_fw_version) N_config_FEMBs++;
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
    }
@@ -190,6 +212,8 @@ namespace sbndaq
       excpt << "None of the FEMBs was configured due to firmware mismatch";
       throw excpt;
    }*/
+   
+   IssueWIBSYNC();
    
    TLOG_INFO(identification) << "WIB setup completed " << TLOG_ENDL;
  }
@@ -347,6 +371,7 @@ void WIBReader::setupWIBFakeData(int datamode)
 	if (wib->Read(9) != 0x20){
 	    cet::exception excpt(identification);
 	    excpt << "WIB register 9 is not properly written. Written value : " << std::hex << 0x20 << " Read value : " << std::hex << wib->Read(9);
+	    throw excpt;
 	}
     }
     
@@ -355,6 +380,7 @@ void WIBReader::setupWIBFakeData(int datamode)
       if (wib->Read(9) != 0x0){
           cet::exception excpt(identification);
 	  excpt << "WIB register 9 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(9);
+	  throw excpt;
       }
       return;
     }
@@ -363,8 +389,187 @@ void WIBReader::setupWIBFakeData(int datamode)
     if (wib->Read(8) != 0x0){
         cet::exception excpt(identification);
 	excpt << "WIB register 8 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(8);
+	throw excpt;
     }
     sleep(0.1);
+}
+
+void WIBReader::setupNoiseMinConfig(int FEMB_NO, int tries)
+{
+     const std::string identification = "WIBReader::setupNoiseMinConfig";
+     if (wib->Read(0x04) != 0x03){
+         wib->Write(0x04, 0x03);
+	 sleep(0.1);
+	 int iTries = 1;
+	 while (true){
+	    if (wib->Read(0x04) != 0x03){
+		wib->Write(0x04, 0x03);
+		iTries++;
+		if (iTries > tries){
+		    cet::exception excpt(identification);
+		    excpt << "WIB register 4 is not properly written. Written value : " << std::hex << 0x3 << " Read value : " << std::hex <<     wib->Read(0x04);
+		    throw excpt;
+		    break;
+		}
+		sleep(0.1);
+	    }
+	    else{
+	      break;
+	    }   
+	 } // while loop
+     } // checking wib register address 0x04
+     
+     TLOG_INFO(identification) << "WIB register 0x04 value for FEMB " << FEMB_NO << " : " << std::hex << wib->Read(0x04) << TLOG_ENDL;
+     
+     if (wib->ReadFEMB(FEMB_NO, 0x09) != 0x09){
+         wib->WriteFEMB(FEMB_NO, 0x09, 0x09);
+	 sleep(0.1);
+	 int iTries = 1;
+	 while (true){
+	   if (wib->ReadFEMB(FEMB_NO, 0x09) != 0x09){
+	       wib->WriteFEMB(FEMB_NO, 0x09, 0x09);
+	       iTries++;
+	       if (iTries > tries){
+	           cet::exception excpt(identification);
+		   excpt << "FEMB register 9 is not properly written. Written value : " << std::hex << 0x09 << " Read value : " << std::hex << wib->ReadFEMB(FEMB_NO, 0x09);
+		   throw excpt;
+		   break;
+	       }
+	       sleep(0.1);
+	   }
+	   
+	   else{
+	      break;
+	   }
+	 } // while loop 
+     } // checking FEMB register address 0x09
+     
+     TLOG_INFO(identification) << "FEMB register 0x09 value for FEMB " << FEMB_NO << " : " << std::hex << wib->ReadFEMB(FEMB_NO, 0x09) << TLOG_ENDL;
+     //sleep(5);
+}
+
+void WIBReader::IssueWIBSYNC()
+{
+  const std::string identification = "WIBReader::IssueWIBSYNC";
+  wib->Write(0x14, 0x0);
+  sleep(0.1);
+  if (wib->Read(0x14) != 0x0){
+      cet::exception excpt(identification);
+      excpt << "WIB register 0x14 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(0x14);
+      throw excpt;
+  }
+  wib->Write(0x14, 0x2);
+  sleep(0.1);
+  if (wib->Read(0x14) != 0x2){
+     cet::exception excpt(identification);
+     excpt << "WIB register 0x14 is not properly written. Written value : " << std::hex << 0x2 << " Read value : " << std::hex << wib->Read(0x14);
+     throw excpt; 
+  }
+ 
+  wib->Write(0x14, 0x0);
+  sleep(0.1);
+  if (wib->Read(0x14) != 0x0){
+      cet::exception excpt(identification);
+      excpt << "WIB register 0x14 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(0x14);
+      throw excpt;
+  }
+}
+
+void WIBReader::FEMBHsLinkCheck(int FEMB_NO, int tries)
+{
+  const std::string identification = "WIBReader::FEMBHsLinkCheck";
+  
+  uint32_t linkStatBits = wib->ReadWithRetry("LINK_SYNC_STATUS_BRD"+std::to_string(FEMB_NO));
+  auto link_1_stat = 0x3  & linkStatBits;
+  auto link_2_stat = 0xC  & linkStatBits; 
+  auto link_3_stat = 0x30 & linkStatBits;
+  auto link_4_stat = 0xC0 & linkStatBits;
+   
+  if (link_1_stat == 0x0 || link_2_stat == 0x0 || link_3_stat == 0x0 || link_4_stat == 0x0){
+      sleep(0.1);
+      int iTries = 1;
+       
+      while (true){
+       linkStatBits = wib->ReadWithRetry("LINK_SYNC_STATUS_BRD"+std::to_string(FEMB_NO));
+       link_1_stat = 0x3  & linkStatBits;
+       link_2_stat = 0xC  & linkStatBits; 
+       link_3_stat = 0x30 & linkStatBits;
+       link_4_stat = 0xC0 & linkStatBits;
+       if (link_1_stat == 0x0 || link_2_stat == 0x0 || link_3_stat == 0x0 || link_4_stat == 0x0){
+	   iTries++;
+	   if (iTries > tries){
+	       cet::exception excpt(identification);
+	       excpt << "FEMB " << FEMB_NO << " Link status is not OK, " << " Link Stat. 1 : " << link_1_stat << " Link Stat. 2 : " << link_2_stat << "Link Stat. 3" << link_3_stat << " Link Stat. 4 : " << link_4_stat;
+	       throw excpt;
+	       break;
+	   } // link stat check
+	   sleep(0.1);
+       } // link stat check
+       else{
+	 break;
+       }
+     } // while loop
+   } // link stat check
+   
+   uint32_t eqStatBits = wib->ReadWithRetry("EQ_LOS_BRD"+std::to_string(FEMB_NO)+"_RX");
+   auto link_1_eqlz = 0x1  & eqStatBits;
+   auto link_2_eqlz = 0x2  & eqStatBits; 
+   auto link_3_eqlz = 0x4 & eqStatBits;
+   auto link_4_eqlz = 0x8 & eqStatBits;
+   
+   if (link_1_eqlz == 0x0 || link_2_eqlz == 0x0 || link_3_eqlz == 0x0 || link_4_eqlz == 0x0){
+       sleep(0.1);
+       int iTries = 1;
+       
+       while (true){
+         eqStatBits = wib->ReadWithRetry("EQ_LOS_BRD"+std::to_string(FEMB_NO)+"_RX");
+	 link_1_eqlz = 0x1  & eqStatBits;
+         link_2_eqlz = 0x2  & eqStatBits; 
+         link_3_eqlz = 0x4 & eqStatBits;
+         link_4_eqlz = 0x8 & eqStatBits;
+	 if (link_1_eqlz == 0x0 || link_2_eqlz == 0x0 || link_3_eqlz == 0x0 || link_4_eqlz == 0x0){
+	     iTries++;
+	     if (iTries > tries){
+	         cet::exception excpt(identification);
+		 excpt << "FEMB " << FEMB_NO << " Equlizer status is not OK, " << " Equalizer Stat. 1 : " << link_1_eqlz << " Equalizer Stat. 2 : " << link_2_eqlz << "Equalizer Stat. 3" << link_3_eqlz << " Equalizer Stat. 4 : " << link_4_eqlz;
+		 throw excpt;
+		 break;
+	     }
+	     sleep(0.1);
+	 } // equalizer stat check
+	 else{
+	   break;
+	 }
+       } // while loop
+   } // equlizer stat check
+}
+
+void WIBReader::InitFEMBRegCheck(uint32_t expected_val, std::string reg_addrs, int FEMB_NO, int tries)
+{
+  const std::string identification = "WIBReader::InitFEMBRegCheck"; 
+  if (wib->ReadFEMB(FEMB_NO, reg_addrs) != expected_val){
+      sleep(0.1);
+      int iTries = 1; 
+      TLOG_INFO(identification) << "Try : " << iTries << " FEMB NO : " << FEMB_NO << " Expected Val : " << std::hex << expected_val << " Read Val : " << std::hex << wib->ReadFEMB(FEMB_NO, reg_addrs) << TLOG_ENDL;
+      while (true){
+        if (wib->ReadFEMB(FEMB_NO, reg_addrs) != expected_val){
+	    iTries++;
+	    TLOG_INFO(identification) << "Try : " << iTries << " FEMB NO : " << FEMB_NO << " Expected Val : " << std::hex << expected_val << " Read Val : " << std::hex << wib->ReadFEMB(FEMB_NO, reg_addrs) << TLOG_ENDL;
+	    if (iTries > tries){
+	        cet::exception excpt(identification);
+		excpt << "FEMB " << FEMB_NO << " register " << reg_addrs << " value is " << std::hex << wib->ReadFEMB(FEMB_NO, reg_addrs) << " and expected value is " << std::hex << expected_val;
+		throw excpt;
+		break;
+	    }
+	    sleep(0.1);
+	}
+	else{
+	  TLOG_INFO(identification) << "Try : " << iTries << " FEMB NO : " << FEMB_NO << " Expected Val : " << std::hex << expected_val << " Read Val : " << std::hex << wib->ReadFEMB(FEMB_NO, reg_addrs) << TLOG_ENDL;
+	  break;
+	}
+     }
+  }
+  TLOG_INFO(identification) << "Expected value : " << std::hex << expected_val << " Read value : " << std::hex << wib->ReadFEMB(FEMB_NO, reg_addrs) << TLOG_ENDL;
 }
 
 void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure)
@@ -470,21 +675,28 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   }
   
   TLOG_INFO(identification) << " Just before FEMBPower function" << TLOG_ENDL;
-      
+  
+  wib->FEMBPower(iFEMB,0);
+  sleep(2);    
   wib->FEMBPower(iFEMB,1); 
+  sleep(2);
   
   TLOG_INFO(identification) << " After powering up the FEMBs" << TLOG_ENDL;
   
   //TLOG_INFO(identification) << " FEMB FW Version : " << wib->ReadFEMB(iFEMB,"VERSION_ID") << TLOG_ENDL;
   
-  uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
+  //uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
   //femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
   
   //TLOG_INFO(identification) << " FEMB FW Version (2 nd) : " << femb_fw_version << TLOG_ENDL;
   
   auto expected_femb_fw_version = FEMB_configure.get<uint32_t>("expected_femb_fw_version");
   
-  if(femb_fw_version != expected_femb_fw_version){
+  InitFEMBRegCheck(expected_femb_fw_version, "VERSION_ID", iFEMB, 30);
+  
+  FEMBHsLinkCheck(iFEMB, 30);
+  
+  /*if(femb_fw_version != expected_femb_fw_version){
           TLOG_WARNING(identification) << "Skipping powering up/ configuring FEMB " << iFEMB << " due to FW version mismatch " << TLOG_ENDL;
 	  TLOG_WARNING(identification) << "Expected Version : " << std::hex << std::setw(8) << std::setfill('0')
 	                               << expected_femb_fw_version << "  Read FW version : " << std::hex << std::setw(8) << std::setfill('0')
@@ -492,7 +704,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 	  return;
   }
   
-  sleep(5);
+  sleep(5);*/
       
   std::vector<uint32_t> fe_config = {gain,shape,baselineHigh,leakHigh,leak10X,acCouple,buffer,extClk};
   
@@ -508,9 +720,10 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   
   //TLOG_INFO(identification) << "After reading register 42" << TLOG_ENDL;
   
-  wib->WriteFEMB(iFEMB,0x09,0x09); // Added as part of Shanshan's Minimum configuration.
-  sleep(10);
-  //wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+  //wib->WriteFEMB(iFEMB,0x09,0x09); // Added as part of Shanshan's Minimum configuration.
+  //sleep(10);
+  //setupNoiseMinConfig(iFEMB, 30); // Uncomment this line to run Shanshan's minimum configuration to see FEMB noise.
+  wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
   
   TLOG_INFO(identification) << "After ConfigWIB function" << TLOG_ENDL;
   
