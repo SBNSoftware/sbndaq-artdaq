@@ -156,7 +156,5 @@ cet_make_exec( ConvertCRTConfiguration
     cetlib_except
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
-
-
 install_source()
 install_headers()
