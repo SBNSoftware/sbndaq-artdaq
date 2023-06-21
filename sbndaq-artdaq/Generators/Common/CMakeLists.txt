@@ -104,7 +104,7 @@ cet_make_library(
 )
 
 
-basic_plugin(CAENV1730Readout "generator"
+cet_build_plugin(CAENV1730Readout artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
     sbndaq-artdaq_Common_CAENV1730_GeneratorBase
@@ -113,19 +113,19 @@ basic_plugin(CAENV1730Readout "generator"
     CAENDigitizer
   )
 
-basic_plugin(SpectraTimeReadout "generator"
+cet_build_plugin(SpectraTimeReadout artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
     sbndaq-artdaq_Common_SpectraTime_GeneratorBase
 )
 
-basic_plugin(WhiteRabbitReadout "generator"
+cet_build_plugin(WhiteRabbitReadout artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
     sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
 )
 
-basic_plugin(BernCRTZMQData "generator"
+cet_build_plugin(BernCRTZMQData artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
     sbndaq-artdaq_Common_BernCRTZMQ_GeneratorBase
@@ -133,7 +133,7 @@ basic_plugin(BernCRTZMQData "generator"
     febdrv
 )
 
-basic_plugin(BernCRTData "generator"
+cet_build_plugin(BernCRTData artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
     sbndaq-artdaq_Common_BernCRT_GeneratorBase
@@ -141,7 +141,7 @@ basic_plugin(BernCRTData "generator"
     febdrv
 )
 
-basic_plugin(DummyGenerator "generator"
+cet_build_plugin(DummyGenerator artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )

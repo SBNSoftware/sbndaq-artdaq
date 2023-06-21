@@ -15,7 +15,7 @@ cet_make_library(
     ${LIBRARY_CORE_LIB_LIST}
 )
 
-basic_plugin(PhysCrateData "generator"
+cet_build_plugin(PhysCrateData artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
     sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
@@ -26,35 +26,35 @@ basic_plugin(PhysCrateData "generator"
     CAENComm
 )
 
-# basic_plugin(PhysCrateFakeData "generator"
+# cet_build_plugin(PhysCrateFakeData artdaq::commandableGenerator
 #  LIBRARIES REG
 #    ${BUILD_PLUGIN_CORE_LIB_LIST}
 #    sbndaq-artdaq_ICARUS_PhysCrate_GeneratorBase
 #   )
 
-basic_plugin(ICARUSTriggerUDP "generator"
+cet_build_plugin(ICARUSTriggerUDP artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )
 
-basic_plugin(ICARUSTriggerV2 "generator"
+cet_build_plugin(ICARUSTriggerV2 artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )
 
-basic_plugin(ICARUSTriggerV3 "generator"
+cet_build_plugin(ICARUSTriggerV3 artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )  
 
 #JCZ - obsolete interpretation
-#basic_plugin(ICARUSPMTGate "generator"
+#cet_build_plugin(ICARUSPMTGate artdaq::commandableGenerator
 #  LIBRARIES REG
 #    ${BUILD_PLUGIN_CORE_LIB_LIST}
 #    artdaq-core-demo_Overlays
 #)
 
-basic_plugin(CRTFragGen "generator"
+cet_build_plugin(CRTFragGen artdaq::commandableGenerator
   LIBRARIES
   sbndaq-artdaq_ICARUS_BottomInterface_StartBackend
   sbndaq-artdaq_ICARUS_BottomInterface_StopBackend
