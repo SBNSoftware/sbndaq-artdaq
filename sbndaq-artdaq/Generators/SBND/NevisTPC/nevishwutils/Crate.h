@@ -6,6 +6,7 @@
 #include "XMITReader.h"
 #include "XMITModule.h"
 #include "TriggerModule.h"
+#include "NevisTBStreamReader.h"
 
 namespace nevistpc{
   
@@ -23,6 +24,7 @@ namespace nevistpc{
     XMITReaderSPtr getXMITReader();
     XMITReaderSPtr getXMITReader(std::string name); // Two-stream overload
     TriggerModuleSPtr getTriggerModule();
+    //    NevisTBStreamReaderSPtr getNevisTBStreamReader();
     
     bool hasTrigger;
     
@@ -45,7 +47,7 @@ namespace nevistpc{
     XMITReaderSPtr					_sn_xmit_reader; // SN stream
     std::vector < NevisTPCFEMSPtr > _fem_modules;
     TriggerModuleSPtr				_trigger_module;
-    
+    //NevisTBStreamReaderSPtr    _nevistb_reader;
   };
   
   typedef std::unique_ptr<Crate> CrateUPtr;
