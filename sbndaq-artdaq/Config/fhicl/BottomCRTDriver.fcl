@@ -2,7 +2,7 @@
 # about the FHiCL language, please look at
 # cdcvs.fnal.gov/redmine/documents/327 , the "FHiCL Quick Start Guide"
 
-events_to_generate: 10
+events_to_generate: 100000
 run_number: 101
 transition_timeout: 30
 debug_cout: true
@@ -11,13 +11,15 @@ debug_cout: true
 fragment_receiver: {
   generator: CRTFragGen
   fragment_type: CRT
-  fragment_ids: [0]  # In the case of just one fragment, "fragment_id: 0" would also work
+  fragment_ids: [ 0x30b1, 0x30b2, 0x30b3, 0x30b4, 0x30b5, 0x30b6, 0x30b7 ]  # In the case of just one fragment, "fragment_id: 0" would also work
+  #fragment_ids: [ 0 ]  # In the case of just one fragment, "fragment_id: 0" would also work
+  generated_fragments_per_event: 7
   board_id: 999
 
   interface_type: 1
-  indir: "/scratch_local/crt_tests/backend_data/"
+  indir: "/scratch_local/crt_tests/backend_data"
 
-  partition_number: 0
+  partition_number: 2
   # Exactly one artdaq process needs to start up the backend, but then
   # all four can read the results
   startbackend: true
@@ -34,7 +36,7 @@ fragment_receiver: {
       metricPluginType: "file"
       level: 3
       #fileName: "/daq/log/metrics/bottom_metrics.log"
-      fileName: "/scratch_local/crt_tests/log/bottom_metrics.log"
+      fileName: "/scratch_local/crt_tests/metrics/bottom_metrics.log"
       uniquify: true
     }
     
@@ -98,8 +100,8 @@ art: {
 
     rootout:{
       module_type: RootDAQOut
-      #fileName: "/data1/%to_%tc_crt01_%#_new.root"
-      fileName: "CRT_%to_%tc_%#.root"
+      #fileName: ""
+      fileName: "/scratch_local/crt_tests/artdriver/CRT_%to_%tc_%#.root"
       compressionLevel: 5
       fileProperties: {
         maxEvents: 100000

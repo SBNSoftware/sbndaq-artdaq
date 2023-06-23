@@ -335,7 +335,7 @@ void CRT::FragGen::stop()
   stopallboards(configfile.c_str(),indir.c_str());
   string cmd = "killall bottomCRTreadout";
   int ret=system(cmd.c_str());
-  TLOG(TLVL_DEBUG) << "system("<< cmd << ") returned: " << ret;
+  TLOG(TLVL_INFO) << "system("<< cmd << ") returned: " << ret;
 }
 
 // The following macro is defined in artdaq's GeneratorMacros.hh header
