@@ -551,21 +551,7 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
         boxini = 1;
         boxfin = totalbox;
     }
-    
-    time_t t2 = time(0);   //get time now
-    struct tm * now1 = localtime( & t2 );
-    
-    int newSec = now1->tm_sec;
-    int newHour = now1->tm_hour;
-    int newMin = now1->tm_min;
-    int newDay = now1->tm_mday;
-    
-    int elapsed_time;
-    elapsed_time = (newDay - Day)*24*3600 + (newHour - Hour)*3600 + (newMin - Min)*60 + (newSec - Sec);
-    
-    //printf("%d sec...", elapsed_time);
-    TRACE(TLVL_INFO,"Elapsed time since start of data taking: %d sec", elapsed_time);
-    
+   
     int pmt1;
     int usb_local;
     int pmt_local;
@@ -594,7 +580,7 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     
     //sleep(5.0);
     //printf("shutting down ");
-    TRACE(TLVL_INFO,"Shutting down\n");
+    TRACE(TLVL_INFO,"Shutting down data taking from USB(s)\n");
     
     for(int m = 0;m<=10; m++)
     {
@@ -1070,7 +1056,7 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
 
 int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
 {
-
+    int minbase = 10000;
 
     if(DataPath=="auto"){
         int disk_num = 1;
@@ -1218,12 +1204,16 @@ int eventbuilder(string DataPath, int pmtini, int pmtfin, string online_path)
 
 		//cout << "PMT " << pmttousb[pmt1] << "-" << pmttoboard[pmt1] << ":\t baseline hits: " << min << "\n";
 		TLOG(TLVL_INFO) << "PMT " << pmttousb[pmt1] << "-" << pmttoboard[pmt1] << ":\t baseline hits: " << min << "\n";
-	  
+	  	if(min<minbase){
+		  minbase = min;
+		}
      }//end of loop over all PMTs (for loop pmt1++)
    }//end of else (putting things in baselines.dat)
 fclose(OUT);
 
-return 0;
+//Return the minimum number of baseline hits on a board.
+//If any of the boards have 0 baseline hits, we will initialize again
+return minbase;
     
 }
 }

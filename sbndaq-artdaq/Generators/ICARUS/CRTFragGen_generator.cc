@@ -66,13 +66,14 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   // piling up, but that's ok since we will have a cron job to clean them up,
   // and we will always read only from the latest file when data is requested.
 
-  string cmd = "killall bottomCRTreadout";
+  string cmd = "killall -q bottomCRTreadout";
   system(cmd.c_str());
 
   cmd = "ipcrm -Q 0x0000270f -Q 0x00002737";
   system(cmd.c_str());
 
   if(startbackend) {
+    stopallboards(configfile.c_str(),indir.c_str());
     startallboards(configfile.c_str(),indir.c_str());
   }
 
@@ -264,7 +265,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //Tracks the highest lowertime each module has seen, verifies that it does not go above (sync+0.1) seconds
   if(lowertime_ns > maxlowertime_ns[module_id]){
     maxlowertime_ns[module_id] = lowertime_ns;
-    metricMan->sendMetric("Highest 32bit timestamp (in seconds):", maxlowertime_ns[module_id]/1.e9, "Fragments", 1, artdaq::MetricMode::Accumulate); 
+    metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 1, artdaq::MetricMode::Maximum | artdaq::MetricMode::LastPoint); 
   }
 
   if(lowertime_ns > (sync + 0.1)*1.e9) {
