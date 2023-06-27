@@ -99,6 +99,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
     {
       TLOG(TLVL_INFO) << "Moving to accept function" << "\n";
       datafd_ = accept(configsocket_, (struct sockaddr *) &si_config_, &configlen);
+      TLOG(TLVL_INFO) << "After datafd_ accept(configsocket_...." << "\n";
     }
   else
     {
@@ -654,7 +655,7 @@ void sbndaq::ICARUSTriggerV3::start()
 
   }
   //send_TRIG_ALLW();
-  close(datafd_);
+  //////////////close(datafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
   socklen_t datalen = sizeof((struct sockaddr_in&) si_data_);
   bind(datasocket_, (struct sockaddr *) &si_data_, datalen);                     
   if(listen(datasocket_, 1) >= 0)            
@@ -668,8 +669,21 @@ void sbndaq::ICARUSTriggerV3::start()
     abort();
   }                                                                            
 }
+
+
 void sbndaq::ICARUSTriggerV3::stop()
 {
+  if(send_stop(n_init_retries_) < 0) //comment out for fake trigger tests
+  {  
+     TLOG(TLVL_ERROR) << "Was not able to STOP LabVIEW: closing socket  " << "\n";
+     close(datafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
+     abort();
+  
+  }
+  else {
+     TLOG(TLVL_ERROR) << " STOPPED LabVIEW; closing socket  " << "\n";
+     close(datafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
+  }
   //send_TRIG_VETO();
 }
 void sbndaq::ICARUSTriggerV3::pause()
@@ -775,7 +789,7 @@ int sbndaq::ICARUSTriggerV3::initialization(int retries, int sleep_time_ms)
     //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
     int sendcode = send(datafd_,&cmd,16, 0); //datafd
     TLOG(TLVL_INFO) << "retcode from send call is: " << sendcode;
-    TLOG(TLVL_DEBUG) << "sent!:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    TLOG(TLVL_DEBUG) << "sent:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
     //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
     int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, sleep_time_ms);  
     if(size_bytes>0){
@@ -791,6 +805,31 @@ int sbndaq::ICARUSTriggerV3::initialization(int retries, int sleep_time_ms)
   return -1;
   
 }
+
+
+int sbndaq::ICARUSTriggerV3::send_stop(int retries)
+{   
+    char cmd[7];
+    sprintf(cmd,"%s","STOP  ");
+    
+    TLOG(TLVL_INFO) << "to send:: COMMAND " << cmd << "  to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
+    int sendcode = send(datafd_,&cmd,7, 0); //datafd
+    TLOG(TLVL_INFO) << "retcode from send call is: " << sendcode;
+    TLOG(TLVL_INFO) << "sent:: COMMAND " << cmd << "  to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
+    //
+
+    retries--; //AA: this is leftover from tests, should be removed in the future
+ 
+     return 0;
+ 
+}
+
+
+
+
+
 
 void sbndaq::ICARUSTriggerV3::configure_socket(int socket, struct sockaddr_in& si)
 {
