@@ -324,6 +324,12 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 
   fTimeOffsetNanoSec = ps.get<uint32_t>("TimeOffsetNanoSec",0); //0ms by default
   TLOG(TINFO) <<"fTimeOffsetNanoSec=" << fTimeOffsetNanoSec;
+
+  fOutputClk = ps.get<bool>("OutputClk", 0); // To output Motherboard CLK to TRG-OUT, default 0
+  TLOG(TINFO)<<"OutputClk=" << fOutputClk;
+
+  fOutputClkPhase = ps.get<bool>("OutputClkPhase", 0); // To output Motherboard CLK PHASE to TRG-OUT, default 0
+  TLOG(TINFO)<<"OutputClkPhase=" << fOutputClkPhase;
 }
 
 void sbndaq::CAENV1730Readout::Configure()
@@ -679,6 +685,80 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
   }
 }
 
+void sbndaq::CAENV1730Readout::StopClkToTrgOut(){
+
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+  uint32_t data, readBack;
+  
+  /* Check the output of the 0x811C */
+  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, old value: 0x" << std::hex << data << std::dec;
+  TLOG(TINFO) << "Front Panel IO Control address 0x811C, old value: 0x" << std::hex << data << std::dec;
+  
+  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
+
+  /* Need bit 17:16 = 01 AND bit 19:18 == 01 for CLK and == 10 for PHASE  */
+  // 1. Make sure they're all 0: make 11 and invert to 00
+  uint32_t test = 0x3;
+  test = ~test;  
+  TLOG(TINFO) << "test value = " << std::hex << test << std::dec << std::endl;
+
+  //2. Insert 00 into data at bit 17:16 and bit 19:18
+  data &= ((test)<<16) + ((test)<<18); 
+  std::cout << "Front Panel IO Control address 0x811C, after insert test: 0x" << std::hex << data << std::dec;
+
+  //4. Write value
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, data);
+
+  //5. Double-check register value
+  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+  TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+}
+
+void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
+{
+  /* Check to output EITHER CLK or CLK PHASE */
+  if ( (fOutputClk == 1) & (fOutputClkPhase == 1) ){
+    TLOG(TLVL_ERROR) << "Error configuring output clock: Cannot output clock and its phase at the same time." << std::endl;
+    abort();
+  } 
+
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+  uint32_t data, readBack;
+  
+  /* Check the output of the 0x811C */
+  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, old value: 0x" << std::hex << data << std::dec;
+  TLOG(TINFO) << "Front Panel IO Control address 0x811C, old value: 0x" << std::hex << data << std::dec;
+  
+  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
+
+  /* Need bit 17:16 = 01 AND bit 19:18 == 01 for CLK and == 10 for PHASE  */
+  // 1. Make sure they're all 0: make 11 and invert to 00
+  uint32_t test = 0x3;
+  test = ~test;  
+  TLOG(TINFO) << "test value = " << std::hex << test << std::dec << std::endl;
+
+  //2. Insert 00 into data at bit 17:16 and bit 19:18
+  data &= ((test)<<16) + ((test)<<18); 
+  std::cout << "Front Panel IO Control address 0x811C, after insert test: 0x" << std::hex << data << std::dec;
+
+  //3. Make value
+  uint32_t value16 = 0x1; 
+  uint32_t value18 = 0x0;
+  if (fOutputClk) value18 = 0x1;
+  if (fOutputClkPhase) value18 = 0x2;
+  data |= ((value16 & 0x3)<<16) + ((value18 &0x3)<<18);
+  
+  //4. Write value
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, data);
+
+  //5. Double-check register value
+  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+  TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+}
 
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
 {
@@ -1014,6 +1094,9 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
     }
   }
 
+  // for SBND
+  if( (fOutputClk == 1) | (fOutputClkPhase == 1) ){ ConfigureClkToTrgOut(); } 
+
   // for ICARUS
   if(fModeLVDS!=0){ ConfigureLVDS();  }
 
@@ -1263,6 +1346,9 @@ void sbndaq::CAENV1730Readout::start()
 
 void sbndaq::CAENV1730Readout::stop()
 {
+
+  if( (fOutputClk == 1) | (fOutputClkPhase == 1) ){ StopClkToTrgOut(); } 
+
   if(fVerbosity>0)
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
