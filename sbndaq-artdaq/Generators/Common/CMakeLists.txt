@@ -1,5 +1,6 @@
 add_subdirectory(GPS)
 add_subdirectory(Bern)
+add_subdirectory(CAEN)
 
 include_directories( ./GPS )
 
