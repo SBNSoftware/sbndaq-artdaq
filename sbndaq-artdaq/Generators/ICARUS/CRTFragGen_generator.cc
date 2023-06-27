@@ -248,11 +248,11 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
     if(module_id == 5){timestamp_ -= 14; } //Module 6 sync is wired directly to the doublechooz module
 
-    int64_t deltaUNIX_sec = timestamp_/1.e9 - oldUNIX_ns/1.e9; //this is in sec.  
-    int64_t consec_event_thres = 2;//TODO
-    if(labs(deltaUNIX_sec) > consec_event_thres){ // there is a difference between two consecutive processed events
+    int64_t deltaUNIX_ns = timestamp_ - oldUNIX_ns; //this is in ns.  
+    int64_t consec_event_thres_sec = 2;//TODO
+    if(labs(deltaUNIX_ns)/1.e9 > consec_event_thres_sec){ // there is a difference between two consecutive processed events
       TLOG(TLVL_WARNING, "BottomFragGen") << "Detected a difference between consecutive events of " 
-                           << deltaUNIX_sec << " seconds. currentUNIX = "
+                           << deltaUNIX_ns/1.e9 << " seconds. currentUNIX = "
 			   << currentUNIX_ns/1.e9 << " sec, and timestamp = "
 			   << int64_t(timestamp_/1.e9) << " sec, and oldUNIX = "
                            << oldUNIX_ns/1.e9 
@@ -265,7 +265,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //Tracks the highest lowertime each module has seen, verifies that it does not go above (sync+0.1) seconds
   if(lowertime_ns > maxlowertime_ns[module_id]){
     maxlowertime_ns[module_id] = lowertime_ns;
-    metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 1, artdaq::MetricMode::Maximum | artdaq::MetricMode::LastPoint); 
+    metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 1, artdaq::MetricMode::Maximum); 
   }
 
   if(lowertime_ns > (sync + 0.1)*1.e9) {
@@ -284,7 +284,8 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //                            << lowertime << ",deltaT_process is: " << deltaT_process << ", deltaT is " << deltaT << "  \n";
   //}
 
-  metricMan->sendMetric("Timestamp difference", int(deltaUNIX_sec), "Fragments", 1, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
+  //Report the average time difference between consecutive events (ns)
+  metricMan->sendMetric("Timestamp difference", deltaUNIX_ns/1.e9, "seconds", 1, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
 
   oldUNIX_ns = timestamp_; // in nanoseconds
   lowertime_per_mod_ns[module_id] = lowertime_ns;

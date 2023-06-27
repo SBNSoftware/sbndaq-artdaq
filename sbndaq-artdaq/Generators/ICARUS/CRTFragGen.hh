@@ -88,7 +88,7 @@ namespace CRT
     uint64_t old_tpacket_sec = 0;
 
     //Keep track of the maximum lowertime among all boards
-    std::vector<uint32_t> maxlowertime_ns;
+    std::vector<uint64_t> maxlowertime_ns;
 
     // The previous 32-bit timestamp received from the CRT hardware (or
     // the run start time if no events yet), so we can determine if we
