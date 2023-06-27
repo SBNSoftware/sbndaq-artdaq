@@ -155,7 +155,7 @@ void readTemperature()
   }
 }
 
-void read_temperature_loop(unsigned int sleep_duration)
+void read_temperature_loop()
 {
 
   std::cout << "Read out temperature of each channel...Ctrl+C to kill" << std::endl;
@@ -175,7 +175,7 @@ void read_temperature_loop(unsigned int sleep_duration)
     
     readTemperature();
  
-//    unsigned int sleep_duration = 1;  
+    unsigned int sleep_duration = 1;  
 
     std::cout << "Sleep for " <<  sleep_duration << " s...zzz" << std::endl; 
     sleep(sleep_duration);
@@ -193,8 +193,7 @@ int main( int argc, char* argv[] ) //int argc, char **argv)
         printf("%s\n", argv[i]);
     }
    
-  unsigned int sleep_duration = argv[1];
-  read_temperature_loop(sleep_duration);
+  read_temperature_loop();
   
 }
 
