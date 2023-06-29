@@ -51,6 +51,7 @@ CRT::FragGen::FragGen(fhicl::ParameterSet const& ps) :
   //, timinghw(timeConnMan.getDevice(timinghardwarename))
   , gotRunStartTime(false)
 {
+  TLOG(TLVL_INFO,"BottomFragGen")<<"Starting bottom CRT fragment generator";
   //uhal::setLogLevelTo(uhal::Error());
 
   // Tell the timing board what partition we are running in.
