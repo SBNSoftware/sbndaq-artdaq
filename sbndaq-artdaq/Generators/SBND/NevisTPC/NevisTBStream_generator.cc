@@ -46,41 +46,12 @@ void sbndaq::NevisTBStream::ConfigureNTBStart() {
 
 }
 
-/*
-// Set up worker GetNTBData thread.                                                                                                                           
-            
-share::ThreadFunctor GetNTBData_functor = std::bind( &NevisTBStream::GetNTBData, this );
-auto GetNTBData_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( GetNTBData_functor, "GetNTBDataWorkerThread" ) );
-auto GetNTBData_worker = share::WorkerThread::createWorkerThread( GetNTBData_worker_functor );
-GetNTBData_thread_.swap(GetNTBData_worker);
-if(fDumpNTBBinary){
-  GetNTBData_thread_->start();
-  TLOG(TLVL_INFO) << "Started GetNTBData thread" << TLOG_ENDL;
- }
-
-
-// Set up worker WriteSNData thread.                                                                                                                                     
-share::ThreadFunctor WriteNTBData_functor = std::bind( &NevisTBStream::WriteNTBData, this );
-auto WriteNTBData_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( WriteNTBData_functor, "WriteNTBDataWorkerThread" ) );
-auto WriteNTBData_worker = share::WorkerThread::createWorkerThread( WriteNTBData_worker_functor );
-WriteNTBData_thread_.swap(WriteNTBData_worker);
-if( fDumpNTBBinary ){
-  WriteNTBData_thread_->start();
-  TLOG(TLVL_INFO) << "Started WriteNTBData thread" << TLOG_ENDL;
- }
-
-*/
-
 void sbndaq::NevisTBStream::ConfigureNTBStop() {
 
   if( fDumpNTBBinary ){
     TLOG(TLVL_INFO)<< "Closig raw binary file " << binFileNameNevisTB;
     binFileNTB.close();
-    //GetNTBData_thread_->stop();
-    //WriteNTBData_thread_->stop();
   }
-
-  //  delete[] NTBBuffer_;
 
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
@@ -88,50 +59,15 @@ void sbndaq::NevisTBStream::ConfigureNTBStop() {
 }
 
 size_t sbndaq::NevisTBStream::GetNevisTBData() {
-
-  //  std::streamsize bytesRead = fCrate->getNevisTBStreamReader()->readsome(reinterpret_cast<char*>(&DMABufferNTB_[0]), fNTBChunkSize);
   TLOG(TLVL_INFO)<< "GetNevisTBData";
 
   std::streamsize bytesRead = fntbreader->readsome(reinterpret_cast<char*>(&DMABufferNTB_[0]), fNTBChunkSize);  
-  TLOG(TLVL_INFO)<< "NTB bytes:" << bytesRead;
-  //  if(bytesRead>0){
 
-    binFileNTB.write( (char*)(&DMABufferNTB_[0]), bytesRead); //fNTBChunkSize );  
-
-  // size_t n_words = bytesRead/sizeof(uint16_t); 
-  //size_t new_buffer_size = NTBCircularBuffer_.Insert(n_words, NTBDMABuffer_);
-  //if( NTBCircularBuffer_.buffer.size() < fNTBChunkSize ) return false;
-  //std::copy(NTBCircularBuffer_.buffer.begin(), NTBCircularBuffer_.buffer.begin() + fNTBChunkSize, NTBBuffer_); 
-
-  //binFileNTB.write((char*)NTBBuffer_, fNTBChunkSize );                                                                                                     
+  binFileNTB.write( (char*)(&DMABufferNTB_[0]), bytesRead); //fNTBChunkSize );                         
   binFileNTB.flush();
-  //}                                                                                                                                        
-  return bytesRead;
+ return bytesRead;
 
 }
 
-/*
-bool sbndaq::NevisTBStream::GetNTBData() {
-  std::streamsize bytesRead = fCrate->getNevisTBStreamReader()->readsome(reinterpret_cast<char*>(&NTBDMABuffer_[0]), fNTBChunkSize);
-  size_t n_words = bytesRead/sizeof(uint16_t);
-  size_t new_buffer_size = NTBCircularBuffer_.Insert(n_words, NTBDMABuffer_);
-
-  TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
-  return true;
-}
-
-bool sbndaq::NevisTBStream::WriteNTBData() {
-  if( NTBCircularBuffer_.buffer.size() < fNTBChunkSize ) return false;
-
-  std::copy(NTBCircularBuffer_.buffer.begin(), NTBCircularBuffer_.buffer.begin() + fNTBChunkSize, NTBBuffer_);
-
-  binFileNTB.write((char*)NTBBuffer_, fNTBChunkSize );
-  binFileNTB.flush();
-  size_t new_buffer_size = NTBCircularBuffer_.Erase(fNTBChunkSize);
-  TLOG(TFILLFRAG)<< "Successfully erased " << fNTBChunkSize << " . NTB Buffer occupancy now " << new_buffer_size;
-
-  return true;
-}
-*/
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::NevisTBStream)

@@ -20,9 +20,6 @@ namespace sbndaq {
     explicit NevisTBStream(fhicl::ParameterSet const& _p) :
       NevisTB_generatorBase(_p),
       fntbreader( new nevistpc::NevisTBStreamReader("ntb_reader",_p))
-      //      fControllerModule( new nevistpc::ControllerModule(_p) ),
-      //fNUXMITReader( new nevistpc::XMITReader("nu_xmit_reader", _p) ),
-      //fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) )
     {
       ConfigureNTBStart();
     }
@@ -31,23 +28,11 @@ namespace sbndaq {
     void ConfigureNTBStart();
     void ConfigureNTBStop();
 
-     size_t GetNevisTBData();
-
-    /*  bool GetNTBData(); //! Get NTB stream data                                                                                                                  
-    share::WorkerThreadUPtr GetNTBData_thread_;
-    */
+    size_t GetNevisTBData();
     std::unique_ptr<uint16_t[]> NTBDMABuffer_;
     CircularBuffer_t NTBCircularBuffer_;
-    //bool WriteNTBData(); //! Write NTB stream data                                                                                                              
-    // share::WorkerThreadUPtr WriteNTBData_thread_;
     uint16_t* NTBBuffer_;
    
-
-    //    nevistpc::ControllerModuleSPtr fControllerModule;
-    //nevistpc::XMITReaderSPtr fNUXMITReader;
-    //nevistpc::XMITReaderSPtr fSNXMITReader;
-    //nevistpc::CrateSPtr fCrate;
-
     nevistpc::NevisTBStreamReaderSPtr fntbreader;
 
     uint32_t fNTBChunkSize;
