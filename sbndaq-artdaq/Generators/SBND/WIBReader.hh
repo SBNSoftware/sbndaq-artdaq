@@ -33,7 +33,6 @@ namespace sbndaq
      bool acquireSemaphores_ThrowOnFailure();
      void releaseSemaphores();
      void disconnectWIB_releaseSemaphores();
-
      void setupWIB(fhicl::ParameterSet const& WIB_config);
      void setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config,bool continueOnFEMBRegReadError);
      void setupWIBFakeData(int datamode); // This function is developed by looking into Modified_WIB_fake_data.py at "/home/nfs/sbnd/BNL_CE/SBND_CE"
@@ -41,6 +40,7 @@ namespace sbndaq
      void IssueWIBSYNC();
      void FEMBHsLinkCheck(int FEMB_NO, int tries);
      void InitFEMBRegCheck(uint32_t expected_val, std::string reg_addrs, int FEMB_NO, int tries);
+     void disable_dat_stream_and_sync_to_NEVIS();
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
      uint64_t semaphore_acquire_timeout_ms;
      bool calibration_mode;
