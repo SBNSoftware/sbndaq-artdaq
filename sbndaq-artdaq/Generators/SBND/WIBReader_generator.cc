@@ -178,7 +178,9 @@ namespace sbndaq
    
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
    
-   //setupWIBFakeData(2); // Uncomment this line to run Shanshan's WIB fake data patterns (1 - sawtooth, 2 - channel ID)
+   disable_dat_stream_and_sync_to_NEVIS();
+   
+   setupWIBFakeData(2); // Uncomment this line to run Shanshan's WIB fake data patterns (1 - sawtooth, 2 - channel ID)
    
    TLOG_INFO(identification) << "Now Connecting to FEMBs " << TLOG_ENDL;
    
@@ -210,7 +212,7 @@ namespace sbndaq
           TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
-	  setupFEMB(iFEMB,FEMB_config);
+	  //setupFEMB(iFEMB,FEMB_config);
 	  /*uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
 	  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");*/
 	  //if(femb_fw_version != expected_femb_fw_version) N_config_FEMBs++;
@@ -583,6 +585,32 @@ void WIBReader::InitFEMBRegCheck(uint32_t expected_val, std::string reg_addrs, i
   TLOG_INFO(identification) << "Expected value : " << std::hex << expected_val << " Read value : " << std::hex << wib->ReadFEMB(FEMB_NO, reg_addrs) << TLOG_ENDL;
 }
 
+void WIBReader::disable_dat_stream_and_sync_to_NEVIS()
+{
+  const std::string identification = "WIBReader::disable_dat_stream_and_sync_to_NEVIS";
+  wib->Write(20, 0x00);
+  sleep(0.1);
+  if (wib->Read(20) != 0x00){
+      cet::exception excpt(identification);
+      excpt << "Register 20 is not equal to 0";
+      throw excpt;
+  }
+  wib->Write(20, 0x03);
+  sleep(0.1);
+  if (wib->Read(20) != 0x03){
+      cet::exception excpt(identification);
+      excpt << "Register 20 is not equal to 0x03";
+      throw excpt;
+  }
+  wib->Write(20, 0x00);
+  sleep(0.1);
+  if (wib->Read(20) != 0x00){
+      cet::exception excpt(identification);
+      excpt << "Register 20 is not equal to 0";
+      throw excpt;
+  }
+}
+
 void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure)
 {
   const std::string identification = "WIBReader::setupFEMB";
@@ -688,7 +716,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   TLOG_INFO(identification) << " Just before FEMBPower function" << TLOG_ENDL;
   
   wib->FEMBPower(iFEMB,0);
-  sleep(2);    
+  sleep(2);  
   wib->FEMBPower(iFEMB,1); 
   sleep(2);
   
