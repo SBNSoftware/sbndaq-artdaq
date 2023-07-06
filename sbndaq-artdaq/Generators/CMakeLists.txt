@@ -1,6 +1,6 @@
 set ( LIBRARY_CORE_LIB_LIST
       artdaq_DAQdata
-      artdaq_CommandableFragmentGenerator
+      artdaq_plugin_types::CommandableFragmentGenerator
       artdaq-utilities_Plugins
       artdaq_core::artdaq-core_Utilities
       artdaq_core::artdaq-core_Data
@@ -18,6 +18,8 @@ set(BUILD_PLUGIN_CORE_LIB_LIST
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
+
+include(artdaq::commandableGenerator)
 
 add_subdirectory(Common)
 

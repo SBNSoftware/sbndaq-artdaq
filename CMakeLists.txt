@@ -15,7 +15,7 @@ set(CET_CETBUILDTOOLS_COMPAT TRUE)
 include(Compatibility)
 set(CET_WARN_DEPRECATED)
 
-project(sbndaq_artdaq VERSION 1.07.02)
+project(sbndaq_artdaq VERSION 1.08.00)
 
 set(CMAKE_MODULE_PATH
   $ENV{ARTDAQ_UTILITIES_DIR}/Modules
@@ -27,7 +27,7 @@ cet_cmake_env()
 cet_set_compiler_flags(DIAGS VIGILANT
   WERROR
   NO_UNDEFINED
-  EXTRA_FLAGS -pedantic -pthread -Wno-unused-variable -Wno-overloaded-virtual
+  EXTRA_FLAGS -pedantic -pthread -Wno-unused-variable
 )
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} BTYPE_UC)
