@@ -14,6 +14,7 @@
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/ControllerModule.h"
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/Crate.h"
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
+#include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/NevisTBStreamReader.h"
 
 #include <fstream> // temp
 
@@ -27,6 +28,7 @@ namespace sbndaq {
       fNUXMITReader( new nevistpc::XMITReader("nu_xmit_reader", _p) ),
       fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) )
     {
+      ConfigureStart();
     }
     virtual ~NevisTPC2StreamNUandSNXMIT() {}
     
@@ -35,6 +37,7 @@ namespace sbndaq {
     void ConfigureStop();
     
     size_t GetFEMCrateData();
+    size_t GetNevisTBData();  
 
     nevistpc::ControllerModuleSPtr fControllerModule;
     nevistpc::XMITReaderSPtr fNUXMITReader;
@@ -42,6 +45,7 @@ namespace sbndaq {
     nevistpc::CrateSPtr fCrate;
 
     uint32_t fChunkSize;  //!< Number of bytes to read at once in NU stream
+    uint32_t fNTBChunkSize;    
     uint32_t fSNChunkSize;  //!< Number of bytes to read at once in SN stream
 
     bool FireCALIB(); //! Fire CALIB trigger
@@ -51,6 +55,10 @@ namespace sbndaq {
     bool FireController(); //! Fire Controller trigger
     share::WorkerThreadUPtr FireController_thread_;
     double fControllerTriggerFreq;  //!< Frequency in Hz of the Controller trigger
+
+    bool GPSTime();
+    share::WorkerThreadUPtr GPSTime_thread_;
+    int fGPSTimeFreq;
 
     bool MonitorCrate(); //! Check status of the boards in the crate
     share::WorkerThreadUPtr MonitorCrate_thread_;
@@ -71,6 +79,9 @@ namespace sbndaq {
     std::ofstream binFileSN; // temp 
     char binFileNameNU[80]; // Name of binary dump file for NU stream
     char binFileNameSN[80]; // Name of binary dump file for SN stream
+    std::ofstream binFileNevisTB;                                                                                                                                
+    char binFileNameNevisTB[80];   
+
 
   };
   
