@@ -101,9 +101,9 @@ include(ArtMake)
 include(BuildPlugins)
 
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v3_12_01 )
-find_ups_product( artdaq_utilities v1_08_01)
-find_ups_product( artdaq_core v3_09_03 )
+find_ups_product( artdaq v3_12_05 )
+find_ups_product( artdaq_utilities v1_08_04)
+find_ups_product( artdaq_core v3_09_13 )
 find_ups_product( canvas v3_12_04 )
 find_ups_product( art v3_09_03 )
 find_ups_product( art_root_io v1_08_03 )
@@ -130,7 +130,7 @@ find_ups_product( sbndaq_artdaq_core v1_04_00 )
 
 find_ups_product (jsoncpp v1_7_7c)
 
-find_ups_product (TRACE v3_17_05)
+find_ups_product (TRACE v3_17_09)
 
 find_ups_product( zmq v4_3_1 )
 find_ups_product( redis v5_0_5 )
