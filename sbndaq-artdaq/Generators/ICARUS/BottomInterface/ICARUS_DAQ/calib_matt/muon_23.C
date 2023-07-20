@@ -152,6 +152,8 @@ void muon_23(const int subrunnumber=171)
   TH1F *ADCvmean[100];
   TH1F *ADCvmean_mono[100];
   TH1F *gain_p[100];
+  TH1F *h_adc2pe[100];
+  TH2F *h2_adc2pe = new TH2F("ADC2PE","ADC2PE",64,0,64,6,1,7);
 
   TH1F *ADC[100][64]; //histograms of adc counts for 8 different counter positions.
   TH1F *ADC_mono[100][64];
@@ -388,6 +390,8 @@ void muon_23(const int subrunnumber=171)
     ADCvmean_mono[i] = new TH1F(histname,histname,100,0,1000);
     sprintf(histname,"gain_distribution_mod=%d",i);
     gain_p[i]= new TH1F(histname,histname,10,10,40);
+    sprintf(histname,"ADC2PE_mod=%d",i);
+    h_adc2pe[i] = new TH1F(histname,histname,50,0,100);
   }
 
   int ch_per_pmt = channels_in[0].size();
@@ -518,6 +522,9 @@ void muon_23(const int subrunnumber=171)
 	  srms[j][i] = smod->GetRMS();
 	  ADC2PE[j][i] = trunc_mean(smod);	    //truncated mean
 	  //ADC2PE[j][i] = 20.0; //testing
+
+	  h_adc2pe[pmtboardnumber[j]]->Fill(ADC2PE[j][i]);
+	  h2_adc2pe->Fill(i,pmtboardnumber[j],ADC2PE[j][i]);
 
 	  if(debug1){ cout << "--mean=" << smean[j][i] <<" trunc.=" << ADC2PE[j][i] << endl; }
           bmod->Reset();
@@ -1065,12 +1072,22 @@ cout << "looping over module 3 ntuple..."<<endl;
   channel_events_bi->Draw("colz");
   channel_events_bi->GetXaxis()->SetTitle("Channel index (compare to fcl file)");
   channel_events_bi->GetYaxis()->SetTitle(Form("PMT index (1-%i)",numberofboardused));
-  //c1->Print(Form("plots/%i_channel_events_bi.png",subrunnumber));
+  c1->Print(Form("plots/%i_channel_events_bi.png",subrunnumber));
   channel_events_mono->Draw("colz");
   channel_events_mono->GetXaxis()->SetTitle("Channel number");
   channel_events_mono->GetYaxis()->SetTitle(Form("PMT index (1-%i)",numberofboardused));
-  //c1->Print(Form("plots/%i_channel_events_mono.png",subrunnumber));
-ofstream gain_file;
+  c1->Print(Form("plots/%i_channel_events_mono.png",subrunnumber));
+
+  for(int i=1;i<56;i++){
+    //cout << "i: " << i << ", entries: " << h_adc2pe[i]->GetEntries() << endl;
+    if(h_adc2pe[i]->GetEntries()>0){
+      h_adc2pe[i]->Draw();
+      c1->Print(Form("adc2pe/adc2pe_run%d_mod%d.png",subrunnumber,i));
+    }
+  }
+  h2_adc2pe->Draw("colz");
+  c1->Print(Form("adc2pe/adc2pe_run%d_all.png",subrunnumber));
+  ofstream gain_file;
   if(!test_calib){gain_file.open("gain_file.txt");}
 
   for (int j=1; j<=numberofboardused; j++){ //to be replaced after query on mysql
@@ -1099,9 +1116,9 @@ ofstream gain_file;
     }
   }
   channel_adc->Draw("colz");
-  //c1->Print(Form("plots/%i_channel_adc.png",subrunnumber));
+  c1->Print(Form("plots/%i_channel_adc.png",subrunnumber));
   allADCv->Draw();
-  //if(!test_calib){c1->Print("alladcv.png");}
+  if(!test_calib){c1->Print("alladcv.png");}
   if(test_calib){c1->Print("alladcv_calib.png");}
 
   for (int j=1; j<=numberofboardused; j++){ 
@@ -1138,7 +1155,7 @@ ofstream gain_file;
     }
   }
   allgain_p->Draw();
-  //if(!test_calib){c1->Print("allgain_p.png");}
+  if(!test_calib){c1->Print("allgain_p.png");}
   if(test_calib){c1->Print("allgain_p_calib.png");}
   
   time_t end_t;

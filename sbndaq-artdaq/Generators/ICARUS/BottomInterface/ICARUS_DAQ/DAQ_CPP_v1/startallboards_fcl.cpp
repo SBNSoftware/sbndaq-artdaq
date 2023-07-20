@@ -62,20 +62,32 @@ int main(int argc, char *argv[])
     cout << "PMTFIN: " << PMTFIN << endl;
 
 
-    initializeboard("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
+    //initializeboard("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
+    initializeboard_new("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
     // TODO create symbolic link between Run_000** and DataFolder
 
+    //eventbuilder("auto", PMTINI, PMTFIN,online_path);
 
     //EBbaseline;
     //write function in CRT.cpp
 	//cout << "Datapath: " << DataPath << " totalusb: " << totalusb << " totalpmt: " << totalpmt << endl;
-    
-    eventbuilder("auto", PMTINI, PMTFIN,online_path);          //Calculates baseline data and writes it to a file
-
     sleep(2.0);
-
-    starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
-    
+    int trycounter = 0;
+    while(eventbuilder("auto", PMTINI, PMTFIN,online_path) == 0){ //Calculates baseline data and writes it to a file
+ 	trycounter++;
+	cout << "Initialization failed, trying again: Attempt " << trycounter << endl;
+	initializeboard_new("auto",500,PMTINI, PMTFIN, online_path);
+	if(trycounter > 2){
+	  cout << "ERROR: failed to take baselines after 4 attempts! Something is wrong.\n";
+	  break;
+	}
+    }         
+    //starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
+    starttakedata_new(PMTINI,PMTFIN,0,0);              //Starts taking data
+//    sleep(60.0);
+//    stoptakedata_new(PMTINI,PMTFIN,0,0,online_path);
+//    sleep(5.0);
+//    generatecsv(PMTINI,PMTFIN,online_path);
 
     //To debug directly, uncomment the following  
     

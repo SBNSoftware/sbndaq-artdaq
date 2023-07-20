@@ -15,6 +15,7 @@ void setup_pmt(int usb[10], int pmtnumber[10][10], int pmtboardnumber[10][10], i
 
 
 void initializeboard(string define_runnumber, int trigger_num, int pmtini, int pmtfin, string online_path);
+void initializeboard_new(string define_runnumber, int trigger_num, int pmtini, int pmtfin, string online_path);
 
 void generatebaseline(int usb, int pmt, string online_path);
 
@@ -34,7 +35,9 @@ void test_system_time(int usb, int pmt, string online_path);
 bool JudgeNum(string str, int iTmp);
 void check_system_time();
 void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin);
+void starttakedata_new(int pmtini, int pmtfin, int boxini, int boxfin);
 void stoptakedata(int pmtini, int pmtfin, int boxini, int boxfin, string online_path);
+void stoptakedata_new(int pmtini, int pmtfin, int boxini, int boxfin, string online_path);
 void getpmtdata(int usbboard, int pmtnumber);
 void setpmtdata(int usbboard, int pmtnumber);
 void loadpmtdata_auto(int usb, int pmt, int pmtserialnumber, string mysql_table);
