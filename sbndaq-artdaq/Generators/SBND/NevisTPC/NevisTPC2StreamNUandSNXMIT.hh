@@ -57,6 +57,10 @@ namespace sbndaq {
     share::WorkerThreadUPtr MonitorCrate_thread_;
     int fMonitorPeriod;  //!< Period in seconds to read electronics status
 
+    bool GPSTime();
+    share::WorkerThreadUPtr GPSTime_thread_;
+    int fGPSTimeFreq;
+
     bool fSNReadout; //!< Do continuous readout (supernova stream)
     bool GetSNData(); //! Get SN stream data
     share::WorkerThreadUPtr GetSNData_thread_;
