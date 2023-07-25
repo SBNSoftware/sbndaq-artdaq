@@ -315,7 +315,6 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   fragptr->setSequenceID( ev_counter_inc() );
   fragptr->setFragmentID(fragment_ids_[module_id]); // each board has its own fragment ID
   fragptr->setUserType( sbndaq::detail::BottomCRT );
-  //TLOG(TLVL_WARNING, "BottomFragGen") << "module: " << module_id << ", timestamp: " << timestamp_;
   fragptr->setTimestamp( timestamp_ ); //Timestamp is in ns
   memcpy(fragptr->dataBeginBytes(), readout_buffer_, bytes_read);
 
@@ -341,6 +340,7 @@ void CRT::FragGen::start()
 
 void CRT::FragGen::stop()
 {
+  TLOG(TLVL_INFO,"BottomFragGen") << "Stopping Bottom CRT Fragment Generator";
   hardware_interface_->StopDatataking();
   // Stop the backend DAQ.
   stopallboards(configfile.c_str(),indir.c_str());

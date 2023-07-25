@@ -755,9 +755,8 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     int usbread;
  
     for(int i=0;usbhowmanyboards[0][i];i++){
-        usbread = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves board number, usbhowmanyboard[1] saves usb number
-	  set_inhibit_usb(usbread,-1);
-	//}
+      usbread = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves board number, usbhowmanyboard[1] saves usb number
+      set_inhibit_usb(usbread,-1);		
     }
     
     //sleep(1);
