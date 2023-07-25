@@ -1106,9 +1106,7 @@ void check_system_time()
     }
 }
 
-
-
-////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
 void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
 {
     
@@ -1153,138 +1151,18 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
         boxini = 1;
         boxfin = totalbox;
     }
-   
 
-    //    cout << "pmtini: " << pmtini << " pmtfin: " << pmtfin << endl;
-    
-    //com_usb(33,63,254,0);
-    
-    //sleep(2);
-
-
-    int box1;
-    for(box1 = boxini; box1<=boxfin; box1++)
-    {
-        if(!boxtousb[box1] || !boxtoboard[box1])
-        {
-            printf("usb_local or pmt_local not defined.\n");
-        }
-    }
-    
-    //for(int i = 0; usblocal[i]!=0;i++){
-    //    usb_local = usblocal[i];
-   for(int pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1];
-        if(structure[usb_local] == -1)                // only trigger box!!
-        {
-            set_inhibit_usb(usb_local, 0);            // -2; release inhibit for baseline
-            					      // -1; inhibit writing data
-            					      // 0; release inhibit for writing data
-            structure[usb_local] = 1;
-            printf("File open for writing for USB: %d\n",usb_local);
-	    sleep(0.1);
-        }
-	//cout << "Starttakedata: i=" << i<< ", usblocal[i]=" << usblocal[i] << ", structure[usblocal[i]]=" << structure[usblocal[i]] << endl;	
-    }
- 
-    sleep(1.0);
-
-    for(int pmt1 = pmtini; pmt1<=pmtfin; pmt1++)
-    {
-        if(!pmttousb[pmt1] || !pmttoboard[pmt1])
-        {
-            if(pmttoboard[pmt1] != 0)
-                printf("usb_local or pmt_local not defined.\n");
-        }
-
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1];
-        getpmtdata(usb_local, pmt_local);
-        //printf("usb_local=%d and pmt_local=%d.\n",usb_local,pmt_local);
-        com_usb(usb_local, pmt_local, 254, 0);
-        
-        //sleep(0.2);
-	sleep(0.1);
-    }
-    
-    //usb(usb_local,0,1);
-    //usb_usb(usb_local,0,1);
-    
-    sleep(1.);
-   
-
-
-    
-    time_t t1 = time(0);   //get time now
-    struct tm * now = localtime( & t1 );
-    
-    Sec = now->tm_sec;
-    Hour = now->tm_hour;
-    Min = now->tm_min;
-    Day = now->tm_mday;
-    Mon = now->tm_mon;
-    Year = now->tm_year;
-    
-    printf("..... Taking data .....\n");
-    
-    
-}
-////////////////////////////////////////////////////////////////
-void starttakedata_new(int pmtini, int pmtfin, int boxini, int boxfin)
-{
-    
-    if(!pmtini && !pmtfin)                          // both not defined
-    {
-        pmtini = 1;
-        pmtfin = totalpmt;
-    }
-    
-    if(mode.compare("debug")==0)
-    {
-        int totalboard = pmtfin - pmtini + 1;
-        printf("%d \t %d \t\n",totalpmt, totalboard);
-        if(totalpmt != totalboard)
-        {
-            printf("Problem with initialization at starttakedata \n");
-        }
-    }
-    else
-    {
-        pmtini = 1;
-        pmtfin = totalpmt;
-    }
-    
-    if (!boxini && !boxfin)                           // both not defined
-    {
-        boxini = 1;
-        boxfin = totalbox;
-    }
-    
-    if(mode.compare("debug")==0)
-    {
-        int totalfans = boxfin - boxini + 1;
-        printf("%d\t %d\t \n", totalfans, totalbox);
-        if(totalbox != totalfans)
-        {
-            printf("Problem with initialization of fan-in modules at starttakedata \n");
-        }
-    }
-    else
-    {
-        boxini = 1;
-        boxfin = totalbox;
-    }
-
+    //Enable trigger for data taking
     for(int pmt1 = pmtini; pmt1<=pmtfin; pmt1++){
         usb_local = pmttousb[pmt1];
         pmt_local = pmttoboard[pmt1];
         getpmtdata(usb_local, pmt_local);
         
-	com_usb(usb_local, pmt_local, 254, 1);
-	sleep(2.0);
+	com_usb(usb_local, pmt_local, 254, 1); //trigger on
+    	usleep(200000);
     }
 
+    //Open file for writing data
     for(int i=0;i<usbhowmanyboardscount;i++){
 	usb_local = usbhowmanyboards[1][i];
         if(structure[usb_local] == 0)                // only trigger box!!
@@ -1297,9 +1175,6 @@ void starttakedata_new(int pmtini, int pmtfin, int boxini, int boxfin)
         }
 	//cout << "Starttakedata: i=" << i<< ", usblocal[i]=" << usblocal[i] << ", structure[usblocal[i]]=" << structure[usblocal[i]] << endl;	
     }
- 
-    sleep(2.0);
-
     
     time_t t1 = time(0);   //get time now
     struct tm * now = localtime( & t1 );
@@ -1316,9 +1191,7 @@ void starttakedata_new(int pmtini, int pmtfin, int boxini, int boxfin)
     
 }
 
-
-////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////
 void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online_path)
 {
     if(!pmtini && !pmtfin)                           // both not defined
@@ -1387,122 +1260,16 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
         usb_local = pmttousb[pmt1];
         pmt_local = pmttoboard[pmt1];
         getpmtdata(usb_local, pmt_local);
-        com_usb(usb_local, pmt_local, 255, 0);                     // disable trigger
-        com_usb(usb_local, pmt_local, 73, 0b00000);
-        com_usb(usb_local, 0, 255, 0);
-        sleep(0.2);                                               // give it some time
-    }
-    
-    sleep(2.0);
-    
-    printf("shutting down ");
-    
-    for(int m = 0;m<=10; m++)
-    {
-        printf(".");
-        sleep(0.3);
-    }
-    printf("\n");
-    
-   // for(int i = 0; usblocal[i]; i++)
-   // {
-  for(int pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1]; 
-        if(structure[usb_local] == 1 || structure[usb_local] == 0)
-        {
-            set_inhibit_usb(usb_local, -1);                       // -2; release inhibit for baseline
-            // -1; inhibit writing data
-            // 0; release inhibit for writing data
-            structure[usb_local] = -1;
-        }
-    }
-    
-    sleep(1);
-
-    long runtmp = scanFiles(online_path + "/readout/data1/OVDAQ/DATA");
-    
-        sprintf(run_number,"%0.7d",runtmp - 1); //ScanFiles returns 1+ the current max run#
-}
-////////////////////////////////////////////////////////////////////////////
-void stoptakedata_new( int pmtini, int pmtfin, int boxini, int boxfin, string online_path)
-{
-    if(!pmtini && !pmtfin)                           // both not defined
-    {
-        pmtini = 1;
-        pmtfin = totalpmt;
-    }
-    
-    if(mode.compare("debug")==0)
-    {
-        totalboard = pmtfin - pmtini + 1;
-        if(totalpmt != totalboard)
-        {
-            printf("Problem with initialization at stoptakedata \n");
-        }
-    }
-    else
-    {
-        pmtini = 1;
-        pmtfin = totalpmt;
-    }
-    
-    
-    if(!boxini && !boxfin)                            // both not defined
-    {
-        boxini = 1;
-        boxfin = totalbox;
-    }
-    
-    if(mode.compare("debug")==0)
-    {
-        int totalfans = boxfin - boxini + 1;
-        if(totalbox != totalfans)
-        {
-            printf("Problem with initialization at stoptakedata \n");
-        }
-    }
-    else{
-        boxini = 1;
-        boxfin = totalbox;
-    }
-    
-    time_t t2 = time(0);   //get time now
-    struct tm * now1 = localtime( & t2 );
-    
-    int newSec = now1->tm_sec;
-    int newHour = now1->tm_hour;
-    int newMin = now1->tm_min;
-    int newDay = now1->tm_mday;
-    int newMon = now1->tm_mon;
-    int newYear = now1->tm_year;
-    
-    int elapsed_time;
-    elapsed_time = (newDay - Day)*24*3600 + (newHour - Hour)*3600 + (newMin - Min)*60 + (newSec - Sec);
-    
-    printf("%d sec...", elapsed_time);
-    
-    int pmt1;
-    for(pmt1 = pmtini; pmt1<=pmtfin; pmt1++)
-    {
-        if(!pmttousb[pmt1] || !pmttoboard[pmt1])
-        {
-            if(pmttoboard[pmt1] != 0)
-                printf("usb_local or pmt_local not defined.\n");
-        }
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1];
-        getpmtdata(usb_local, pmt_local);
         
-	com_usb(usb_local, pmt_local, 109, 1);
-	com_usb(usb_local, pmt_local, 73, 0b00000);
-	com_usb(usb_local, pmt_local, 84, 255);
-	com_usb(usb_local, pmt_local, 74, 0b0100000);
-	com_usb(usb_local, pmt_local, 70, 0);
-	com_usb(usb_local, pmt_local, 81,0);
-	com_usb(usb_local, pmt_local, 81,0);
-	com_usb(usb_local, pmt_local, 81,0);
-        sleep(0.5);                                               // give it some time
+	com_usb(usb_local, pmt_local, 109, 1);		//vdd_fsb on
+	com_usb(usb_local, pmt_local, 73, 0b00000);	//gate
+	com_usb(usb_local, pmt_local, 84, 255);		//
+	com_usb(usb_local, pmt_local, 74, 0b0100000);	//default gain
+	com_usb(usb_local, pmt_local, 70, 0);		//set default
+	com_usb(usb_local, pmt_local, 81,0);		//
+	com_usb(usb_local, pmt_local, 81,0);		//
+	com_usb(usb_local, pmt_local, 81,0);		//
+        usleep(500000);                                               // give it some time
     }
     
     printf("shutting down ");
@@ -1510,21 +1277,21 @@ void stoptakedata_new( int pmtini, int pmtfin, int boxini, int boxfin, string on
     for(int m = 0;m<=10; m++)
     {
         printf(".");
-        sleep(0.5);
+        usleep(100000);
     }
     printf("\n");
    
     for(int i=0; i<usbhowmanyboardscount;i++){ 
         usb_local = usbhowmanyboards[1][i];
         //pmt_local = pmttoboard[pmt1]; 
-        //if(structure[usb_local] == -2){
+        if(structure[usb_local] == 0){
             set_inhibit_usb(usb_local, -1);                       // -2; release inhibit for baseline
             // -1; inhibit writing data
             // 0; release inhibit for writing data
             structure[usb_local] = -1;
-        //}
+        }
     }
-    sleep(5);
+    sleep(2);
 
     long runtmp = scanFiles(online_path + "/readout/data1/OVDAQ/DATA");
     
@@ -2792,60 +2559,6 @@ void process_signal(int usb, string online_path)
 
 }
 
-///////////////////////////////////////////////////////////////////////////////
-void generatecsv2(int pmtini, int pmtfin, string online_path)
-{
-
-  int usb;
-  int pmt;
-
-  int pmt1;
-
-  //debug
-
-  //sprintf(run_number,"0001134");
-  //DataFolder = "/e/h.0/localdev/readout/data1/OVDAQ/DATA/";
-
-  //run automatically acquiring last take run number
-  int disk_num = 1;
-  DataFolder = online_path + "/readout/data" + to_string(disk_num) + "/OVDAQ/DATA/";
-
-
-
-  for (pmt1 = pmtini; pmt1<=pmtfin; pmt1++){
-    if(!(usb_local = pmttousb[pmt1] || !(pmt_local = pmttoboard[pmt1]))){
-      printf("usb_local or pmt_local not defined.\n");
-    }
-    usb = pmttousb[pmt1];
-    pmt = pmttoboard[pmt1];
-
-    generatebaseline(usb, pmt, online_path);
-
-    getpmtdata(usb, pmt);
-
-    printf("Processing files and Producing Plots for USB=%d and PMT=%d...",usb,pmt);
-
-    string runtmp(run_number);
-
-    modulenum = pmt;
-
-
-    ////check on DataFolder --CM
-
-    string full_path = DataFolder + "/Run_" + runtmp + "/USB_" + to_string(usb) + "/PMT_" + to_string(modulenum);
-    string baselines = DataFolder + "/Run_" + runtmp + "/USB_" + to_string(usb) + "/PMT_" + to_string(modulenum) + "/baselines.dat";
-
-    string filename = DataFolder + "/Run_" + runtmp + "/signal" + "_" + to_string(usb) + ".dec";
-    string homedir = online_path + "/readout";
-
-    signal(full_path,filename,baselines,usb,pmt,homedir,online_path);
-  }
-
-
-    printf("...Done.\n");
-
-
-}
 /////////////////////////////////////////////////////////////////////////////////
 
 void generatecsv(int pmtini, int pmtfin, string online_path)
@@ -3123,7 +2836,7 @@ nohomedir:
     size_t comma2 = 0;
     size_t comma3 = 0;
     
-    sleep(1);
+    usleep(250000);
 
     if(!infile1)
     {
@@ -3508,15 +3221,15 @@ nohomedir:
         fprintf(PLOT,"plot \"%s/summary.csv\" using 1:9 title \"Maroc Gain Constants\" with histeps\n",dir.c_str());
         fprintf(PLOT,"\n");
         
-        fprintf(PLOT,"set title \"Data acquisition rate per channel (normalized)\"\n");
-        fprintf(PLOT,"set xlabel \"Channel #\"\n");
-        fprintf(PLOT,"set ylabel \"Normalized Rate\"\n");
-        fprintf(PLOT,"set autoscale\n");
-        fprintf(PLOT,"set xrange [0.5:64.5]\n");
-        fprintf(PLOT,"set yrange [0:*]\n");
-        fprintf(PLOT,"set output \"%s/rate_per_channel_normalized.png\"\n",dir.c_str());
-        fprintf(PLOT,"plot \"%s/summary.csv\" using 1:10 title \"Normalized Rate\" with histeps\n",dir.c_str());
-        fprintf(PLOT,"\n");
+        //fprintf(PLOT,"set title \"Data acquisition rate per channel (normalized)\"\n");
+        //fprintf(PLOT,"set xlabel \"Channel #\"\n");
+        //fprintf(PLOT,"set ylabel \"Normalized Rate\"\n");
+        //fprintf(PLOT,"set autoscale\n");
+        //fprintf(PLOT,"set xrange [0.5:64.5]\n");
+        //fprintf(PLOT,"set yrange [0:*]\n");
+        //fprintf(PLOT,"set output \"%s/rate_per_channel_normalized.png\"\n",dir.c_str());
+        //fprintf(PLOT,"plot \"%s/summary.csv\" using 1:10 title \"Normalized Rate\" with histeps\n",dir.c_str());
+        //printf(PLOT,"\n");
         
         // histograms - individual channels
         for(i=1;i<=64;i++)
@@ -3570,21 +3283,21 @@ nohomedir:
         fprintf(PLOT,"\n");
         
         // 2d pulse heights normalized
-        fprintf(PLOT,"set title \"Normalized ADC pulse heights\"\n");
-        fprintf(PLOT,"unset grid\n");
-        fprintf(PLOT,"set xlabel \"X\"\n");
-        fprintf(PLOT,"set ylabel \"Y\"\n");
-        fprintf(PLOT,"set autoscale\n");
-        fprintf(PLOT,"set xrange [0.5:8.5]\n");
-        fprintf(PLOT,"set yrange [0.5:8.5]\n");
-        fprintf(PLOT,"set pm3d at b corners2color c1\n");
-        fprintf(PLOT,"set view map\n");
-        fprintf(PLOT,"set style data pm3d\n");
-        fprintf(PLOT,"set output \"%s/mean_normalized_2d.png\"\n",dir.c_str());
-        fprintf(PLOT,"splot \"%s/summary_2d.csv\" using 1:2:9 title \"\"\n",dir.c_str());
-        fprintf(PLOT,"unset pm3d\n");
-        fprintf(PLOT,"set grid\n");
-        fprintf(PLOT,"\n");
+        //fprintf(PLOT,"set title \"Normalized ADC pulse heights\"\n");
+        //fprintf(PLOT,"unset grid\n");
+        //fprintf(PLOT,"set xlabel \"X\"\n");
+        //fprintf(PLOT,"set ylabel \"Y\"\n");
+        //fprintf(PLOT,"set autoscale\n");
+        //fprintf(PLOT,"set xrange [0.5:8.5]\n");
+        //fprintf(PLOT,"set yrange [0.5:8.5]\n");
+        //fprintf(PLOT,"set pm3d at b corners2color c1\n");
+        //fprintf(PLOT,"set view map\n");
+        //fprintf(PLOT,"set style data pm3d\n");
+        //fprintf(PLOT,"set output \"%s/mean_normalized_2d.png\"\n",dir.c_str());
+        //fprintf(PLOT,"splot \"%s/summary_2d.csv\" using 1:2:9 title \"\"\n",dir.c_str());
+        //fprintf(PLOT,"unset pm3d\n");
+        //fprintf(PLOT,"set grid\n");
+        //fprintf(PLOT,"\n");
         
         // 2d all in one
         fprintf(PLOT,"set title \"Histograms\"\n");
@@ -3659,9 +3372,9 @@ void SplitString(string s, vector<string> &v, string c)
         v.push_back(s.substr(pos1));
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void initializeboard(string define_runnumber, int trigger_num, int pmtini, int pmtfin, string online_path){
 
 
@@ -3670,8 +3383,6 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     char DataPath[128] = "/OVDAQ/DATA/";
     DataFolder = online_path + "/readout/data" + to_string(disk_num) + "/OVDAQ/DATA/";
     pipedelay = 20;
-    int structure_t0[128];
-    for(int i=0; i<128;i++){structure_t0[i]=-10;}
 
 
     
@@ -3692,26 +3403,15 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
 
     
     int pmt1;
-    int usbbase[20];
     int usbread;
-    
-    int i;
-    for(i=0;usbhowmanyboards[0][i];i++){
-        usbread = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves board number, usbhowmanyboard[1] saves usb number
-        if(structure_t0[usbread]==0) {
-	  set_inhibit_usb(usbread,-1);
-	  structure_t0[usbread] = 1;
-	}
-    }
 
-
-    
+   int i; 
     for(i=0;usbhowmanybox[0][i];i++){
         usbread = usbhowmanybox[1][i];
         set_inhibit_usb(usbread,-1);
     }
     
-    sleep(1);
+    sleep(2);
     
     //now the new folder and the new data path will be passed to the DAQ
     
@@ -3751,361 +3451,6 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
     set_run_number(run_number);
     
     printf("pmtini = %d, pmtfin = %d\n", pmtini, pmtfin);
-    
-
-
-
-    printf("Baseline data taking .");
-    
-    int t = 0;
-    
-    for (pmt1 = pmtini; pmt1<=pmtfin; pmt1++){
-        if(!(usb_local = pmttousb[pmt1] || !(pmt_local = pmttoboard[pmt1]))){
-            printf("usb_local or pmt_local not defined.\n");
-        }
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1];
-        getpmtdata(usb_local, pmt_local);
-        //usb_usb(usb_local, 0 ,1);                       // turn auto token ON
-        com_usb(usb_local, pmt_local, 110, 1);          // turn off lef off/on the PMT's board = 1/0
-        com_usb(usb_local, pmt_local, 109, 1);          // vdd_fsb on
-        com_usb(usb_local, pmt_local, 73, 0b00000);     // set up pmt module
-        com_usb(usb_local, pmt_local, 255, 0);          // clear buffers
-        com_usb(usb_local, pmt_local, 84, 255);         
-        com_usb(usb_local, pmt_local, 74, 0b0100000);   // default gain
-        com_usb(usb_local, pmt_local, 70, 0);           // load default
-        com_usb(usb_local, pmt_local, 67, 0b000010);       // statea
-        com_usb(usb_local, pmt_local, 68, 0b000000);       // stateb
-        com_usb(usb_local, pmt_local, 69, 0b000000);       // statec
-        com_usb(usb_local, pmt_local, 71, 0);           // rst_g to maroc
-        com_usb(usb_local, pmt_local, 72, 0);           // write config was done twice
-        com_usb(usb_local, pmt_local, 72, 0);           
-        com_usb(usb_local, pmt_local, 73, 0b00110);           
-        com_usb(usb_local, pmt_local, 80, 5);           // hold delay is variable. Has been fixed to 5 here
-        dac_usb(usb_local, pmt_local, 900);            // threshold value
-        //com_usb(usb_local, pmt_local, 73, 0b00110);     // gate alladc gate on -> 0b11110
-            //      alladc gate off-> 0b01110
-        //com_usb(usb_local, pmt_local, 85, pipedelay);   // no pipe delay
-        com_usb(usb_local, pmt_local, 85, 0);   // no pipe delay
-        com_usb(usb_local, pmt_local, 75, 0b00010000);  // set up trigger mode for module
-        com_usb(usb_local, pmt_local, 86, 0);           // edge strip mode is off
-        com_usb(usb_local, pmt_local, 87, 0b00);           // no force trigger
-        com_usb(usb_local, pmt_local, 74, 0b0100000);   // default gain for the 64 channels
-        
-        com_usb(usb_local, pmt_local, 109, 0);          // vdd_fsb off
-        com_usb(usb_local, pmt_local, 254, 0);          // enable trigger
-	sleep(1.0);
-        for ( int i = 0; i < 10 ; i++){
-            com_usb(usb_local, pmt_local, 81, 0);       // avoid first packets
-	    printf(".");
-        }
-        com_usb(usb_local, pmt_local, 255, 0);          // disable trigger
-        usbbase[t] = usb_local;
-        t++;
-	sleep(0.2);
-    }
-
-    sleep(2.0); //looose previous packets
-    
-    for(int j = 0; j<t; j++){
-        usb_local = usbbase[j];
-        if(structure[usb_local]==0){
-            set_inhibit_usb(usb_local, -3);              // -3; created file structure
-            sleep(0.5);
-            set_inhibit_usb(usb_local, -2);              // -2; release inhibit for baseline
-            // -1; inhibit writing data
-            // 0; release inhibit for writing data
-            structure[usb_local] = -2;
-        }
-    }
-
-
-
-
-
-    for(pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1];
-        //usb_usb(usb_local, 0, 1);                         // turn auto token ON
-        com_usb(usb_local, pmt_local, 254, 0);            // enable trigger
- 	//        sleep(0.3);
-	for( int i = 1; i <= trigger_num; i++){
-            com_usb(usb_local, pmt_local, 81, 0);         // take baseline hits - 500
-	}
-	//sleep(0.01);
-//        com_usb(usb_local, pmt_local, 109, 0);              // vdd_fsb off
-        com_usb(usb_local, pmt_local, 255, 0);            // disable trigger
-        sleep(0.3);                                      // give it some time
-    }
- 
-    sleep(3.0);                                             // wait late packets
-  
-
-
-    for( int j = 0; j<t; j++){
-        usb_local = usbbase[j];
-	//cout << "j: " << j << ", usb_local: "<< usb_local << ", structure[usb_local]: " << structure[usb_local] << endl;
-        if(structure[usb_local] == -2){
-            set_inhibit_usb(usb_local, -1);       // -1; inhibit writing data for baseline
-            // -1; inhibit writing data
-            // 0; release inhibit for writing data
-            structure[usb_local] = -1;
-            usblocal[j] = usb_local;
-            //com_usb(usb_local, 63, 109, 0);              // vdd_fsb off
-            //com_usb(usb_local, 63, 255, 0);              // disable trigger
-	    sleep(0.01);
-        }
-    }
-
-    //for(int i=0; i<=12; i++){cout << "i: " << i << ", usblocal[i]: " << usblocal[i] << endl;}
-
-    sleep(2.0);
-    
-    time_t t2 = time(0);   //get time now
-    struct tm * now1 = localtime( & t2 );
-    
-    int newSec = now1->tm_sec;
-    int newHour = now1->tm_hour;
-    int newMin = now1->tm_min;
-    int newDay = now1->tm_mday;
-    int newMon = now1->tm_mon;
-    int newYear = now1->tm_year;
-    
-    int elapsed_time;
-    elapsed_time = (newDay - Day)*24*3600 + (newHour - Hour)*3600 + (newMin - Min)*60 + (newSec - Sec);
-    
-    for(int e = 0; e<=20; e++){
-        sleep(0.1);
-        printf(".");
-    }
-    
-    printf(": %d sec\n",elapsed_time);
-    
-    //now let's initialize everything for the data taking
-    
-    printf("Initializing .\n");
-    
-    string dir2 = DataFolder + "Run_" + run_number;
-    string summary = "on";                                 // summary file default = off
-    //string summary = "off";   
- 
-    for (pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
-        
-        usb_local = pmttousb[pmt1];
-        pmt_local = pmttoboard[pmt1];
-        
-        printf("Loading PMT: %d, USB: %d\n", pmt_local, usb_local);
-        
-        getpmtdata(usb_local,pmt_local);
-        
-        //usb_usb(usb_local, 0, 1);                          // auto token on
-        com_usb(usb_local, pmt_local, 110, 1);             // turn off the three led on the PMT's board = 1
-        com_usb(usb_local, pmt_local, 109, 1);             // vdd_fsb on
-        com_usb(usb_local, pmt_local, 73, 0b00000);        // set up pmt module
-        //com_usb(usb_local, pmt_local, 255, 0);             // clear buffers
-        com_usb(usb_local, pmt_local, 84, 255);            // buffer size limit
-        com_usb(usb_local, pmt_local, 74, 0b0100000);      // default gain
-        com_usb(usb_local, pmt_local, 70, 0);              // load default
-        dac_usb(usb_local, pmt_local, DACt);               // threshold value
-        com_usb(usb_local, pmt_local, 67, 0b000010);       // statea
-        com_usb(usb_local, pmt_local, 68, 0b000000);       // stateb
-        com_usb(usb_local, pmt_local, 69, 0b000000);       // statec
-        com_usb(usb_local, pmt_local, 71, 0);              // rst_g to maroc
-        com_usb(usb_local, pmt_local, 72, 0);              // write config
-        com_usb(usb_local, pmt_local, 72, 0);              // write config
-      
-	//printf("gate mode = %d\n", gateonoff);
-	//printf("force trig = %d\n", trigger_mode);
-	//printf("trigger_mode = %d\n", force_trig);
-
-        //com_usb(usb_local, pmt_local, 80, 5);              // hold delay is variable. Has been fixed to 5 here
-        //dac_usb(usb_local, pmt_local, DACt);               // threshold value
-        com_usb(usb_local, pmt_local, 73, gateonoff);        //gateonoff);      // gate
-        //com_usb(usb_local, pmt_local, 85, pipedelay);      // set up pipe delay
-        
-        com_usb(usb_local, pmt_local, 75, trigger_mode);     // trigger mode (gateonoff = 0b01011; trigger_mode = 0b0110 0000);
-        com_usb(usb_local, pmt_local, 80, 5);              // hold delay is variable. Has been fixed to 5 here
-        com_usb(usb_local, pmt_local, 85, pipedelay);      // set up pipe delay
-        com_usb(usb_local, pmt_local, 86, 0);              // edge strip mode
-        com_usb(usb_local, pmt_local, 87, force_trig);     // force readout -> 01: 1msec, 10: 16msec, 11: 256msec
-        //com_usb(usb_local, pmt_local, 74, 0b0100000);      // default gain
-        
-        sleep(1.5);
-        
-        com_usb(usb_local, pmt_local, 109, 0);              // vdd_fsb off
-        
-        //com_usb(usb_local, pmt_local, 254, 1);              // enable trigger
-        
-        
-        if(usemaroc2gainconstantsmb.compare("no")==0){
-            com_usb(usb_local, pmt_local, 74, 0b0100000);  // default gain
-        }
-        else if(usemaroc2gainconstantsmb.compare("yes")==0 && fclload == 0){
-            printf("Error cannot load mysql gain constants from MYSQL\n");
-            com_usb(usb_local, pmt_local, 74, 0b0100000);  // default gain
-        }
-        else if(usemaroc2gainconstantsmb.compare("yes")==0 && fclload == 1){
-            for(int index = 1 ; index < 65; index++){
-                com_usb(usb_local, pmt_local, index - 1, 2*gain[index]);  // applying gain constants from MySQL
-		}
-        }
-        
-        sleep(1.5);
-        
-	com_usb(usb_local, pmt_local, 109, 0);              // vdd_fsb off
-        //com_usb(usb_local, pmt_local, 254, 1);              // trigger on
-        //com_usb(usb_local, pmt_local, 255, 0);              // trigger on
-        
-        
-        // here create a first summary file or append to an existing one
-     
-        if(summary.compare("on")==0){
-            
-            string summaryfile = dir2 + "/summary.txt";
-            string summaryfile1 = dir2 + "/summary_new.txt";
-            
-            ifstream efile(summaryfile.c_str());
-            
-            if(efile.good()){
-                
-                FILE * pFile2;
-                pFile2 = fopen(summaryfile.c_str(),"a+");
-                if(pFile2 == NULL){
-                    printf("Can not open summaryfile1\n");
-                    fclose(pFile2);
-                }
-                fprintf(pFile2,"\n");
-                fprintf(pFile2,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, pipedelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
-                if(usemaroc2gainconstantsmb.compare("yes")==0){
-                    for(int index = 1; index < 65; index++){
-                        fprintf(pFile2, "%d \t", gain[index]);
-                    }
-                }
-                efile.close();
-                fclose(pFile2);
-//                string move = "mv " + summaryfile1 + " " +  summaryfile;
-//                system(move.c_str());
-            }
-            else{
-                efile.close();
-                FILE * pFile1;
-		//cout << "summaryfile = " << summaryfile << endl;
-                pFile1 = fopen(summaryfile.c_str(),"w");
-                if(pFile1 == NULL){
-                    printf("Can not open summaryfile\n");
-                    perror("Failed: ");
-                    fclose(pFile1);
-                }
-                fprintf(pFile1,"%d \t %d \t %d \t %d \t %d \t %s \t %d \t %d \t %d \t %d \t %s \t %s \t", pmt_local, pmtserialnumber, pmt_local,HVsetting, DACt, gate.c_str(), trigger_mode, pipedelay, filelength, run_length, usemaroc2gainconstantsmb.c_str(), comments.c_str());
-                if(usemaroc2gainconstantsmb.compare("yes")==0){
-                    for(int index = 1; index < 65; index++){
-                        fprintf(pFile1, "%d \t", gain[index]);
-                    }
-                }
-                fclose(pFile1);
-            }
-            
-        } // end for summary on or off
-        
-        
-    } //end loop over pmt
-    
-    //sleep(0.5);
-    printf("finished initializing \n");
-    
-    
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void initializeboard_new(string define_runnumber, int trigger_num, int pmtini, int pmtfin, string online_path){
-
-
-
-    int disk_num = 1;
-    char DataPath[128] = "/OVDAQ/DATA/";
-    DataFolder = online_path + "/readout/data" + to_string(disk_num) + "/OVDAQ/DATA/";
-    pipedelay = 20;
-    //int structure_t0[128];
-    //for(int i=0; i<128;i++){structure_t0[i]=-10;}
-
-
-    
-    if(!pmtini && !pmtfin){
-        pmtini = 1;
-        pmtfin = totalpmt;
-    }
-    if(!mode.compare("debug")){
-        totalboard = pmtfin - pmtini + 1;
-        if(totalpmt != totalboard){
-            printf("totalpmt: %d\t totalboard: %d\n",totalpmt,totalboard);
-            printf("Problem with initialization \n");
-        }
-    }
-
-
-
-
-    
-    int pmt1;
-    //int usbbase[20];
-    int usbread;
-    
-    int i;
-    for(i=0;usbhowmanyboards[0][i];i++){
-        usbread = usbhowmanyboards[1][i];         //usbhowmanyboard[0] saves board number, usbhowmanyboard[1] saves usb number
-        //if(structure_t0[usbread]==0) {
-	  set_inhibit_usb(usbread,-1);
-	//  structure_t0[usbread] = 1;
-	//}
-    }
-
-
-    
-    for(i=0;usbhowmanybox[0][i];i++){
-        usbread = usbhowmanybox[1][i];
-        set_inhibit_usb(usbread,-1);
-    }
-    
-    sleep(2.0);
-    
-    //now the new folder and the new data path will be passed to the DAQ
-    
-    printf("DataPath=%s, Disk=%d\n",DataPath,disk_num);
-    
-    set_data_path(DataPath);
-    //check_diskspace;
-    set_data_disk(disk_num);  //setting $DataFolder
-    
-    
-    //defining the run number
-    int file_run;
-    int max = 0;
-    int files_run[20];
-    
-    time_t t1 = time(0);   //get time now
-    struct tm * now = localtime( & t1 );
-    
-    int Sec = now->tm_sec;
-    int Hour = now->tm_hour;
-    int Min = now->tm_min;
-    int Day = now->tm_mday;
-    int Mon = now->tm_mon;
-    int Year = now->tm_year;
-    
-    string date;
-    
-    // run_number = to_string(Year) + to_string(Mon) + to_string(Day) + to_string(Hour) + to_string(Min) + to_string(Sec);
-    date = to_string(Year) + to_string(Mon) + to_string(Day);
-    
-    long runtmp = scanFiles(online_path + "/readout/data1/OVDAQ/DATA");
-    
-    if(define_runnumber.compare("auto") == 0){
-        sprintf(run_number,"%0.7d",runtmp);
-    }
-    
-    set_run_number(run_number);
-    
-    printf("pmtini = %d, pmtfin = %d\n", pmtini, pmtfin);
-    
 
 
 
@@ -4124,59 +3469,78 @@ void initializeboard_new(string define_runnumber, int trigger_num, int pmtini, i
 	com_usb(usb_local, pmt_local, 110, 1);          // turn off lef off/on the PMT's board = 1/0
         com_usb(usb_local, pmt_local, 109, 1);          // vdd_fsb on
         com_usb(usb_local, pmt_local, 73, 0b00000);     // set up pmt module
-        com_usb(usb_local, pmt_local, 74, 0b0100000);   // default gain
+        
+        com_usb(usb_local, pmt_local, 84, 255);
+
+	com_usb(usb_local, pmt_local, 74, 0b0100000);   // default gain
         com_usb(usb_local, pmt_local, 70, 0);           // load default
         dac_usb(usb_local, pmt_local, 1000);            // threshold value
+
+        com_usb(usb_local, pmt_local, 67, 0b000010);    // statea
+        com_usb(usb_local, pmt_local, 68, 0b000000);    // stateb
+        com_usb(usb_local, pmt_local, 69, 0b000000);    // statec
+
         com_usb(usb_local, pmt_local, 71, 0);           // rst_g to maroc
         com_usb(usb_local, pmt_local, 72, 0);           // write config was done twice
-        com_usb(usb_local, pmt_local, 73, 0b00110);           
-        com_usb(usb_local, pmt_local, 87, 0);           // no force trigger
-        com_usb(usb_local, pmt_local, 75, 0b00010000); 
-        com_usb(usb_local, pmt_local, 109, 0);          // vdd_fsb off
-	//sleep(1.0);
-        
+        com_usb(usb_local, pmt_local, 72, 0);           // write config was done twice
+        com_usb(usb_local, pmt_local, 73, 0b00110);     // gate alladc (gate on ->0b11110)      
+
+        com_usb(usb_local, pmt_local, 75, 0b00010000);  // set up trigger mode for module
+        com_usb(usb_local, pmt_local, 80, 5);		// hold delay
+        com_usb(usb_local, pmt_local, 85, 0b0000);	// pipe delay
+        com_usb(usb_local, pmt_local, 86, 0);		// edge strip mode
+        com_usb(usb_local, pmt_local, 87, 0);		// force readout-> 01: 1msec, 10: 16msec, 11: 256msec
+
+        com_usb(usb_local, pmt_local, 109, 0);		// vdd_fsb off
+        com_usb(usb_local, pmt_local, 254, 0);		// trigger on
+        usleep(200000); 
+
 	for ( int i = 0; i <= 30 ; i++){
             com_usb(usb_local, pmt_local, 81, 0);       // avoid first packets
         }
-        sleep(2.0); //looose previous packets
    }
+
+   sleep(1); //lose previous packets
+
+   //Open file and take baseline   
    for(pmt1=pmtini;pmt1<=pmtfin;pmt1++){
 	usb_local = pmttousb[pmt1];
 	pmt_local = pmttoboard[pmt1]; 
         if(structure[usb_local]==0){
             printf("releasing inhibit for usb:%d\n",usb_local);
 	    set_inhibit_usb(usb_local, -3);              // -3; created file structure
-            sleep(2.0);
-            set_inhibit_usb(usb_local, -2);              // -2; release inhibit for baseline
-            // -1; inhibit writing data
-            // 0; release inhibit for writing data
+            sleep(2);
+            set_inhibit_usb(usb_local, -2);             // -2; release inhibit for baseline
+            						// -1; inhibit writing data
+            						// 0; release inhibit for writing data
             structure[usb_local] = -2;
-	    sleep(2.0);
+	    //sleep(2);
         }
-
 	for( int i = 1; i <= trigger_num; i++){
             com_usb(usb_local, pmt_local, 81, 0);         // take baseline hits - 500
 	}
+	usleep(500000);
+   } 
 
-        sleep(3.0);                                             // wait late packets
- } 
+   cout << "Baseline data taking completed\n";
 
-    //sleep(1.0);
+    //Close file after baseline
     for( int j = 0; j<usbhowmanyboardscount; j++){
         usb_local = usbhowmanyboards[1][j];
 	//cout << "j: " << j << ", usb_local: "<< usb_local << ", structure[usb_local]: " << structure[usb_local] << endl;
         if(structure[usb_local] == -2){
+	  
             set_inhibit_usb(usb_local, -1);       // -1; inhibit writing data for baseline
-            // -1; inhibit writing data
-            // 0; release inhibit for writing data
+            					  // -1; inhibit writing data
+            					  // 0; release inhibit for writing data
             structure[usb_local] = 0;
-	    sleep(1.0);
+	    sleep(1);
         }
     }
 
     //for(int i=0; i<=12; i++){cout << "i: " << i << ", usblocal[i]: " << usblocal[i] << endl;}
 
-    sleep(3.0);
+    sleep(1);
     
     time_t t2 = time(0);   //get time now
     struct tm * now1 = localtime( & t2 );
@@ -4210,13 +3574,29 @@ void initializeboard_new(string define_runnumber, int trigger_num, int pmtini, i
         
         getpmtdata(usb_local,pmt_local);
         
-        dac_usb(usb_local, pmt_local, DACt);               // threshold value
-        com_usb(usb_local, pmt_local, 73, gateonoff);        //gateonoff);      // gate
-        com_usb(usb_local, pmt_local, 75, trigger_mode);     // trigger mode (gateonoff = 0b01011; trigger_mode = 0b0110 0000);
-        com_usb(usb_local, pmt_local, 80, 5);              // hold delay is variable. Has been fixed to 5 here
-        com_usb(usb_local, pmt_local, 85, pipedelay);      // set up pipe delay
-        com_usb(usb_local, pmt_local, 86, 0);              // edge strip mode
-        com_usb(usb_local, pmt_local, 87, force_trig);     // force readout -> 01: 1msec, 10: 16msec, 11: 256msec
+	com_usb(usb_local, pmt_local, 110, 1);		//Turn off LED
+	com_usb(usb_local, pmt_local, 255, 0);		//trigger off
+	com_usb(usb_local, pmt_local, 84, 255);
+	com_usb(usb_local, pmt_local, 109, 1);		//vdd_fsb on
+	com_usb(usb_local, pmt_local, 73, 0b00000);	//gate
+	com_usb(usb_local, pmt_local, 74, 0b0100000);	//default gain
+
+	dac_usb(usb_local, pmt_local, DACt);            //threshold value
+        
+	com_usb(usb_local, pmt_local, 67, 0b000010);	//statea
+	com_usb(usb_local, pmt_local, 68, 0b000000);	//stateb
+	com_usb(usb_local, pmt_local, 69, 0b000000);	//statec
+	com_usb(usb_local, pmt_local, 70, 0);		//load default
+	com_usb(usb_local, pmt_local, 71, 0);		//rst_g to maroc
+	com_usb(usb_local, pmt_local, 72, 0);		//write config
+	com_usb(usb_local, pmt_local, 72, 0);		//(done twice intentionally)
+
+	com_usb(usb_local, pmt_local, 73, gateonoff);   //gate
+        com_usb(usb_local, pmt_local, 75, trigger_mode);//trigger mode (gateonoff = 0b01011; trigger_mode = 0b0110 0000);
+        com_usb(usb_local, pmt_local, 80, 5);           //hold delay is variable. Has been fixed to 5 here
+        com_usb(usb_local, pmt_local, 85, pipedelay);   //set up pipe delay
+        com_usb(usb_local, pmt_local, 86, 0);           //edge strip mode
+        com_usb(usb_local, pmt_local, 87, force_trig);  //force readout-> 01: 1msec, 10: 16msec, 11: 256msec
         
         if(usemaroc2gainconstantsmb.compare("no")==0){
             com_usb(usb_local, pmt_local, 74, 0b0100000);  // default gain
@@ -4227,19 +3607,22 @@ void initializeboard_new(string define_runnumber, int trigger_num, int pmtini, i
         }
         else if(usemaroc2gainconstantsmb.compare("yes")==0 && fclload == 1){
             for(int index = 1 ; index < 65; index++){
-                com_usb(usb_local, pmt_local, index - 1, 2*gain[index]);  // applying gain constants from MySQL
+                com_usb(usb_local, pmt_local, index - 1, 2*gain[index]);  // applying gain constants from fcl file
 		}
         }
         
-        sleep(1.0);
-        
+        usleep(500000);
+        com_usb(usb_local, pmt_local, 71, 0);
+	com_usb(usb_local, pmt_local, 72, 0);
+        usleep(500000);
+	//com_usb(usb_local, pmt_local, 72, 0);
+ 
 	com_usb(usb_local, pmt_local, 109, 0);              // vdd_fsb off
         //com_usb(usb_local, pmt_local, 254, 1);              // trigger on
-        com_usb(usb_local, pmt_local, 254, 0);              // trigger on
+        //com_usb(usb_local, pmt_local, 254, 0);              // trigger on
         
         
-        // here create a first summary file or append to an existing one
-     
+	// here create a first summary file or append to an existing one
         if(summary.compare("on")==0){
             
             string summaryfile = dir2 + "/summary.txt";
@@ -4290,9 +3673,21 @@ void initializeboard_new(string define_runnumber, int trigger_num, int pmtini, i
         
         
     } //end loop over pmt
+
+    time_t t3 = time(0);   //get time now
+    struct tm * now2 = localtime( & t3 );
     
-    //sleep(0.5);
-    printf("finished initializing \n");
+    int newSec2 = now2->tm_sec;
+    int newHour2 = now2->tm_hour;
+    int newMin2 = now2->tm_min;
+    int newDay2 = now2->tm_mday;
+    int newMon2 = now2->tm_mon;
+    int newYear2 = now2->tm_year;
+    
+    int elapsed_time2;
+    elapsed_time2 = (newDay2 - Day)*24*3600 + (newHour2 - Hour)*3600 + (newMin2 - Min)*60 + (newSec2 - Sec);
+    
+    printf("finished initializing, total time: %i seconds\n",elapsed_time2);
     
     
 }

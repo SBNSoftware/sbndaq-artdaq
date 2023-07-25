@@ -36,6 +36,10 @@ int main(int argc, char *argv[])
     //Direct this to wherever the readout is compiled
     //To be noted that the main DAQ code in /readout/src/main.c also contains the link to the location where the data is written
     //DAQ is also expecting to write a logfile in $(DataPath2)/log (must exist or DAQ will fail)
+    
+     string cmd_q = "ipcrm -Q 0x0000270f -Q 0x00002737";
+     system(cmd_q.c_str()); 
+
     string cmd = online_path + "\\/readout\\/script\\/start_readout.sh \"readout_old\" \"1\" \"1\" \"none\"";
     //string cmd = "/e/h.0/localdev/readout/script/start_readout.sh \"readout\" \"1\" \"1\" \"none\"";
     system(cmd.c_str());
@@ -62,8 +66,7 @@ int main(int argc, char *argv[])
     cout << "PMTFIN: " << PMTFIN << endl;
 
 
-    //initializeboard("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
-    initializeboard_new("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
+    initializeboard("auto",800, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
     // TODO create symbolic link between Run_000** and DataFolder
 
     //eventbuilder("auto", PMTINI, PMTFIN,online_path);
@@ -71,19 +74,20 @@ int main(int argc, char *argv[])
     //EBbaseline;
     //write function in CRT.cpp
 	//cout << "Datapath: " << DataPath << " totalusb: " << totalusb << " totalpmt: " << totalpmt << endl;
-    sleep(2.0);
+    usleep(500000);
     int trycounter = 0;
     while(eventbuilder("auto", PMTINI, PMTFIN,online_path) == 0){ //Calculates baseline data and writes it to a file
  	trycounter++;
 	cout << "Initialization failed, trying again: Attempt " << trycounter << endl;
-	initializeboard_new("auto",500,PMTINI, PMTFIN, online_path);
+	initializeboard("auto",800,PMTINI, PMTFIN, online_path);
 	if(trycounter > 2){
 	  cout << "ERROR: failed to take baselines after 4 attempts! Something is wrong.\n";
 	  break;
 	}
-    }         
-    //starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
-    starttakedata_new(PMTINI,PMTFIN,0,0);              //Starts taking data
+    }
+         
+    starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
+
 //    sleep(60.0);
 //    stoptakedata_new(PMTINI,PMTFIN,0,0,online_path);
 //    sleep(5.0);

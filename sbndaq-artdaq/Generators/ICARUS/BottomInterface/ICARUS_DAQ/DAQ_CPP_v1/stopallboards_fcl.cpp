@@ -47,8 +47,7 @@ int main(int argc, char *argv[]){
   PMTINI = 1;
   PMTFIN = getnumpmt();
 
-  //stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
-  stoptakedata_new(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
+  stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
 
   string cmd = online_path + "\\/readout\\/script\\/stop_readout.sh \"readout_old\"";
   system(cmd.c_str()); 
