@@ -135,7 +135,11 @@ public:
       fhicl::Name("RightAframeVList"),
 	fhicl::Comment("list of vertical modules on right side of Aframe")
 	};
-
+    fhicl::Atom<bool> UseCAENReferencedT1 {
+      fhicl::Name("UseCAENReferencedT1"),
+	fhicl::Comment("if true make the t1 be a t0 referenced to the CAEN TTT"),
+	true
+	};
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
 
@@ -295,6 +299,7 @@ private:
   int fTimeCoinc;
   bool fMakeCRTHitTree;
   bool fMakeAnaTree;
+  bool fUseCAENReferencedT1;
 
   bool finclude_caen;
   bool fcaen_keepwaveforms;
@@ -333,7 +338,8 @@ sbndaq::CRTHitAna::CRTHitAna(CRTHitAna::Parameters const& pset): art::EDAnalyzer
   fTimeCoinc= pset().TimeCoinc(); 
   fMakeCRTHitTree= pset().MakeCRTHitTree(); 
   fMakeAnaTree= pset().MakeAnaTree(); 
-  //fMakeHistos=pset().MakeHistos(); 
+  //fMakeHistos=pset().MakeHistos();
+  fUseCAENReferencedT1 = pset().UseCAENReferencedT1();
   fRightAframeVList=pset().RightAframeVList();
   fLeftAframeVList=pset().LeftAframeVList();
   fRightAframeHList=pset().RightAframeHList();
@@ -696,7 +702,7 @@ void sbndaq::CRTHitAna::CRTmaketree()  {
     thisFEB1=mac5.at(ih1);
     // check that time is in beam window
     //    thistime1=ts1.at(ih1);
-    thistime1=ts0.at(ih1)-TTT_ns;
+    thistime1 = fUseCAENReferencedT1 ? ts0.at(ih1)-TTT_ns : ts1.at(ih1);
     if (thistime1>1000000000) thistime1-=1000000000;
     else if (thistime1<-1000000000) thistime1+=1000000000;
     if (thistime1<fBeamTimeWindowEnd && thistime1>fBeamTimeWindowStart && flags.at(ih1)==3) {
@@ -706,7 +712,7 @@ void sbndaq::CRTHitAna::CRTmaketree()  {
       	match = it->second;
       	for (int ih2=ih1+1;ih2<nhits;++ih2) {
 	  // use trigger time
-	  thistime2=ts0.at(ih2)-TTT_ns;
+	  thistime2 = fUseCAENReferencedT1 ? ts0.at(ih2)-TTT_ns : ts1.at(ih2);
 	  if (thistime2>1000000000) thistime2-=1000000000;
 	  else if (thistime2<-1000000000) thistime2+=1000000000;
 	  // use beam spill

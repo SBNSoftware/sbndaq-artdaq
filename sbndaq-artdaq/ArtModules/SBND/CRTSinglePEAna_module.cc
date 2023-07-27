@@ -5,7 +5,7 @@
 // Class:       CRTSinglePEAna
 // Module Type: analyzer
 // File:        CRTSinglePEAna_module.cc
-// Description: Black box for single PE gain measurement
+// Description: Black box for single PE eff_gain measurement
 // Author:      Jiaoyang Li/李 娇瑒 (jiaoyang.li@ed.ac.uk)
 ////////////////////////////////////////////////////////////////////////
 
@@ -104,8 +104,8 @@ public:
       fhicl::Comment("if true fit the adc histos"),
       false
     };  
-    fhicl::Atom<int> bias_voltage { 
-      fhicl::Name("bias_voltage"),
+    fhicl::Atom<int> bias_setting { 
+      fhicl::Name("bias_setting"),
       114
     };
     fhicl::Atom<std::string> photo_dump_dir { 
@@ -143,7 +143,7 @@ private:
   void analyze_bern_fragment(artdaq::Fragment & frag);
   void MakeSinglePETree(); // single PE search 
   void PeakFindFit(TH1F* h, bool save, art::TFileDirectory tfdir, 
-                   float &gain, float &gain_err, float &pedestal, float &pedestal_err, float &chisqr, float &ndf);
+                   float &eff_gain, float &eff_gain_err, float &pedestal, float &pedestal_err, float &chisqr, float &ndf);
 
   //--default values
   static constexpr int nChannels=32; 
@@ -151,7 +151,7 @@ private:
   std::vector<int> fFEBModules_vec;
   std::vector<int> fFEBModules_vec_manual_input;
   std::vector<int> fFitRange_manual_input;
-  int fbias_voltage;
+  int fbias_setting;
 
   // declare the histogram per FEB per channel. 
   std::vector<std::vector<TH1F *>> adc_1d_ditributions_perChannel_perFEB;
@@ -249,7 +249,7 @@ private:
 
   TString fPhoto_dump_dir;
   int n_count_create_folder;
-  float fgain_increment_slope=0.45;
+  float feff_gain_increment_slope=0.4;
 }; //--class CRTSinglePEAna
 
 
@@ -259,7 +259,7 @@ sbndaq::CRTSinglePEAna::CRTSinglePEAna(CRTSinglePEAna::Parameters const& pset): 
   finclude_berncrt = pset().include_berncrt();
   fcrt_keepall = pset().crt_keepall();
   fStoreBasicInfo= pset().store_basic_info(); 
-  fbias_voltage = pset().bias_voltage();
+  fbias_setting = pset().bias_setting();
   fStoreADCRawHistos = pset().store_adc_raw_histo();
   fIncludeTiming = pset().include_timing();
   fSaveHistsToPDF = pset().save_histo_to_pdf();
@@ -311,15 +311,15 @@ void sbndaq::CRTSinglePEAna::endJob()
 
     art::TFileDirectory dir = tfs->mkdir("ADC_histos_fitted");// folder to save all fit plots. 
 
-    // Store the gain info in the TTree. 
+    // Store the eff_gain info in the TTree. 
     int FEB_id, channel;
-    float gain, gain_err, pedestal, pedestal_err, chisqr, ndf;
-    CRTFitInfoTree = tfs->make<TTree>("CRTFitInfoTree", "CRT fitted gain and pedestal tree");
-    CRTFitInfoTree->Branch("fbias_voltage", &fbias_voltage, "fbias_voltage/I");
+    float eff_gain, eff_gain_err, pedestal, pedestal_err, chisqr, ndf;
+    CRTFitInfoTree = tfs->make<TTree>("CRTFitInfoTree", "CRT fitted eff_gain and pedestal tree");
+    CRTFitInfoTree->Branch("fbias_setting", &fbias_setting, "fbias_setting/I");
     CRTFitInfoTree->Branch("FEB_id", &FEB_id, "FEB_id/I");
     CRTFitInfoTree->Branch("channel", &channel, "channel/I");
-    CRTFitInfoTree->Branch("gain", &gain, "gain/F");
-    CRTFitInfoTree->Branch("gain_err", &gain_err, "gain_err/F");
+    CRTFitInfoTree->Branch("eff_gain", &eff_gain, "eff_gain/F");
+    CRTFitInfoTree->Branch("eff_gain_err", &eff_gain_err, "eff_gain_err/F");
     CRTFitInfoTree->Branch("pedestal", &pedestal, "pedestal/F");
     CRTFitInfoTree->Branch("pedestal_err", &pedestal_err, "pedestal_err/F"); 
     CRTFitInfoTree->Branch("chisqr", &chisqr, "chisqr/F"); 
@@ -328,24 +328,25 @@ void sbndaq::CRTSinglePEAna::endJob()
     for (auto iFeb=0; iFeb<(int)adc_1d_ditributions_perChannel_perFEB.size(); iFeb++){
 
       // the array to store the fit info. 
-      std::vector<float> gain_perChannel(nChannels);
-      std::vector<float> gain_err_perChannel(nChannels);
+      std::vector<float> eff_gain_perChannel(nChannels);
+      std::vector<float> eff_gain_err_perChannel(nChannels);
       std::vector<float> pedestal_perChannel(nChannels); 
       std::vector<float> pedestal_err_perChannel(nChannels); 
       //std::vector<float> fit_chisqr_over_ndf_perChannel(nChannels); 
       std::vector<float> channel_number;
-
+      
       for (auto iChannel=0; iChannel<(int)adc_1d_ditributions_perChannel_perFEB.at(iFeb).size(); iChannel++){
+      //for (auto iChannel=4; iChannel<9; iChannel++){
 
-        //float gain, gain_err, pedestal, pedestal_err, chisqr, ndf; 
+        //float eff_gain, eff_gain_err, pedestal, pedestal_err, chisqr, ndf; 
         float chisqr, ndf;
 
-        PeakFindFit(adc_1d_ditributions_perChannel_perFEB.at(iFeb).at(iChannel), fSaveHistsToPDF, dir, gain, gain_err, pedestal, pedestal_err, chisqr, ndf);
+        PeakFindFit(adc_1d_ditributions_perChannel_perFEB.at(iFeb).at(iChannel), fSaveHistsToPDF, dir, eff_gain, eff_gain_err, pedestal, pedestal_err, chisqr, ndf);
         
-        if(fverbose) std::cout<<"FEB: "<<fFEBModules_vec.at(iFeb)<<", iChannel: "<<iChannel<<", gain "<<gain<<", pedestal "<<pedestal<<std::endl;
+        if(fverbose) std::cout<<"FEB: "<<fFEBModules_vec.at(iFeb)<<", iChannel: "<<iChannel<<", eff_gain "<<eff_gain<<", pedestal "<<pedestal<<std::endl;
 
-        gain_perChannel[iChannel] = gain;   
-        gain_err_perChannel[iChannel] = gain_err;    
+        eff_gain_perChannel[iChannel] = eff_gain;   
+        eff_gain_err_perChannel[iChannel] = eff_gain_err;    
         pedestal_perChannel[iChannel] = pedestal;   
         pedestal_err_perChannel[iChannel] = pedestal_err;  
         //chisqr_over_ndf = chisqr/ndf; 
@@ -357,7 +358,7 @@ void sbndaq::CRTSinglePEAna::endJob()
         if(isBrokenChannel) {
           if(fverbose) std::cout<<"WARNING: check out FEB: "<<FEB_id<<", channel: "<<channel<<std::endl;
           // if broken channel, rewrite everything to be unphysical. 
-          gain = -1;     gain_err = -1;
+          eff_gain = -1;     eff_gain_err = -1;
           pedestal = -1; pedestal_err = -1;
           chisqr = -1;   ndf = -1;
         }
@@ -365,27 +366,24 @@ void sbndaq::CRTSinglePEAna::endJob()
         CRTFitInfoTree->Fill(); // store the fitting info in the TTree.
       }
 
-      // draw the gain with error for all FEB all channel;
-      TString graph_name = "gain_vs_channel"+std::to_string(fFEBModules_vec[iFeb]);
+      // draw the eff_gain with error for all FEB all channel;
+      TString graph_name = "eff_gain_vs_channel"+std::to_string(fFEBModules_vec[iFeb]);
       TCanvas * c = tfs->makeAndRegister<TCanvas>(graph_name,"");
 
-      TGraphErrors* gr_gain_vs_channel = new TGraphErrors(nChannels, &(channel_number[0]), &(gain_perChannel[0]), 0, &(gain_err_perChannel[0]));
+      TGraphErrors* gr_eff_gain_vs_channel = new TGraphErrors(nChannels, &(channel_number[0]), &(eff_gain_perChannel[0]), 0, &(eff_gain_err_perChannel[0]));
       
       TString name = "FEB: "+std::to_string(fFEBModules_vec[iFeb]);
-      gr_gain_vs_channel->SetTitle(name);
-      gr_gain_vs_channel->GetXaxis()->SetTitle("Channel no.");
-      gr_gain_vs_channel->GetYaxis()->SetTitle("Fitted gain value");
+      gr_eff_gain_vs_channel->SetTitle(name+" ; Channel no. ; Fitted effective gain value");
 
-      //gr_gain_vs_channel->Draw();
-      gr_gain_vs_channel->Draw("a2");
-      gr_gain_vs_channel->Draw("p");
-      gr_gain_vs_channel->GetYaxis()->SetRangeUser(-10, 150);
+      gr_eff_gain_vs_channel->Draw("a2");
+      gr_eff_gain_vs_channel->Draw("p");
+      gr_eff_gain_vs_channel->GetYaxis()->SetRangeUser(-10, 150);
       // Highlighted region coordinates
       Double_t xMin = 0;
       Double_t xMax = 34;
-      Double_t yMin = fbias_voltage*fgain_increment_slope*0.7;
-      Double_t yMax = fbias_voltage*fgain_increment_slope*1.2;
-      std::cout<<yMin<<", "<<yMax<<", "<<xMin<<", "<<xMax<<std::endl;
+      Double_t yMin = fbias_setting*feff_gain_increment_slope*0.7;
+      Double_t yMax = fbias_setting*feff_gain_increment_slope*1.2;
+      // std::cout<<yMin<<", "<<yMax<<", "<<xMin<<", "<<xMax<<std::endl;
       // Create a TBox to represent the highlighted region
       TBox *highlightBox = new TBox(xMin, yMin, xMax, yMax);
       highlightBox->SetFillColorAlpha(40, 0.5); // Set transparent green color
@@ -516,6 +514,8 @@ void sbndaq::CRTSinglePEAna::analyze(const art::Event& evt)
       CRTHitBasicInfoTree->Branch("febid", &febid);
       CRTHitBasicInfoTree->Branch("channelA", &channelA);
       CRTHitBasicInfoTree->Branch("channelB", &channelB);  
+      CRTHitBasicInfoTree->Branch("adcA", &adcA); 
+      CRTHitBasicInfoTree->Branch("adcB", &adcB); 
       if (fIncludeTiming){
         CRTHitBasicInfoTree->Branch("ts0_hit", &ts0_hit);   
         CRTHitBasicInfoTree->Branch("ts1_hit", &ts1_hit);  
@@ -550,8 +550,6 @@ void sbndaq::CRTSinglePEAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
     
     BernCRTHitV2 const* bevt = bern_fragment.eventdata(iHit);
     
-    // Remove the problematic ones. 
-    //if (md->MAC5()==154 || md->MAC5()==155 || md->MAC5()==73) continue;
     if (fcrt_keepall) {
       //metadata
       sequence_id.push_back(               frag.sequenceID());
@@ -646,7 +644,7 @@ void sbndaq::CRTSinglePEAna::MakeSinglePETree()  {
   if (nhits<=0) { std::cout << " no crt hits in event " << fEvent << std::endl; return;}
   
   // clean before refill per hit. 
-  channelA.clear(); channelB.clear(); febid.clear(); 
+  channelA.clear(); channelB.clear(); febid.clear(); adcA.clear(); adcB.clear();
   if (fIncludeTiming){
     ts0_hit.clear(); ts1_hit.clear();
   }
@@ -657,7 +655,7 @@ void sbndaq::CRTSinglePEAna::MakeSinglePETree()  {
 
     // Find the channel.
     std::vector<int> this_adc_array;
-    this_adc_array.push_back(adc0[ihit]); // can use std::format, but only c++20. 
+    this_adc_array.push_back(adc0[ihit]); 
     this_adc_array.push_back(adc1[ihit]);
     this_adc_array.push_back(adc2[ihit]);
     this_adc_array.push_back(adc3[ihit]);
@@ -692,13 +690,9 @@ void sbndaq::CRTSinglePEAna::MakeSinglePETree()  {
 
     auto highest_adc_value = max_element(std::begin(this_adc_array), std::end(this_adc_array)); // find the maximum hits. 
     int adc_channel_no = std::distance(std::begin(this_adc_array), highest_adc_value); // find the channel with the maximum hits. 
-    if(fIncludeTiming){
-      ts0_hit.push_back(ts0[ihit]); ts1_hit.push_back(ts1[ihit]);
-    }
 
     // To find the FEB module.
     int thisFeb=mac5[ihit];
-    febid.push_back(thisFeb); 
     std::vector<int>::iterator itr = std::find(fFEBModules_vec.begin(), fFEBModules_vec.end(), thisFeb);
     int index_in_module_number = std::distance(fFEBModules_vec.begin(), itr); // Find the module number. 
     // End of finding the FEB module. 
@@ -709,13 +703,27 @@ void sbndaq::CRTSinglePEAna::MakeSinglePETree()  {
     if (adc_channel_no%2 != 0){ // odd number
       channelA.push_back(adc_channel_no-1); // even
       channelB.push_back(adc_channel_no);   // odd
+      adcA.push_back(this_adc_array.at(adc_channel_no-1));
+      adcB.push_back(*highest_adc_value);
       adc_1d_ditributions_perChannel_perFEB.at(index_in_module_number).at(adc_channel_no-1)->Fill(this_adc_array.at(adc_channel_no-1));
       adc_1d_ditributions_perChannel_perFEB.at(index_in_module_number).at(adc_channel_no)->Fill(*highest_adc_value);
+
+      febid.push_back(thisFeb); 
+      if(fIncludeTiming){
+        ts0_hit.push_back(ts0[ihit]); ts1_hit.push_back(ts1[ihit]);
+      }
     }else{ // even number
       channelA.push_back(adc_channel_no);   // even
       channelB.push_back(adc_channel_no+1); // odd
+      adcA.push_back(*highest_adc_value);
+      adcB.push_back(this_adc_array.at(adc_channel_no+1));
       adc_1d_ditributions_perChannel_perFEB.at(index_in_module_number).at(adc_channel_no)->Fill(*highest_adc_value);
-      adc_1d_ditributions_perChannel_perFEB.at(index_in_module_number).at(adc_channel_no+1)->Fill(this_adc_array.at(adc_channel_no+1));
+      adc_1d_ditributions_perChannel_perFEB.at(index_in_module_number).at(adc_channel_no+1)->Fill(this_adc_array.at(adc_channel_no+1));    
+
+      febid.push_back(thisFeb); 
+      if(fIncludeTiming){
+        ts0_hit.push_back(ts0[ihit]); ts1_hit.push_back(ts1[ihit]);
+      }
     }
   } //loop over hits
 
@@ -724,13 +732,13 @@ void sbndaq::CRTSinglePEAna::MakeSinglePETree()  {
   if (hitcount>1) std::cout << "event " << fEvent << " has " << hitcount << " crt hits " << std::endl;
 }// end of MakeSinglePETree.
 
-void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory tfdir, float &gain, float &gain_err, float &pedestal, float &pedestal_err, float &chisqr, float &ndf){
+void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory tfdir, float &eff_gain, float &eff_gain_err, float &pedestal, float &pedestal_err, float &chisqr, float &ndf){
   
-  float gainSeed = fbias_voltage*fgain_increment_slope;
+  float eff_gainSeed = fbias_setting*feff_gain_increment_slope;
 
   Double_t tSpectrumSigma = 1.85;
   Double_t tSpectrumThreshold = 0.18;
-  if (fbias_voltage>200.) tSpectrumThreshold = 0.13;
+  if (fbias_setting>200.) tSpectrumThreshold = 0.14;
   const size_t nPeakMax = 10;
   
   //h->SetStats(kFALSE);
@@ -741,7 +749,7 @@ void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory
 
   fit_canvas->Divide(1,2);
   fit_canvas->cd(1);
-  h->GetXaxis()->SetTitle("ADC"); h->GetYaxis()->SetTitle("# of hits"); h->SetStats(kFALSE);  
+  h->SetTitle("; ADC; # of hits"); h->SetStats(kFALSE);  
   h->Draw("e0hist");
 
   TSpectrum *s = new TSpectrum();
@@ -769,13 +777,13 @@ void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory
   std::vector<float> peak_value;
   std::vector<float> adc_value;
 
-  //same list with "bad" peaks excluded (what eventually goes into the gain fit)
+  //same list with "bad" peaks excluded (what eventually goes into the eff_gain fit)
   std::vector<float> peak_value_ammended;
   std::vector<float> adc_value_ammended;
   std::vector<float> adc_value_error;
 
   //float ped_temp = 260.;
-  //int peak_offset = round((peaks[0]-ped_temp)/gainSeed); //estimate peak number
+  //int peak_offset = round((peaks[0]-ped_temp)/eff_gainSeed); //estimate peak number
 
   for (int ipeak=0; ipeak<nPeak; ipeak++){ // store the peak value from TSpectrum in the vector. 
     if(peaks[ipeak]<0) std::cout << "bad peak value: " << peaks[ipeak] << std::endl;
@@ -791,7 +799,7 @@ void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory
   // first and refit chi-squareds
   for (int ipeak=0 ; ipeak<nPeak && ipeak<(int)nPeakMax; ipeak++){
     //initial gaus fit to peak from TSpectrum
-    TF1 *gfit = new TF1("gfit", "gaus", adc_value[ipeak]-gainSeed/2, adc_value[ipeak]+gainSeed/2);
+    TF1 *gfit = new TF1("gfit", "gaus", adc_value[ipeak]-20, adc_value[ipeak]+20);
 
     gfit->SetParameter(0, h->GetBinContent(h->FindBin(adc_value[ipeak])));//200);
     gfit->SetParameter(1, adc_value[ipeak]);
@@ -808,36 +816,39 @@ void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory
     if(adc_value[ipeak]>h->GetBinLowEdge(h->GetNbinsX())-15) nPeakHigh++;
     
     if (ipeak==0){ // remove pedestals. 
-      if (adc_value[ipeak+1]-adc_value[ipeak]<gainSeed*0.7 || (adc_value[ipeak+1]-adc_value[ipeak])>gainSeed*1.5) continue;
+      if (adc_value[ipeak+1]-adc_value[ipeak]<eff_gainSeed*0.7 || (adc_value[ipeak+1]-adc_value[ipeak])>eff_gainSeed*1.5) continue;
     }
     if (adc_value[ipeak] > 650.) continue; // cut becasue beyond that the adc_value doesn't makes sense (most of times)
     if (adc_value[ipeak]>h->GetBinLowEdge(1)+15 && adc_value[ipeak]<h->GetBinLowEdge(h->GetNbinsX())-15 && abs(adc_value[ipeak]-gfit->GetParameter(1))<15){
       //skip false peaks (may need improvement - currently relies on init values)
       if(ipeak!=0 && ipeak!=nPeak-1 //check it's not first or last peaks
-       && (adc_value[ipeak+1]-adc_value[ipeak]<gainSeed*0.7 || adc_value[ipeak]-adc_value[ipeak-1]<gainSeed*0.7)){ //check peak within 30% of expected gain w.r.t adj.
+       && ( adc_value[ipeak+1]-adc_value[ipeak]<eff_gainSeed*0.7 || adc_value[ipeak]-adc_value[ipeak-1]<eff_gainSeed*0.7)){ //check peak within 30% of expected eff_gain w.r.t adj.
         if (fverbose) std::cout << "determined peak " << ipeak << " (" << adc_value[ipeak] << " ADC) is false peak. removing..." << std::endl;
         for (int j=ipeak; j<nPeak; j++) peak_value[j] = peak_value[j]-1; //overwrite current value, shifting higher values down by 1 index
       }
       else{ //if not missed peak, could there have been a skipped peak?
-        if(ipeak!=0 && ipeak!=nPeak-1 && adc_value[ipeak+1]-adc_value[ipeak]<gainSeed*1.2 && adc_value[ipeak]-adc_value[ipeak-1]>gainSeed*1.5){ //missed peak adjust
-          if (ipeak==1 && (adc_value[ipeak]-adc_value[ipeak-1])>gainSeed*1.5){  // remove pedestals. 
-            for (int j=ipeak; j<nPeak; j++) peak_value[j] = peak_value[j]-1;
-            if (fverbose) std::cout << "determined peak " << ipeak-1 << " (" << adc_value[ipeak-1] << " ADC) is pedestal. removing..." << std::endl;
-          }else{
-            for (int j=ipeak; j<nPeak; j++) peak_value[j] = peak_value[j]+1;
-            if (fverbose) std::cout << "missed peak detected. shifting peaks " << ipeak << " and higher up by 1..." << std::endl;
-          }
+        bool isPedestals=false;        
+        if (ipeak==0 && ((adc_value[ipeak+1]-adc_value[ipeak])>eff_gainSeed*1.2 && adc_value[ipeak]<280.)) {  // remove pedestals. 
+          isPedestals=true;
+          for (int j=ipeak; j<nPeak; j++) peak_value[j] = peak_value[j]-1; 
+          if (fverbose) std::cout << "determined peak " << ipeak-1 << " (" << adc_value[ipeak-1] << " ADC) is pedestal. removing..." << std::endl;
+        }else if(ipeak!=0 && ipeak!=nPeak-1 && ipeak>1 && adc_value[ipeak+1]-adc_value[ipeak]<eff_gainSeed*1.2 && adc_value[ipeak]-adc_value[ipeak-1]>eff_gainSeed*1.5){ //missed peak adjust
+          for (int j=ipeak; j<nPeak; j++) peak_value[j] = peak_value[j]+1;
+          if (fverbose) std::cout << "missed peak detected. shifting peaks " << ipeak << " and higher up by 1..." << std::endl;
         }
         //if last peak likely occuring after skipped peak
-        if(ipeak==nPeak-1 && (adc_value[ipeak]-adc_value[ipeak-1])/gainSeed>1.5) {
-          peak_value[ipeak]+=(int)((adc_value[ipeak]-adc_value[ipeak-1])/gainSeed);
+        if(ipeak==nPeak-1 && (adc_value[ipeak]-adc_value[ipeak-1])/eff_gainSeed>1.5) {
+          peak_value[ipeak]+=(int)((adc_value[ipeak]-adc_value[ipeak-1])/eff_gainSeed);
           if (fverbose) std::cout << "missed peak(s) detected before last peak...shifting last peak" << std::endl;
         }
         
-        peak_value_ammended.push_back(peak_value[ipeak]);
-        adc_value_ammended.push_back(gfit->GetParameter(1));
-        adc_value_error.push_back(gfit->GetParError(1));
-        ipeak_new++;
+        if (!isPedestals){
+          //std::cout<<"peak_value[ipeak]: "<<peak_value[ipeak]<<", "<<ipeak<<std::endl;
+          peak_value_ammended.push_back(peak_value[ipeak]);
+          adc_value_ammended.push_back(gfit->GetParameter(1));
+          adc_value_error.push_back(gfit->GetParError(1));
+          ipeak_new++;
+        }
       }//end else not missed but was there skip
     }// end if not edge peak, not far from TSpectrum value
   }//end for loop of peaks
@@ -865,21 +876,18 @@ void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory
     //linear fit function
     TF1 *fit = new TF1("fit","[0] + [1]*x", peak_value_ammended[0]-0.25, peak_value_ammended[ipeak_new-1]+0.25);
 
-    gr_mean->GetXaxis()->SetTitle("# of peaks");
-    gr_mean->GetYaxis()->SetTitle("ADC");  
+    gr_mean->SetTitle("; # of peaks; ADC");
 
-    gr_mean->SetTitle("");
-
-    //name, initialize gain fit parameters
-    fit->SetParName(1,"Gain");
+    //name, initialize eff_gain fit parameters
+    fit->SetParName(1,"eff_Gain");
     fit->SetParName(0, "Pedestal");
-    fit->SetParLimits(1, gainSeed-40, gainSeed+40);
-    /*fit->SetParameter(1, gainSeed);
+    fit->SetParLimits(1, eff_gainSeed-40, eff_gainSeed+40);
+    /*fit->SetParameter(1, eff_gainSeed);
     fit->SetParameter(0, ped_temp);
     fit->SetParLimits(0, ped_temp*0.8, ped_temp*1.2);*/
 
-    if (fverbose) std::cout << "gain fit..." << std::endl;
-    //perform gain fit
+    if (fverbose) std::cout << "eff_gain fit..." << std::endl;
+    //perform eff_gain fit
     gStyle->SetOptStat(0100);
     gStyle->SetOptFit(1111);
     gStyle->SetStatX(0.5);
@@ -891,10 +899,10 @@ void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory
     gr_mean->Fit(fit, "QR");  
 
     //if (fverbose) std::cout << "check chi-square..." << std::endl;
-    //check if gain fit is bad according to chi-square
+    //check if eff_gain fit is bad according to chi-square
     /*if (fit->GetChisquare()/fit->GetNDF()>5.0 && fit->GetChisquare()/fit->GetNDF()<1000000000000000.0)
     {
-      if (fverbose) std::cout << "gain fit X^2 too large...shifting all peaks by 1" << std::endl;
+      if (fverbose) std::cout << "eff_gain fit X^2 too large...shifting all peaks by 1" << std::endl;
       chisqr=fit->GetChisquare();
       for(int i=1; i<ipeak_new; i++) peak_value_ammended[i]+=1;
       gr_mean = new TGraphErrors(ipeak_new, &(peak_value_ammended[0]), &(adc_value_ammended[0]), 0, &(adc_value_error[0]));
@@ -917,14 +925,13 @@ void sbndaq::CRTSinglePEAna::PeakFindFit(TH1F* h, bool save, art::TFileDirectory
     }*/
 
     // store the fitting results. 
-    gain = fit->GetParameter(1); //gain
-    gain_err = fit->GetParError(1);  //gain error
-    pedestal = fit->GetParameter(0); //pedestal mean
-    pedestal_err = fit->GetParError(0);  //pedestal mean error
-    chisqr = fit->GetChisquare();  //X^2
-    ndf = fit->GetNDF();        //NDF
+    eff_gain = fit->GetParameter(1);        //eff_gain
+    eff_gain_err = fit->GetParError(1);     //eff_gain error
+    pedestal = fit->GetParameter(0);    //pedestal mean
+    pedestal_err = fit->GetParError(0); //pedestal mean error
+    chisqr = fit->GetChisquare();       //X^2
+    ndf = fit->GetNDF();                //NDF
 
-    //fit_canvas->cd();
     fit_canvas->Update();
   }
 
