@@ -771,7 +771,6 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   CAENV1730EventHeader header = event_ptr->Header;
   
   int fragId = static_cast<int>(frag.fragmentID());
-  fragId-=fShift;
   //
   if (fverbose)      std::cout << "\tFrom CAEN header, event counter is "  << header.eventCounter   << "\n";
   if (fverbose)      std::cout << "\tFrom CAEN header, triggerTimeTag is " << header.triggerTimeTag << "\n";
@@ -800,6 +799,8 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   
   //--store the tick value for each acquisition
   fTicksVec.resize(wfm_length);
+
+  fragId = 0;
   
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes()
 								 + sizeof(CAENV1730EventHeader));
@@ -809,232 +810,232 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   size_t ch_offset = 0;
   //--loop over channels
   for (size_t i_ch=0; i_ch<nChannels; ++i_ch){
-    fWvfmsVec[i_ch+nChannels*fragId].resize(wfm_length);
-    ch_offset = (size_t)(i_ch * wfm_length);
-    
-    //--loop over waveform samples
-    for(size_t i_t=0; i_t<wfm_length; ++i_t){
-      fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   /*timestamps, event level*/
-      value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
-      value = *(value_ptr);
-      if (i_ch == 0 && firstEvt) {
-	h_wvfm_ev0_ch0->SetBinContent(i_t,value);
-      }
-      fWvfmsVec[i_ch+nChannels*fragId][i_t] = value;
-    } //--end loop samples
-    firstEvt = false;
+      fWvfmsVec[i_ch+nChannels*fragId].resize(wfm_length);
+      ch_offset = (size_t)(i_ch * wfm_length);
+      
+      //--loop over waveform samples
+      for(size_t i_t=0; i_t<wfm_length; ++i_t){
+        fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   /*timestamps, event level*/
+        value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
+        value = *(value_ptr);
+        //if (i_ch == 0 && firstEvt) {
+        //	h_wvfm_ev0_ch0->SetBinContent(i_t,value);
+        //}
+        fWvfmsVec[i_ch+nChannels*fragId][i_t] = value;
+      } //--end loop samples
+    //firstEvt = false;
   } //--end loop channels
 
-  int threshold[]= { 10000, 5000, 10000, 5000,10000, 5000, 10000, 5000,10000, 5000, 10000, 5000, 10000, 5000, 10000, 5000};
-
-  // find leading edges in waveforms
-  int toggle=0;
-  int i_ch =0 ;
-  auto this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch0.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-  
-  // find leading edges in waveforms
-  i_ch = 1; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch1.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-  
-  // find leading edges in waveforms
-  i_ch = 2; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch2.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 3; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch3.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-  
-  // find leading edges in waveforms
-  i_ch = 4; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch4.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 5; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch5.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 6; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch6.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 7; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch7.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 8; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch8.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 9; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch9.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 10; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch10.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 11; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch11.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 12; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch12.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 13; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch13.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 14; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch14.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
-
-  // find leading edges in waveforms
-  i_ch = 15; toggle=0;
-  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
-  if (this_value>threshold[i_ch]) toggle=1;
-  for(size_t i_t=1; i_t<wfm_length; ++i_t){
-    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
-    if (toggle==0 && this_value>threshold[i_ch]) {
-      toggle=1;
-      fPMT_ch15.emplace_back(i_t);
-    }
-    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
-  }
+//  int threshold[]= { 10000, 5000, 10000, 5000,10000, 5000, 10000, 5000,10000, 5000, 10000, 5000, 10000, 5000, 10000, 5000};
+//
+//  // find leading edges in waveforms
+//  int toggle=0;
+//  int i_ch =0 ;
+//  auto this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch0.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//  
+//  // find leading edges in waveforms
+//  i_ch = 1; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch1.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//  
+//  // find leading edges in waveforms
+//  i_ch = 2; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch2.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 3; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch3.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//  
+//  // find leading edges in waveforms
+//  i_ch = 4; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch4.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 5; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch5.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 6; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch6.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 7; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch7.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 8; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch8.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 9; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch9.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 10; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch10.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 11; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch11.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 12; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch12.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 13; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch13.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 14; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch14.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
+//
+//  // find leading edges in waveforms
+//  i_ch = 15; toggle=0;
+//  this_value = fWvfmsVec[i_ch+nChannels*fragId][0];
+//  if (this_value>threshold[i_ch]) toggle=1;
+//  for(size_t i_t=1; i_t<wfm_length; ++i_t){
+//    this_value = fWvfmsVec[i_ch+nChannels*fragId][i_t];
+//    if (toggle==0 && this_value>threshold[i_ch]) {
+//      toggle=1;
+//      fPMT_ch15.emplace_back(i_t);
+//    }
+//    if (toggle==1 && this_value<threshold[i_ch]) toggle=0;
+//  }
   
 
 
