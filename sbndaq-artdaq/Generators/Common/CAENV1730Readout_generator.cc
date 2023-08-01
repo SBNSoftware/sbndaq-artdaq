@@ -697,28 +697,16 @@ void sbndaq::CAENV1730Readout::StopClkToTrgOut(){
   
   sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
 
-  /* Need bit 17:16 = 01 AND bit 19:18 == 01 for CLK and == 10 for PHASE  */
-  // 1. Make sure they're all 0: make 11 and invert to 00
-  uint32_t test = 0x3;
-  test = ~test;  
-  TLOG(TINFO) << "test value = " << std::hex << test << std::dec << std::endl;
+  uint32_t mask = 0x3;
+  mask = ~mask;  
+  data &= ((mask)<<16) + ((mask)<<18); 
 
-  //2. Insert 00 into data at bit 17:16 and bit 19:18
-  data &= ((test)<<16) + ((test)<<18); 
-  std::cout << "Front Panel IO Control address 0x811C, after insert test: 0x" << std::hex << data << std::dec;
-
-  //4. Write value
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, data);
-
-  //5. Double-check register value
-  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
-  TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
 }
 
 void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
 {
-  /* Check to output EITHER CLK or CLK PHASE */
+  /* Check to output ONLY CLK OR CLK PHASE */
   if ( (fOutputClk == 1) & (fOutputClkPhase == 1) ){
     TLOG(TLVL_ERROR) << "Error configuring output clock: Cannot output clock and its phase at the same time." << std::endl;
     abort();
@@ -734,30 +722,13 @@ void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
   
   sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
 
-  /* Need bit 17:16 = 01 AND bit 19:18 == 01 for CLK and == 10 for PHASE  */
-  // 1. Make sure they're all 0: make 11 and invert to 00
-  uint32_t test = 0x3;
-  test = ~test;  
-  TLOG(TINFO) << "test value = " << std::hex << test << std::dec << std::endl;
-
-  //2. Insert 00 into data at bit 17:16 and bit 19:18
-  data &= ((test)<<16) + ((test)<<18); 
-  std::cout << "Front Panel IO Control address 0x811C, after insert test: 0x" << std::hex << data << std::dec;
-
-  //3. Make value
   uint32_t value16 = 0x1; 
   uint32_t value18 = 0x0;
   if (fOutputClk) value18 = 0x1;
   if (fOutputClkPhase) value18 = 0x2;
   data |= ((value16 & 0x3)<<16) + ((value18 &0x3)<<18);
   
-  //4. Write value
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, data);
-
-  //5. Double-check register value
-  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
-  TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
 }
 
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
@@ -1394,7 +1365,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
     if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
       TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
-                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
+                       << "Temperature = " << ch_temps[ch] << ", above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
 		       << TLOG_ENDL;
     }
 
