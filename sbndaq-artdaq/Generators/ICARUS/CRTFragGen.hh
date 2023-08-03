@@ -82,8 +82,8 @@ namespace CRT
     // The upper 32 bits of the timestamp. We keep track of this in the
     // fragment generator because the CRT hardware only keeps the lower
     // 32 bits.
-    std::vector<uint64_t> uppertime_per_mod_syncs;
-    std::vector<uint64_t> lowertime_per_mod_ns;
+    std::vector<uint32_t> uppertime_per_mod_syncs;
+    std::vector<uint32_t> lowertime_per_mod_ns;
     uint64_t tpacket_sec = 0;
     uint64_t old_tpacket_sec = 0;
 

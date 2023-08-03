@@ -538,12 +538,12 @@ static void check_data_in() {
   if (len >= 0) {
     time_lastopen[ser_no] = -1; //when getting inhibit message allow to reset the time in the filename
     tmp = *((int *) msg_buf.mdata);
-    TRACE(TLVL_INFO, "Inhibit: %d\n",tmp);
+    TRACE(TLVL_DEBUG+1, "Inhibit: %d\n",tmp);
     //normal starting will be data_flag = 1 suppress write data to disk
     
     if(tmp == 0) { 
       inhibit_writetofile = 0; 
-      TRACE(TLVL_INFO,"USB %d: releasing inhibit\n",ser_no);
+      TRACE(TLVL_DEBUG+1,"USB %d: releasing inhibit\n",ser_no);
       /* Alert Gaibu Server */
       //sprintf(mymsg,"USB %d: releasing inhibit",ser_no);
       //gaibu_msg(MNOTICE, mymsg);
@@ -552,7 +552,7 @@ static void check_data_in() {
     
     else if(tmp == -1) {
       inhibit_writetofile = 1;  //suppress write data to disk  
-      TRACE(TLVL_INFO,"USB %d: inhibiting writing to file\n",ser_no);
+      TRACE(TLVL_DEBUG+1,"USB %d: inhibiting writing to file\n",ser_no);
       /* Alert Gaibu Server */
       //sprintf(mymsg,"USB %d: inhibiting writing to file",ser_no);
       //gaibu_msg(MNOTICE, mymsg);
@@ -561,7 +561,7 @@ static void check_data_in() {
     }
     else if(tmp == -2) {  // to take baseline
       inhibit_writetofile = 0;
-      TRACE(TLVL_INFO,"USB %d: releasing inhibit for baseline\n",ser_no);
+      TRACE(TLVL_DEBUG+1,"USB %d: releasing inhibit for baseline\n",ser_no);
       
       /* Alert Gaibu Server */
       //sprintf(mymsg,"USB %d: releasing inhibit for baseline",ser_no);

@@ -210,12 +210,10 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
 
   uint64_t lowertime_ns = lowertime_tick*16.; //Convert to ns
 
-  //TLOG(TLVL_INFO, "BottomFragGen")<<"module: " << module_id << ", lowertime_ns: " << lowertime_ns;
-
   //uint64_t deltaT_process = 0;
   
   if (!gotRunStartTime && tpacket_sec > 0) {
-    runstarttime_ns = tpacket_sec*1000000000 - lowertime_ns - cable_offset_ns;
+    runstarttime_ns = tpacket_sec*1.e9 - lowertime_ns - cable_offset_ns; //ns
     gotRunStartTime = true;
     //oldUNIX_ns = time(nullptr); //seconds
     oldUNIX_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -227,8 +225,8 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   if(tpacket_sec > 0 && tpacket_sec > old_tpacket_sec){
     old_tpacket_sec = tpacket_sec;
     TLOG(TLVL_DEBUG, "BottomFragGen") << "Found new tpacket: " << tpacket_sec 
-			      << " seconds, currentUNIX is: " << (uint64_t)(currentUNIX_ns/1000000000)
-			      << " seconds, diff is: " << (uint64_t)(currentUNIX_ns/1000000000 - tpacket_sec) << " s\n";
+			      << " seconds, currentUNIX is: " << (uint64_t)(currentUNIX_ns/1.e9)
+			      << " seconds, diff is: " << (uint64_t)(currentUNIX_ns/1.e9 - tpacket_sec) << " s\n";
   }
 
   if(lowertime_per_mod_ns[module_id]==0){ //First event in each module
@@ -247,14 +245,9 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
       TLOG(TLVL_DEBUG, "BottomFragGen") << "Module " << module_id <<" received a sync. "
       				<< "Uppertime is now " << uppertime_per_mod_syncs[module_id] << " syncs\n";
     }
-    timestamp_ = lowertime_ns + runstarttime_ns + uppertime_per_mod_syncs[module_id]*1000000000*sync;
-    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "runstarttime: " <<runstarttime_ns<< " + lowertime: " << lowertime_ns 
-					<<" + sync addition: " << uppertime_per_mod_syncs[module_id]*1000000000*sync 
-					<<" for module " << module_id << " = timestamp: " << timestamp_; 
+    timestamp_ = lowertime_ns + runstarttime_ns + uppertime_per_mod_syncs[module_id]*1.e9*sync;
 
-    if(module_id == 1 || module_id == 2 || module_id == 3 || module_id == 4){ //Boards 2, 3, 4, 5 are wired directly to the 
-      timestamp_ -= 14; 						      //doublechooz module instead of the fanout
-    }
+    if(module_id == 5){timestamp_ -= 14; } //Module 6 sync is wired directly to the doublechooz module
 
     int64_t deltaUNIX_ns = timestamp_ - oldUNIX_ns; //this is in ns.  
     int64_t consec_event_thres_sec = 2;//TODO
@@ -276,7 +269,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 1, artdaq::MetricMode::Maximum); 
   }
 
-  if(lowertime_ns > (sync + 0.1)*1000000000) { //0.1 seconds after we're supposed to receive a sync
+  if(lowertime_ns > (sync + 0.1)*1.e9) {
     TLOG(TLVL_WARNING, "BottomFragGen") << "Module did not receive a sync. Module # "
 			   << module_id << " and lowertime is = " 
                            << lowertime_ns << " ns ( " << lowertime_ns/1.e9 << " seconds )"<< " \n";
@@ -340,7 +333,6 @@ void CRT::FragGen::start()
 
 void CRT::FragGen::stop()
 {
-  TLOG(TLVL_INFO,"BottomFragGen") << "Stopping Bottom CRT Fragment Generator";
   hardware_interface_->StopDatataking();
   // Stop the backend DAQ.
   stopallboards(configfile.c_str(),indir.c_str());
