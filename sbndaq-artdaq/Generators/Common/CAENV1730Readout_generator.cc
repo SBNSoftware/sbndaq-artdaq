@@ -65,10 +65,12 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
     TLOG(TLVL_ERROR) << "Terminating process";
     abort();
   }
-
+ 
+  // check current firmware/software versions
+  GetSWInfo();
+  
   retcode = CAEN_DGTZ_Reset(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
-  GetSWInfo();
   
   sleep(1);
   Configure();
@@ -1828,8 +1830,8 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
   retcod = CAEN_DGTZ_GetInfo(fHandle,&info);
   if( retcod == CAEN_DGTZ_Success ){
     TLOG(TLVL_INFO) << info.ModelName << " S/N: " << info.SerialNumber 
-                    << "\nFirmware (ROC): " << info.ROC_FirmwareRel 
-                    << "\nFirmware (AMC): " << info.AMC_FirmwareRel;
+                    << "\nFirmware ROC: " << info.ROC_FirmwareRel 
+                    << "\nFirmware AMC: " << info.AMC_FirmwareRel;
   }
 
   // CAEN software releases
@@ -1837,9 +1839,30 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
   retcod = CAEN_DGTZ_SWRelease( DGTZSWrel );
   retcod = CAENVME_SWRelease( VMESWrel );
   retcod = CAENComm_SWRelease( CommSWrel );
-  TLOG(TLVL_INFO) << "Software releases CAENDGTZ: " << DGTZSWrel
+  TLOG(TLVL_INFO) << "Software releases"
+		  << "\nCAENDGTZ: " << DGTZSWrel
                   << "\nCAENVME: " << VMESWrel
                   << "\nCAENComm: " << CommSWrel;
+  
+  // A3818 Firmware / Driver
+  short Device = 0;
+  int32_t BHandle;
+
+  if( CAENVME_Init2(cvA3818, &fCAEN.link, Device, &BHandle) == cvSuccess ) {
+  
+    char fwrev[100];
+    char drrev[100];
+    auto ret = CAENVME_BoardFWRelease(BHandle,fwrev);
+    if (!ret)
+      TLOG(TLVL_INFO) << "A3818 Firmware: " << fwrev;
+    else TLOG(TLVL_INFO) << "Unable to fetch A3818 firmware: " << CAENVME_DecodeError(ret);
+    ret = CAENVME_DriverRelease( BHandle, drrev );
+    if (!ret)
+      TLOG(TLVL_INFO) << "A3818 Driver: " << drrev;
+    else TLOG(TLVL_INFO) << "Unable to fetch A3818 driver: " << CAENVME_DecodeError(ret);
+   
+    CAENVME_End(BHandle);
+  }
 }
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::CAENV1730Readout)
