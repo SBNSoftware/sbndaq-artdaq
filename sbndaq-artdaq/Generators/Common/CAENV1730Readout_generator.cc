@@ -68,6 +68,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 
   retcode = CAEN_DGTZ_Reset(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
+  GetSWInfo();
   
   sleep(1);
   Configure();
@@ -1816,6 +1817,29 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
     //throw(e);
   }
   
+}
+
+void sbndaq::CAENV1730Readout::GetSWInfo(){
+
+  int retcod=0;
+  CAEN_DGTZ_BoardInfo_t info;
+
+  // CAEV1730 S/N and firmware
+  retcod = CAEN_DGTZ_GetInfo(fHandle,&info);
+  if( retcod == CAEN_DGTZ_Success ){
+    TLOG(TLVL_INFO) << info.ModelName << " S/N: " << info.SerialNumber 
+                    << "\nFirmware (ROC): " << info.ROC_FirmwareRel 
+                    << "\nFirmware (AMC): " << info.AMC_FirmwareRel;
+  }
+
+  // CAEN software releases
+  char CommSWrel[30], VMESWrel[30], DGTZSWrel[30];
+  retcod = CAEN_DGTZ_SWRelease( DGTZSWrel );
+  retcod = CAENVME_SWRelease( VMESWrel );
+  retcod = CAENComm_SWRelease( CommSWrel );
+  TLOG(TLVL_INFO) << "Software releases CAENDGTZ: " << DGTZSWrel
+                  << "\nCAENVME: " << VMESWrel
+                  << "\nCAENComm: " << CommSWrel;
 }
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::CAENV1730Readout)
