@@ -7,8 +7,8 @@ spec: {
     timesync_source:wr
     time_adjustment:{
       make_adjustment:true
-      add_leap_seconds:36
-      next_leap_second_tai:1672531199
+      add_leap_seconds:37
+      next_leap_second_tai:1704067199 #31st December 2023
     }
     calibration_data:none
     polltime_ms: 100
@@ -19,25 +19,35 @@ spec: {
     }
     channels: [
       { id : 0
-        name:pps
+        name:ch0
         enabled: true
         time_offset_ps: 0
-        terminated: false },
+        monitor_only: false
+        terminated: true },
       { id : 1
-        name:beam
+        name:ch1
         enabled: true
         time_offset_ps: 0
-        terminated: false },
+        monitor_only: false
+        terminated: true },
       { id : 2
-        name:beam1
-        enabled: false
+        name:ch2
+        enabled: true
         time_offset_ps: 0
-        terminated: false },
+        monitor_only: false
+        terminated: true },
       { id : 3
-        name:beam2
-        enabled: false
+        name:ch3
+        enabled: true
         time_offset_ps: 0
-        terminated: false }
+        monitor_only: false
+        terminated: true },
+      { id : 4
+        name:ch4
+        enabled: true
+        time_offset_ps: 0
+        monitor_only: false
+        terminated: true }
     ]
   }
 }

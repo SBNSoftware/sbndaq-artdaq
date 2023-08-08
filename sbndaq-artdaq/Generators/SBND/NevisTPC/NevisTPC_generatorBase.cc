@@ -45,11 +45,21 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
 
   desyncCrash = ps_.get<bool>("desyncCrash",false);
+  current_subrun_ = 0;
+  events_seen_ = 0;
+
+  // intialize event counting                                                                                                       
+  _subrun_event_0 = -1;
+  _this_event = -1;
   
+
   // Build our buffer
   if( CircularBufferSizeBytes_%sizeof(uint16_t)!=0)
     TRACE(TWARNING,"NevisTPC::Initialize() : CircularBufferSize_ not multiple of size uint16_t. Rounding down.");
   CircularBuffer_ = CircularBuffer(CircularBufferSizeBytes_/sizeof(uint16_t));
+ 
+ // Initialize our buffer                                                                                                          
+  CircularBuffer_.Init();
   
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&NevisTPC_generatorBase::GetData,this);
@@ -59,18 +69,6 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 }
 
 void sbndaq::NevisTPC_generatorBase::start(){
-  
-  current_subrun_ = 0;
-  events_seen_ = 0;
-
-  // intialize event counting
-  _subrun_event_0 = -1;
-  _this_event = -1;
-  
-  ConfigureStart();
-  
-  // Initialize our buffer
-  CircularBuffer_.Init();	
   
   // Magically start getdata thread
   GetData_thread_->start();

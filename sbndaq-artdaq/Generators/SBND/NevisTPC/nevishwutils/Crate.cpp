@@ -76,6 +76,10 @@ namespace nevistpc{
     if( name == "SN" ) return _sn_xmit_reader;
     else return NULL;
   }
+
+  //  NevisTBStreamReaderSPtr Crate::getNevisTBStreamReader(){
+  //return _nevistb_reader;//("nevistb_reader");                                                                                          
+  // }
   
   TriggerModuleSPtr Crate::getTriggerModule(){
     return _trigger_module;

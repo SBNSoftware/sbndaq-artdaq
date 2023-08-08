@@ -27,6 +27,7 @@ namespace sbndaq {
       fNUXMITReader( new nevistpc::XMITReader("nu_xmit_reader", _p) ),
       fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) )
     {
+      ConfigureStart();
     }
     virtual ~NevisTPC2StreamNUandSNXMIT() {}
     
