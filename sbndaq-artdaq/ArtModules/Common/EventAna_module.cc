@@ -133,14 +133,18 @@ private:
 
   TNtuple* nt_header;
 
-  TH1F*    hEventCounter;
-  TH1D*    hTriggerTimeTag;
-  TH1F*    h_wvfm_ev0_ch0;
+//  TH1F*    hEventCounter;
+//  TH1D*    hTriggerTimeTag;
+//  TH1F*    h_wvfm_ev0_ch0;
 
   TTree* events;
   int fRun;
   art::EventNumber_t fEvent;
-  uint64_t  caen_frag_ts;
+  std::vector<uint64_t> TTT;  // will be set to value in CAEN fragement header
+  std::vector<uint64_t> TTT_ns;
+  std::vector<uint64_t>  caen_frag_ts;
+  std::vector<uint64_t> ffragID;
+  std::vector< std::vector<uint16_t> > fWvfmsVec_ch15;
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
   std::vector<int> fPMT_ch0;
@@ -171,8 +175,6 @@ private:
   std::vector<float> fWR_ch3;
   std::vector<float> fWR_ch4;
   bool firstEvt = true;
-  int TTT;  // will be set to value in CAEN fragement header
-  int TTT_ns;
 
   int first_wr_ch0;
   int first_wr_ch1;
@@ -308,39 +310,43 @@ sbndaq::EventAna::EventAna(EventAna::Parameters const& pset): art::EDAnalyzer(ps
 void sbndaq::EventAna::beginJob()
 {
   art::ServiceHandle<art::TFileService> tfs;
-  nt_header       = tfs->make<TNtuple>("nt_header","Multi Header Ntuple","art_ev:caen_ev:caenv_ev_tts");
+//  nt_header       = tfs->make<TNtuple>("nt_header","Multi Header Ntuple","art_ev:caen_ev:caenv_ev_tts");
   /************************************************************************************************/
-  hEventCounter   = tfs->make<TH1F>("hEventCounter","Event Counter Histogram",10000,0,10000);
-  hTriggerTimeTag = tfs->make<TH1D>("hTriggerTimeTag","Trigger Time Tag Histogram",12500,0,125000000);
-  h_wvfm_ev0_ch0  = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",2000,0,2000);
+//  hEventCounter   = tfs->make<TH1F>("hEventCounter","Event Counter Histogram",10000,0,10000);
+//  hTriggerTimeTag = tfs->make<TH1D>("hTriggerTimeTag","Trigger Time Tag Histogram",12500,0,125000000);
+//  h_wvfm_ev0_ch0  = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",2000,0,2000);
   /************************************************************************************************/
   //--make tree to store the channel waveform info:
   events = tfs->make<TTree>("events","waveform tree");
   events->Branch("fRun",&fRun,"fRun/I");
   events->Branch("fEvent",&fEvent,"fEvent/I");
   if (finclude_caen) {
-    events->Branch("TTT_ns",&TTT_ns,"TTT_ns/I");
-    events->Branch("caen_frag_ts",&caen_frag_ts, "caen_frag_ts/l");
+    events->Branch("TTT",&TTT);
+    events->Branch("TTT_ns",&TTT_ns);
+    events->Branch("caen_frag_ts",&caen_frag_ts);
+    events->Branch("ffragID",&ffragID);
+    events->Branch("fWvfmsVec_ch15",&fWvfmsVec_ch15);
+
     if (fcaen_keepwaveforms) {
-      events->Branch("fTicksVec",&fTicksVec);
-      events->Branch("fWvfmsVec",&fWvfmsVec);
+//      events->Branch("fTicksVec",&fTicksVec);
+//      events->Branch("fWvfmsVec",&fWvfmsVec);
     }
-    events->Branch("fPMT_ch0",&fPMT_ch0);
-    events->Branch("fPMT_ch1",&fPMT_ch1);
-    events->Branch("fPMT_ch2",&fPMT_ch2);
-    events->Branch("fPMT_ch3",&fPMT_ch3);
-    events->Branch("fPMT_ch4",&fPMT_ch4);
-    events->Branch("fPMT_ch5",&fPMT_ch5);
-    events->Branch("fPMT_ch6",&fPMT_ch6);
-    events->Branch("fPMT_ch7",&fPMT_ch7);
-    events->Branch("fPMT_ch8",&fPMT_ch8);
-    events->Branch("fPMT_ch9",&fPMT_ch9);
-    events->Branch("fPMT_ch10",&fPMT_ch10);
-    events->Branch("fPMT_ch11",&fPMT_ch11);
-    events->Branch("fPMT_ch12",&fPMT_ch12);
-    events->Branch("fPMT_ch13",&fPMT_ch13);
-    events->Branch("fPMT_ch14",&fPMT_ch14);
-    events->Branch("fPMT_ch15",&fPMT_ch15);
+//    events->Branch("fPMT_ch0",&fPMT_ch0);
+//    events->Branch("fPMT_ch1",&fPMT_ch1);
+//    events->Branch("fPMT_ch2",&fPMT_ch2);
+//    events->Branch("fPMT_ch3",&fPMT_ch3);
+//    events->Branch("fPMT_ch4",&fPMT_ch4);
+//    events->Branch("fPMT_ch5",&fPMT_ch5);
+//    events->Branch("fPMT_ch6",&fPMT_ch6);
+//    events->Branch("fPMT_ch7",&fPMT_ch7);
+//    events->Branch("fPMT_ch8",&fPMT_ch8);
+//    events->Branch("fPMT_ch9",&fPMT_ch9);
+//    events->Branch("fPMT_ch10",&fPMT_ch10);
+//    events->Branch("fPMT_ch11",&fPMT_ch11);
+//    events->Branch("fPMT_ch12",&fPMT_ch12);
+//    events->Branch("fPMT_ch13",&fPMT_ch13);
+//    events->Branch("fPMT_ch14",&fPMT_ch14);
+//    events->Branch("fPMT_ch15",&fPMT_ch15);
   }
   if (finclude_wr) {
     events->Branch("fWR_ch0",&fWR_ch0);
@@ -467,6 +473,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   fPMT_ch5.clear();   fPMT_ch6.clear();   fPMT_ch7.clear(); fPMT_ch8.clear(); fPMT_ch9.clear();
   fPMT_ch10.clear();   fPMT_ch11.clear();   fPMT_ch12.clear(); fPMT_ch13.clear(); fPMT_ch14.clear();
   fPMT_ch15.clear();
+  TTT.clear(); TTT_ns.clear(); caen_frag_ts.clear(); ffragID.clear(); fWvfmsVec_ch15.clear();
+  
   first_wr_ch0=0;  first_wr_ch1=0;  first_wr_ch2=0;  first_wr_ch3=0;  first_wr_ch4=0;
   ftdc_ch0.clear();   ftdc_ch1.clear();   ftdc_ch2.clear();   ftdc_ch3.clear();   ftdc_ch4.clear();
   ftdc_ch0_utc.clear();   ftdc_ch1_utc.clear();   ftdc_ch2_utc.clear();   ftdc_ch3_utc.clear();   ftdc_ch4_utc.clear();
@@ -489,8 +497,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   reset_ptb_variables();
 
   //  Note that this code expects exactly 1 CAEN fragment per event
-  TTT_ns=0;  // will be set to value in CAEN fragement header
-  caen_frag_ts = 0;
+  //TTT_ns=0;  // will be set to value in CAEN fragement header
+  //caen_frag_ts = 0;
   
   
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
@@ -512,9 +520,10 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 	  artdaq::ContainerFragment contf(cont);
 	  if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
 	    if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
-	    fWvfmsVec.resize(16*contf.block_count());
-	    for (size_t ii = 0; ii < contf.block_count(); ++ii)
+            //fWvfmsVec.resize(16*contf.block_count());
+	    for (size_t ii = 0; ii < contf.block_count(); ++ii){
 	      analyze_caen_fragment(*contf[ii].get());
+            }
 	  }
 	}
       }
@@ -522,7 +531,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 	//normal fragment
 	if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
 	  if (fverbose) 	std::cout << "   found normal caen fragments " << handle->size() << std::endl;
-	  fWvfmsVec.resize(16*handle->size());
+	  //fWvfmsVec.resize(16*handle->size());
 	  for (auto frag : *handle)
 	    analyze_caen_fragment(frag);
 	}
@@ -653,7 +662,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
        }
      }
    } // if includes ptb
-  
+
    // Fill the tree
    events->Fill();
   
@@ -688,71 +697,71 @@ void sbndaq::EventAna::analyze_wr_fragment_dio(artdaq::Fragment & frag)  {
 
   std::cout << "WR timestamp count " << fnstamps0 << " + " << fnstamps1 << " + " << fnstamps2 << " + " << fnstamps3 << " + " << fnstamps4 << std::endl;
 
-  for (int i=0;i<(int)fragdata.nstamp;++i) {
-
-
-    int diff = 0;
-    uint this_time_sec = fragdata.timeStamp[i].tv_sec;
-    uint this_time_ns = fragdata.timeStamp[i].tv_nsec;
-    // if (TTT_ns>this_time) {
-    //    std::cout << this_time_sec << std::endl;
-    diff = TTT_ns-this_time_ns;
-    if (diff>500000000) diff = 1000000000-diff;
-    else if (diff<-500000000) diff = 1000000000+diff;
-    // }
-    // else {
-
-    //   diff = this_time-TTT_ns;
-    //   if (diff>500000000) diff = 1000000000-diff;
-    // }
-    //	if (diff>500000000) std::cout<< "diff " << diff << "this_time_ns " << this_time_ns << " TTT_ns " << TTT_ns << std::endl;
-
-    if (fabs(diff)<fWindow && fragdata.channel==1) 	 {
-      if (first_wr_ch1==0) first_wr_ch1=fragdata.timeStamp[i].tv_sec;
-      int secdiff=0;
-      if (fragdata.timeStamp[i].tv_sec>first_wr_ch1) secdiff=this_time_sec-first_wr_ch1;
-      fWR_ch1.emplace_back((int)this_time_ns+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " PMT" <<
-			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
-			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
-			    " TTT " << std::setw(9) << TTT_ns <<
-			    " TTT diff  " << std::setw(9)  << diff << std::endl;
-    }
-    if (fabs(diff)< 50000000 && fragdata.channel==2) 	{
-      if (first_wr_ch2==0) first_wr_ch2=fragdata.timeStamp[i].tv_sec;
-      int secdiff=0;
-      if (fragdata.timeStamp[i].tv_sec>first_wr_ch2) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch2;
-      fWR_ch2.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " RWM" <<
-			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
-			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
-			    " TTT " << std::setw(9) << TTT_ns <<
-			    " TTT diff  " << std::setw(9)  << diff << std::endl;
-    }
-    if (fragdata.channel==0 ) 	{
-      if (first_wr_ch0==0) first_wr_ch0=fragdata.timeStamp[i].tv_sec;
-      int secdiff=0;
-      if (fragdata.timeStamp[i].tv_sec>first_wr_ch0) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch0;
-      fWR_ch0.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " PPS" <<
-			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
-			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
-			    " TTT " << std::setw(9) << TTT_ns <<
-			    " TTT diff  " << std::setw(9)  << diff << std::endl;
-    }
-    // if (diff<(uint)fWindow && fragdata.channel==3 )
-    if ( fabs(diff)<5000000 && fragdata.channel==3) 	 {
-      if (first_wr_ch3==0) first_wr_ch3=fragdata.timeStamp[i].tv_sec;
-      int secdiff=0;
-      if (fragdata.timeStamp[i].tv_sec>first_wr_ch3) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch3;
-      fWR_ch3.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " TRIG" <<
-			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
-			    " " << std::setw(10) << fragdata.timeStamp[i].tv_nsec <<
-			    " TTT " << std::setw(10) << TTT_ns <<
-			    " TTT diff  " << std::setw(10)  << diff << std::endl;
-    }
-  }
+//  for (int i=0;i<(int)fragdata.nstamp;++i) {
+//
+//
+//    int diff = 0;
+//    uint this_time_sec = fragdata.timeStamp[i].tv_sec;
+//    uint this_time_ns = fragdata.timeStamp[i].tv_nsec;
+//    // if (TTT_ns>this_time) {
+//    //    std::cout << this_time_sec << std::endl;
+//    diff = TTT_ns-this_time_ns;
+//    if (diff>500000000) diff = 1000000000-diff;
+//    else if (diff<-500000000) diff = 1000000000+diff;
+//    // }
+//    // else {
+//
+//    //   diff = this_time-TTT_ns;
+//    //   if (diff>500000000) diff = 1000000000-diff;
+//    // }
+//    //	if (diff>500000000) std::cout<< "diff " << diff << "this_time_ns " << this_time_ns << " TTT_ns " << TTT_ns << std::endl;
+//
+//    if (fabs(diff)<fWindow && fragdata.channel==1) 	 {
+//      if (first_wr_ch1==0) first_wr_ch1=fragdata.timeStamp[i].tv_sec;
+//      int secdiff=0;
+//      if (fragdata.timeStamp[i].tv_sec>first_wr_ch1) secdiff=this_time_sec-first_wr_ch1;
+//      fWR_ch1.emplace_back((int)this_time_ns+1e9*secdiff);
+//      if (fverbose) 	  std::cout << " Event " << fEvent << " PMT" <<
+//			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
+//			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
+//			    " TTT " << std::setw(9) << TTT_ns <<
+//			    " TTT diff  " << std::setw(9)  << diff << std::endl;
+//    }
+//    if (fabs(diff)< 50000000 && fragdata.channel==2) 	{
+//      if (first_wr_ch2==0) first_wr_ch2=fragdata.timeStamp[i].tv_sec;
+//      int secdiff=0;
+//      if (fragdata.timeStamp[i].tv_sec>first_wr_ch2) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch2;
+//      fWR_ch2.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
+//      if (fverbose) 	  std::cout << " Event " << fEvent << " RWM" <<
+//			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
+//			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
+//			    " TTT " << std::setw(9) << TTT_ns <<
+//			    " TTT diff  " << std::setw(9)  << diff << std::endl;
+//    }
+//    if (fragdata.channel==0 ) 	{
+//      if (first_wr_ch0==0) first_wr_ch0=fragdata.timeStamp[i].tv_sec;
+//      int secdiff=0;
+//      if (fragdata.timeStamp[i].tv_sec>first_wr_ch0) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch0;
+//      fWR_ch0.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
+//      if (fverbose) 	  std::cout << " Event " << fEvent << " PPS" <<
+//			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
+//			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
+//			    " TTT " << std::setw(9) << TTT_ns <<
+//			    " TTT diff  " << std::setw(9)  << diff << std::endl;
+//    }
+//    // if (diff<(uint)fWindow && fragdata.channel==3 )
+//    if ( fabs(diff)<5000000 && fragdata.channel==3) 	 {
+//      if (first_wr_ch3==0) first_wr_ch3=fragdata.timeStamp[i].tv_sec;
+//      int secdiff=0;
+//      if (fragdata.timeStamp[i].tv_sec>first_wr_ch3) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch3;
+//      fWR_ch3.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
+//      if (fverbose) 	  std::cout << " Event " << fEvent << " TRIG" <<
+//			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
+//			    " " << std::setw(10) << fragdata.timeStamp[i].tv_nsec <<
+//			    " TTT " << std::setw(10) << TTT_ns <<
+//			    " TTT diff  " << std::setw(10)  << diff << std::endl;
+//    }
+//  }
   std::cout << " ----------------------- " << std::endl;
 
 }
@@ -763,7 +772,8 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   if (fverbose) std::cout <<  "     timestamp is  " << frag.timestamp() << std::endl;
   if (fverbose) std::cout <<  "     seq ID is " << frag.sequenceID() << std::endl;
 
-  caen_frag_ts = frag.timestamp(); 
+  //caen_frag_ts = frag.timestamp(); 
+  caen_frag_ts.push_back(frag.timestamp()); 
   
   CAENV1730Fragment bb(frag);
   auto const* md = bb.Metadata();
@@ -771,6 +781,7 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   CAENV1730EventHeader header = event_ptr->Header;
   
   int fragId = static_cast<int>(frag.fragmentID());
+  ffragID.push_back(frag.fragmentID());
   //
   if (fverbose)      std::cout << "\tFrom CAEN header, event counter is "  << header.eventCounter   << "\n";
   if (fverbose)      std::cout << "\tFrom CAEN header, triggerTimeTag is " << header.triggerTimeTag << "\n";
@@ -779,12 +790,17 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   if (fverbose)       std::cout << "\tShift back, fragment id of "  << fShift << "\n";
   
   uint32_t t0 = header.triggerTimeTag;
-  TTT = (int)t0;
-  TTT_ns = t0*8;
-  if (fverbose)       std::cout << "\n\tTriggerTimeTag in ns is " << TTT_ns << "\n";  // 500 MHz is 2 ns per tick
-  hEventCounter->Fill(header.eventCounter);
-  hTriggerTimeTag->Fill((int)t0);
-  nt_header->Fill(fEvent,header.eventCounter,t0);
+  
+  TTT.push_back(t0);
+  TTT_ns.push_back(t0*8);
+
+//  TTT = (int)t0;
+//  TTT_ns = t0*8;
+//  if (fverbose)       std::cout << "\n\tTriggerTimeTag in ns is " << TTT_ns << "\n";  // 500 MHz is 2 ns per tick
+
+//  hEventCounter->Fill(header.eventCounter);
+//  hTriggerTimeTag->Fill((int)t0);
+//  nt_header->Fill(fEvent,header.eventCounter,t0);
   nChannels = md->nChannels;
   if (fverbose)       std::cout << "\tNumber of channels: " << nChannels << "\n";
   
@@ -800,7 +816,6 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   //--store the tick value for each acquisition
   fTicksVec.resize(wfm_length);
 
-  fragId = 0;
   
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes()
 								 + sizeof(CAENV1730EventHeader));
@@ -808,24 +823,35 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   const uint16_t* value_ptr =  data_begin;
   uint16_t value = 0;
   size_t ch_offset = 0;
-  //--loop over channels
-  for (size_t i_ch=0; i_ch<nChannels; ++i_ch){
-      fWvfmsVec[i_ch+nChannels*fragId].resize(wfm_length);
-      ch_offset = (size_t)(i_ch * wfm_length);
-      
-      //--loop over waveform samples
-      for(size_t i_t=0; i_t<wfm_length; ++i_t){
-        fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   /*timestamps, event level*/
-        value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
-        value = *(value_ptr);
-        //if (i_ch == 0 && firstEvt) {
-        //	h_wvfm_ev0_ch0->SetBinContent(i_t,value);
-        //}
-        fWvfmsVec[i_ch+nChannels*fragId][i_t] = value;
-      } //--end loop samples
-    //firstEvt = false;
-  } //--end loop channels
+  std::vector<uint16_t> temp_wfm;
+  temp_wfm.resize(wfm_length);        
 
+  //only save if board id == 3
+    //--loop over channels
+    for (size_t i_ch=0; i_ch<nChannels; ++i_ch){
+
+        //fWvfmsVec[i_ch+nChannels*fragId].resize(wfm_length);
+        temp_wfm.clear(); 
+        ch_offset = (size_t)(i_ch * wfm_length);
+
+        //--loop over waveform samples
+        for(size_t i_t=0; i_t<wfm_length; ++i_t){
+          //fTicksVec[i_t] = t0*Ttt_DownSamp + i_t;   /*timestamps, event level*/
+          value_ptr = data_begin + ch_offset + i_t; /*pointer arithmetic*/
+          value = *(value_ptr);
+          temp_wfm.push_back(value);
+          //if (i_ch == 0 && firstEvt) {
+          //	h_wvfm_ev0_ch0->SetBinContent(i_t,value);
+          //}
+          //fWvfmsVec[i_ch+nChannels*fragId][i_t]=value;
+        } //--end loop samples
+
+      if(i_ch == 15){
+         fWvfmsVec_ch15.push_back(temp_wfm);
+      }
+      //firstEvt = false;
+  }
+          
 //  int threshold[]= { 10000, 5000, 10000, 5000,10000, 5000, 10000, 5000,10000, 5000, 10000, 5000, 10000, 5000, 10000, 5000};
 //
 //  // find leading edges in waveforms
@@ -1145,6 +1171,7 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
   // Construct PTB fragment overlay class giving us access to all the helpful decoder functions
   CTBFragment ptb_fragment(frag);
 
+  if(fverbose)
   std::cout << "PTB Fragment ID: " << frag.sequenceID() << " TS: " << frag.timestamp()
             << " Containing " << ptb_fragment.NWords() << " words" << std::endl;
 
