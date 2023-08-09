@@ -539,6 +539,37 @@ MBBReader::~MBBReader()
 
 }
 
+// start femb daq
+void MBBReader::start_femb(fhicl::ParameterSet const& ps){
+    const std::string identification = "MBBReader::start";
+
+    const auto start_femb_daq   = ps.get<uint32_t>("MBB.start_femb_daq");
+    if(start_femb_daq == 1){
+      TLOG_INFO(identification) << "Resetting the timestamp and starting FEMB Daq." << TLOG_ENDL;
+      mbb->TimeStampReset();
+      mbb->StartFEMBDaq();
+      TLOG_INFO(identification) << "FEMB Daq started." << TLOG_ENDL;
+    }
+    else{
+      TLOG_INFO(identification) << "Not running start FEMB Daq right now." << TLOG_ENDL;
+    }
+}
+
+// stop femb                                                                                                                                                                                                
+void MBBReader::stop_femb(fhicl::ParameterSet const& ps){
+    const std::string identification = "MBBReader::stop";
+    
+    const auto stop_femb_daq   = ps.get<uint32_t>("MBB.stop_femb_daq");
+    if(stop_femb_daq == 1){
+      TLOG_INFO(identification) << "Stopping FEMB Daq." << TLOG_ENDL;
+      mbb->StopFEMBDaq();
+      TLOG_INFO(identification) << "FEMB Daq stopped." << TLOG_ENDL;
+    }
+    else{
+      TLOG_INFO(identification) << "Not running stop FEMB Daq right now." << TLOG_ENDL;
+    }
+}
+
 // "start" transition
 void MBBReader::start() 
 {
@@ -549,10 +580,6 @@ void MBBReader::start()
     excpt << "MBB object pointer NULL";
     throw excpt;
   }
-  TLOG_INFO(identification) << "Resetting the timestamp and starting FEMB Daq." << TLOG_ENDL;
-  mbb->TimeStampReset();
-  mbb->StartFEMBDaq();
-  TLOG_INFO(identification) << "FEMB Daq started." << TLOG_ENDL;
 }
 
 // "stop" transition
@@ -565,9 +592,6 @@ void MBBReader::stop()
     excpt << "MBB object pointer NULL";
     throw excpt;
   }
-  TLOG_INFO(identification) << "Stopping FEMB Daq." << TLOG_ENDL;
-  mbb->StopFEMBDaq();
-  TLOG_INFO(identification) << "FEMB Daq stopped." << TLOG_ENDL;
 }
 
 // Called by BoardReaderMain in a loop between "start" and "stop"
