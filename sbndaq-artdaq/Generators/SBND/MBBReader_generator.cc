@@ -549,7 +549,10 @@ void MBBReader::start()
     excpt << "MBB object pointer NULL";
     throw excpt;
   }
+  TLOG_INFO(identification) << "Resetting the timestamp and starting FEMB Daq." << TLOG_ENDL;
   mbb->TimeStampReset();
+  mbb->StartFEMBDaq();
+  TLOG_INFO(identification) << "FEMB Daq started." << TLOG_ENDL;
 }
 
 // "stop" transition
@@ -562,6 +565,9 @@ void MBBReader::stop()
     excpt << "MBB object pointer NULL";
     throw excpt;
   }
+  TLOG_INFO(identification) << "Stopping FEMB Daq." << TLOG_ENDL;
+  mbb->StopFEMBDaq();
+  TLOG_INFO(identification) << "FEMB Daq stopped." << TLOG_ENDL;
 }
 
 // Called by BoardReaderMain in a loop between "start" and "stop"
