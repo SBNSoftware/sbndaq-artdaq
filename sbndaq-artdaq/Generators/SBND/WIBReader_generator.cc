@@ -124,6 +124,8 @@ namespace sbndaq
    auto DTS_source                 = WIB_config.get<uint8_t>("WIB.DTS_source");
    auto enable_FEMBs               = WIB_config.get<std::vector<bool> >("WIB.enable_FEMBs");
    auto FEMB_configs               = WIB_config.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
+   auto wib_fake_data              = WIB_config.get<bool>("WIB.run_wib_fake_data_mode");
+   auto wib_fake_data_id           = WIB_config.get<uint8_t>("WIB.wib_fake_data_mode");
    
    const std::string identification = "SBNDWIBReader::setupWIB";
    
@@ -180,7 +182,8 @@ namespace sbndaq
    
    disable_dat_stream_and_sync_to_NEVIS();
    
-   setupWIBFakeData(2); // Uncomment this line to run Shanshan's WIB fake data patterns (1 - sawtooth, 2 - channel ID)
+   //setupWIBFakeData(2); // Uncomment this line to run Shanshan's WIB fake data patterns (1 - sawtooth, 2 - channel ID)
+   if (wib_fake_data) setupWIBFakeData(wib_fake_data_id); 
    
    TLOG_INFO(identification) << "Now Connecting to FEMBs " << TLOG_ENDL;
    
@@ -213,6 +216,7 @@ namespace sbndaq
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
 	  //setupFEMB(iFEMB,FEMB_config);
+	  if (!wib_fake_data) setupFEMB(iFEMB,FEMB_config);
 	  /*uint32_t femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");
 	  femb_fw_version = wib->ReadFEMB(iFEMB,"VERSION_ID");*/
 	  //if(femb_fw_version != expected_femb_fw_version) N_config_FEMBs++;
@@ -611,6 +615,121 @@ void WIBReader::disable_dat_stream_and_sync_to_NEVIS()
   }
 }
 
+//===============================================================================
+
+void WIBReader::FEMB_DECTECT(int FEMB_NO, int FEMB_V)
+{
+    // This function is a modified version of one of the funcitons available in Shanshan's python script
+    // to configure WIB/FEMB.
+    // The original function is in cls_config.py module inside the repository CE_LD with same name (git branch name is, Installation_Support)
+    const std::string identification = "WIBReader::FEMB_DECTECT";
+    std::map<std::string,double> map = wib->WIB_STATUS();
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_LINK")->second != 0xFF ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " LINK is broken";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_EQ")->second != 0xF ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " EQ is broken";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second < 0.001 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is lower than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second > 0.1 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is higher than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second < 0.010 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " lower than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second > 0.2 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " higher than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second < 0.050 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " lower than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second > 0.5 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " higher than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second < 0.200 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " lower than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second > 1.0 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " higher than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second < 0.100 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " lower than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second > 1.0 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " higher than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second < 0.100 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " lower than expected";
+	throw excpt;
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second > 1.5 ){
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " higher than expected";
+	throw excpt;
+    }
+    
+    wib->WriteFEMB(FEMB_NO, 0x0, 0x0);
+    wib->ReadFEMB(FEMB_NO, 0x102);
+    int ver_value = wib->ReadFEMB(FEMB_NO, 0x101);
+    
+    if (ver_value > 0){
+       if ((ver_value&0xFFFF) != FEMB_V){
+           cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FE version is " << ver_value << " which is different from default " << FEMB_V;
+	   throw excpt;
+       }
+    }
+    
+    else if (ver_value <= 0){
+       cet::exception excpt(identification);
+       excpt << "FEMB " << FEMB_NO << " 12C is broken";
+       throw excpt;
+    }
+}
+
+//===============================================================================
+
 void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure)
 {
   const std::string identification = "WIBReader::setupFEMB";
@@ -628,6 +747,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto pls_dac_val  = FEMB_configure.get<uint32_t>("pls_dac_val");
   const auto start_frame_mode_sel = FEMB_configure.get<uint32_t>("start_frame_mode_sel");
   const auto start_frame_swap     = FEMB_configure.get<uint32_t>("start_frame_swap");
+  const auto power_off_femb       = FEMB_configure.get<bool>("turn_off_femb");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -715,8 +835,12 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   
   TLOG_INFO(identification) << " Just before FEMBPower function" << TLOG_ENDL;
   
-  wib->FEMBPower(iFEMB,0);
-  sleep(2);  
+  /*wib->FEMBPower(iFEMB,0);
+  sleep(2);*/ 
+  if (power_off_femb){
+      wib->FEMBPower(iFEMB,0);
+      sleep(2);
+  }
   wib->FEMBPower(iFEMB,1); 
   sleep(2);
   
@@ -731,9 +855,11 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   
   auto expected_femb_fw_version = FEMB_configure.get<uint32_t>("expected_femb_fw_version");
   
-  InitFEMBRegCheck(expected_femb_fw_version, "VERSION_ID", iFEMB, 30);
+  /*InitFEMBRegCheck(expected_femb_fw_version, "VERSION_ID", iFEMB, 30);
   
-  FEMBHsLinkCheck(iFEMB, 30);
+  FEMBHsLinkCheck(iFEMB, 30);*/
+  
+  FEMB_DECTECT(iFEMB,expected_femb_fw_version);
   
   /*if(femb_fw_version != expected_femb_fw_version){
           TLOG_WARNING(identification) << "Skipping powering up/ configuring FEMB " << iFEMB << " due to FW version mismatch " << TLOG_ENDL;
@@ -762,7 +888,8 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   //wib->WriteFEMB(iFEMB,0x09,0x09); // Added as part of Shanshan's Minimum configuration.
   //sleep(10);
   //setupNoiseMinConfig(iFEMB, 30); // Uncomment this line to run Shanshan's minimum configuration to see FEMB noise.
-  wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+  //wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+  wib->New_ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
   
   TLOG_INFO(identification) << "After ConfigWIB function" << TLOG_ENDL;
   

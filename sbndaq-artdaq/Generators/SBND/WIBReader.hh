@@ -41,6 +41,7 @@ namespace sbndaq
      void FEMBHsLinkCheck(int FEMB_NO, int tries);
      void InitFEMBRegCheck(uint32_t expected_val, std::string reg_addrs, int FEMB_NO, int tries);
      void disable_dat_stream_and_sync_to_NEVIS();
+     void FEMB_DECTECT(int FEMB_NO, int FEMB_V);// This function is a modified version of a function availble in shanshan's python script to configure WIB/FEMB
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
      uint64_t semaphore_acquire_timeout_ms;
      bool calibration_mode;
