@@ -106,21 +106,14 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
 
 
 
-}
-
-void sbndaq::ICARUSTriggerV3::do_configure()
-{
-
-
-
   bind(configsocket_, (struct sockaddr *) &si_config_, configlen_);
   if(listen(configsocket_, 1) < 0)
-    {
+    { 
       throw art::Exception(art::errors::Configuration) << "Unable to accept request to connect to SPEXI" << "\n";
       exit(1);
     }
   else
-    {
+    { 
       TLOG(TLVL_INFO) << "Moving to accept function" << "\n";
     }
 
@@ -131,12 +124,12 @@ void sbndaq::ICARUSTriggerV3::do_configure()
   TLOG(TLVL_INFO) << "Sending Initialization Parameters for FPGA";
   std::vector<std::string> fpga_init_keys = initialization_data_fpga_.get_pset_names();
   if(fpga_init_keys.size() > 0)
-  {
+  { 
     int setup_fpga = send_init_params(fpga_init_keys, initialization_data_fpga_);
     if(setup_fpga == 0)
-    {
+    { 
       throw art::Exception(art::errors::Configuration) <<
-	"ICARUSTriggerV3: Did not successfully communicate FPGA parameters to SPEXI ";
+        "ICARUSTriggerV3: Did not successfully communicate FPGA parameters to SPEXI ";
       exit(1);
     }
   TLOG(TLVL_INFO) << "Initialization Parameters for FPGA successfully communicated to SPEXI";
@@ -146,7 +139,6 @@ void sbndaq::ICARUSTriggerV3::do_configure()
   TLOG(TLVL_INFO) << "Sending Initialization Parameters for SPEXI";
 
 
-
   std::vector<std::string> spexi_init_keys = initialization_data_spexi_.get_pset_names();
   if(spexi_init_keys.size() > 0)
   {
@@ -154,7 +146,7 @@ void sbndaq::ICARUSTriggerV3::do_configure()
     if(setup_spexi == 0)
     {
       throw art::Exception(art::errors::Configuration) <<
-	"ICARUSTriggerV3: Did not successfully communicate SPEXI Initialize parameters to SPEXI ";
+        "ICARUSTriggerV3: Did not successfully communicate SPEXI Initialize parameters to SPEXI ";
       exit(1);
     }
     TLOG(TLVL_INFO) << "Initialization Parameters for SPEXI successfully communicated to SPEXI";
@@ -173,13 +165,13 @@ void sbndaq::ICARUSTriggerV3::do_configure()
         buffer[size_bytes+1] = {'\0'};
         readTCP(configdatafd_,ip_config_,si_config_,size_bytes,buffer);
         TLOG(TLVL_DEBUG) << "Initialization final step - received:: " << buffer;
-	break;
+        break;
       }
       if(tries == 0)
       {
-	throw art::Exception(art::errors::Configuration) <<
-	  "ICARUSTriggerV3: Did not successfully communicate ability to go to start of run communication to SPEXI";
-	exit(1);
+        throw art::Exception(art::errors::Configuration) <<
+          "ICARUSTriggerV3: Did not successfully communicate ability to go to start of run communication to SPEXI";
+        exit(1);
       }
       --tries;
   }
@@ -249,6 +241,8 @@ void sbndaq::ICARUSTriggerV3::do_configure()
   fStartOfRun = 0;
   fInitialStep = 0;
 }
+
+
 bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 {
   static auto start= std::chrono::steady_clock::now();
@@ -673,7 +667,6 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerV3::start()
 {
-  do_configure();
 
   if(initialization(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
   {
