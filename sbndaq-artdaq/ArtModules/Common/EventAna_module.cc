@@ -909,7 +909,7 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   caen_frag_ts.push_back(frag.timestamp());
 
   CAENV1730Fragment bb(frag);
-  auto const* md = bb.Metadata();
+  auto const md = bb.Metadata();
   CAENV1730Event const* event_ptr = bb.Event();
   CAENV1730EventHeader header = event_ptr->Header;
 
@@ -932,7 +932,7 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   hEventCounter->Fill(header.eventCounter);
   hTriggerTimeTag->Fill((int)t0);
   nt_header->Fill(fEvent,header.eventCounter,t0);
-  nChannels = md->nChannels;
+  nChannels = md.nChannels;
   if (fverbose)       std::cout << "\tNumber of channels: " << nChannels << "\n";
 
   //--get the number of 32-bit words (quad_bytes) from the header

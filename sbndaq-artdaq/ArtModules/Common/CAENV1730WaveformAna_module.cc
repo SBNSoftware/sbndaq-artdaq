@@ -86,7 +86,7 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
     const auto& frag((*rawFragHandle)[idx]); // use this fragment as a refernce to the same data
     CAENV1730Fragment bb(frag);
     
-    auto const* md = bb.Metadata();
+    auto const md = bb.Metadata();
 
     CAENV1730Event const* event_ptr = bb.Event();
     CAENV1730EventHeader header = event_ptr->Header;
@@ -100,7 +100,7 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
     //get the number of 32-bit words from the header
     size_t const& ev_size(header.eventSize);
     
-    size_t nChannels = md->nChannels; //fixme
+    size_t nChannels = md.nChannels; //fixme
     fWvfmsVec.resize(nChannels);
     
     //use that to get the number of 16-bit words for each channel
@@ -129,7 +129,7 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
       wvfm_rms = std::sqrt(wvfm_rms/fWvfmsVec[i_ch].size());
       
       nt_wvfm->Fill(eventNumber,header.eventCounter,header.triggerTimeTag,
-		    i_ch,wvfm_mean,wvfm_rms,md->chTemps[i_ch]);
+		    i_ch,wvfm_mean,wvfm_rms,md.chTemps[i_ch]);
     }
   }
   
