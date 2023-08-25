@@ -18,8 +18,9 @@ build_plugin(SBNDArtdaqBuildInfo "module" LIBRARIES REG ${BUILD_PLUGIN_BUILDINFO
 #build_plugin( PMTmetrics "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( CRTHitAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 build_plugin( CRTSinglePEAna "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
-
+build_plugin( CRTAframeReco "module" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 basic_plugin(SBND "fragmentNameHelper" LIBRARIES REG ${BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST})
 
 add_subdirectory(testStandTrigger)
 add_subdirectory(SoftwareTrigger)
+
