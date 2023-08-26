@@ -35,6 +35,9 @@
 #include <iostream>
 #include <bitset>
 
+// Add ChannelMap class for initializing the geometry of your Aframe and calculating positions
+#include "AFrameUtils/ChannelMap.h"
+
 namespace sbndaq {
   class CRTAframeReco;
 }
@@ -46,6 +49,12 @@ class sbndaq::CRTAframeReco : public art::EDAnalyzer {
 public:
   struct Config {
     //--one atom for each parameter
+
+    // Try to add an Aframe config file for Channel Mapping
+    fhicl::Atom<std::string> channel_map_config { 
+      fhicl::Name("channel_map_config"),
+	fhicl::Comment("This should give the path and file name for the channel mapping config file"),
+	};
     fhicl::Atom<bool> include_berncrt {
       fhicl::Name("include_berncrt"),
 	fhicl::Comment("look for bern CRT V2 fragments true/false"),
@@ -132,7 +141,9 @@ private:
   uint32_t Ttt_DownSamp;// =  4;
  /* the waveforms are sampled at 500MHz sampling. The trigger timestamp is
                                * sampled 4 times slower than input channels*/
-
+  // Initialize the Channel Map  
+  ChannelMap map;
+  
   TNtuple* nt_header;
   int TTT_ns;
 
@@ -229,7 +240,8 @@ private:
   int fTimeCoinc;
   bool fMakeCRTHitTree;
   bool fMakeAnaTree;
-
+  
+  std::string fchannel_map_config;
   bool finclude_berncrt;
   bool fcrt_keepall;
   bool fverbose;
@@ -243,6 +255,8 @@ private:
 
 sbndaq::CRTAframeReco::CRTAframeReco(CRTAframeReco::Parameters const& pset): art::EDAnalyzer(pset)
 {
+  // added a fcl parameter for the Channel Mapping
+  fchannel_map_config = pset().channel_map_config();
   fverbose = pset().verbose();
   finclude_berncrt = pset().include_berncrt();
   fcrt_keepall = pset().crt_keepall();
@@ -271,7 +285,11 @@ void sbndaq::CRTAframeReco::beginJob()
   h_wvfm_ev0_ch0  = tfs->make<TH1F>("h_wvfm_ev0_ch0","Waveform",2000,0,2000);
   /************************************************************************************************/
 
-
+  // ChannelMap Class initialization 
+  const std::string s(fchannel_map_config);
+  //AFrame::ChannelMap map;
+  map.initialize_config(s);
+  map.CalculateParams(map.top_measure, map.bottom_measure);
 
   /************************************************************************************************/
 
@@ -490,8 +508,24 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
   
   if (fMakeAnaTree) events->Fill();
   if (fMakeCRTHitTree) CRTmaketree();
+ 
+/*
 
-  
+  // Test for Channel Mapping class
+
+  int feb_v_test = 72; 
+  int feb_h_test = 171;
+  int strip_h_test = 5;
+  int strip_v_test = 7;
+  // put adc fake values of 50 -->  not needed in mode 0
+  TVector3 horiz_pos = map.CalculatePosHoriz(feb_h_test, strip_h_test, 50, 50, 0); 
+  TVector3 vert_pos = map.CalculatePosVert(feb_v_test, strip_v_test, 50, 50, 0);
+
+  std::cout << "FEB_H " << feb_h_test << " strip " << strip_h_test << " pos: x " << horiz_pos.X() << " y "<< horiz_pos.Y() << " z " << horiz_pos.Z() << std::endl;
+  std::cout << "FEB_V " << feb_v_test << " strip " << strip_v_test << " pos: x " << vert_pos.X() << " y " << vert_pos.Y() << " z " << vert_pos.Z() << std::endl;
+
+*/
+
 }
 
 
