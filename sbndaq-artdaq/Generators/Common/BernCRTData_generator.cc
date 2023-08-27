@@ -231,7 +231,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
       for(int jj = 0; jj < datalen; ) { // jj is incremented in processSingleHit
         BernCRTHitV2 hit;
 
-	febdrv.processSingleHit(jj, hit, FirmwareFlag); //read next hit
+	      febdrv.processSingleHit(jj, hit, FirmwareFlag); //read next hit
         feb.hits.push_back(hit);
       }
     }

@@ -66,7 +66,9 @@ namespace sbndaq
     int initialization(int, int);
     void send_TRIG_VETO();
     void send_TRIG_ALLW();
-    
+
+    void do_configure();
+
     // FHiCL-configurable variables. Note that the C++ variable names
     // are the FHiCL variable names with a "_" appended
 
@@ -88,10 +90,12 @@ namespace sbndaq
     struct sockaddr_in si_data_;
     int datasocket_;
 
-    int datafd_;
+    int configdatafd_;
 
     int dataconnfd_;
-
+    socklen_t configlen_;
+    socklen_t datalen_;
+    
     int pmtdataport_;
     std::string ip_data_pmt_;
 
