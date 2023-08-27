@@ -182,6 +182,8 @@ namespace sbndaq
    //wib->UDP_enable(true);
    //TLOG_INFO(identification) << "UDP DISABLE register value :  " << int(wib->Read("UDP_DISABLE")) << TLOG_ENDL;
    
+   wib->WIBs_CFG_INIT();
+   
    TLOG_INFO(identification) << "config WIB completed " << TLOG_ENDL;
    
    //disable_dat_stream_and_sync_to_NEVIS();
@@ -1283,9 +1285,10 @@ void WIBReader::FEMB_SCAN(std::vector<bool> &FEMB_NOs, uint32_t FEMB_V){
    // This function is a modified version of one of the funcitons available in Shanshan's python script
   // to configure WIB/FEMB.
   // The original function is in cls_config.py module inside the repository CE_LD with the name FEMB_SCAN (git branch name is, Installation_Support)
-  const std::string identification = "WIBReader::FEMB_DETECT_ALL"; 
+  const std::string identification = "WIBReader::FEMB_SCAN"; 
   wib->WIB_PWR_FEMB(FEMB_NOs);
   FEMB_DETECT_ALL(FEMB_NOs,FEMB_V,10);
+  wib->WIB_PWR_FEMB(FEMB_NOs,false,{0,0,0,0});
 }
 
 void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure)
@@ -1450,6 +1453,9 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   //wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
   wib->New_ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
   
+  //wib->CE_CHK_CFG(iFEMB,1,1,0,0,0,500,10,0,0,0,1,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,false); // 14mV/fC, 2.0us, 200mV, RMS 
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,1,0,0x08,500,10,0,0,1,1,1,0,1,1,0,1,0,0,0,0,0,0,1,0,0,false); // 7.8mV/fC, 2.0us, 200mV, FPGA_DAC enable = 0x08		  
   TLOG_INFO(identification) << "After ConfigWIB function" << TLOG_ENDL;
   
   // Adding this line after looking into the BNL_CE code
