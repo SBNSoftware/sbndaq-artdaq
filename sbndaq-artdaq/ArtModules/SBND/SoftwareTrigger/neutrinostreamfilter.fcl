@@ -1,0 +1,16 @@
+BEGIN_PROLOG
+
+neutrinostreamfilter:
+{
+
+  module_type: "NeutrinoStreamFilter"
+  CRTInputModule: "crttriggerproducer"
+  PMTInputModule: "pmttriggerproducer"
+  NumCRTPlanes: 7
+  ExcludeCRTPlanes: {2}
+  NPMTHits: 0
+  Verbose: true
+
+}
+
+END_PROLOG
