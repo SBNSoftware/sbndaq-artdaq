@@ -7,12 +7,12 @@
 #include <iostream>
 #include "CRT.h"
 //#include "eventbuilder.h"
+#include <tracemf.h>
 
 //using namespace std;
 //using std::cout;
 using std::endl;
 using std::string;
-
 
 int startallboards(const char *argv, const char *online_path)
 { 
@@ -50,10 +50,22 @@ int startallboards(const char *argv, const char *online_path)
     //cout << "PMTFIN: " << PMTFIN << endl;
 
 
-    Bottom::initializeboard("auto",500, PMTINI, PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
+    Bottom::initializeboard("auto",1000,PMTINI,PMTFIN,online_path);   //Takes baseline data and prepares USBs for writing
 
-    Bottom::eventbuilder("auto", PMTINI, PMTFIN,online_path);          //Calculates baseline data and writes it to a file
+    int res = Bottom::eventbuilder("auto",PMTINI,PMTFIN,online_path);
 
+    int trycounter = 0;
+    while(res == 0){  //Calculates baseline data and writes it to a file
+      trycounter++;
+      TRACE(TLVL_INFO,"Baseline taking failed, trying to initialize again. Attempt %d",trycounter);
+      sleep(1.0);
+      Bottom::initializeboard("auto",1000,PMTINI,PMTFIN,online_path); //Re-initialize the boards
+      res = Bottom::eventbuilder("auto",PMTINI,PMTFIN,online_path);
+      if(trycounter>2){
+        TRACE(TLVL_ERROR,"No baselines taken after 4 attempts, giving up.");
+        break;
+      }
+    }
     Bottom::starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
 
     return 0;

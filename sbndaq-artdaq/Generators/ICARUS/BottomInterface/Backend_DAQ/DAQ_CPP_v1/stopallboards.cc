@@ -12,7 +12,6 @@
 #include "TRACE/tracemf.h"
 
 //using namespace std;
-using std::cout;
 using std::endl;
 using std::string;
 using std::istringstream;
@@ -24,7 +23,7 @@ int stopallboards(const char *argv, const char *online_path){
   int disk = 1;                 //Disk number (1 or 2)
     
   //string mode = "fcl";
-  //loadconfig(mode,0,0,0,filename);                       //read fcl file and load PMT data
+  //Bottom::loadconfig(mode,0,0,0,fname);                       //read fcl file and load PMT data
 
   PMTINI = 1;
   PMTFIN = Bottom::getnumpmt();
