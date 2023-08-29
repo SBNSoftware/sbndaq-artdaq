@@ -55,7 +55,7 @@ public:
         int GetFEBIndex(int _mac5);
 
         int is_Horiz(int _mac5);
-
+	int is_Left(int _mac5);
         float GetHypotenuse(int ascend, int _strip_h, int is_horiz);
         float Tanh_Method(int adcA, int adcB, int is_horiz);
         TVector3 CalculatePosHoriz(int _mac5, int strip, int adcA, int adcB, int mode);

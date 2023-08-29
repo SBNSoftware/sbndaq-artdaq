@@ -1,0 +1,61 @@
+process_name: Dump
+
+services: {
+  TFileService: { fileName: "eventsANDhits.root" }
+}
+
+#source is a root file
+source:
+{
+  module_type: RootInput
+  maxEvents:   100000000        # Number of events to create
+}
+
+outputs:
+{
+ out1: {
+  module_type: FileDumperOutput
+  wantProductFullClassName:     true
+  wantProductFriendlyClassName: false
+ }
+}
+
+physics:
+{
+
+ producers:{}
+
+ filters:{}
+
+ analyzers:{
+
+   reco: {
+     module_type: CRTAframeReco
+     channel_map_config: "/home/nfs/sbnd/DAQ_DevAreas/aantonak/aframe3_channel_config.txt"
+     include_berncrt: true
+     crt_keepall: false
+     verbose: false
+     BeamTimeWindowStart: -1000000000
+     BeamTimeWindowEnd: 1000000000
+     TimeCoinc: 150
+     MakeCRTHitTree: true
+     MakeAnaTree: true
+# 
+     RightAframeVList: [71, 76]  
+     RightAframeHList: [166, 233, 168] # Aframe 1
+
+     LeftAframeVList: [72, 75] 
+     LeftAframeHList: [169, 170, 171] # Aframe 2
+     #UseCAENReferencedT1: false
+   }
+
+ }
+
+ #define the output stream, there could be more than one if using filters 
+ stream1:  [ out1 ]
+ ana: [ reco ]
+
+ #end_paths is a keyword and contains the paths that do not modify the art::Event, 
+ #ie analyzers and output streams.  these all run simultaneously
+ end_paths:     [ ana ]  
+}

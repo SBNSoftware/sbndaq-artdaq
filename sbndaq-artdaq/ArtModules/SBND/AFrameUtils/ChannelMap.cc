@@ -195,6 +195,16 @@ int ChannelMap::is_Horiz(int _mac5) {
         }
 }
 
+int ChannelMap::is_Left(int _mac5) {
+	int index = GetFEBIndex(_mac5);
+	if (zpos.at(index) < 0) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
+
 //  Without the correction for light sharing
 // This returns distance to the lower edge of the strip from the bottom of the A-Frame 
 float ChannelMap::GetHypotenuse(int ascend, int _strip_h, int is_horiz) {
