@@ -21,7 +21,6 @@
 #include "trace.h"
 #define TRACE_NAME "febdrv"
 
-
 sbndaq::FEBDRV::FEBDRV() :
   sockfd_w(-1),
   sockfd_r(-1),
@@ -519,7 +518,6 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, Firm
   //AA: The CAEN manual says all 30 bits of the timestamp are
   //    encoded in Gray Code. This is apparently not true.
   //IK: Two LSBs of the time stamp are indeed coded normal binary, not Gray
-  // ts1 = ts1 << 1;
 
   uint8_t ls2b0=ts0 & 0x00000003;
   uint8_t ls2b1=ts1 & 0x00000003;
@@ -529,7 +527,6 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, Firm
   tt1=(GrayToBin(tt1) << 2) | ls2b1;
   tt0=tt0+5; //IK: correction based on phase drift w.r.t GPS
   tt1=tt1+5; //IK: correction based on phase drift w.r.t GPS
-
   bool NOts0=ts0 & 0x40000000; // check overflow bit
   bool NOts1=ts1 & 0x40000000;
   
@@ -546,20 +543,6 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, Firm
   if(!NOts1)    hit.flags |= 2;
   if(REFEVTts0) hit.flags |= 4; //bit indicating TS0 reference hit
   if(REFEVTts1) hit.flags |= 8; //bit indicating TS1 reference hit
-
-  // if(hit.flags == 11)
-  //   TLOG(TLVL_ERROR) << "Flags: 11" << '\n'
-  // 		     << "T1: " << std::bitset<32>(*ts1_ptr) << '\n'
-  // 		     << "NOts1: " << NOts1 << '\n'
-  // 		     << "REFEVTts1: " << REFEVTts1 << '\n'
-  // 		     << "ts1: " << ts1;
-
-  // if(hit.flags == 9)
-  //   TLOG(TLVL_ERROR) << "Flags: 9" << '\n'
-  // 		     << "T1: " << std::bitset<32>(*ts1_ptr) << '\n'
-  // 		     << "NOts1: " << NOts1 << '\n'
-  // 		     << "REFEVTts1: " << REFEVTts1 << '\n'
-  // 		     << "ts1: " << ts1;
 
   for(int kk=0; kk<32; kk++) {
     auto adc_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
