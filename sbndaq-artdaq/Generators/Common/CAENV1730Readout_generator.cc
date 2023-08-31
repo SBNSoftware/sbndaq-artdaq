@@ -1063,8 +1063,8 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
     }
   }
 
-  // for SBND
-  if( (fOutputClk == 1) | (fOutputClkPhase == 1) ){ ConfigureClkToTrgOut(); } 
+  // for clock synchronization studies
+  if( fOutputClk || fOutputClkPhase ){ ConfigureClkToTrgOut(); } 
 
   // for ICARUS
   if(fModeLVDS!=0){ ConfigureLVDS();  }
