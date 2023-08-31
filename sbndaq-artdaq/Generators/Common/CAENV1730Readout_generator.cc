@@ -688,7 +688,7 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
 void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
 {
   /* Check to output ONLY CLK OR CLK PHASE */
-  if ( (fOutputClk == 1) & (fOutputClkPhase == 1) ){
+  if ( fOutputClk && fOutputClkPhase ){
     TLOG(TLVL_ERROR) << "Error configuring output clock: Cannot output clock and its phase at the same time." << std::endl;
     abort();
   } 
