@@ -157,7 +157,11 @@ private:
   art::EventNumber_t fEvent;
 
   //BernCRTV2 Information
-
+  std::map<uint64_t, std::vector<sbndaq::BernCRTHitV2 const*>> window;
+  uint64_t t_low;
+  uint64_t t_high;
+  bool fragcheck = false;
+  std::vector<bool> is8fold;
   std::vector<int> flags;
   std::vector<int> lostcpu;
   std::vector<int> lostfpga;
@@ -292,6 +296,8 @@ void sbndaq::CRTAframeReco::beginJob()
   map.CalculateParams(map.top_measure, map.bottom_measure);
 
   /************************************************************************************************/
+  //crt_8fold = tfs->make<TTree>("crt_8fold", "waveform tree");
+  //crt_8fold->Branch("window"             &map);
 
   //--make tree to store the channel waveform info:
   events = tfs->make<TTree>("events","waveform tree");
@@ -335,8 +341,9 @@ void sbndaq::CRTAframeReco::beginJob()
     events->Branch("adc29",           &adc29);
     events->Branch("adc30",           &adc30);
     events->Branch("adc31",           &adc31);
-    events->Branch("maxadc",          &maxadc);
-    events->Branch("timestamp",     &timestamp);
+    events->Branch("maxadc",         &maxadc);
+    events->Branch("timestamp",   &timestamp);
+    events->Branch("window",         &window);
 
     if (fcrt_keepall) {
       events->Branch("lostcpu",       &lostcpu);
@@ -374,7 +381,7 @@ void sbndaq::CRTAframeReco::beginJob()
     crthits->Branch("ts1_v",&ts1_v);
     crthits->Branch("adcA_v",&adcA_v);
     crthits->Branch("adcB_v",&adcB_v);
-
+    crthits->Branch("is8fold", &is8fold);
   }
 
 
@@ -456,14 +463,15 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
   feb_hit_number.clear()          ;    timestamp.clear()               ;    last_accepted_timestamp.clear() ; 
   lost_hits.clear()               ;   run_start_time.clear();   this_poll_start.clear();   this_poll_end.clear();
   last_poll_start.clear();   last_poll_end.clear();    system_clock_deviation.clear();    feb_hits_in_poll.clear();
-  feb_hits_in_fragment.clear(); sequence_id.clear();
+  feb_hits_in_fragment.clear(); sequence_id.clear(); window.clear();
   /************************************************************************************************/
 
 
   //  Note that this code expects exactly 1 CAEN fragment per event
   TTT_ns=0;  // will be set to value in CAEN fragement header
   
-  
+
+
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
   
 #if ART_HEX_VERSION < 0x30900
@@ -473,8 +481,14 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
 #endif
   
   /************************************************************************************************/
+
+
+
   if (finclude_berncrt){
-    
+
+
+
+
     std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
     
 #if ART_HEX_VERSION < 0x30900
@@ -483,20 +497,58 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
     fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
 #endif
     
+    //Loop through all fragments to find max/min timestamp values.
+    for (auto handle : fragmentHandles) {
+      if (!handle.isValid() || handle->size() == 0) continue;
+      
+      if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
+	//Container fragment
+	for (auto cont : *handle) {
+	  artdaq::ContainerFragment contf(cont);
+	  if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
+	    if (fverbose)   std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
+	    fWvfmsVec.resize(16*contf.block_count());
+	    for (size_t ii = 0; ii < contf.block_count(); ++ii)
+	      analyze_bern_fragment(*contf[ii].get());
+	  }
+	}
+      }
+      else {
+	//normal fragment
+	if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
+	  if (fverbose) std::cout << "   found normal caen fragments " << handle->size() << std::endl;
+	  fWvfmsVec.resize(16*handle->size());
+	  for (auto frag : *handle)
+	    analyze_bern_fragment(frag);
+	}
+      }
+    } // loop over frag handles
+    
+    fragcheck = true;
     for (auto handle : fragmentHandles) {
       if (!handle.isValid() || handle->size() == 0)
 	continue;
       
       if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
-        //Container fragment
-        for (auto cont : *handle) {
-          artdaq::ContainerFragment contf(cont);
-          if (contf.fragment_type() != sbndaq::detail::FragmentType::BERNCRTV2)
-            continue;
-          for (size_t ii = 0; ii < contf.block_count(); ++ii)
-            analyze_bern_fragment(*contf[ii].get());
-        }
+	//Container fragment
+	
+	for (auto cont : *handle) {
+	    //int i = 0;
+	  artdaq::ContainerFragment contf(cont);
+	  if (contf.fragment_type() != sbndaq::detail::FragmentType::BERNCRTV2)
+	    continue;
+	    
+	  for (size_t ii = 0; ii < contf.block_count(); ++ii){
+	    analyze_bern_fragment(*contf[ii].get());
+	    
+	  }
+
+
+	}
+
+	    
       }
+	
       else {
         //normal fragment
         if (handle->front().type() != sbndaq::detail::FragmentType::BERNCRTV2) continue;
@@ -541,7 +593,7 @@ void sbndaq::CRTAframeReco::CRTmaketree()  {
   strip_v.clear(); febid_v.clear(); adcA_v.clear(); adcB_v.clear();
   ts0_h.clear();   ts1_h.clear();
   ts0_v.clear();   ts1_v.clear();
-  
+  is8fold.clear();
   /************************************************************************************************/
 
   std::vector<int> match;
@@ -567,12 +619,17 @@ void sbndaq::CRTAframeReco::CRTmaketree()  {
       	  if (thistime2<fBeamTimeWindowEnd && thistime2>fBeamTimeWindowStart && flags.at(ih2)==3) {
     	      thisFEB2=mac5.at(ih2);
       	    // are hits 100 ns apart or less in time?
-      	    float tdiff = fabs(thistime1-thistime2);	
+      	    float tdiff = fabs(thistime1-thistime2);
+	    bool a = true;
       	    if (tdiff>500000000) {tdiff-=1000000000; tdiff*=-1.0;}
       	    if (tdiff<fTimeCoinc) {
         	      // next check if they are from crossing strips
       	      if (checkList(thisFEB2,match)) {
       		      hitcount++;
+		      if(hitcount>=4){
+			is8fold.push_back(a);
+		      }
+		      
 		      if (checkList(thisFEB1,horiz)) {
             		  strip_h.push_back(getstrip(ih1));
             		  febid_h.push_back(thisFEB1);  
@@ -582,6 +639,8 @@ void sbndaq::CRTAframeReco::CRTmaketree()  {
 			  adcA_v.push_back(adca); adcB_v.push_back(adcb);
             		  ts0_h.push_back(ts0.at(ih1)); ts0_v.push_back(ts0.at(ih2));
             		  ts1_h.push_back(thistime1); ts1_v.push_back(thistime2);
+			
+			  
             		}
             		else {
             		  strip_h.push_back(getstrip(ih2));
@@ -681,12 +740,38 @@ int sbndaq::CRTAframeReco::getstrip(int ihit)
 }
 
 void sbndaq::CRTAframeReco::analyze_bern_fragment(artdaq::Fragment & frag)  {
-
+  uint64_t dt = 300; //300 ns
+  
   BernCRTFragmentV2 bern_fragment(frag);
   const BernCRTFragmentMetadataV2* md = bern_fragment.metadata();
+  //std::cout<<"hits in fragment: "<<md->hits_in_fragment()<<std::endl;
   for(unsigned int iHit = 0; iHit < md->hits_in_fragment(); iHit++) {
     BernCRTHitV2 const* bevt = bern_fragment.eventdata(iHit);
+    
     timestamp.push_back(                 bevt->timestamp);
+    
+    uint64_t stamp = bevt->timestamp;
+    //uint64_t t_low = 1692301830000000000;
+    //uint64_t t_high = 1692305430000000000;
+    uint64_t bin = stamp*dt/(t_high-t_low);
+    
+    /*
+    if(stamp-t_low<=dt && stamp-t_low>0){
+      std::cout<<"YES"<<std::endl;
+
+    }
+    */
+    if(bin <= 1692301930000000000){
+      std::cout<<"bin: " << bin << " t_low: " << t_low << " stamp: " << stamp <<std::endl;
+    }
+    //std::cout<<"mac5 " << (int)(md->MAC5()) << std::endl;
+    
+    
+    //std::vector<sbndaq::BernCRTHitV2 const*> temp = window[bin];
+    window[bin].push_back(bevt);
+    //temp.push_back(bevt);
+    //std::cout<<"pushed window"<<std::endl;
+    
     if (fcrt_keepall) {
       //metadata
       sequence_id.push_back(frag.sequenceID());
