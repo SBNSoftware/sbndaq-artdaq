@@ -498,6 +498,7 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
 #endif
     
     //Loop through all fragments to find max/min timestamp values.
+    /*
     for (auto handle : fragmentHandles) {
       if (!handle.isValid() || handle->size() == 0) continue;
       
@@ -525,6 +526,7 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
     } // loop over frag handles
     
     fragcheck = true;
+    */
     for (auto handle : fragmentHandles) {
       if (!handle.isValid() || handle->size() == 0)
 	continue;
@@ -751,8 +753,8 @@ void sbndaq::CRTAframeReco::analyze_bern_fragment(artdaq::Fragment & frag)  {
     timestamp.push_back(                 bevt->timestamp);
     
     uint64_t stamp = bevt->timestamp;
-    //uint64_t t_low = 1692301830000000000;
-    //uint64_t t_high = 1692305430000000000;
+    uint64_t t_low = 1692301830000000000;
+    uint64_t t_high = 1692305430000000000;
     uint64_t bin = stamp*dt/(t_high-t_low);
     
     /*
