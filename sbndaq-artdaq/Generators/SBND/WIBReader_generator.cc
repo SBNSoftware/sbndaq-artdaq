@@ -816,7 +816,7 @@ void WIBReader::FEMB_DECTECT_V2(int FEMB_NO, uint32_t FEMB_V, int Tries){
     
     if (i != 0){ 
        map = wib->WIB_STATUS();
-       sleep(0.5);
+       sleep(3);
     }
     
     
@@ -1055,7 +1055,7 @@ void WIBReader::FEMB_DETECT_ALL(std::vector<bool> &FEMB_NOs, uint32_t FEMB_V, in
       if (i != 0){ 
         restart_main_loop = false;
 	map = wib->WIB_STATUS();
-        sleep(0.5);
+        sleep(3);
       }
   
      for (unsigned int j=0; j<FEMB_NOs.size(); j++){
@@ -1309,6 +1309,19 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto start_frame_mode_sel = FEMB_configure.get<uint32_t>("start_frame_mode_sel");
   const auto start_frame_swap     = FEMB_configure.get<uint32_t>("start_frame_swap");
   const auto power_off_femb       = FEMB_configure.get<bool>("turn_off_femb");
+  const auto BNL_enable_test_cap   = FEMB_configure.get<uint32_t>("BNL_enable_test_cap");
+  const auto BNLbaselineHigh       = FEMB_configure.get<uint32_t>("BNLbaselineHigh");
+  const auto BNLgain               = FEMB_configure.get<std::vector<uint32_t> >("BNLgain");
+  const auto BNLshape              = FEMB_configure.get<std::vector<uint32_t> >("BNLshape");
+  const auto BNL_enable_output_mon = FEMB_configure.get<uint32_t>("BNL_enable_output_mon");
+  const auto BNL_buffter_ctrl      = FEMB_configure.get<uint32_t>("BNL_buffter_ctrl");
+  const auto BNL_output_coupl      = FEMB_configure.get<uint32_t>("BNL_output_coupl");
+  const auto BNL_enable_high_filt  = FEMB_configure.get<uint32_t>("BNL_enable_high_filt");
+  const auto BNL_mon_STB   = FEMB_configure.get<uint32_t>("BNL_mon_STB");
+  const auto BNL_mon_STB1  = FEMB_configure.get<uint32_t>("BNL_mon_STB1");
+  const auto BNL_sdacsw1   = FEMB_configure.get<uint32_t>("BNL_sdacsw1");
+  const auto BNL_sdacsw2   = FEMB_configure.get<uint32_t>("BNL_sdacsw2");
+  const auto FEMB_channel_map = FEMB_configure.get<std::vector<uint8_t> >("FEMB_channel_map");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -1421,7 +1434,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   
   FEMBHsLinkCheck(iFEMB, 30);*/
   
-  FEMB_DECTECT_V2(iFEMB,expected_femb_fw_version,10);
+  FEMB_DECTECT_V2(iFEMB,expected_femb_fw_version,3);
   
   /*if(femb_fw_version != expected_femb_fw_version){
           TLOG_WARNING(identification) << "Skipping powering up/ configuring FEMB " << iFEMB << " due to FW version mismatch " << TLOG_ENDL;
@@ -1451,11 +1464,79 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   //sleep(10);
   //setupNoiseMinConfig(iFEMB, 30); // Uncomment this line to run Shanshan's minimum configuration to see FEMB noise.
   //wib->ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
-  wib->New_ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+  //wib->New_ConfigFEMB(iFEMB, fe_config, clk_phases, pls_mode, pls_dac_val, start_frame_mode_sel, start_frame_swap);
+   
   
-  //wib->CE_CHK_CFG(iFEMB,1,1,0,0,0,500,10,0,0,0,1,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,false); // 14mV/fC, 2.0us, 200mV, RMS 
+  //******************************************************************************************************************************  
+  //*                                      Definiton of arguments to CE_CHK_CFG function                                         *
+  //****************************************************************************************************************************** 
+  //* Argument No.  *    Argument Name    *        Description                                                                   *
+  //******************************************************************************************************************************
+  //*    1          *       iFEMB         *      FEMB Number (1-4)                                                               *
+  //*    2          *     configuration   *      0 - config. 1, 1 - config. 2, any other number = config. 3                      *  
+  //*    3          *       pls_cs        *      set to 0 always                                                                 *
+  //*    4          *       dac_sel       *      set to 1 always                                                                 *
+  //*    5          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
+  //*    6          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
+  //*    7          *       fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
+  //*    8          *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
+  //*    9          *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             *
+  //*    10         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    11         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    12         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
+  //*    13         *       snc           *      Sets the baseline value                                                         *
+  //*    14         *       sg0           *      First argument in setting the gain                                              *
+  //*    15         *       sg1           *      Second argument in setting the gain                                             *
+  //*    16         *       st0           *      First argument in setting the shaping time                                      *
+  //*    17         *       st1           *      second argument in setting the shaping time                                     *
+  //*    18         *       smn           *      Enable output monitor                                                           *
+  //*    19         *       sdf           *      Buffer control                                                                  *
+  //*    20         *       slk0          *      Set to 0 in shanshan scripts                                                    *
+  //*    21         *       stb1          *      Set monitoring (always set to 0)                                                *
+  //*    22         *       stb           *      Set monitoring (always set to 0)                                                *
+  //*    23         *       s16           *      Enable high filter                                                              *
+  //*    24         *       slk1          *      Set to 0 always in shanshan scripts                                             *
+  //*    25         *       sdc           *      Output coupling                                                                 *
+  //*    26         *       swdac1        *      Set to 1 when FPGA pulsar is being used (otherwise 0)                           *
+  //*    27         *       swdac2        *      Set to 1 when ASIC pulsar is being used (otherwise 0)                           *
+  //*    28         *       dac           *      DAC setting when using ASIC pulsar                                              *
+  //*    29         *       fecfg_loadflg *      Always set to 0 in shanshan scripts                                             * 
+  //******************************************************************************************************************************   
   
-  //wib->CE_CHK_CFG(iFEMB,1,1,1,0,0x08,500,10,0,0,1,1,1,0,1,1,0,1,0,0,0,0,0,0,1,0,0,false); // 7.8mV/fC, 2.0us, 200mV, FPGA_DAC enable = 0x08		  
+  if (pls_mode == 0){
+      wib->CE_CHK_CFG(iFEMB, FEMB_channel_map[iFEMB-1], 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+                      BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		      0, BNL_output_coupl, 0, 0, 0, false);
+  }
+  
+  else if (pls_mode == 1){
+      wib->CE_CHK_CFG(iFEMB, FEMB_channel_map[iFEMB-1], 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+                      BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		      0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+  }
+  
+  else if (pls_mode == 2){
+      wib->CE_CHK_CFG(iFEMB, FEMB_channel_map[iFEMB-1], 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+                      BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		      0, BNL_output_coupl, 1, 0, 0, false);
+  }
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,1,0,0x08,500,10,0,0,1,1,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,false); // 14mV/fC, 2.0us, 200mV, FPGA_DAC enable = 0x08
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,1,0,15,500,10,0,0,1,0,1,0,1,1,0,1,0,0,0,0,0,0,1,0,0,false); // 7.8mV/fC, 2.0us, 900mV, FPGA_DAC enable = 0x08
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,1,0,0x08,500,10,0,0,1,1,1,0,1,1,0,1,0,0,0,0,0,0,1,0,0,false); // 7.8mV/fC, 2.0us, 200mV, FPGA_DAC enable = 0x08
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,0,1,0,500,10,0,0,1,0,0,1,1,1,0,1,0,0,0,0,0,0,0,1,0x08,false); // 14mV/fC, 2.0us, 200mV, ASIC_DAC enable = 0x08
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,0,0,0,500,10,0,0,0,1,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,false); // 14mV/fC, 2.0us, 200mV, RMS
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,0,0,0,500,10,0,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0,0,0,false); // 14mV/fC, 2.0us, 900mV, RMS
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,0,0,0,500,10,0,0,0,1,1,0,1,1,0,1,0,0,0,0,0,0,0,0,0,false); // 7.8mV/fC, 2.0us, 200mV, RMS
+  
+  //wib->CE_CHK_CFG(iFEMB,1,1,1,0,0x08,500,10,0,0,1,0,0,1,1,1,0,1,0,0,0,0,0,0,1,0,0,false); // 14mV/fC, 2.0us, 900mV, FPGA_DAC enable = 0x08
+  		  
   TLOG_INFO(identification) << "After ConfigWIB function" << TLOG_ENDL;
   
   // Adding this line after looking into the BNL_CE code
