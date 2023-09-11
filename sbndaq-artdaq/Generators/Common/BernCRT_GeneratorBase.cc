@@ -172,7 +172,7 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 
   unsigned long total_hits = GetFEBData(); //read data FEB and fill circular buffer
   
-  if(metricMan != nullptr) metricMan->sendMetric("total_hits_per_poll", total_hits, "CRT hits per poll", 11, artdaq::MetricMode::Average);
+  if(metricMan != nullptr) metricMan->sendMetric("total_hits_per_poll", total_hits, "CRT hits per poll", 11, artdaq::MetricMode::Maximum);
 
   return true;
 } //GetData
@@ -219,11 +219,11 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
           metricMan->sendMetric(
               std::string("feb_poll_time_ms_")+std::to_string(feb.fragment_id & 0xff),
               (metadata.this_poll_end() - metadata.this_poll_start()) * 1e6,
-              "CRT poll time", 11, artdaq::MetricMode::Average);
+              "CRT poll time", 11, artdaq::MetricMode::Maximum);
           metricMan->sendMetric(
               std::string("feb_poll_period_ms_")+std::to_string(feb.fragment_id & 0xff),
               (metadata.this_poll_end() - metadata.last_poll_end()) * 1e6,
-              "CRT poll period", 11, artdaq::MetricMode::Average);
+              "CRT poll period", 11, artdaq::MetricMode::Maximum);
         }
       }
 
