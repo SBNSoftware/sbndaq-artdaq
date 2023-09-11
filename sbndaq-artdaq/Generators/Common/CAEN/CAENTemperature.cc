@@ -4,10 +4,14 @@
 //
 //
 #include <unistd.h>
-#include <iostream>
 #include <stdio.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string> 
 #include <chrono>
 #include <ctime>
+#include <iomanip>
 #include "CAENDigitizer.h"
 #include "CAENDigitizerType.h"
 
@@ -25,175 +29,183 @@ void readTemperature()
   uint32_t data;
   CAEN_DGTZ_BoardInfo_t info;
 
+  auto now = std::chrono::system_clock::now();
+  auto in_time_t = std::chrono::system_clock::to_time_t(now);
+  std::stringstream datetime;
+  datetime << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d_%X");
+  
+  std::ofstream outfile ("/home/nfs/sbnd/lnguyen/CAEN_Temperature_Log/Temperature_Log_"+datetime.str()+".txt");
+  outfile << "Channel Temperature[C] Date Time" << std::endl;
+
   board = 0; // Can be 0...7, but we only use one per optical chain
 
-  printf("Link Model\n"); 
-  for ( link = 0; link<N_LINKS; link++)
-  {
-    printf("\n %1.1d ", link);
-    retcod = CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_OpticalLink,
-				     link, board, 0, &handle);
+  bool goodTemp = true;
+ 
+  while(goodTemp){
+
+    //Open digitizer in link 3
+    link = 3; 
+    retcod = CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_OpticalLink, link, board, 0, &handle);
+    if ( retcod != CAEN_DGTZ_Success ) continue; 
+    printf("\n Link %1.1d ", link);
+
+    //Get digitizer info
+    retcod = CAEN_DGTZ_GetInfo(handle,&info);
+    if ( retcod != CAEN_DGTZ_Success ) continue; //Check if can get info
+        
+    printf("  %s Serial %d\n ", info.ModelName, info.SerialNumber ); //%d
+
+    //Get Time
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream datetime;
+    datetime << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %X");
+
+    //Read Temperature
+    uint32_t readback;
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x10A8,&readback);
     if ( retcod == CAEN_DGTZ_Success )
     {
-      retcod = CAEN_DGTZ_GetInfo(handle,&info);
-      if ( retcod == CAEN_DGTZ_Success )
-      {
-	printf("  %s Serial %d\n ", info.ModelName, info.SerialNumber ); //%d
-
-        uint32_t readback8;
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x10A8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  printf("      Temperature ch 0-1: %d",readback8);
-        }
-        else
-        {
-    	  printf("       Temperature 0:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x12A8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  printf("      Temperature ch 2-3: %d",readback8);
-        }
-        else
-        {
-    	  printf("       Temperature 2:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x14A8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  printf("      Temperature ch 4-5: %d",readback8);
-        }
-        else
-        {
-    	  printf("       Temperature 4:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x16A8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  printf("      Temperature ch 6-7: %d",readback8);
-        }
-        else
-        {
-    	  printf("       Temperature 6:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x18A8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        { 
-    	  printf("\n      Temperature ch 8-9: %d",readback8);
-        }
-        else
-        {
-    	  printf("\n       Temperature 8:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x1AA8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  printf("      Temperature ch 10-11: %d",readback8);
-        }
-        else
-        {
-    	  printf("       Temperature 10:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x1CA8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  printf("      Temperature ch 12-13: %d",readback8);
-        }
-        else
-        {
-    	  printf("       Temperature 12:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,0x1EA8,&readback8);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  printf("      Temperature ch 14-15: %d",readback8);
-        }
-        else
-        {
-    	  printf("       Temperature 14:E");
-        } 
-    
-        retcod = CAEN_DGTZ_ReadRegister(handle,CAEN_DGTZ_ACQ_STATUS_ADD,&data);
-        if ( retcod == CAEN_DGTZ_Success )
-        {
-    	  bool run  = data & 0x0004;
-    	  bool drdy = data & 0x0008;
-    	  bool full = data & 0x0010;
-    	  bool clk  = data & 0x0020;
-    	  bool pll  = data & 0x0080;
-    	  bool rdy  = data & 0x0100;
-    	  printf("\n CLK:%d  PLL:%d  RUN:%d  DRDY:%d  FULL:%d  RDY:%d\n",
-    		 clk, pll, run, drdy, full, rdy);
-        }
-        else
-        {
-    	  printf("    *** [Status,%d]  suspect PLL is not locked\n", retcod);
-        }
-
-
-      }
-      else
-      {
-	printf("  *** [Info,%d]\n", retcod);
-      }
-
-
-      retcod = CAEN_DGTZ_CloseDigitizer(handle); // We don't care if this fails
+    printf("      Temperature ch 0-1: %d",readback);
+      outfile << "0" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "1" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
     }
     else
     {
-      printf("  *** [Open,%d]\n", retcod); // Empty link
+      printf("       Temperature 0:E");
+      outfile << "0" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "1" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+      
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x12A8,&readback);
+    if ( retcod == CAEN_DGTZ_Success )
+    {
+    printf("      Temperature ch 2-3: %d",readback);
+      outfile << "2" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "3" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
     }
-  }
-}
-
-void read_temperature_loop()
-{
-
-  std::cout << "Read out temperature of each channel...Ctrl+C to kill" << std::endl;
- 
-  auto start = std::chrono::system_clock::now();
- 
-  while(true){
-
-    auto now = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = now-start;
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-
-    std::cout << std::endl
-  	      << "---> Time now is " << std::ctime(&now_time)
-              << "---> Time elapsed is " << elapsed_seconds.count() << " s"
-              << std::endl;
+    else
+    {
+      printf("       Temperature 2:E");
+      outfile << "2" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "3" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+      
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x14A8,&readback);
+    if ( retcod == CAEN_DGTZ_Success )
+    {
+    printf("      Temperature ch 4-5: %d",readback);
+      outfile << "4" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "5" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
+    }
+    else
+    {
+      printf("       Temperature 4:E");
+      outfile << "4" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "5" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+      
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x16A8,&readback);
+    if ( retcod == CAEN_DGTZ_Success )
+    {
+      printf("      Temperature ch 6-7: %d",readback);
+      outfile << "6" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "7" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
+    }
+    else
+    {
+      printf("       Temperature 6:E");
+      outfile << "6" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "7" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+      
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x18A8,&readback);
+    if ( retcod == CAEN_DGTZ_Success )
+    { 
+      printf("\n      Temperature ch 8-9: %d",readback);
+      outfile << "8" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "9" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
+    }
+    else
+    {
+      printf("\n       Temperature 8:E");
+      outfile << "8" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "9" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+      
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x1AA8,&readback);
+    if ( retcod == CAEN_DGTZ_Success )
+    {
+      printf("      Temperature ch 10-11: %d",readback);
+      outfile << "10" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "11" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
+    }
+    else
+    {
+      printf("       Temperature 10:E");
+      outfile << "10" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "11" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+      
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x1CA8,&readback);
+    if ( retcod == CAEN_DGTZ_Success )
+    {
+    printf("      Temperature ch 12-13: %d",readback);
+      outfile << "12" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "13" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
+    }
+    else
+    {
+      printf("       Temperature 12:E");
+      outfile << "12" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "13" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+      
+    retcod = CAEN_DGTZ_ReadRegister(handle,0x1EA8,&readback);
+    if ( retcod == CAEN_DGTZ_Success )
+    {
+    printf("      Temperature ch 14-15: %d",readback);
+      outfile << "14" << " " << readback << " " << datetime.str() << std::endl;
+      outfile << "15" << " " << readback << " " << datetime.str() << std::endl;
+      if(readback > 85) goodTemp = false;
+    }
+    else
+    {
+    printf("       Temperature 14:E");
+      outfile << "14" << " " << "-999" << " " << datetime.str() << std::endl;
+      outfile << "15" << " " << "-999" << " " << datetime.str() << std::endl;
+    } 
+    //End of read temperature      
     
-    readTemperature();
+    //Close digitizer
+    retcod = CAEN_DGTZ_CloseDigitizer(handle); 
  
-    unsigned int sleep_duration = 1;  
+    //Throw some errors if temperature goes above 85 
+    if(!goodTemp){
+      outfile << "BAD TEMPERATURE, STOP RECORDING" << std::endl;
+      std::cout << "\nBAD TEMPERATURE, STOP RECORDING" << std::endl;
+    }
 
-    std::cout << "Sleep for " <<  sleep_duration << " s...zzz" << std::endl; 
+    //Get some sleep
+    unsigned int sleep_duration = 30;  
     sleep(sleep_duration);
-    
-//    std::cout << "Sleep for " << sleep_duration << " us...zzz" << std::endl; 
-//    usleep(sleep_duration);
-  }
+
+  } //End of while loop
+      
+  outfile.close();
+  return;
 }
 
-int main( int argc, char* argv[] ) //int argc, char **argv)
+
+int main()
 {
-   printf("You have entered %d arguments:\n", argc);
- 
-    for (int i = 0; i < argc; i++) {
-        printf("%s\n", argv[i]);
-    }
-   
-  read_temperature_loop();
-  
+  readTemperature();
 }
 

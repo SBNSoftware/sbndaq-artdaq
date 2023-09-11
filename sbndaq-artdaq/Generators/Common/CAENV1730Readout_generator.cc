@@ -1363,10 +1363,22 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
 			  artdaq::MetricMode::Average);
 
+    //TLOG(TLVL_INFO) << "CAENV1730 BoardID " << fBoardID << " : "
+    //          << "Temperature = " << ch_temps[ch] << " for channel " << ch
+    //	      << TLOG_ENDL;
+
+    bool printTemp = false;
+
     if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
       TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
                        << "Temperature = " << ch_temps[ch] << ", above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
 		       << TLOG_ENDL;
+      printTemp = true;
+    }
+    if( printTemp ){
+      TLOG(TLVL_INFO) << "CAENV1730 BoardID " << fBoardID << " : "
+              << "Temperature = " << ch_temps[ch] << " for channel " << ch
+    	      << TLOG_ENDL;
     }
 
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
