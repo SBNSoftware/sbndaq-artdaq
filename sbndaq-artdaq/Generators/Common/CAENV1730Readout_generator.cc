@@ -1303,7 +1303,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
                                << ": " << ch_temps[ch] << "  C"
                                << TLOG_ENDL;
 
-    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
 			  artdaq::MetricMode::Average);
 
     if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
@@ -1323,10 +1323,10 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
       TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << ch;
     }
     else{
-      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 1,
+      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
-      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 1,
+      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
       /*
@@ -1588,7 +1588,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
 
   if (delta.count() >0.005*fGetNextFragmentBunchSize) {
-     metricMan->sendMetric("Laggy getNext",1,"count",1,artdaq::MetricMode::Accumulate);
+     metricMan->sendMetric("Laggy getNext",1,"count",11,artdaq::MetricMode::Accumulate);
      TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_seqid;
    }
 
@@ -1724,8 +1724,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 			 << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 			 << TLOG_ENDL;
     }
-    metricMan->sendMetric("FragmentCreationGapMax", (ts_now-ts_frag), "ns", 2, artdaq::MetricMode::Maximum);
-    metricMan->sendMetric("FragmentCreationGapAvg", (ts_now-ts_frag), "ns", 2, artdaq::MetricMode::Average);
+    metricMan->sendMetric("FragmentCreationGapMax", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Maximum);
+    metricMan->sendMetric("FragmentCreationGapAvg", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Average);
 
 
     fragment_uptr->setTimestamp( ts_frag );
@@ -1742,7 +1742,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       {
 	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / "
                         << readoutwindow_sequence_id_gap;
-	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
       }
     }
 
@@ -1773,13 +1773,13 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     max_fragment_create_time=std::max(delta.count(),max_fragment_create_time);
 
     if (delta.count() >0.0005 ) {
-      metricMan->sendMetric("Laggy Fragments",1,"frags",1,artdaq::MetricMode::Maximum);
+      metricMan->sendMetric("Laggy Fragments",1,"frags",11,artdaq::MetricMode::Maximum);
       TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_seqid <<  " took " << delta.count()*1000 << " ms";
 //TRACE_CNTL("modeM", 0);
     }
   }
 
-  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
+  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
 
   //wes ... this shouldn't be called here!

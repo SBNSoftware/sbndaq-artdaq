@@ -172,7 +172,7 @@ bool sbndaq::BernCRT_GeneratorBase::GetData() {
 
   unsigned long total_hits = GetFEBData(); //read data FEB and fill circular buffer
   
-  if(metricMan != nullptr) metricMan->sendMetric("total_hits_per_poll", total_hits, "CRT hits per poll", 5, artdaq::MetricMode::Average);
+  if(metricMan != nullptr) metricMan->sendMetric("total_hits_per_poll", total_hits, "CRT hits per poll", 11, artdaq::MetricMode::Average);
 
   return true;
 } //GetData
@@ -190,7 +190,7 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
   size_t buffer_end = feb.buffer.size();
 
   TLOG(TLVL_DEBUG+5) << "(feb_id=" << feb_id << ") Current size of the FEB buffer: " << buffer_end << " fragments";
-  if(metricMan != nullptr) metricMan->sendMetric("max_feb_buffer_size", buffer_end, "CRT hits", 5, artdaq::MetricMode::Maximum);
+  if(metricMan != nullptr) metricMan->sendMetric("max_feb_buffer_size", buffer_end, "CRT hits", 11, artdaq::MetricMode::Maximum);
 
   //workaround: avoid processing hits at the beginning of the run, to prevent CRT from accumulating lot's of data before TPCs are ready
   static bool discard_data = true;
@@ -215,15 +215,15 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
           metricMan->sendMetric(
               std::string("feb_hit_rate_Hz_")+std::to_string(feb.fragment_id & 0xff),
               metadata.hits_in_poll() * 1e9 / (metadata.this_poll_end() - metadata.last_poll_end()),
-              "CRT hit rate", 5, artdaq::MetricMode::Average);
+              "CRT hit rate", 11, artdaq::MetricMode::Average);
           metricMan->sendMetric(
               std::string("feb_poll_time_ms_")+std::to_string(feb.fragment_id & 0xff),
               (metadata.this_poll_end() - metadata.this_poll_start()) * 1e6,
-              "CRT poll time", 5, artdaq::MetricMode::Average);
+              "CRT poll time", 11, artdaq::MetricMode::Average);
           metricMan->sendMetric(
               std::string("feb_poll_period_ms_")+std::to_string(feb.fragment_id & 0xff),
               (metadata.this_poll_end() - metadata.last_poll_end()) * 1e6,
-              "CRT poll period", 5, artdaq::MetricMode::Average);
+              "CRT poll period", 11, artdaq::MetricMode::Average);
         }
       }
 
@@ -247,7 +247,7 @@ void sbndaq::BernCRT_GeneratorBase::FillFragment(uint64_t const& feb_id,
 
   //update 
   std::string id_str = GetFEBIDString(feb_id);
-  metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",5,artdaq::MetricMode::Rate);
+  metricMan->sendMetric("FragmentsBuilt_"+id_str,buffer_end,"events/s",11,artdaq::MetricMode::Rate);
   UpdateBufferOccupancyMetrics(feb_id,new_buffer_size);
 
   TLOG(TLVL_DEBUG+1) <<"(feb_id=" << feb_id << ") ending size of frags is " << frags.size();
@@ -298,7 +298,7 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
   t_start = std::chrono::steady_clock::now();
   if(metricMan != nullptr) metricMan->sendMetric("time_outside_getNext_ms",
      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_end, t_start),
-     "CRT performance", 5, artdaq::MetricMode::Maximum);
+     "CRT performance", 11, artdaq::MetricMode::Maximum);
 
   if (should_stop()) {
     return false;
@@ -313,7 +313,7 @@ bool sbndaq::BernCRT_GeneratorBase::getNext_(artdaq::FragmentPtrs & frags) {
 
   if(metricMan != nullptr) metricMan->sendMetric("getNext_execution_time_ms",
      artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),
-     "CRT performance", 5, artdaq::MetricMode::Maximum);
+     "CRT performance", 11, artdaq::MetricMode::Maximum);
 
 
   if(frags.size()>0)
