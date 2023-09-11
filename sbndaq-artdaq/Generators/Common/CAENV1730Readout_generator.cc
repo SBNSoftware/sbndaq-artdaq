@@ -713,22 +713,6 @@ void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
   TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
 }
 
-void sbndaq::CAENV1730Readout::StopClkToTrgOut(){
-
-  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
-  uint32_t data;
-
-  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
-  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
-
-  uint32_t mask = 0x3;
-  mask = ~mask;  
-  data &= ((mask)<<16) + ((mask)<<18); 
-
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, data);
-  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
-}
-
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
 {
   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
@@ -1318,8 +1302,6 @@ void sbndaq::CAENV1730Readout::stop()
   if(fVerbosity>0)
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
-
-  if( (fOutputClk == 1) | (fOutputClkPhase == 1) ){ StopClkToTrgOut(); } 
 
   GetData_thread_->stop();
 
