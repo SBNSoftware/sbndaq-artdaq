@@ -85,7 +85,7 @@ void TDCChan::read() {
       TLOG(TLVL_WARNING) << "Detected a gap in the channel " << int{id}
                          << " sample sequence; last_seen_sample_seq/gap=" << last_seen_sample_seq << "/" << gap;
       if (metricMan) {
-        metricMan->sendMetric(metric_prefix + lit::tdc_sequence_gap, gap, lit::unit_sample_count, 1,
+        metricMan->sendMetric(metric_prefix + lit::tdc_sequence_gap, gap, lit::unit_sample_count, 11,
                               MetricMode::Accumulate);
       }
     }
@@ -93,7 +93,7 @@ void TDCChan::read() {
   }
 
   if (metricMan) {
-    metricMan->sendMetric(metric_prefix + lit::tdc_sample_rate, uint64_t(read_count), lit::unit_samples_per_second, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_sample_rate, uint64_t(read_count), lit::unit_samples_per_second, 11,
                           MetricMode::Rate);
   }
   bytes_read += read_count * sizeof(fmctdc_time);

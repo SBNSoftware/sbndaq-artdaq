@@ -91,24 +91,24 @@ bool TDCChan::configure() {
 bool TDCChan::start() {
   TLOG(TLVL_DEBUG_4) << "Starting channel=" << int{id} << ".";
   if (metricMan) {
-    metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{0}, lit::unit_samples_per_second, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{0}, lit::unit_samples_per_second, 11,
                           MetricMode::Rate);
-    metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, uint64_t{0}, lit::unit_nanoseconds, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, uint64_t{0}, lit::unit_nanoseconds, 11,
                           MetricMode::Average);
-    metricMan->sendMetric(metric_prefix + lit::tdc_sequence_gap, uint64_t{0}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_sequence_gap, uint64_t{0}, lit::unit_sample_count, 11,
                           MetricMode::Accumulate);
-    metricMan->sendMetric(metric_prefix + lit::tdc_sample_rate, uint64_t{0}, lit::unit_samples_per_second, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_sample_rate, uint64_t{0}, lit::unit_samples_per_second, 11,
                           MetricMode::Rate);
-    metricMan->sendMetric(metric_prefix + lit::tdc_bytes_read, uint64_t{0}, lit::unit_bytes, 1, MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_read_count, uint64_t{0}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_bytes_read, uint64_t{0}, lit::unit_bytes, 11, MetricMode::LastPoint);
+    metricMan->sendMetric(metric_prefix + lit::tdc_read_count, uint64_t{0}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_drain_count, uint64_t{0}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_drain_count, uint64_t{0}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_missed_count, uint64_t{0}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_missed_count, uint64_t{0}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_dropped_count, uint64_t{0}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_dropped_count, uint64_t{0}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_last_sequence, uint64_t{0}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_last_sequence, uint64_t{0}, lit::unit_sample_count, 11
                           MetricMode::LastPoint);
   }
   for (auto task : starttasks)
@@ -131,7 +131,7 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
   auto lag_ns = utls::elapsed_time_ns(timestamp_ns);
 
   if (metricMan) {
-    metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, lag_ns, lit::unit_nanoseconds, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, lag_ns, lit::unit_nanoseconds, 11,
                           MetricMode::Average);
   }
   if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
@@ -144,7 +144,7 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
     TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
                     << lag_ns / utls::onesecond_ns << " seconds.";
     if (metricMan) {
-      metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 1,
+      metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 11,
                             MetricMode::Rate);
     }
   }
@@ -154,17 +154,17 @@ void TDCChan::monitor() {
   if (!enabled) return;
 
   if (metricMan) {
-    metricMan->sendMetric(metric_prefix + lit::tdc_bytes_read, uint64_t{bytes_read}, lit::unit_bytes, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_bytes_read, uint64_t{bytes_read}, lit::unit_bytes, 11,
                           MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_read_count, uint64_t{sample_read_count}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_read_count, uint64_t{sample_read_count}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_drain_count, uint64_t{sample_drain_count}, lit::unit_sample_count, 1,
+    metricMan->sendMetric(metric_prefix + lit::tdc_drain_count, uint64_t{sample_drain_count}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
     metricMan->sendMetric(metric_prefix + lit::tdc_missed_count, uint64_t{missed_sample_count}, lit::unit_sample_count,
-                          1, MetricMode::LastPoint);
+                          11, MetricMode::LastPoint);
     metricMan->sendMetric(metric_prefix + lit::tdc_dropped_count, uint64_t{sample_drop_count}, lit::unit_sample_count,
-                          1, MetricMode::LastPoint);
+                          11, MetricMode::LastPoint);
     metricMan->sendMetric(metric_prefix + lit::tdc_last_sequence, uint64_t{last_seen_sample_seq},
-                          lit::unit_sample_count, 1, MetricMode::LastPoint);
+                          lit::unit_sample_count, 11, MetricMode::LastPoint);
   }
 }
