@@ -41,6 +41,11 @@ namespace sbndaq
      void FEMBHsLinkCheck(int FEMB_NO, int tries);
      void InitFEMBRegCheck(uint32_t expected_val, std::string reg_addrs, int FEMB_NO, int tries);
      void disable_dat_stream_and_sync_to_NEVIS();
+     void FEMB_DECTECT(int FEMB_NO, uint32_t FEMB_V);// This function is a modified version of a function availble in shanshan's python script to configure WIB/FEMB
+     bool Retry_Read(std::map<std::string,double> &map, std::string var_name, double val, char check_type, int Tries); // check_types allowed are e, g, l
+     void FEMB_DECTECT_V2(int FEMB_NO, uint32_t FEMB_V, int Tries); // This function is a modified version of a function availble in shanshan's python script to configure WIB/FEMB 
+     void FEMB_DETECT_ALL(std::vector<bool> &FEMB_NOs, uint32_t FEMB_V, int Tries); // This function is a modified version of a function availble in shanshan's python script to configure WIB/FEMB
+     void FEMB_SCAN(std::vector<bool> &FEMB_NOs, uint32_t FEMB_V); // This function is a modified version of a function copied from shanshan's python script to configure WIB/FEMB
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
      uint64_t semaphore_acquire_timeout_ms;
      bool calibration_mode;
@@ -50,4 +55,5 @@ namespace sbndaq
      std::unique_ptr<WIB> wib;
   };
 }
+
 
