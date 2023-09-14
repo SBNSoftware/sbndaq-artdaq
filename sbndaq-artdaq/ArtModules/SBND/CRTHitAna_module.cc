@@ -588,7 +588,7 @@ void sbndaq::CRTHitAna::analyze(const art::Event& evt)
 	  artdaq::ContainerFragment contf(cont);
 	  if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
 	    if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
-	    fWvfmsVec.resize(16*contf.block_count());
+	    //fWvfmsVec.resize(16*contf.block_count());
 	    for (size_t ii = 0; ii < contf.block_count(); ++ii)
 	      analyze_caen_fragment(*contf[ii].get());
 	  }
@@ -598,7 +598,7 @@ void sbndaq::CRTHitAna::analyze(const art::Event& evt)
 	//normal fragment
 	if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
 	  if (fverbose) 	std::cout << "   found normal caen fragments " << handle->size() << std::endl;
-	  fWvfmsVec.resize(16*handle->size());
+	  //fWvfmsVec.resize(16*handle->size());
 	  for (auto frag : *handle)
 	    analyze_caen_fragment(frag);
 	}

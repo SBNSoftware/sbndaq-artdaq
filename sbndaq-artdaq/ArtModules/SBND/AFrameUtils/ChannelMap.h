@@ -55,6 +55,7 @@ public:
         int GetFEBIndex(int _mac5);
 
         int is_Horiz(int _mac5);
+	int is_Outer(int _mac5);
 	int is_Left(int _mac5);
         float GetHypotenuse(int ascend, int _strip_h, int is_horiz);
         float Tanh_Method(int adcA, int adcB, int is_horiz);
@@ -62,6 +63,10 @@ public:
         TVector3 CalculatePosVert(int _mac5, int strip, int adcA, int adcB, int mode);
 
         float GetDistToFEB(int _FEB, TVector3 _pos);
+
+	// Add Error calculation which only needs the horizontal FEB id
+	std::vector<float> CalculateError(int _mac5_v, int _mac5_h);
+
 
 
 private:

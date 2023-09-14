@@ -195,6 +195,17 @@ int ChannelMap::is_Horiz(int _mac5) {
         }
 }
 
+// Determine if this is one of the outer horizontal Modules
+int ChannelMap::is_Outer(int _mac5) {
+        long unsigned int index = GetFEBIndex(_mac5);
+        if (index == 2 || index == mac5.size()-3) {
+                return 1;
+        }
+        else {
+                return 0;
+        }
+}
+
 int ChannelMap::is_Left(int _mac5) {
 	int index = GetFEBIndex(_mac5);
 	if (zpos.at(index) < 0) {
@@ -371,6 +382,36 @@ float ChannelMap::GetDistToFEB(int _FEB, TVector3 _pos) {
                 float d = _pos.Y()/TMath::Sin(angle.at(index));
                 return d;
         }
+}
+
+
+std::vector<float> ChannelMap::CalculateError(int _mac5_v, int _mac5_h) {
+	std::vector<float> errors;
+
+	// Note: We will use 1 to denote vertical and 2 to denote horizontal 
+
+	// Note: For this approach, the x-position errors are always the same
+	float dx1 = strip_w_v/12; // assume uniform distribution
+	float dx2 = strip_l_h/12; 
+	errors.push_back(dx1); errors.push_back(dx2);
+
+	int index_v = GetFEBIndex(_mac5_v);
+	int index_h = GetFEBIndex(_mac5_h);
+		
+	float dw1 = strip_l_v/12;
+	float dw2 = strip_w_h/12;
+	
+	float dy1 = dw1*TMath::Sin(angle.at(index_v)); 
+	float dy2 = dw2*TMath::Sin(angle.at(index_h)); 
+
+	float dz1 = dw1*TMath::Cos(angle.at(index_v)); 
+	float dz2 = dw2*TMath::Cos(angle.at(index_h)); 
+
+	errors.push_back(dy1); errors.push_back(dy2);
+	errors.push_back(dz1); errors.push_back(dz2);
+
+	return errors;
+
 }
 
 } // end namespace AFrame
