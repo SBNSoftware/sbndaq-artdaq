@@ -1,0 +1,181 @@
+# FHiCL document used to run the "driver" executable. To learn more
+# about the FHiCL language, please look at
+# cdcvs.fnal.gov/redmine/documents/327 , the "FHiCL Quick Start Guide"
+
+events_to_generate: 10
+run_number: 101
+transition_timeout: 30
+debug_cout: true
+
+
+fragment_receiver: {
+  generator: CRTFragGen
+  fragment_type: CRT
+  fragment_ids: [0]  # In the case of just one fragment, "fragment_id: 0" would also work
+  board_id: 999
+
+  interface_type: 1
+  indir: "/scratch_local/crt_tests/backend_data/"
+
+  partition_number: 0
+  # Exactly one artdaq process needs to start up the backend, but then
+  # all four can read the results
+  startbackend: true
+
+  # valid number 39
+  usbnumber: 39
+
+  # Options are "crt_upstream", "crt_downstream", "online_normal_running"
+  #sqltable: "board_6_debug"
+  configfile: "/home/nfs/icarus/DAQ_DevAreas/DAQ_12Dec2022_rhowell/srcs/sbndaq_artdaq/sbndaq-artdaq/Generators/ICARUS/BottomInterface/Backend_DAQ/DAQ_CPP_v1/crt_daq.fcl"
+}
+  metrics: {
+    aggFile: {
+      metricPluginType: "file"
+      level: 3
+      #fileName: "/daq/log/metrics/bottom_metrics.log"
+      fileName: "/scratch_local/crt_tests/log/bottom_metrics.log"
+      uniquify: true
+    }
+    
+#    graphite: {
+#      level:5
+#      metricPluginType: "graphite"
+#      reporting_interval: 10.0
+#      host:"192.168.191.18"
+#      port:2003
+#      namespace:"sbnd.disp00."
+#    } 
+  }
+
+event_builder: {
+
+  expected_fragments_per_event: 1
+  max_fragment_size_bytes: 256000
+  buffer_count: 16
+  use_art: true
+  print_event_store_stats: false
+  verbose: true
+  events_expected_in_SimpleQueueReader: @local::events_to_generate
+#how many init fragments we expect
+  init_fragment_count: 0
+
+}
+
+#event_builder: {
+#  expected_fragments_per_event: 1
+#  max_fragment_size_bytes: 100000000
+#  buffer_count: 10
+#  use_art: true
+#  print_event_store_stats: false
+#  verbose: true
+#}
+
+######################################################################
+# The ART code
+######################################################################
+art: {
+  services: {
+    ArtdaqSharedMemoryServiceInterface: { service_provider: ArtdaqSharedMemoryService }
+    TimeTracker: {}
+    ArtdaqFragmentNamingServiceInterface: {
+      service_provider: ArtdaqFragmentNamingService
+      helper_plugin: "Icarus" }
+    }
+
+
+  physics:{
+
+    analyzers: {}
+    producers: {}
+    filters:   {}
+
+    outstream: [ rootout ]
+    end_paths: [ outstream ]
+  }
+
+  outputs:{
+
+    rootout:{
+      module_type: RootDAQOut
+      #fileName: "/data1/%to_%tc_crt01_%#_new.root"
+      fileName: "CRT_%to_%tc_%#.root"
+      compressionLevel: 5
+      fileProperties: {
+        maxEvents: 100000
+        maxSubRuns: 1
+        maxRuns: 1
+      }
+    }
+  }
+
+  source:{
+    module_type: ArtdaqInput
+    waiting_time: 900
+    resume_after_timeout: true
+  }
+
+  process_name: Driver
+}
+
+#physics:
+#{
+#  analyzers:
+ # {
+    # n.b. if you wish to generate more than one fragment per event, toyDump should be disabled
+ #   toyDump:
+ #   {
+ #     module_type: ToyDump
+ #     raw_data_label: daq
+ #     frag_type: @local::fragment_receiver.fragment_type
+ #     num_adcs_to_show: 10   # Obviously this should be no more than ADC counts per fragment
+ #   }
+
+ #   printBuildInfo: {
+ #     module_type: PrintBuildInfo
+ #     buildinfo_module_label: BuildInfo
+  #    buildinfo_instance_label: DuneArtdaq
+ #   }
+ # }
+
+#  producers:
+##  {
+#    BuildInfo:
+#    {
+ #    module_type: DuneArtdaqBuildInfo
+  #   instance_name: DuneArtdaq
+#    }
+#  }
+
+ # e1: [ out1, rootout ]
+
+#  end_paths: [ e1 ]
+#}
+
+#outputs:
+#{
+ # out1:
+ # {
+ #   module_type: FileDumperOutput
+ #   wantProductFriendlyClassName: true
+ # }
+
+#  rootout:
+#  {
+#    module_type: RootOutput
+#    fileName: "CRT.root"
+#    compressionLevel: 0
+#  }
+#}
+
+#source:
+#{
+#  module_type: DuneInput
+#  waiting_time: 900
+#  resume_after_timeout: true
+#}
+#
+#process_name: Driver
+
+
+
