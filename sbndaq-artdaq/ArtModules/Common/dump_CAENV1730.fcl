@@ -32,6 +32,8 @@ physics:
    caenv1730dump: {
      module_type: CAENV1730Dump
      data_label: "daq:CAENV1730"
+     shift_fragment_id: 1
+     verbose: true
    }
 
  }
