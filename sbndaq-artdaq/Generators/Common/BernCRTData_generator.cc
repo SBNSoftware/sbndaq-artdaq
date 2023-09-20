@@ -220,7 +220,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
     
     while(true) {
       //loop over hits received via ethernet and push into circular buffer
-      int numbytes = febdrv.GetData();
+      int numbytes = febdrv.GetData(FirmwareFlag);
       if(numbytes<=0) break;
       
       int datalen = numbytes-18;
