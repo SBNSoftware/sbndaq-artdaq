@@ -108,7 +108,7 @@ bool TDCChan::start() {
                           MetricMode::LastPoint);
     metricMan->sendMetric(metric_prefix + lit::tdc_dropped_count, uint64_t{0}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
-    metricMan->sendMetric(metric_prefix + lit::tdc_last_sequence, uint64_t{0}, lit::unit_sample_count, 11
+    metricMan->sendMetric(metric_prefix + lit::tdc_last_sequence, uint64_t{0}, lit::unit_sample_count, 11,
                           MetricMode::LastPoint);
   }
   for (auto task : starttasks)
