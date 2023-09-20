@@ -193,7 +193,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
   t_start = std::chrono::steady_clock::now();
   if(metricMan != nullptr) metricMan->sendMetric("time_outside_GetFEBData_ms",
       artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_end, t_start),
-      "CRT performance", 5, artdaq::MetricMode::Maximum);
+      "CRT performance", 11, artdaq::MetricMode::Maximum);
   
   // Sleep until the time for next poll comes
   int now = std::chrono::system_clock::now().time_since_epoch().count() % feb_poll_period_;
@@ -202,7 +202,7 @@ size_t sbndaq::BernCRTData::GetFEBData() {
   const auto t_wait = std::chrono::steady_clock::now();
   if(metricMan != nullptr) metricMan->sendMetric("time_waiting_for_poll_ms",
       artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_wait),
-      "CRT performance", 5, artdaq::MetricMode::Maximum);
+      "CRT performance", 11, artdaq::MetricMode::Maximum);
 
 
   size_t hit_count_all_febs = 0;
@@ -351,11 +351,11 @@ size_t sbndaq::BernCRTData::GetFEBData() {
 
   if(metricMan != nullptr) metricMan->sendMetric("time_reading_FEBs_ms",
       artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_wait, t_end),
-      "CRT performance", 5, artdaq::MetricMode::Maximum);
+      "CRT performance", 11, artdaq::MetricMode::Maximum);
 
   if(metricMan != nullptr) metricMan->sendMetric("GetFEBData_execution_time_ms",
       artdaq::TimeUtils::GetElapsedTimeMilliseconds(t_start, t_end),
-      "CRT performance", 5, artdaq::MetricMode::Maximum);
+      "CRT performance", 11, artdaq::MetricMode::Maximum);
   
   TLOG(TLVL_DEBUG+2) << "read " << std::to_string(hit_count_all_febs) << " hits";
 
