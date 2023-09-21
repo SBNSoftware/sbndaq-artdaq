@@ -1,40 +1,38 @@
 
-include_directories( $ENV{SBNDAQ_ARTDAQ_CORE_INC} )
-include_directories( $ENV{EPICS_INC}/ )
-include_directories( $ENV{EPICS_INC}/os/Linux/ )
-include_directories( $ENV{EPICS_INC}/compiler/gcc/ )
-include_directories( $ENV{PQXX_INC} )
-include_directories( $ENV{BOOST_INC} )
-include_directories( . )
+include_directories(.)
 
 cet_add_compiler_flags(-Wno-deprecated-copy )
 #cet_add_compiler_flags(-Wno-deprecated-copy -DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
-cet_find_library( EPICS_CA  NAMES ca  PATHS ENV EPICS_LIBRARY    NO_DEFAULT_PATH )
-cet_find_library( PQXX    NAMES pqxx  PATHS ENV PQXX_LIBRARIES  NO_DEFAULT_PATH )
-cet_find_library( BOOST_SYSTEM  NAMES boost_system  PATHS ENV BOOST_LIB  NO_DEFAULT_PATH )
-cet_find_library( BOOST_THREAD  NAMES boost_thread  PATHS ENV BOOST_LIB  NO_DEFAULT_PATH )
+find_package(artdaq_epics_plugin 1.05.04 REQUIRED)
+find_package(EPICS 7.0.6 REQUIRED)
 
-cet_make_exec(gps
+if(DEFINED ENV{PQXX_DIR})
+    include_directories($ENV{PQXX_INC})
+    link_directories($ENV{PQXX_LIB})
+endif()
+
+cet_make_exec(NAME gps
   SOURCE
     GPSReceiver.cc
     GPSInfo.cc
     NetworkReceiver.cc
   LIBRARIES
-    ${BOOST_SYSTEM}
-    ${BOOST_THREAD}
+    Boost::thread
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
     pthread
     rt
 )
 
-cet_make_exec(gps-bcast
+cet_make_exec(NAME gps-bcast
   SOURCE
     GPSBroadcast.cc
     GPSInfo.cc
   LIBRARIES
-   ${EPICS_CA}
-   ${PQXX}
-   ${BOOST_SYSTEM}
+    Boost::thread
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+   EPICS::ca
+   pqxx
    pthread
    rt
 )

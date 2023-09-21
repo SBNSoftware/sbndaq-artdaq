@@ -8,8 +8,6 @@ add_subdirectory(NevisTPC)
 add_subdirectory(SPECTDC)
 
 
-find_ups_product( wibtools )
-
 # Temporary, until wibtools is refactored, check for local wibtools
 include_directories(../../../../wibtools/WIB/include)
 include_directories(../../../../wibtools/MBB/include)

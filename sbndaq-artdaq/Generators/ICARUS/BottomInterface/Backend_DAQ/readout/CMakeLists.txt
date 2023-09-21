@@ -7,6 +7,7 @@ cet_make_exec(bottomCRTreadout
     SOURCE
       main.c
     LIBRARIES
+      TRACE::TRACE
       -lusb-1.0
       -lm
       -lrt

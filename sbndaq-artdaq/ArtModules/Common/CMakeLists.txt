@@ -5,7 +5,7 @@ cet_make(
  BASENAME_ONLY
  LIBRARY_NAME
    sbndaq-artdaq_ArtModules_Common
- LIB_LIBRARIES
+ LIBRARIES
    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND

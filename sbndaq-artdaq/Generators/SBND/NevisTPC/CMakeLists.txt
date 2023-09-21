@@ -1,3 +1,6 @@
+
+if(DEFINED ENV{WINDRIVER_INC})
+
 add_subdirectory(nevishwutils)
 include_directories ( $ENV{WINDRIVER_INC} )
 
@@ -41,3 +44,5 @@ basic_plugin(NevisTPCFile "generator" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST
 
 install_source()
 install_headers()
+
+endif()
