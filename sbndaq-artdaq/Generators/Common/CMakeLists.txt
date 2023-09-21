@@ -1,8 +1,6 @@
 add_subdirectory(GPS)
 add_subdirectory(Bern)
 
-include_directories( ./GPS )
-
 add_definitions(-DLINUX)
 
 if(DEFINED ENV{CAENCOMM_DIR})
@@ -53,12 +51,11 @@ cet_make_library(
     sbndaq-artdaq_Common_SpectraTime_GeneratorBase
   SOURCE
     SpectraTimeReadout_generator.cc
-    GPS/GPSInfo.cc
   LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
     sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+    sbndaq_artdaq::sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
 )
-
 
 cet_make_library(
   LIBRARY_NAME
@@ -163,7 +160,7 @@ cet_build_plugin(DummyGenerator artdaq::commandableGenerator
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )
 
-cet_make_exec( ConvertCRTConfiguration
+cet_make_exec(NAME ConvertCRTConfiguration
   SOURCE
     ConvertCRTConfiguration.cc
   LIBRARIES

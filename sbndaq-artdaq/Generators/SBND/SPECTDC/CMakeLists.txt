@@ -25,14 +25,11 @@ cet_make_exec(NAME SPECTDC_Test
   SOURCE
     SPECTDC_Test.cc
   LIBRARIES
-    fhiclcpp
-    cetlib
-    cetlib_except
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    MF_MessageLogger
+    fhiclcpp::fhiclcpp
+    cetlib::cetlib
     sbndaq-artdaq_fmctdclib
     sbndaq-artdaq_Generators_SBND_SPECTDC
+    Boost::program_options
  )
 
 

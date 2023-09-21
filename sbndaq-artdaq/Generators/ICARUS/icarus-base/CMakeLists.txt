@@ -35,7 +35,7 @@ cet_make_library(
    icarus-base_A2795Board
 )
 
-cet_make_exec(VetoUDP
+cet_make_exec(NAME VetoUDP
   SOURCE
     VetoUDP_main.cc
   LIBRARIES

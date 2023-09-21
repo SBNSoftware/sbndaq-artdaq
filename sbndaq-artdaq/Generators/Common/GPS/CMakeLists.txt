@@ -1,6 +1,4 @@
 
-include_directories(.)
-
 cet_add_compiler_flags(-Wno-deprecated-copy )
 #cet_add_compiler_flags(-Wno-deprecated-copy -DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
@@ -12,14 +10,21 @@ if(DEFINED ENV{PQXX_DIR})
     link_directories($ENV{PQXX_LIB})
 endif()
 
+cet_make_library(LIBRARY_NAME sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
+SOURCE
+GPSInfo.cc 
+LIBRARIES PUBLIC
+Boost::thread
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+)
+target_include_directories(sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
 cet_make_exec(NAME gps
   SOURCE
     GPSReceiver.cc
-    GPSInfo.cc
     NetworkReceiver.cc
   LIBRARIES
-    Boost::thread
-    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+    sbndaq_artdaq::sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
     pthread
     rt
 )
@@ -27,10 +32,8 @@ cet_make_exec(NAME gps
 cet_make_exec(NAME gps-bcast
   SOURCE
     GPSBroadcast.cc
-    GPSInfo.cc
   LIBRARIES
-    Boost::thread
-    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+    sbndaq_artdaq::sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
    EPICS::ca
    pqxx
    pthread

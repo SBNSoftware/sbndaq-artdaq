@@ -54,7 +54,7 @@ cet_build_plugin(ICARUSTriggerV3 artdaq::commandableGenerator
 #)
 
 cet_build_plugin(CRTFragGen artdaq::commandableGenerator
-  LIBRARIES
+  LIBRARIES REG
   sbndaq-artdaq_ICARUS_BottomInterface_StartBackend
   sbndaq-artdaq_ICARUS_BottomInterface_StopBackend
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays

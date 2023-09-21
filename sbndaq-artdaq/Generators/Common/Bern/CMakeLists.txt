@@ -1,6 +1,4 @@
 
-include_directories( . )
-
 SET_SOURCE_FILES_PROPERTIES(febdrv.cc PROPERTIES COMPILE_FLAGS "-Wno-unused-parameter -Wno-unused-but-set-variable -Wno-pointer-arith")
 
 if(DEFINED ENV{ZMQ_DIR})
@@ -8,7 +6,7 @@ if(DEFINED ENV{ZMQ_DIR})
     link_directories($ENV{ZMQ_LIB})
 endif()
 
-cet_make_exec(febdrv_standalone
+cet_make_exec(NAME febdrv_standalone
     SOURCE
       febdrv.cc
     LIBRARIES
@@ -16,40 +14,40 @@ cet_make_exec(febdrv_standalone
       zmq
 )
 
-cet_make_exec(febctl
+cet_make_exec(NAME febctl
     SOURCE
       febctl.cc
     LIBRARIES
       zmq
 )
 
-cet_make_exec(febconf
+cet_make_exec(NAME febconf
     SOURCE
       febconf.cc
     LIBRARIES
       zmq
 )
 
-cet_make_exec(febmon
+cet_make_exec(NAME febmon
     SOURCE
       febmon.cc
     LIBRARIES
       zmq
 )
 
-cet_make_exec(febpeek
+cet_make_exec(NAME febpeek
     SOURCE
       febpeek.cc
     LIBRARIES
       zmq
 )
 
-cet_make_exec(confsetbias
+cet_make_exec(NAME confsetbias
     SOURCE
       confsetbias.cc
 )
 
-cet_make_exec(confsetgain
+cet_make_exec(NAME confsetgain
     SOURCE
       confsetgain.cc
 )
