@@ -268,6 +268,9 @@ private:
   std::vector<int> adc31;
   std::vector<int> coinc;
 
+  std::vector<std::pair<int, int>> max_adc;
+  std::vector<int>                 max_chan;
+
   std::vector<int>  feb_hit_number          ; //hit counter for individual FEB, including hits lost in FEB or fragment generator
   std::vector<uint64_t>  timestamp               ; //absolute timestamp
   std::vector<uint>  last_accepted_timestamp ; //timestamp of previous accepted hit
@@ -485,6 +488,8 @@ void sbndaq::EventAna::beginJob()
     events->Branch("adc29",           &adc29);
     events->Branch("adc30",           &adc30);
     events->Branch("adc31",           &adc31);
+    events->Branch("max_adc",         &max_adc);
+    events->Branch("max_chan",        &max_chan);
     if (fcrt_keepall) {
       events->Branch("timestamp",     &timestamp);
       events->Branch("lostcpu",       &lostcpu);
@@ -568,11 +573,12 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
   /************************************************************************************************/
   //BERN CRT 
   mac5.clear();    flags.clear();   lostcpu.clear();   lostfpga.clear();   ts0.clear();     ts1.clear();
-  adc0.clear();    adc1.clear();    adc2.clear();      adc3.clear();       adc4.clear();    adc5.clear();    adc6.clear();
-  adc7.clear();    adc8.clear();    adc9.clear();      adc10.clear();      adc11.clear();   adc12.clear();   adc13.clear();
-  adc14.clear();   adc15.clear();   adc16.clear();     adc17.clear();      adc18.clear();   adc19.clear();   adc20.clear();
-  adc21.clear();   adc22.clear();   adc23.clear();     adc24.clear();      adc25.clear();   adc26.clear();   adc27.clear();
-  adc28.clear();   adc29.clear();   adc30.clear();     adc31.clear();      coinc.clear();
+  adc0.clear();    adc1.clear();    adc2.clear();      adc3.clear();       adc4.clear();    adc5.clear();     adc6.clear();
+  adc7.clear();    adc8.clear();    adc9.clear();      adc10.clear();      adc11.clear();   adc12.clear();    adc13.clear();
+  adc14.clear();   adc15.clear();   adc16.clear();     adc17.clear();      adc18.clear();   adc19.clear();    adc20.clear();
+  adc21.clear();   adc22.clear();   adc23.clear();     adc24.clear();      adc25.clear();   adc26.clear();    adc27.clear();
+  adc28.clear();   adc29.clear();   adc30.clear();     adc31.clear();      coinc.clear();   max_adc.clear();  max_chan.clear();
+
 
   feb_hit_number.clear()       ;   timestamp.clear()      ;    last_accepted_timestamp.clear();
   lost_hits.clear()            ;   run_start_time.clear() ;    this_poll_start.clear()        ;   this_poll_end.clear();
@@ -1321,7 +1327,25 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
     adc29.push_back(                      bevt->adc[29]);
     adc30.push_back(                      bevt->adc[30]);
     adc31.push_back(                      bevt->adc[31]);
+    
+    int max     = -std::numeric_limits<int>::max();
+    int max_id  = std::numeric_limits<int>::max();
+    int counter = 0;
 
+    for(auto const &adc : bevt->adc)
+      {
+	if(adc > max)
+	  {
+	    max    = adc;
+	    max_id = counter;
+	  }
+	++counter;
+      }
+
+    int max_other_sipm_id = max_id % 2 ? max_id - 1 : max_id + 1;
+    
+    max_adc.push_back({max, bevt->adc[max_other_sipm_id]});
+    max_chan.push_back(max_id);
 
     if (fverbose) {
       std::cout << "  mac5                "     <<    (int)(md->MAC5())                   << std::endl;

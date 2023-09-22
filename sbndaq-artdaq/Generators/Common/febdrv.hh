@@ -105,7 +105,7 @@ namespace sbndaq {
     bool sendconfig(uint8_t mac5, uint8_t * bufSCR, uint16_t lenSCR, uint8_t * bufPMR, uint16_t lenPMR);
 
     void processSingleHit(int & jj, sbndaq::BernCRTHitV2& hit, FirmwareVersion firmwareFlag);
-    int GetData();
+    int GetData(FirmwareVersion firmwareFlag);
 
     void pollfeb(uint8_t mac);
     
