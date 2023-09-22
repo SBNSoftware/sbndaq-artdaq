@@ -118,7 +118,11 @@ find_package( sbndaq_artdaq_core 1.04.00  REQUIRED EXPORT)
 
 find_package (TRACE 3.17.09 REQUIRED EXPORT)
 
+if( DEFINED SPACK_BUILD )
+find_package( cppzmq 4.3.1  REQUIRED EXPORT)
+else()
 find_package( zmq 4.3.1  REQUIRED EXPORT)
+endif()
 #find_package( redis 5.0.5 REQUIRED EXPORT )
 
 # macros for art_dictionary and basic_plugin
