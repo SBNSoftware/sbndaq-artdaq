@@ -167,7 +167,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
     else
     {
       std::cout << "Failed to connect to "<< dbName << " at " << port << "@" << hostName << std::endl;
-#if PQXX_VERSION == 6
+#if PQXX_MAJOR_VERSION == 6
       dbConnection->disconnect();
 #else
       delete dbConnection;
@@ -266,7 +266,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
       message[0] = gps.gps.data.messageStatus;
 
       pqxx::work work(*dbConnection);
-#if PQXX_VERSION >= 7
+#if PQXX_MAJOR_VERSION >= 7
       pqxx::result result = work.exec_prepared("insertGPS",
 	(gps.gps.data.timeStamp)              ,
 	(gps.gps.data.systemTimer.tv_sec)      ,
@@ -317,7 +317,7 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
       work.commit();
     }
   }
-#if PQXX_VERSION == 6
+#if PQXX_MAJOR_VERSION == 6
   dbConnection->disconnect();
 #else
   delete dbConnection;

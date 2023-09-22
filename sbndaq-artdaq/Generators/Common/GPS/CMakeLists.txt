@@ -5,11 +5,11 @@ cet_add_compiler_flags(-Wno-deprecated-copy )
 find_package(artdaq_epics_plugin 1.05.04 REQUIRED)
 find_package(EPICS 7.0.6 REQUIRED)
 
-set(PQXX_VERSION 7)
+set(PQXX_MAJOR_VERSION 7)
 if(DEFINED ENV{PQXX_DIR})
     include_directories($ENV{PQXX_INC})
     link_directories($ENV{PQXX_LIB})
-    set(PQXX_VERSION 6)
+    set(PQXX_MAJOR_VERSION 6)
 endif()
 
 cet_make_library(LIBRARY_NAME sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
@@ -42,7 +42,7 @@ cet_make_exec(NAME gps-bcast
    pthread
    rt
 )
-
+target_compile_definitions(gps-bcast PUBLIC PQXX_MAJOR_VERSION=${PQXX_MAJOR_VERSION})
 
 install_source()
 install_headers()
