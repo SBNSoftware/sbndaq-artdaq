@@ -84,6 +84,7 @@ namespace CRT
     // 32 bits.
     std::vector<uint64_t> uppertime_per_mod_syncs;
     std::vector<uint64_t> lowertime_per_mod_ns;
+    std::vector<uint64_t> missed_syncs;
     uint64_t tpacket_sec = 0;
     uint64_t old_tpacket_sec = 0;
 

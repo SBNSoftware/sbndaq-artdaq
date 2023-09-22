@@ -93,7 +93,7 @@ bool CRT::FragGen::getNext_(
 {
   //oldUNIX_ns = time(nullptr);// seconds //*1.e9; //ns
   if(should_stop()){
-    TLOG(TLVL_INFO, "BottomFragGen") << "getNext_ returning on should_stop()\n";
+    TLOG(TLVL_INFO, "BottomFragGen") << "getNext_ returning on should_stop()";
     return false;
   }
 
@@ -128,7 +128,7 @@ bool CRT::FragGen::getNext_(
     tpacket_sec = hardware_interface_->GetTpacket();
    
     if(tpacket_sec != 0 && !gotRunStartTime){
-       TLOG(TLVL_WARNING, "BottomFragGen") << "Got first tpacket: " << tpacket_sec << " seconds.\n"; 
+       TLOG(TLVL_WARNING, "BottomFragGen") << "Got first tpacket: " << tpacket_sec << " seconds."; 
     } 
  
     if(tpacket_sec == 0){ //waiting for the first tpacket 
@@ -154,10 +154,10 @@ bool CRT::FragGen::getNext_(
 
     ev_counter_inc(); // from base CommandableFragmentGenerator
 
-    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getNext_ is returning with hits in " << fragIt << " Fragments\n";
+    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getNext_ is returning with hits in " << fragIt << " Fragments";
   }
   else{
-    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getNext_ is returning with no data\n";
+    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getNext_ is returning with no data";
   }
 
   return true;
@@ -221,7 +221,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     oldUNIX_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     //deltaT_process = oldUNIX_ns - runstarttime;
     TLOG(TLVL_WARNING, "BottomFragGen") << "setting the runstarttime to " << runstarttime_ns 
-                              << " ns, with tpacket: "<< tpacket_sec << " s, and initial lowertime of  "  <<  lowertime_ns << " ns\n";
+                              << " ns, with tpacket: "<< tpacket_sec << " s, and initial lowertime of  "  <<  lowertime_ns << " ns";
   }
 
 
@@ -234,7 +234,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     old_tpacket_sec = tpacket_sec;
     TLOG(TLVL_DEBUG, "BottomFragGen") << "Found new tpacket: " << tpacket_sec 
 			      << " seconds, currentUNIX is: " << (uint64_t)(currentUNIX_ns/1000000000)
-			      << " seconds, diff is: " << process_timediff_sec << " s\n";
+			      << " seconds, diff is: " << process_timediff_sec << " s";
     if(process_timediff_sec >= 15){
       TLOG(TLVL_ERROR, "BottomFragGen") << "Fragment generator has fallen very far behind backend binary files ("
 					<< process_timediff_sec << " s). Check the data rate and consider raising the DAC threshold!"; 
@@ -249,17 +249,21 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     lowertime_per_mod_ns[module_id]=lowertime_ns;
     timestamp_=lowertime_per_mod_ns[module_id]+runstarttime_ns;
     TLOG(TLVL_DEBUG, "BottomFragGen") << "setting first event timestamp for module " << module_id << " to " << timestamp_ 
-                              << " ns, with initial lowertime of "  <<  lowertime_per_mod_ns[module_id] << " ns\n";
+                              << " ns, with initial lowertime of "  <<  lowertime_per_mod_ns[module_id] << " ns";
   }  
   else{ //Any other event
-    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getting data packet from module # = "
-			   << module_id << "\n"; 
+    TLOG(TLVL_DEBUG+1, "BottomFragGen") << "getting data packet from module # = " << module_id; 
 
     if(lowertime_ns+rolloverThreshold<lowertime_per_mod_ns[module_id]){
       //increase the uppertime because we have received a sync pulse
-      uppertime_per_mod_syncs[module_id]++; 
+      uppertime_per_mod_syncs[module_id] += (1 + missed_syncs[module_id]); 
       TLOG(TLVL_DEBUG, "BottomFragGen") << "Module " << module_id <<" received a sync. "
-      				<< "Uppertime is now " << uppertime_per_mod_syncs[module_id] << " syncs\n";
+      				<< "Uppertime is now " << uppertime_per_mod_syncs[module_id] << " syncs";
+      if(missed_syncs[module_id] > 0){
+        TLOG(TLVL_INFO, "BottomFragGen") << missed_syncs[module_id] << " missed sync(s) added back to module " << module_id
+				         << ". Uppertime is now " << uppertime_per_mod_syncs[module_id] << " syncs";
+      }
+      missed_syncs[module_id] = 0;
     }
     timestamp_ = lowertime_ns + runstarttime_ns + uppertime_per_mod_syncs[module_id]*1000000000*sync;
     TLOG(TLVL_DEBUG+1, "BottomFragGen") << "runstarttime: " <<runstarttime_ns<< " + lowertime: " << lowertime_ns 
@@ -280,7 +284,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
                            << oldUNIX_ns/1.e9 
       			   << " sec. Tpacket is " << tpacket_sec 
       			   << " sec, uppertime is " << uppertime_per_mod_syncs[module_id] 
-			   << " syncs, lowertime is " << lowertime_ns << " ns.\n";
+			   << " syncs, lowertime is " << lowertime_ns << " ns.";
     }
 
   //Safety check that all modules receive a sync 
@@ -290,10 +294,11 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
     metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 1, artdaq::MetricMode::Maximum); 
   }
 
-  if(lowertime_ns > (sync + 0.1)*1000000000) { //0.1 seconds after we're supposed to receive a sync
-    TLOG(TLVL_WARNING, "BottomFragGen") << "Module did not receive a sync. Module # "
-			   << module_id << " and lowertime is = " 
-                           << lowertime_ns << " ns ( " << lowertime_ns/1.e9 << " seconds )"<< " \n";
+  if(lowertime_ns > ((1+missed_syncs[module_id])*sync + 0.2)*1000000000) { //0.2 seconds after we're supposed to receive a sync
+    TLOG(TLVL_WARNING, "BottomFragGen") << "Module "<< module_id <<" did not receive a sync. Lowertime is " 
+                           << lowertime_ns << " ns ( " << lowertime_ns/1.e9 << " seconds ). "
+			   << "Incrementing its missed_sync counter and will attempt to correct the next time it receives a sync";
+    missed_syncs[module_id]++;
   }
 
   //Sanity check on timestamps, check that the distance in time between when the event was acquired and processed stays within alarmDeltaT
@@ -343,6 +348,7 @@ void CRT::FragGen::start()
     lowertime_per_mod_ns.push_back(0);
     uppertime_per_mod_syncs.push_back(0);
     maxlowertime_ns.push_back(0);
+    missed_syncs.push_back(0); 
   }
 
   //runstarttime = time(nullptr);
