@@ -17,7 +17,7 @@ SET_SOURCE_FILES_PROPERTIES(XMITModule.cpp PROPERTIES COMPILE_FLAGS -Wno-error=u
 SET_SOURCE_FILES_PROPERTIES(XMITReader.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 
 
-cet_make( LIBRARY_NAME sbndaq-artdaq_nevishwutils
+cet_make_library( LIBRARY_NAME sbndaq-artdaq_nevishwutils
   SOURCE NevisPCIeCard-generated.cpp
        ControlDataPacket.cpp
        StatusPacket.cpp
