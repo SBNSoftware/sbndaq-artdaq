@@ -106,7 +106,6 @@ cet_make_library(
   SOURCE
     febdrv.cc
   LIBRARIES
-    artdaq_DAQdata
     sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
     fhiclcpp::fhiclcpp
     cetlib_except::cetlib_except

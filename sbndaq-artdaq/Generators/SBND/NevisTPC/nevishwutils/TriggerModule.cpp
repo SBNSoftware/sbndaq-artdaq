@@ -3,7 +3,6 @@
 #include <chrono>
 #include "TriggerModule.h"
 #include "daqExceptions.h"
-#include "messagefacility/MessageLogger/MessageLogger.h"
 #include "trace.h"
 #define TRACE_NAME "TriggerModule"
 
@@ -23,7 +22,7 @@ namespace nevistpc
 	    << "  Sample (64MHz) : " << sample_ctr_trigger << std::endl
 	    << "  Trigger Count  : " << trigger_ctr        << std::endl;
     
-    mf::LogInfo("TriggerModuleStatus")  << strstrm.str();
+    TLOG(TLVL_INFO)  << strstrm.str();
   }
   
 
@@ -251,7 +250,7 @@ namespace nevistpc
     setGate2Delay(config->g2delay);
     
     _timeinfo_file_path=config->timeinfo_file_path;
-    mf::LogDebug("TriggerModule")  << config->debugInfo();
+    TLOG(TLVL_DEBUG)  << config->debugInfo();
   }
 
   void TriggerModule::loadStatus()
@@ -341,7 +340,7 @@ namespace nevistpc
     strstrm << std::endl
 	    <<"  Trigger Module [" << std::dec << (int) _slot_number << "]"  << " Status Query " << std::endl
 	    << "----------------------------" << std::endl;
-    mf::LogInfo("TriggerModule") << strstrm.str();
+    TLOG(TLVL_INFO) << strstrm.str();
     
     getStatus().report();
     

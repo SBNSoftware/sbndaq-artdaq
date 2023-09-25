@@ -25,20 +25,21 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_nevishwutils
        NevisPCIeCard.cpp
        NevisReadoutPCIeCard.cpp
        NevisControllerPCIeCard.cpp
+       FPGAFirmwareReader.cpp
        Crate.cpp
        ControllerModule.cpp
        NevisTPCFEM.cpp
        TriggerModule.cpp
        XMITModule.cpp
        XMITReader.cpp
+       NevisTBStreamReader.cpp
+       TimeUtils.cpp
+       StringUtils.cpp
   LIBRARIES
-       cetlib
-       cetlib_except
+       cetlib::cetlib
+       fhiclcpp::fhiclcpp
+       artdaq_utilities::artdaq-utilities_Plugins
        ${WINDRIVERLIB}
-
-      fhiclcpp
-      MF_MessageLogger
-      ${MF_UTILITIES}
   )
 
 

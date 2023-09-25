@@ -38,7 +38,6 @@ cet_make_exec(NAME gps-bcast
     sbndaq_artdaq::sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
    EPICS::ca
    pqxx
-   pq
    pthread
    rt
 )
