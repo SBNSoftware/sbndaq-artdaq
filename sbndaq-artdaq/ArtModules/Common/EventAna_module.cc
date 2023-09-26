@@ -609,11 +609,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
 
-#if ART_HEX_VERSION < 0x30900
-  evt.getManyByType(fragmentHandles);
-#else
   fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
-#endif
 
   /************************************************************************************************/
   if (finclude_caen) { 
@@ -679,11 +675,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 
     std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
 
-#if ART_HEX_VERSION < 0x30900
-    evt.getManyByType(fragmentHandles);
-#else
     fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
-#endif
 
     for (auto handle : fragmentHandles) {
       if (!handle.isValid() || handle->size() == 0)
@@ -739,11 +731,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
    if(finclude_ptb) {
      std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
 
-     #if ART_HEX_VERSION < 0x30900
-         evt.getManyByType(fragmentHandles);
-     #else
          fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
-     #endif
 
      for (auto handle : fragmentHandles) {
        if (!handle.isValid() || handle->size() == 0) continue;
