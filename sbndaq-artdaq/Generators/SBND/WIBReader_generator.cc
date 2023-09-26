@@ -1276,7 +1276,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto BNL_mon_STB1  = FEMB_configure.get<uint32_t>("BNL_mon_STB1");
   const auto BNL_sdacsw1   = FEMB_configure.get<uint32_t>("BNL_sdacsw1");
   const auto BNL_sdacsw2   = FEMB_configure.get<uint32_t>("BNL_sdacsw2");
-  const auto FEMB_channel_map = FEMB_configure.get<uint32_t>("FEMB_channel_map");
+  const auto FEMB_channel_map = FEMB_configure.get<uint8_t>("FEMB_channel_map");
   const auto use_old_femb_config = FEMB_configure.get<bool>("use_old_femb_config");
   
   if(signed(gain)>3 || signed(gain)<0){
