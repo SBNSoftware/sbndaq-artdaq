@@ -179,8 +179,8 @@ bool sbndaq::TriggerBoardReader::getNext_(artdaq::FragmentPtrs & frags) {
   TLOG( 20, "TriggerBoardReader") << "Sending " << frags.size() <<  " fragments" << std::endl ;
 
   if( artdaq::Globals::metricMan_ ) {
-    artdaq::Globals::metricMan_->sendMetric("PTB_Fragments_Sent", (double) frags.size(), "Fragments", 0, artdaq::MetricMode::Average) ;
-    artdaq::Globals::metricMan_->sendMetric("PTB_Bytes_Sent",     (double) sent_bytes,   "Bytes",     0, artdaq::MetricMode::Average) ;
+    artdaq::Globals::metricMan_->sendMetric("PTB_Fragments_Sent", (double) frags.size(), "Fragments", 11, artdaq::MetricMode::Average) ;
+    artdaq::Globals::metricMan_->sendMetric("PTB_Bytes_Sent",     (double) sent_bytes,   "Bytes",     11, artdaq::MetricMode::Average) ;
   }
 
   return ! _error_state.load() ;
@@ -234,10 +234,10 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  // publish the dedicated metrics
 	  if ( artdaq::Globals::metricMan_ ) {
 	    
-	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H0L0", (double) _metric_spill_h0l0_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
-	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H0L1", (double) _metric_spill_h0l1_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
-	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H1L0", (double) _metric_spill_h1l0_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
-	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H1L1", (double) _metric_spill_h1l1_counter, "Particles", 0, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H0L0", (double) _metric_spill_h0l0_counter, "Particles", 11, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H0L1", (double) _metric_spill_h0l1_counter, "Particles", 11, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H1L0", (double) _metric_spill_h1l0_counter, "Particles", 11, artdaq::MetricMode::Accumulate ) ;
+	    artdaq::Globals::metricMan_->sendMetric("PTB_Spill_H1L1", (double) _metric_spill_h1l1_counter, "Particles", 11, artdaq::MetricMode::Accumulate ) ;
 	    
 	  } // if there is a metric manager      
 	  
@@ -280,21 +280,21 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  double cs_rate   = _metric_CS_counter  * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 
 	  // publish metrics
-	  artdaq::Globals::metricMan_->sendMetric("PTB_Word_rate", word_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Word_rate", word_rate, "Hz", 11, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("PTB_HLT_rate", hlt_rate, "Hz", 0, artdaq::MetricMode::Average) ;
-	  artdaq::Globals::metricMan_->sendMetric("PTB_LLT_rate", llt_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_HLT_rate", hlt_rate, "Hz", 11, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_LLT_rate", llt_rate, "Hz", 11, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Trig_rate", beam_rate, "Hz", 0, artdaq::MetricMode::Average) ;
-	  artdaq::Globals::metricMan_->sendMetric("PTB_Good_Part_rate", good_part_rate, "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Trig_rate", beam_rate, "Hz", 11, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Good_Part_rate", good_part_rate, "Hz", 11, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Eff", beam_eff, "ratio", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Eff", beam_eff, "ratio", 11, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("PTB_CS_rate",  cs_rate,  "Hz", 0, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_CS_rate",  cs_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
 
 	  for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
 	    double temp_rate = _metric_HLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
-	    artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 0, artdaq::MetricMode::Average) ;
+	    artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
 	  }
 
 

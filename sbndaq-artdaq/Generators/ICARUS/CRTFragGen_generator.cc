@@ -139,7 +139,7 @@ bool CRT::FragGen::getNext_(
 
   if(metricMan != nullptr)
   {
-    metricMan->sendMetric("Fragments Made", fragIt, "Fragments", 1, artdaq::MetricMode::Accumulate);
+    metricMan->sendMetric("Fragments Made", fragIt, "Fragments", 11, artdaq::MetricMode::Accumulate);
   }
 
   // TODO prune debug messages, make trace message BottomCRT
@@ -147,7 +147,7 @@ bool CRT::FragGen::getNext_(
 
   if(fragIt > 0){//If we read at least one Fragment
     if (metricMan /* What is this? */ != nullptr)
-      metricMan->sendMetric("Fragments Sent", ev_counter(), "Events", 3 /* ? */,
+      metricMan->sendMetric("Fragments Sent", ev_counter(), "Events", 12 /* ? */,
           artdaq::MetricMode::LastPoint);
 
     ev_counter_inc(); // from base CommandableFragmentGenerator
@@ -264,7 +264,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //Tracks the highest lowertime each module has seen, verifies that it does not go above (sync+0.1) seconds
   if(lowertime_ns > maxlowertime_ns[module_id]){
     maxlowertime_ns[module_id] = lowertime_ns;
-    metricMan->sendMetric("Highest 32bit timestamp (in seconds):", maxlowertime_ns[module_id]/1.e9, "Fragments", 1, artdaq::MetricMode::Accumulate); 
+    metricMan->sendMetric("Highest 32bit timestamp (in seconds):", maxlowertime_ns[module_id]/1.e9, "Fragments", 11, artdaq::MetricMode::Accumulate);
   }
 
   if(lowertime_ns > (sync + 0.1)*1.e9) {
@@ -283,7 +283,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //                            << lowertime << ",deltaT_process is: " << deltaT_process << ", deltaT is " << deltaT << "  \n";
   //}
 
-  metricMan->sendMetric("Timestamp difference", int(deltaUNIX_sec), "Fragments", 1, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
+  metricMan->sendMetric("Timestamp difference", int(deltaUNIX_sec), "Fragments", 11, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
 
   oldUNIX_ns = timestamp_; // in nanoseconds
   lowertime_per_mod_ns[module_id] = lowertime_ns;

@@ -135,8 +135,8 @@ bool SPECTDCTimestampReader::getNext_(artdaq::FragmentPtrs& fragments) {
     ss << ", create_time=" << std::setw(5) << create_time_ms << " ms, " << last_frag_ovl;
     TLOG(TLVL_DEBUG_11) << ss.str().c_str();
     if (metricMan) {
-      metricMan->sendMetric("Fragments Sent", 1, "Events", 1, MetricMode::Rate);
-      metricMan->sendMetric("Fragment Create Time", create_time_ms, "ms", 1, MetricMode::Average | MetricMode::Maximum);
+      metricMan->sendMetric("Fragments Sent", 1, "Events", 11, MetricMode::Rate);
+      metricMan->sendMetric("Fragment Create Time", create_time_ms, "ms", 11, MetricMode::Average | MetricMode::Maximum);
     }
     if (0 != events_to_generate_ && ev_counter() > events_to_generate_) {
       requestStop();
@@ -156,11 +156,11 @@ bool SPECTDCTimestampReader::getNext_(artdaq::FragmentPtrs& fragments) {
 
   if (metricMan) {
     if (next_status_report_time_us_ < utls::hosttime_us()) {
-      metricMan->sendMetric("PoolBuffer Free Block Count", buffer_->freeBlockCount(), "Samples", 1,
+      metricMan->sendMetric("PoolBuffer Free Block Count", buffer_->freeBlockCount(), "Samples", 11,
                             MetricMode::LastPoint);
-      metricMan->sendMetric("PoolBuffer Fully Drained Count", buffer_->fullyDrainedCount(), "Times", 1,
+      metricMan->sendMetric("PoolBuffer Fully Drained Count", buffer_->fullyDrainedCount(), "Times", 11,
                             MetricMode::LastPoint);
-      metricMan->sendMetric("PoolBuffer Low Watermark", buffer_->lowWaterMark(), "Samples", 1, MetricMode::LastPoint);
+      metricMan->sendMetric("PoolBuffer Low Watermark", buffer_->lowWaterMark(), "Samples", 11, MetricMode::LastPoint);
       next_status_report_time_us_ = utls::hosttime_us() + 5 * utls::onesecond_us;
     }
   }
