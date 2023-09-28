@@ -1,3 +1,4 @@
+include_directories($ENV{JSONCPP_INC})
 link_directories($ENV{JSONCPP_LIB})
 
 
