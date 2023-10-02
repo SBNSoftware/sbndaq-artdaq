@@ -261,10 +261,10 @@ bool icarus::PhysCrateData::Monitor(){
       physCr->BoardTemps(ib,BoardTemps1_[ib],BoardTemps2_[ib]);
 
       sprintf(tmp_str,".Temp.Board%d.Temp1",ib);
-      metricMan->sendMetric(tmp_str,BoardTemps1_[ib],"C",1,artdaq::MetricMode::Average);
+      metricMan->sendMetric(tmp_str,BoardTemps1_[ib],"C",11,artdaq::MetricMode::Average);
 
       sprintf(tmp_str,".Temp.Board%d.Temp2",ib);
-      metricMan->sendMetric(tmp_str,BoardTemps2_[ib],"C",1,artdaq::MetricMode::Average);
+      metricMan->sendMetric(tmp_str,BoardTemps2_[ib],"C",11,artdaq::MetricMode::Average);
     }
 
   }
@@ -287,10 +287,10 @@ bool icarus::PhysCrateData::Monitor(){
     }
   }
 
-  metricMan->sendMetric(".Status.N_Running",n_running,"boards",1,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint); //use minimum for running
-  metricMan->sendMetric(".Status.N_DataReady",n_ready,"boards",1,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint); //use last point for ready...
-  metricMan->sendMetric(".Status.N_Busy",n_busy,"boards",1,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint); //maximum for the busy signals...
-  metricMan->sendMetric(".Status.N_GBusy",n_gbusy,"boards",1,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint);
+  metricMan->sendMetric(".Status.N_Running",n_running,"boards",11,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint); //use minimum for running
+  metricMan->sendMetric(".Status.N_DataReady",n_ready,"boards",11,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint); //use last point for ready...
+  metricMan->sendMetric(".Status.N_Busy",n_busy,"boards",11,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint); //maximum for the busy signals...
+  metricMan->sendMetric(".Status.N_GBusy",n_gbusy,"boards",11,artdaq::MetricMode::Minimum|artdaq::MetricMode::Maximum|artdaq::MetricMode::LastPoint);
 
   
   /*
@@ -327,7 +327,7 @@ int icarus::PhysCrateData::GetData(){
   _tloop_end = std::chrono::high_resolution_clock::now();
   UpdateDuration();
   TRACEN("PhysCrateData",TLVL_DEBUG+6,"GetData : waitData loop time was %lf seconds",_tloop_duration.count());
-  metricMan->sendMetric(".GetData.ReturnTime",_tloop_duration.count()*1000.,"ms",1,
+  metricMan->sendMetric(".GetData.ReturnTime",_tloop_duration.count()*1000.,"ms",11,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
   TRACEN("PhysCrateData",TLVL_DEBUG+7,"GetData : Calling waitData()");
@@ -338,7 +338,7 @@ int icarus::PhysCrateData::GetData(){
 
   _tloop_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_start-_tloop_end);
   TRACEN("PhysCrateData",TLVL_DEBUG+8,"GetData : waitData call time was %lf seconds",_tloop_duration.count());
-  metricMan->sendMetric(".GetData.WaitTime",_tloop_duration.count()*1000.,"ms",1,
+  metricMan->sendMetric(".GetData.WaitTime",_tloop_duration.count()*1000.,"ms",11,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
   // Yun-Tse: ugly and tentative workaround at this moment...  need to change!!
@@ -383,17 +383,17 @@ int icarus::PhysCrateData::GetData(){
   }
   
   TRACEN("PhysCrateData",TLVL_DEBUG+14,"GetData completed. Status %d, Data size %lu bytes",0,data_size_bytes);
-  metricMan->sendMetric(".GetData.DataAcquiredSize",data_size_bytes,"bytes",1,artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
+  metricMan->sendMetric(".GetData.DataAcquiredSize",data_size_bytes,"bytes",11,artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
 
   //start loop timer
   _tloop_start = std::chrono::high_resolution_clock::now();
 
   _tloop_duration = std::chrono::duration_cast< std::chrono::duration<double> >(_tloop_start-_tloop_end);
   TRACEN("PhysCrateData",TLVL_DEBUG+15,"GetData : waitData fill time was %lf seconds",_tloop_duration.count());
-  metricMan->sendMetric(".GetData.FillTime",_tloop_duration.count()*1000.,"ms",1,
+  metricMan->sendMetric(".GetData.FillTime",_tloop_duration.count()*1000.,"ms",11,
 			artdaq::MetricMode::LastPoint | artdaq::MetricMode::Maximum | artdaq::MetricMode::Average);
 
-  metricMan->sendMetric(".GetData.CircularBufferOccupancy",fCircularBuffer.Size()/2,"bytes",1,
+  metricMan->sendMetric(".GetData.CircularBufferOccupancy",fCircularBuffer.Size()/2,"bytes",11,
 			artdaq::MetricMode::LastPoint|artdaq::MetricMode::Maximum|artdaq::MetricMode::Minimum|artdaq::MetricMode::Average);
 
   if(data_size_bytes==0 && veto_state)

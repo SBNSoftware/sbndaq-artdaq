@@ -98,11 +98,7 @@ void sbndaq::IncompleteEventAna::analyze(const art::Event& evt)
 
   std::vector< art::Handle< std::vector<artdaq::Fragment> > > rawFragHandles;
 
-#if ART_HEX_VERSION < 0x30900
-        evt.getManyByType(rawFragHandles);
-#else
         rawFragHandles = evt.getMany<std::vector<artdaq::Fragment>>();
-#endif
 
   for(auto const& rawFragHandle : rawFragHandles){
     if(!rawFragHandle.isValid()) continue;

@@ -195,7 +195,7 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 	}
 
       fDeltaGates = datastream_info.gate_id - fLastGatesNum;
-      metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("EventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
 
       if(fDeltaGates <= 0)
 	TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
@@ -203,20 +203,20 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
       if(datastream_info.gate_type == 1)
 	{
 	  fDeltaGatesBNB = datastream_info.gate_id - fLastGatesNumBNB;
-	  metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	  metricMan->sendMetric("BNBEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
 	  if(fDeltaGatesBNB <= 0)
 	    TLOG(TLVL_WARNING) << "Change in total number of beam gates for BNB <= 0!";
 	}
       else if(datastream_info.gate_type == 2)
 	{
 	  fDeltaGatesNuMI = datastream_info.gate_id - fLastGatesNumNuMI;
-	  metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	  metricMan->sendMetric("NuMIEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
 	  if(fDeltaGatesNuMI <= 0)
 	    TLOG(TLVL_WARNING) << "Change in total number of beam gates for NuMI <= 0!";
 	}
       else {
 	fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
-	metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+	metricMan->sendMetric("OtherEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
 	if(fDeltaGatesOther <= 0)
 	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for Other <= 0!";
       }

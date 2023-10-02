@@ -1,0 +1,49 @@
+BEGIN_PROLOG
+
+pmtSoftwareTriggerProducer:
+{
+  module_type: "PMTmetrics"
+  is_persistable: true
+  WindowOffset: 0.1    # us, offset of trigger time in us
+  WindowLength: 1.8    # us, extended by 0.2us to account for delayed signals
+  TrigWindowFrag:     100      # max time difference for frag timestamp to be part of beam window                                                                          
+                           #  in ticks (1 tick=2 ns), default 100 ticks - WAG for now   
+  WvfmLength: 5120         # not used, changing this does nothing
+  ETrigFragID: 9
+  ETrigThresh: 5000        # adc threshold for event trigger
+# order in fragIDlist is arbitrary, but Uncoated and TPC have to follow the same order
+  FragIDlist: [9, 15, 17, 20, 21, 22, 23, 24, 25]  # should have 8 modules  
+  Uncoated: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,  
+	     0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,  
+	     0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,  
+	     0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+	     0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+	     0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
+	     0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+	     0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]  
+# 0 is Coated, 1 is Uncoated
+  TPC:      [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+             1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+             0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+             1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+             0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+             1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+             0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+             1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1]  
+# TPC=0(1) is neg(pos) x and beam right(left)
+
+# need to add channel dependent baseline below and another 120 array of "ignore this PMT"
+
+  Verbose: true
+  SaveHists: false          # save 10 us waveform histograms
+
+  BaselineAlgo: "estimate"  # options are: "constant" or "estimate"
+  InputBaseline: 8000.0     # in ADC, used if BaselineAlgo: "constant"
+  InputBaselineSigma: 2.0   # in ADC, used if BaselineAlgo: "constant"
+  ADCThreshold: 7960        # in ADC, corresponds to ~5 PE in ideal response 
+  FindPulses: false         # use crude pulse finding algorithm (more computational)
+  PEArea: 66.33             # conversion factor from ADCxns area to PE count 
+}
+
+END_PROLOG
+

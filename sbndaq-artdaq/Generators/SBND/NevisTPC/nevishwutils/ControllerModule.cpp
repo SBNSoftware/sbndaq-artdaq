@@ -154,8 +154,8 @@ namespace nevistpc
   void ControllerModule::setupTXModeRegister()
   {
     nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::tx_mode_reg, 0xf0000008 );
-    nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::r2_cs_reg, dma_detail::cs_init );
-    nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::r2_cs_reg, dma_detail::cs_start+0xffffff );
+    nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::r1_cs_reg, dma_detail::cs_init );
+    nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::r1_cs_reg, dma_detail::cs_start+0xffffff );
     TLOG(TLVL_INFO) << "ControllerModule: called " <<  __func__ ;
   }
 

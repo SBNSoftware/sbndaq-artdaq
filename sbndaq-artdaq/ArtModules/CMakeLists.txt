@@ -1,11 +1,11 @@
 set (ART_build_LIB_LIST
-  art_Framework_Core
-  art_Framework_Principal
-  art_Persistency_Provenance
-  art_Utilities
-  canvas
-  art_root_io_tfile_support
-  art_root_io_TFileService_service
+  art::Framework_Core
+  art::Framework_Principal
+  art::Persistency_Provenance
+  art::Utilities
+  canvas::canvas
+  art_root_io::tfile_support
+  art_root_io::TFileService_service
 )
 
 set (ARTDAQ_build_LIB_LIST
@@ -14,9 +14,9 @@ set (ARTDAQ_build_LIB_LIST
 )
 
 set(ROOT_build_LIB_LIST
-  Tree
-  TreePlayer
-  Hist
+  ROOT::Tree
+  ROOT::TreePlayer
+  ROOT::Hist
 )
 
 set(BUILD_PLUGIN_CORE_LIB_LIST
@@ -31,21 +31,21 @@ set(BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST
   artdaq_core::artdaq-core_Data
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
-  MF_MessageLogger
-  fhiclcpp
-  cetlib_except
+  messagefacility::MF_MessageLogger
+  fhiclcpp::fhiclcpp
+  cetlib_except::cetlib_except
 )
 
 set(BUILD_PLUGIN_BUILDINFO_LIB_LIST
-  artdaq_BuildInfo
+  artdaq::BuildInfo
   artdaq_core::artdaq-core_BuildInfo
   artdaq_utilities::artdaq-utilities_BuildInfo
   sbndaq-artdaq_BuildInfo
   sbndaq_artdaq_core::sbndaq-artdaq-core_BuildInfo
-  MF_MessageLogger
-  fhiclcpp
-  cetlib
-  cetlib_except
+  messagefacility::MF_MessageLogger
+  fhiclcpp::fhiclcpp
+  cetlib::cetlib
+  cetlib_except::cetlib_except
 )
 
 add_subdirectory(Common)
