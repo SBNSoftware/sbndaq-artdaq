@@ -1278,6 +1278,8 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto BNL_sdacsw2   = FEMB_configure.get<uint32_t>("BNL_sdacsw2");
   const auto FEMB_channel_map = FEMB_configure.get<uint8_t>("FEMB_channel_map");
   const auto use_old_femb_config = FEMB_configure.get<bool>("use_old_femb_config");
+  const auto chnl_mapping_mode = FEMB_configure.get<bool>("chnl_mapping_mode");
+  const auto test_chnl_number  = FEMB_configure.get<uint32_t>("test_chnl_number");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -1395,54 +1397,80 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   //* Argument No.  *    Argument Name    *        Description                                                                   *
   //******************************************************************************************************************************
   //*    1          *       iFEMB         *      FEMB Number (1-4)                                                               *
-  //*    2          *     configuration   *      0 - config. 1, 1 - config. 2, any other number = config. 3                      *  
-  //*    3          *       pls_cs        *      set to 0 always                                                                 *
-  //*    4          *       dac_sel       *      set to 1 always                                                                 *
-  //*    5          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
-  //*    6          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
-  //*    7          *       fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
-  //*    8          *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
-  //*    9          *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             *
-  //*    10         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
-  //*    11         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
-  //*    12         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
-  //*    13         *       snc           *      Sets the baseline value                                                         *
-  //*    14         *       sg0           *      First argument in setting the gain                                              *
-  //*    15         *       sg1           *      Second argument in setting the gain                                             *
-  //*    16         *       st0           *      First argument in setting the shaping time                                      *
-  //*    17         *       st1           *      second argument in setting the shaping time                                     *
-  //*    18         *       smn           *      Enable output monitor                                                           *
-  //*    19         *       sdf           *      Buffer control                                                                  *
-  //*    20         *       slk0          *      Set to 0 in shanshan scripts                                                    *
-  //*    21         *       stb1          *      Set monitoring (always set to 0)                                                *
-  //*    22         *       stb           *      Set monitoring (always set to 0)                                                *
-  //*    23         *       s16           *      Enable high filter                                                              *
-  //*    24         *       slk1          *      Set to 0 always in shanshan scripts                                             *
-  //*    25         *       sdc           *      Output coupling                                                                 *
-  //*    26         *       swdac1        *      Set to 1 when FPGA pulsar is being used (otherwise 0)                           *
-  //*    27         *       swdac2        *      Set to 1 when ASIC pulsar is being used (otherwise 0)                           *
-  //*    28         *       dac           *      DAC setting when using ASIC pulsar                                              *
-  //*    29         *       fecfg_loadflg *      Always set to 0 in shanshan scripts                                             * 
+  //*    2          *     configuration   *      0 - config. 1, 1 - config. 2, any other number = config. 3                      *
+  //*    3          *   use_chnl_map_test *      going test channel mapping by setting a pulse in a given channel                *
+  //*    4          *       chnl_no       *      Channel number for channel mapping test (0-127)                                 *        
+  //*    5          *       pls_cs        *      set to 0 always                                                                 *
+  //*    6          *       dac_sel       *      set to 1 always                                                                 *
+  //*    7          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
+  //*    8          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
+  //*    9          *       fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
+  //*    10         *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
+  //*    11         *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             * 
+  //*    12         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    13         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    14         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
+  //*    15         *       snc           *      Sets the baseline value                                                         *
+  //*    16         *       sg0           *      First argument in setting the gain                                              *
+  //*    17         *       sg1           *      Second argument in setting the gain                                             *
+  //*    18         *       st0           *      First argument in setting the shaping time                                      *
+  //*    19         *       st1           *      second argument in setting the shaping time                                     *
+  //*    20         *       smn           *      Enable output monitor                                                           *
+  //*    21         *       sdf           *      Buffer control                                                                  *
+  //*    22         *       slk0          *      Set to 0 in shanshan scripts                                                    *
+  //*    23         *       stb1          *      Set monitoring (always set to 0)                                                *
+  //*    24         *       stb           *      Set monitoring (always set to 0)                                                *
+  //*    25         *       s16           *      Enable high filter                                                              *
+  //*    26         *       slk1          *      Set to 0 always in shanshan scripts                                             *
+  //*    27         *       sdc           *      Output coupling                                                                 *
+  //*    28         *       swdac1        *      Set to 1 when FPGA pulsar is being used (otherwise 0)                           *
+  //*    29         *       swdac2        *      Set to 1 when ASIC pulsar is being used (otherwise 0)                           *
+  //*    30         *       dac           *      DAC setting when using ASIC pulsar                                              *
+  //*    31         *       fecfg_loadflg *      Always set to 0 in shanshan scripts                                             * 
   //******************************************************************************************************************************   
   
   if(!use_old_femb_config){
   
+     if (chnl_mapping_mode){
+         if (signed(test_chnl_number)<0 || signed(test_chnl_number)>127){
+	     cet::exception excpt(identification);
+	     excpt << "In FEMB " << iFEMB << " Channel number " << test_chnl_number << " Provided for channel map test is not acceptable";
+	     throw excpt;
+	 }
+	 
+	 else if(pls_mode == 0){
+	     cet::exception excpt(identification);
+	     excpt << "In FEMB " << iFEMB << " Pulse mode " << pls_mode << " is unacceptable for doing channel map tests";
+	     throw excpt;
+	 }
+     }
+  
      if (pls_mode == 0){
-         wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+         wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
                          BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
 		         0, BNL_output_coupl, 0, 0, 0, false);
      }
   
      else if (pls_mode == 1){
-         wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
-                         BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
-		         0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+         if (chnl_mapping_mode){
+             wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0],                              BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                             BNL_enable_high_filt,0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+	 }
+	 
+	 else{
+	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+                             BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		             0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+	 }
      }
   
      else if (pls_mode == 2){
-         wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], 
-	                 BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,         
-			 BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0, false);
+         if (chnl_mapping_mode){
+	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                   BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0, false);
+	 }
+	 
+	 else{
+	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                                           BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                   BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0, false);
+	 }
      }
   }
   
