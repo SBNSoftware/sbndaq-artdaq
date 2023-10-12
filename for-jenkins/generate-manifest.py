@@ -49,8 +49,8 @@ class Product:
         qualifiers=self.qualifiers.split(':')
         rqual=list(filter(re.compile(r'(e[0-9]{2}|c[0-9]{1})').search , qualifiers))
         bqual=list(filter(re.compile(r'(debug|prof)').search , qualifiers))
-        squal=list(filter(re.compile(r's[0-9]{2,3}').search , qualifiers))
-        pyqual=list(filter(re.compile(r'(py(2|3)|p2715a|p383b|p392)').search , qualifiers))
+        squal=list(filter(re.compile(r's[0-9]{2,3}(|a)').search , qualifiers))
+        pyqual=list(filter(re.compile(r'(py(2|3)|p2715a|p383b|p392|p3913)').search , qualifiers))
         aqual=list(filter(re.compile(r'(noarch|slf7-x86_64)').search , qualifiers))
 
         arch='slf7-x86_64' if not aqual else aqual[0]
