@@ -53,14 +53,7 @@ namespace Bottom {
 int pmt;
 static int totalpmt;
 int usbhowmanyboards[2][10]={0};
-int usbhowmanybox[2][10]={0};
-int usbhowmanyboxcount = 0;
 int usbhowmanyboardscount = 0;
-int boxtousb[128];
-int boxtoboard[128];
-//int pmt_local;
-//int usb_local;
-int pmt_usb_conv[100000];
 int pmttousb[10];
 int pmttoboard[10];
 int pmtnumbers[10];
@@ -76,17 +69,11 @@ int force_trig;
 //string gate;
 int filelength = 20;
 int run_length;
-int usb_box;
-int totalbox;
 int usblocal[128];
-//int boardnumber;
 string pmtdata[128][128][11];
-//string module;
 int hdelay;
 int gaindata[128][128][64];
 int gapkey;
-//int pipedelay;
-string choice = "";
 char run_number[16];
 string usemaroc2gainconstantsmb;
 //string comments;
@@ -198,7 +185,7 @@ vector<vector<string>> fcl_read(string filename)
         return output;
 }
 ///////////////////////////////////////////////////////////////////////////////
-void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,string filename){
+void loadconfig(string mode_local, int usb_board, int pmt_board,string filename){
     //int usbhowmanyboardscount = 0;
 
     //Default mode for mode_local paramter.
@@ -207,7 +194,6 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
     else
         mode = mode_local;
     
-    totalbox = 0;
     totalpmt= 0;
 	
         if(mode.compare("debug") == 0){
@@ -217,7 +203,6 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
             TLOG(TLVL_WARNING) << "Loadconfig: cannot initialize - need USB board and PMT board.\n";
         }
         else{
-            if(!triggerbox){
                 //cout << "Board " << pmt_board << " on USB " << usb_board << " parameters loaded \n";
                 TLOG(TLVL_DEBUG) << "Board " << pmt_board << " on USB " << usb_board << " parameters loaded.\n";
                 pmtdata[usb_board][pmt_board][0] = "none";     //pmt serial number
@@ -261,37 +246,12 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
                 usbhowmanyboards[1][usbhowmanyboardscount] = usb_board;
                 usbhowmanyboards[0][usbhowmanyboardscount]++;
                 usbhowmanyboardscount++;
-            }
-            else{
-                pmtdata[usb_board][pmt_board][0] = "none";     //pmt serial number
-                pmtdata[usb_board][pmt_board][1] = to_string(pmt);  //board number
-                pmtdata[usb_board][pmt_board][2] = "-999";  //HV
-                pmtdata[usb_board][pmt_board][3] = "932";        //DAC
-                pmtdata[usb_board][pmt_board][4] = "no";   //use m2 gains
-                pmtdata[usb_board][pmt_board][5] = "off";  //gate (on,off,...)
-                if(pmt_board <= 40){
-                    pmtdata[usb_board][pmt_board][6] = to_string(20);  //pipedelay
-                }
-                else{
-                    pmtdata[usb_board][pmt_board][6] = to_string(21);  //pipedelay
-                }
-                pmtdata[usb_board][pmt_board][7] = to_string(0);    //op87
-                pmtdata[usb_board][pmt_board][8] = to_string(0);    //op75
-                pmtdata[usb_board][pmt_board][9] = "debug mode";    //comments
-                pmtdata[usb_board][pmt_board][10] = to_string(0);   //module number
-                totalbox++;
-                boxtousb[totalbox] = usb_board;
-                boxtoboard[totalbox] = pmt_board;
-                // should see what to do in initializeboard
-                structure[usb_board] = 0;
-            }
+            
         }
     }
-	else if(mode.compare("fcl") == 0){ //read from FiCHL file if mode = fcl        
+    else if(mode.compare("fcl") == 0){ //read from FiCHL file if mode = fcl        
         vector<vector<string>> output_fcl = fcl_read(filename);
         totalpmt = 0;
-        totalbox = 0;
-        usb_box = 0;
         int usbtemp;
         int pmttemp;
         for (unsigned int i=0; i< output_fcl.size(); i++){
@@ -310,36 +270,21 @@ void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox,
 	    pmtdata[usbtemp][pmttemp][8] = output_fcl[i][8];//
 	    pmtdata[usbtemp][pmttemp][9] = "fcl_mode";//
 	    pmtdata[usbtemp][pmttemp][10] = output_fcl[i][10];//            
-            if(pmtdata[usbtemp][pmttemp][2] == "-999"){
-                for(int index = 0; index<64; index++){
-                gaindata[usbtemp][pmttemp][index] = 16;
-                }
-                totalbox++;
-                boxtousb[totalbox] = usbtemp;     //usb number
-                boxtoboard[totalbox] = pmttemp;   //board number
-                structure[usbtemp] = 0;
-                usbhowmanybox[0][usbhowmanyboxcount] = usbtemp;
-                usbhowmanybox[1][usbhowmanyboxcount]++;
-                usbhowmanyboxcount++;
-                usb_box = usbtemp;                //unique usb to have boxes connected
-            }
-            else{
-                for (int j=0;j<64;j++){
-                  TLOG(TLVL_DEBUG) << "Attempting to parse fcl parameter ["<<i<<"]["<<(j+11)<<"] = \""<<output_fcl[i][0]<<"\"";
+            for (int j=0;j<64;j++){
+                TLOG(TLVL_DEBUG) << "Attempting to parse fcl parameter ["<<i<<"]["<<(j+11)<<"] = \""<<output_fcl[i][0]<<"\"";
                 gaindata[usbtemp][pmttemp][j] = std::stoi(output_fcl[i][j+11]);
-                }
-                totalpmt++;				
-                pmttousb[totalpmt] = usbtemp;
-                pmttoboard[totalpmt] = pmttemp;
-                structure[usbtemp] = 0;
-                usbhowmanyboards[1][usbhowmanyboardscount] = usbtemp;
-                usbhowmanyboards[0][usbhowmanyboardscount]++;
-                pmtnumbers[totalpmt] = pmttemp;
-                usbhowmanyboardscount++;                
             }
+            totalpmt++;				
+            pmttousb[totalpmt] = usbtemp;
+            pmttoboard[totalpmt] = pmttemp;
+            structure[usbtemp] = 0;
+            usbhowmanyboards[1][usbhowmanyboardscount] = usbtemp;
+            usbhowmanyboards[0][usbhowmanyboardscount]++;
+            pmtnumbers[totalpmt] = pmttemp;
+            usbhowmanyboardscount++;                
         }
 	fclload = 1;	
-	} 
+    } 
 }
 
 int getnumpmt(){
@@ -389,7 +334,7 @@ int scanFiles(string inputDirectory){
 }
 
 ////////////////////////////////////////////////////////////////////////
-void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
+void starttakedata(int pmtini, int pmtfin)
 {
     
     if(!pmtini && !pmtfin)                          // both not defined
@@ -414,30 +359,6 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
         pmtini = 1;
         pmtfin = totalpmt;
     }
-    
-    if (!boxini && !boxfin)                           // both not defined
-    {
-        boxini = 1;
-        boxfin = totalbox;
-    }
-    
-    if(mode.compare("debug")==0)
-    {
-        int totalfans = boxfin - boxini + 1;
-        //printf("%d\t %d\t \n", totalfans, totalbox);
-        TRACE(TLVL_DEBUG,"%d\t %d\t \n", totalfans, totalbox);
-        if(totalbox != totalfans)
-        {
-            //printf("Problem with initialization of fan-in modules at starttakedata \n");
-            TRACE(TLVL_DEBUG,"Problem with initialization of fan-in modules at starttakedata\n");
-        }
-    }
-    else
-    {
-        boxini = 1;
-        boxfin = totalbox;
-    }
-   
 
     int pmt1;
     int usb_local;
@@ -447,7 +368,6 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
     {
         if(!pmttousb[pmt1] || !pmttoboard[pmt1])
         {
-            if(pmttoboard[pmt1] != 0)
                 //printf("usb_local or pmt_local not defined.\n");
                 TRACE(TLVL_WARNING,"Starttakedata: usb_local or pmt_local not defined.\n");
         }
@@ -463,7 +383,7 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
    for(int i=0; i < usbhowmanyboardscount; i++){
         usb_local = usbhowmanyboards[1][i];
         //pmt_local = pmttoboard[pmt1];
-        if(structure[usb_local] == 0)                // only trigger box!!
+        if(structure[usb_local] == 0)
         {
             set_inhibit_usb(usb_local, 0);            // -2; release inhibit for baseline
             					      // -1; inhibit writing data
@@ -475,16 +395,6 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
         }
     }
     
-    
-    //int box1;
-    //for(box1 = boxini; box1<=boxfin; box1++)
-    //{
-    //    if(!boxtousb[box1] || !boxtoboard[box1])
-    //    {
-    //        //printf("usb_local or pmt_local not defined.\n");
-    //        TRACE(TLVL_WARNING,"Starttakedata: usb_local or pmt_local not defined.\n");
-    //    }
-    //}
     
 
     time_t t1 = time(0);   //get time now
@@ -507,7 +417,7 @@ void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin)
 
 ////////////////////////////////////////////////////////////////
 
-void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online_path)
+void stoptakedata( int pmtini, int pmtfin, string online_path)
 {
     if(!pmtini && !pmtfin)                           // both not defined
     {
@@ -528,27 +438,6 @@ void stoptakedata( int pmtini, int pmtfin, int boxini, int boxfin, string online
     {
         pmtini = 1;
         pmtfin = totalpmt;
-    }
-    
-    
-    if(!boxini && !boxfin)                            // both not defined
-    {
-        boxini = 1;
-        boxfin = totalbox;
-    }
-    
-    if(mode.compare("debug")==0)
-    {
-        int totalfans = boxfin - boxini + 1;
-        if(totalbox != totalfans)
-        {
-            //printf("Problem with initialization at stoptakedata \n");
-            TRACE(TLVL_DEBUG,"Problem with initialization at stoptakedata\n");
-        }
-    }
-    else{
-        boxini = 1;
-        boxfin = totalbox;
     }
    
     int pmt1;
@@ -878,20 +767,6 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
 	}
 	usleep(500000);
     }
-
-    //sleep(2.0);
-
-    //for(pmt1 = pmtini; pmt1 <= pmtfin; pmt1++){
-    //    usb_local = pmttousb[pmt1];
-    //    pmt_local = pmttoboard[pmt1];
-    //    com_usb(usb_local, pmt_local, 254, 0);            // enable trigger
-    //  for( int i = 1; i <= trigger_num; i++){
-    //      com_usb(usb_local, pmt_local, 81, 0);         // take baseline hits - 500
-    //  }
-    //    com_usb(usb_local, pmt_local, 73, 0b00000);
-    //}
- 
-    //sleep(2.0);                                             // wait late packets
 
     for( int j = 0; j<usbhowmanyboardscount; j++){
         usb_local = usbhowmanyboards[1][j];

@@ -43,7 +43,7 @@ int startallboards(const char *argv, const char *online_path)
     //For artdaq: this code creates a link to the latest data run at $(online_path)/bottomCRTreadout/DataFolder
 
     string mode = "fcl";
-    Bottom::loadconfig(mode,0,0,0,filename);                       //read fcl file and load PMT data
+    Bottom::loadconfig(mode,0,0,filename);                       //read fcl file and load PMT data
 
     PMTINI = 1;
     PMTFIN = Bottom::getnumpmt();
@@ -66,7 +66,7 @@ int startallboards(const char *argv, const char *online_path)
         break;
       }
     }
-    Bottom::starttakedata(PMTINI,PMTFIN,0,0);              //Starts taking data
+    Bottom::starttakedata(PMTINI,PMTFIN);              //Starts taking data
 
     return 0;
 }

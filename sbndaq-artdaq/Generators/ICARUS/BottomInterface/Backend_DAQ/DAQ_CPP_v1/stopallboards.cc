@@ -28,7 +28,7 @@ int stopallboards(const char *argv, const char *online_path){
   PMTINI = 1;
   PMTFIN = Bottom::getnumpmt();
 
-  Bottom::stoptakedata(PMTINI,PMTFIN,0,0,online_path);               //Stops taking data
+  Bottom::stoptakedata(PMTINI,PMTFIN,online_path);               //Stops taking data
 
   sleep(2);
 
