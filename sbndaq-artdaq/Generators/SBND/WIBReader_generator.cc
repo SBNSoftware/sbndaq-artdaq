@@ -32,8 +32,8 @@ namespace sbndaq
 {
 
  WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps),
-     semaphore_acquire_timeout_ms{ps.get<decltype(semaphore_acquire_timeout_ms)>("semaphore_acquire_timeout_ms", 10000)},
-     calibration_mode{ps.get<decltype(calibration_mode)>("calibration_mode", false)},
+     semaphore_acquire_timeout_ms{ps.get<decltype(semaphore_acquire_timeout_ms)>("semaphore_acquire_timeout_ms")}, // 10000
+     calibration_mode{ps.get<decltype(calibration_mode)>("calibration_mode")},
      sem_wib_yld{nullptr},sem_wib_lck{nullptr},
      semaphores_acquired{acquireSemaphores_ThrowOnFailure()},
      wib{nullptr}
