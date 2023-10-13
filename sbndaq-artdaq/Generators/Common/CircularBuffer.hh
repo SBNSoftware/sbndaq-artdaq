@@ -24,7 +24,7 @@ namespace sbndaq{
       buffer.clear();
       mutexptr->unlock();
 
-      metricMan->sendMetric(".CircularBuffer.LinearizeCount",linearizeCount,"count",1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric(".CircularBuffer.LinearizeCount",linearizeCount,"count",11,artdaq::MetricMode::LastPoint);
     }
 
     size_t Insert(size_t,std::unique_ptr<T[]>  const& );
@@ -133,7 +133,7 @@ namespace sbndaq{
     if(!buffer.is_linearized() )	
 		 throw std::runtime_error("Circular buffer is not linear.");
 
-    metricMan->sendMetric(".CircularBuffer.LinearizeCount",++linearizeCount,"count",1,artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric(".CircularBuffer.LinearizeCount",++linearizeCount,"count",11,artdaq::MetricMode::LastPoint);
 
     return buffer.size();
   }
@@ -155,7 +155,7 @@ namespace sbndaq{
     TLOG(TDEBUG+2)<< "Circular buffer linearize complete. Size is "<<buffer.size()
       <<". Is linear? "<< std::string(buffer.is_linearized()?"yes":"no");
 
-    metricMan->sendMetric(".CircularBuffer.LinearizeCount",++linearizeCount,"count",1,artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric(".CircularBuffer.LinearizeCount",++linearizeCount,"count",11,artdaq::MetricMode::LastPoint);
 
     return data_ptr;
   }

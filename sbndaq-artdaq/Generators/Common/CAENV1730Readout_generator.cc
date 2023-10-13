@@ -324,6 +324,12 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 
   fTimeOffsetNanoSec = ps.get<uint32_t>("TimeOffsetNanoSec",0); //0ms by default
   TLOG(TINFO) <<"fTimeOffsetNanoSec=" << fTimeOffsetNanoSec;
+
+  fOutputClk = ps.get<bool>("OutputClk", 0); // To output Motherboard CLK to TRG-OUT, default 0
+  TLOG(TINFO)<<"OutputClk=" << fOutputClk;
+
+  fOutputClkPhase = ps.get<bool>("OutputClkPhase", 0); // To output Motherboard CLK PHASE to TRG-OUT, default 0
+  TLOG(TINFO)<<"OutputClkPhase=" << fOutputClkPhase;
 }
 
 void sbndaq::CAENV1730Readout::Configure()
@@ -679,6 +685,33 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
   }
 }
 
+void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
+{
+  /* Check to output ONLY CLK OR CLK PHASE */
+  if ( fOutputClk && fOutputClkPhase ){
+    TLOG(TLVL_ERROR) << "Error configuring output clock: Cannot output clock and its phase at the same time." << std::endl;
+    abort();
+  } 
+
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+  uint32_t data;
+
+  /* Check the output of the 0x811C */
+  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
+  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
+
+  uint32_t value16 = 0x1; 
+  uint32_t value18 = 0x0;
+  if (fOutputClk) value18 = 0x1;
+  if (fOutputClkPhase) value18 = 0x2;
+  data |= ((value16 & 0x3)<<16) + ((value18 &0x3)<<18);
+
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, data);
+  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
+
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+  TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+}
 
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
 {
@@ -1016,6 +1049,9 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
 
   // for ICARUS
   if(fModeLVDS!=0){ ConfigureLVDS();  }
+	
+  // for clock synchronization studies
+  if( fOutputClk || fOutputClkPhase ){ ConfigureClkToTrgOut(); } 
 
   ConfigureSelfTriggerMode();
 
@@ -1267,7 +1303,6 @@ void sbndaq::CAENV1730Readout::stop()
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
 
-
   GetData_thread_->stop();
 
   CAEN_DGTZ_ErrorCode retcode;
@@ -1303,7 +1338,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
                                << ": " << ch_temps[ch] << "  C"
                                << TLOG_ENDL;
 
-    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
+    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
 			  artdaq::MetricMode::Average);
 
     if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
@@ -1323,10 +1358,10 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
       TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << ch;
     }
     else{
-      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 1,
+      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
-      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 1,
+      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
       /*
@@ -1588,7 +1623,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
 
   if (delta.count() >0.005*fGetNextFragmentBunchSize) {
-     metricMan->sendMetric("Laggy getNext",1,"count",1,artdaq::MetricMode::Accumulate);
+     metricMan->sendMetric("Laggy getNext",1,"count",11,artdaq::MetricMode::Accumulate);
      TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_seqid;
    }
 
@@ -1724,8 +1759,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 			 << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 			 << TLOG_ENDL;
     }
-    metricMan->sendMetric("FragmentCreationGapMax", (ts_now-ts_frag), "ns", 2, artdaq::MetricMode::Maximum);
-    metricMan->sendMetric("FragmentCreationGapAvg", (ts_now-ts_frag), "ns", 2, artdaq::MetricMode::Average);
+    metricMan->sendMetric("FragmentCreationGapMax", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Maximum);
+    metricMan->sendMetric("FragmentCreationGapAvg", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Average);
 
 
     fragment_uptr->setTimestamp( ts_frag );
@@ -1742,7 +1777,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       {
 	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / "
                         << readoutwindow_sequence_id_gap;
-	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
       }
     }
 
@@ -1773,13 +1808,13 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     max_fragment_create_time=std::max(delta.count(),max_fragment_create_time);
 
     if (delta.count() >0.0005 ) {
-      metricMan->sendMetric("Laggy Fragments",1,"frags",1,artdaq::MetricMode::Maximum);
+      metricMan->sendMetric("Laggy Fragments",1,"frags",11,artdaq::MetricMode::Maximum);
       TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_seqid <<  " took " << delta.count()*1000 << " ms";
 //TRACE_CNTL("modeM", 0);
     }
   }
 
-  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
+  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
 
   //wes ... this shouldn't be called here!

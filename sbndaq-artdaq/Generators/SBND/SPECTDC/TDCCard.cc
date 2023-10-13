@@ -184,8 +184,8 @@ bool TDCCard::start() {
     if (!chan.start()) ++error_count;
 
   if (metricMan) {
-    metricMan->sendMetric(lit::monitor_wr_synced, uint8_t{0}, lit::unit_bool, 1, MetricMode::LastPoint);
-    metricMan->sendMetric(lit::monitor_temperature, float{0}, lit::unit_temperature, 1, MetricMode::Average);
+    metricMan->sendMetric(lit::monitor_wr_synced, uint8_t{0}, lit::unit_bool, 11, MetricMode::LastPoint);
+    metricMan->sendMetric(lit::monitor_temperature, float{0}, lit::unit_temperature, 11, MetricMode::Average);
   }
   TLOG(TLVL_DEBUG_4) << "Started TDC device id=0x" << std::hex << deviceid << ".";
   return 0 == error_count;
@@ -249,8 +249,8 @@ void TDCCard::reportTimeTemp() {
   }
 
   if (metricMan) {
-    metricMan->sendMetric(lit::monitor_wr_synced, uint8_t{status == 0}, lit::unit_bool, 1, MetricMode::LastPoint);
-    metricMan->sendMetric(lit::monitor_temperature, float{temperature}, lit::unit_temperature, 1, MetricMode::Average);
+    metricMan->sendMetric(lit::monitor_wr_synced, uint8_t{status == 0}, lit::unit_bool, 11, MetricMode::LastPoint);
+    metricMan->sendMetric(lit::monitor_temperature, float{temperature}, lit::unit_temperature, 11, MetricMode::Average);
   }
 }
 

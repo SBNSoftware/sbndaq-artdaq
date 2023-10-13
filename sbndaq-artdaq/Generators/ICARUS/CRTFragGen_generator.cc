@@ -291,6 +291,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   if(lowertime_ns > maxlowertime_ns[module_id]){
     maxlowertime_ns[module_id] = lowertime_ns;
     metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 11, artdaq::MetricMode::Maximum); 
+
   }
 
   if(lowertime_ns > ((1+missed_syncs[module_id])*sync + 0.2)*1000000000) { //0.2 seconds after we're supposed to receive a sync

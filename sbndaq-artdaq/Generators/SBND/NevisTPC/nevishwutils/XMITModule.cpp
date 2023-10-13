@@ -1,6 +1,5 @@
 #include "XMITModule.h"
 #include "FPGAFirmwareReader.h"
-#include "messagefacility/MessageLogger/MessageLogger.h"
 #include "trace.h"
 #define TRACE_NAME "XMITModule"
 
@@ -83,7 +82,6 @@ namespace nevistpc {
     strstrm << std::endl;
     
     TLOG(TLVL_INFO) << "XMITModuleStatus"  << strstrm.str();
-    mf::LogInfo("XMITModuleStatus")  << strstrm.str();
 }
 
   XMITModule::XMITModule ( uint8_t slot_number )

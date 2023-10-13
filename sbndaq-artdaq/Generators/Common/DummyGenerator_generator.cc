@@ -71,7 +71,7 @@ bool sbndaq::DummyGenerator::getNext_(artdaq::FragmentPtrs& frags) {
   }
 
   if (metricMan != nullptr) {
-    metricMan->sendMetric("Fragments Sent", ev_counter(), "Events", 3, artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("Fragments Sent", ev_counter(), "Events", 11, artdaq::MetricMode::LastPoint);
   }
 
   return true;
