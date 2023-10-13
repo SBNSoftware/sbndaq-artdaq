@@ -4,7 +4,6 @@
  */
 
 #include "sbndaq-artdaq/Generators/ICARUS/CRTFragGen.hh"
-#include "sbndaq-artdaq/Generators/ICARUS/CRTFragGen.hh"
 #include "sbndaq-artdaq/Generators/ICARUS/BottomInterface/Backend_DAQ/DAQ_CPP_v1/startallboards.cc"
 #include "sbndaq-artdaq/Generators/ICARUS/BottomInterface/Backend_DAQ/DAQ_CPP_v1/stopallboards.cc"
 
@@ -141,7 +140,7 @@ bool CRT::FragGen::getNext_(
 
   if(metricMan != nullptr)
   {
-    metricMan->sendMetric("Fragments Made", fragIt, "Fragments", 1, artdaq::MetricMode::Accumulate);
+    metricMan->sendMetric("Fragments Made", fragIt, "Fragments", 11, artdaq::MetricMode::Accumulate);
   }
 
   // TODO prune debug messages, make trace message BottomCRT
@@ -149,7 +148,7 @@ bool CRT::FragGen::getNext_(
 
   if(fragIt > 0){//If we read at least one Fragment
     if (metricMan /* What is this? */ != nullptr)
-      metricMan->sendMetric("Fragments Sent", ev_counter(), "Events", 3 /* ? */,
+      metricMan->sendMetric("Fragments Sent", ev_counter(), "Events", 12 /* ? */,
           artdaq::MetricMode::LastPoint);
 
     ev_counter_inc(); // from base CommandableFragmentGenerator
@@ -291,7 +290,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //Tracks the highest lowertime each module has seen, verifies that it does not go above (sync+0.1) seconds
   if(lowertime_ns > maxlowertime_ns[module_id]){
     maxlowertime_ns[module_id] = lowertime_ns;
-    metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 1, artdaq::MetricMode::Maximum); 
+    metricMan->sendMetric("Highest 32bit timestamp in seconds:", maxlowertime_ns[module_id]/1.e9, "Seconds", 11, artdaq::MetricMode::Maximum); 
   }
 
   if(lowertime_ns > ((1+missed_syncs[module_id])*sync + 0.2)*1000000000) { //0.2 seconds after we're supposed to receive a sync
@@ -312,7 +311,7 @@ std::unique_ptr<artdaq::Fragment> CRT::FragGen::buildFragment(const size_t& byte
   //}
 
   //Report the average time difference between consecutive events (ns)
-  metricMan->sendMetric("Timestamp difference", deltaUNIX_ns/1.e9, "seconds", 1, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
+  metricMan->sendMetric("Timestamp difference", deltaUNIX_ns/1.e9, "seconds", 11, artdaq::MetricMode::Average | artdaq::MetricMode::Maximum | artdaq::MetricMode::Minimum);
 
   oldUNIX_ns = timestamp_; // in nanoseconds
   lowertime_per_mod_ns[module_id] = lowertime_ns;
