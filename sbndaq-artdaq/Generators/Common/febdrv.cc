@@ -14,7 +14,6 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <netinet/ether.h>
-#include "artdaq/DAQdata/Globals.hh"
 
 #include <functional>
 

@@ -1,6 +1,5 @@
 #include "NevisTPCFEM.h"
 #include "FPGAFirmwareReader.h"
-#include "messagefacility/MessageLogger/MessageLogger.h"
 #include "trace.h"
 #define TRACE_NAME "NevisTPCFEM"
 
@@ -39,15 +38,15 @@ namespace nevistpc {
       			<< "  SN n-words            : "     << sn_nwords            << std::endl
       			<< " -------------------------------------" << std::endl;
 
+      bool bError=false;
     	for(size_t i=0; i < (size_t)kFEM_ERROR_TYPE_MAX; ++i) {
       		if(error_flag_v[i]) {
-    			strstrm << "\033[5;1;33;41m[CRITICAL] ";
+          bError=true;
     			describe((FEMErrorFlag_t)i,strstrm);
-    			strstrm << "\033[00m";
     			strstrm << std::endl;
       		}
     	}
-	mf::LogInfo("TPCFEMStatus")  << strstrm.str();
+      TLOG(bError?TLVL_ERROR:TLVL_INFO)  << strstrm.str();
 	}
 
     bool TPCFEMStatus::isValid() const{
@@ -554,7 +553,6 @@ namespace nevistpc {
 	      // Fake data is the sample index number
 	      else if( pattern == "sample" ) fake_data_array[channel + sample*64]= sample & 0xfff;
 	      else{
-		mf::LogInfo("NevisTPCFEMs") << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
 		TLOG(TLVL_ERROR) << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
 		fake_data_array[channel+sample*64]= 0 & 0xfff;
 	      }
@@ -589,7 +587,7 @@ namespace nevistpc {
 
 
 	void NevisTPCFEM::fem_setup(fhicl::ParameterSet const& crateConfig){
-	  mf::LogInfo("NevisTPCFEMs") << "FEM setup for slot " << (int)_slot_number;
+	  TLOG(TLVL_INFO) << "FEM setup for slot " << (int)_slot_number;
 	  // Power On arria power supply
 	  powerOnArriaFPGA();
 	  // config on stratix fpga
@@ -636,10 +634,8 @@ namespace nevistpc {
 	  bool static_baseline = crateConfig.get<bool>("zs_static_baseline", false);
 
 	  if( !static_baseline ){
-	    mf::LogInfo("NevisTPCFEMs")  << "Configuring dynamic-baseline zero suppression for SN stream...";
 	    TLOG(TLVL_INFO) << "NevisTPCFEM: Configuring dynamic-baseline zero suppression for SN stream...";
 	  } else {
-	    mf::LogInfo("NevisTPCFEMs") << "Configuring static-baseline zero suppression for SN stream...";
 	    TLOG(TLVL_INFO) << "NevisTPCFEM: Configuring static-baseline zero suppression for SN stream...";
 	  }
 
