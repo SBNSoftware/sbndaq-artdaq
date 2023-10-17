@@ -87,8 +87,10 @@ namespace sbndaq {
 
     unsigned int _metric_HLT_counter = 0 ;  // this is not the sum of the specific HLT_n, 
                                             // it is the counter of the HLT word
-    unsigned int _metric_HLT_counters[8] = {0} ;
+    unsigned int _metric_HLT_counters[32] = {0} ;
+    
     unsigned int _metric_LLT_counter = 0 ; 
+    unsigned int _metric_LLT_counters[32] = {0} ;  
 
     unsigned int _metric_beam_trigger_counter = 0 ;
     unsigned int _metric_good_particle_counter = 0 ;  //LLT_1
@@ -99,7 +101,9 @@ namespace sbndaq {
     // total trigger counter
     //<--unsigned long _run_gool_part_counter = 0;
     unsigned long _run_HLT_counter = 0;
-    unsigned long _run_HLT_counters[8] = {0};
+    unsigned long _run_HLT_counters[32] = {0};
+    unsigned long _run_LLT_counter = 0;
+    unsigned long _run_LLT_counters[32] = {0};
 
     // spill parameters
     const uint64_t _spill_width = 240000000 ;  //4.8 s
@@ -128,15 +132,71 @@ namespace sbndaq {
     bool store_run_trigger_counters( unsigned int run_number, const std::string & prefix = "" ) const ; 
 
     // metric utilities
-    const std::array<std::string, 8> _metric_HLT_names  = { "PTB_HLT_0_rate",
+    const std::array<std::string, 32> _metric_HLT_names  = { "PTB_HLT_0_rate",
 							    "PTB_HLT_1_rate", 
 							    "PTB_HLT_2_rate",
 							    "PTB_HLT_3_rate",
 							    "PTB_HLT_4_rate",
 							    "PTB_HLT_5_rate",
 							    "PTB_HLT_6_rate",
-							    "PTB_HLT_7_rate" } ;
+							    "PTB_HLT_7_rate",
+							    "PTB_HLT_8_rate",
+							    "PTB_HLT_9_rate",
+							    "PTB_HLT_10_rate",
+							    "PTB_HLT_11_rate",
+							    "PTB_HLT_12_rate",
+							    "PTB_HLT_13_rate",
+							    "PTB_HLT_14_rate",
+							    "PTB_HLT_15_rate",
+							    "PTB_HLT_16_rate",
+							    "PTB_HLT_17_rate",
+							    "PTB_HLT_18_rate",
+							    "PTB_HLT_19_rate",
+							    "PTB_HLT_20_rate",
+							    "PTB_HLT_21_rate",
+							    "PTB_HLT_22_rate",
+							    "PTB_HLT_23_rate",
+							    "PTB_HLT_24_rate",
+							    "PTB_HLT_25_rate",
+							    "PTB_HLT_26_rate",
+							    "PTB_HLT_27_rate",
+							    "PTB_HLT_28_rate",
+							    "PTB_HLT_29_rate",
+							    "PTB_HLT_30_rate",
+							    "PTB_HLT_31_rate" } ;
 
+    const std::array<std::string, 32> _metric_LLT_names  = { "PTB_LLT_0_rate",
+							    "PTB_LLT_1_rate", 
+							    "PTB_LLT_2_rate",
+							    "PTB_LLT_3_rate",
+							    "PTB_LLT_4_rate",
+							    "PTB_LLT_5_rate",
+							    "PTB_LLT_6_rate",
+							    "PTB_LLT_7_rate",
+							    "PTB_LLT_8_rate",
+							    "PTB_LLT_9_rate",
+							    "PTB_LLT_10_rate",
+							    "PTB_LLT_11_rate",
+							    "PTB_LLT_12_rate",
+							    "PTB_LLT_13_rate",
+							    "PTB_LLT_14_rate",
+							    "PTB_LLT_15_rate",
+							    "PTB_LLT_16_rate",
+							    "PTB_LLT_17_rate",
+							    "PTB_LLT_18_rate",
+							    "PTB_LLT_19_rate",
+							    "PTB_LLT_20_rate",
+							    "PTB_LLT_21_rate",
+							    "PTB_LLT_22_rate",
+							    "PTB_LLT_23_rate",
+							    "PTB_LLT_24_rate",
+							    "PTB_LLT_25_rate",
+							    "PTB_LLT_26_rate",
+							    "PTB_LLT_27_rate",
+							    "PTB_LLT_28_rate",
+							    "PTB_LLT_29_rate",
+							    "PTB_LLT_30_rate",
+							    "PTB_LLT_31_rate" } ;
 
     // calibration stream parameters
     bool _has_calibration_stream = false ; 

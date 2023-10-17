@@ -296,6 +296,10 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	    double temp_rate = _metric_HLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 	    artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
 	  }
+	  for ( unsigned short i = 0 ; i < _metric_LLT_names.size() ; ++i ) {
+	    double temp_rate = _metric_LLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
+	    artdaq::Globals::metricMan_->sendMetric( _metric_LLT_names[i], temp_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
+	  }
 
 
 	}  // if there is a metric manager
@@ -303,6 +307,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	// transfer HLT counters to run counters
 	//<--_run_gool_part_counter += _metric_good_particle_counter ;
 	_run_HLT_counter += _metric_HLT_counter ; 
+	_run_LLT_counter += _metric_LLT_counter ; 
 	
 	// reset counters
 	_metric_TS_counter =
@@ -316,6 +321,10 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
 	  _run_HLT_counters[i] += _metric_HLT_counters[i] ;
 	  _metric_HLT_counters[i] = 0 ;
+	}
+	for ( unsigned short i = 0 ; i < _metric_LLT_names.size() ; ++i ) {
+	  _run_LLT_counters[i] += _metric_LLT_counters[i] ;
+	  _metric_LLT_counters[i] = 0 ;
 	}
 
       }  // if it is necessary to publish the metric
@@ -334,6 +343,11 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       ++ _metric_LLT_counter ;
 
       const ptb::content::word::trigger_t * t = reinterpret_cast<const ptb::content::word::trigger_t *>( & temp_word  ) ;
+
+      std::set<unsigned short> trigs = t -> Triggers(32) ;
+      for ( auto it = trigs.begin(); it != trigs.end() ; ++it ) {
+	++ _metric_LLT_counters[*it] ;
+      }
 
       if ( t -> IsTrigger(1) ) {
 	_close_to_good_part = true ; 
@@ -383,7 +397,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       if ( t -> trigger_word & 0xEE )  // request at least a trigger not cosmic trigger nor random triggers
 	++ _metric_beam_trigger_counter ;    // count beam related HLT
 
-      std::set<unsigned short> trigs = t -> Triggers(8) ;
+      std::set<unsigned short> trigs = t -> Triggers(32) ;
       for ( auto it = trigs.begin(); it != trigs.end() ; ++it ) {
 	++ _metric_HLT_counters[*it] ;
       }
@@ -471,6 +485,10 @@ void sbndaq::TriggerBoardReader::start() {
   _run_HLT_counter = 0 ;
   for ( unsigned int i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
     _run_HLT_counters[i] = 0 ; 
+  }
+  _run_LLT_counter = 0 ;
+  for ( unsigned int i = 0 ; i < _metric_LLT_names.size() ; ++i ) {
+    _run_LLT_counters[i] = 0 ; 
   }
 
   if ( _has_calibration_stream ) {
@@ -577,6 +595,10 @@ bool sbndaq::TriggerBoardReader::store_run_trigger_counters( unsigned int run_nu
   out << "Total \t " << _run_HLT_counter << std::endl ;
   for ( unsigned int i = 0; i < _metric_HLT_names.size() ; ++i ) {
     out << "HLT " << i << " \t " << _run_HLT_counters[i] << std::endl ;
+  }
+  out << "Total \t " << _run_LLT_counter << std::endl ;
+  for ( unsigned int i = 0; i < _metric_LLT_names.size() ; ++i ) {
+    out << "LLT " << i << " \t " << _run_LLT_counters[i] << std::endl ;
   }
 
 
