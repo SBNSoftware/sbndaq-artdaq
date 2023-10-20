@@ -78,7 +78,6 @@ private:
   uint32_t fTrigWindowFrag;  //max time difference for frag timestamp to be part of beam window
                              //  in ticks (1 tick=2 ns), default 100 ticks - WAG for now
   double   fWindowLength;    // in us, window length after trigger time, default 1.6 us
-  uint32_t fWvfmLength;      // overwritten in code, fhicl value not used
   double   fWvfmPostPercent; // post percent of wvfm, 9 us after wvfm = 0.9
   
   uint32_t    fETrigFragid;
@@ -88,30 +87,27 @@ private:
   std::vector<int> fUncoated;
   std::vector<int> fTPC;
 
-  bool fVerbose;
+  int fVerbose;
 
   bool fCalculateBaseline;  
   bool fCountPMTs;          
   bool fCalculatePEMetrics; 
+  bool fFindFlashInfo;
   bool fFindPulses;         
 
   std::vector<double> fInputBaseline; 
   double fBaselineWindow;
-  double fMetricsWindow; 
+  double fPromptWindow;
+  double fPrelimWindow; 
+
   double fADCThreshold;  
   double fADCtoPE;       
   double fPEArea;        
   // end fhicl parameters
 
-  // histogram info
-  std::stringstream histname; //raw waveform hist name
-
   // event information
   int fRun, fSubrun;
   art::EventNumber_t fEvent;
-
-  // PD information
-  std::vector<unsigned int> channelList;
 
   // event-by-event global variables
   uint64_t refTimestamp; // the reference time stamp, either beam trigger or trigger time stamp (flash) depending on configuration
@@ -122,19 +118,21 @@ private:
   double us_to_ticks;
 
   // waveforms
-  uint32_t fTriggerBin; // this is a bin! not a time stamp... assume this is the same across all fragments?
-  bool fWvfmsFound;
+  uint32_t fTriggerBin; 
+  uint32_t fWvfmLength;
   std::vector<std::vector<uint16_t>> fWvfmsVec;
 
   // pmt information
   std::vector<sbnd::trigger::pmtInfo> fpmtInfoVec;
   std::map<int,int> map_fragid_index;
 
-  void analyzeCAEN1730Fragment(const artdaq::Fragment &frag);
-  void estimateBaseline(int i_ch);
-  void SimpleThreshAlgo(int i_ch);
-  void reconfigure(fhicl::ParameterSet const & p);
-  void find_beam_spill(const artdaq::Fragment &frag);
+  void   analyzeCAEN1730Fragment(const artdaq::Fragment &frag);
+  void   estimateBaseline(int i_ch);
+  double estimateBaseline(std::vector<uint32_t> wvfm);
+  void   SimpleThreshAlgo(int i_ch);
+  void   reconfigure(fhicl::ParameterSet const & p);
+  void   find_beam_spill(const artdaq::Fragment &frag);
+  std::vector<uint32_t> sumWvfms(const std::vector<uint32_t>& v1, const std::vector<uint16_t>& v2);
 };
 
 
@@ -163,7 +161,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
 
   fTrigWindowFrag     = p.get<uint32_t>("TrigWindowFrag",100);  //units of ticks, 1 tick=2ns
   fWindowLength       = p.get<double>("WindowLength", 1.8);
-  fWvfmLength         = p.get<uint32_t>("WvfmLength", 5120);  //not used
+  fWvfmPostPercent    = p.get<double>("WvfmPostPercent", 0.9);
 
   fETrigFragid        = p.get<uint32_t>("ETrigFragID",0);
   fETrigThresh        = p.get<uint32_t>("ETrigThresh",5000);
@@ -173,17 +171,18 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
   fUncoated           = p.get<std::vector<int>>("Uncoated");  // =0 for Coated, =1 for Uncoated
   fTPC                = p.get<std::vector<int>>("TPC");  // TPC=0(1) is neg(pos) x and beam right(left)
 
-  fVerbose            = p.get<bool>("Verbose", false);
-  fSaveHists          = p.get<bool>("SaveHists",false);
+  fVerbose            = p.get<int>("Verbose", 0);
 
   fCalculateBaseline  = p.get<bool>("CalculateBaseline",true);
   fCountPMTs          = p.get<bool>("CountPMTs",true);
   fCalculatePEMetrics = p.get<bool>("CalculatePEMetrics",false);
+  fFindFlashInfo      = p.get<bool>("FindFlashInfo",false);
   fFindPulses         = p.get<bool>("FindPulses", false);
 
   fInputBaseline      = p.get<std::vector<double>>("InputBaseline");
   fBaselineWindow     = p.get<double>("BaselineWindow", 0.5);
-  fMetricsWindow      = p.get<double>("MetricsWindow", 1.0);
+  fPromptWindow       = p.get<double>("PromptWindow", 0.1);
+  fPrelimWindow       = p.get<double>("PrelimWindow", 0.5);
   fADCThreshold       = p.get<double>("ADCThreshold", 7960);
   fADCtoPE            = p.get<double>("ADCtoPE", 8.0);
   fPEArea             = p.get<double>("PEArea", 66.3);
@@ -196,12 +195,11 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
   fSubrun = e.subRun();
   fEvent = e.id().event();
 
-  if (fVerbose) std::cout << "Processing Run: " << fRun << ", Subrun: " << fSubrun << ", Event: " << fEvent << std::endl;
+  if (fVerbose==1) std::cout << "Processing Run: " << fRun << ", Subrun: " << fSubrun << ", Event: " << fEvent << std::endl;
 
   // reset for this event
   foundBeamTrigger = false;
   fTriggerBin = 0; 
-  fWvfmsFound = false;
 
   fWvfmsVec.clear(); fWvfmsVec.resize(16*8); // 16 1730 channels per fragment, 8 fragments per trigger
   fpmtInfoVec.clear(); fpmtInfoVec.resize(15*8); // 15 PMTs per fragment, 8 fragments per trigger
@@ -218,7 +216,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       for (auto cont : *handle) {
 	      artdaq::ContainerFragment contf(cont);
         if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
-	        if (fVerbose) std::cout << "Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
+	        if (fVerbose==2) std::cout << "Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
           for (size_t ii = 0; ii < contf.block_count(); ++ii){
             analyzeCAEN1730Fragment(*contf[ii].get());
 	          if (fUseBeamTrigger) find_beam_spill(*contf[ii].get());
@@ -228,7 +226,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     } // if 1730 container
     //Regular CAEN fragment
     else if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
-      if (fVerbose) std::cout << "Found " << handle->size() << " CAEN1730 fragments" << std::endl;
+      if (fVerbose==2) std::cout << "Found " << handle->size() << " CAEN1730 fragments" << std::endl;
       for (auto frag : *handle){
         analyzeCAEN1730Fragment(frag);
         if (fUseBeamTrigger) find_beam_spill(frag);
@@ -236,7 +234,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     } // if/else container/fragmnet
   } // loop over handles
   
-  if (fVerbose) std::cout << "reference time stamp is " << refTimestamp << std::endl;
+  if (fVerbose==1) std::cout << "reference time stamp is " << refTimestamp << std::endl;
   // object to store trigger metrics in
   std::unique_ptr<sbnd::trigger::pmtSoftwareTrigger> pmtSoftwareTriggerMetrics = std::make_unique<sbnd::trigger::pmtSoftwareTrigger>();
 
@@ -254,14 +252,15 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     // store timestamp of trigger 
     double triggerTimeStamp = (double)refTimestamp; // - fWindowOffset*ticks_to_us;
     pmtSoftwareTriggerMetrics->triggerTimestamp = triggerTimeStamp;
-    if (fVerbose) std::cout << "Saving event trigger timestamp: " << triggerTimeStamp << " ns" << std::endl;
+    if (fVerbose==1) std::cout << "Saving event trigger timestamp: " << triggerTimeStamp << " ns" << std::endl;
 
     double promptPE = 0;
     double prelimPE = 0;
+    double flash_peakPE = 0;
+    double flash_peaktime = 0;
 
     int nAboveThreshold = 0;
-    // find the waveform bins that correspond to the start and end of the extended spill window (0 -> 1.8 us) within the 10 us waveform
-    // if the triggerTimeStamp > 1000, the beginning of the beam spill is *not* contained within the waveform
+
     int windowStartBin=0; 
     int windowEndBin=0;
     if (!fUseBeamTrigger){
@@ -275,9 +274,11 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       windowEndBin = (triggerTimeStamp >= 1000)? int(500 + (fWindowLength*1e3 - (triggerTimeStamp-1000))/2) : (windowStartBin + (fWindowLength*1e3)/2);
     }
 
-    if (fVerbose) std::cout << "windowStartBin " << windowStartBin << " windowEndBin " << windowEndBin  <<
+    if (fVerbose==1) std::cout << "windowStartBin " << windowStartBin << " windowEndBin " << windowEndBin  <<
 		    " trigger time stamp " << triggerTimeStamp << " window length " << fWindowLength << std::endl;
 
+    // create a vector to contain the sum of all the wvfms
+    std::vector<uint32_t> wvfm_sum(fWvfmLength, 0);
     // wvfm loop to calculate metrics
     for (int i_ch = 0; i_ch < (int)fpmtInfoVec.size(); ++i_ch){
       auto &pmtInfo = fpmtInfoVec.at(i_ch);
@@ -286,7 +287,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       if (wvfm.begin() == wvfm.end()) continue;
 
       // assign channel
-      pmtInfo.channel = i_ch; //channelList.at(i_ch);
+      pmtInfo.channel = i_ch;
 
       // calculate baseline
       if (fCalculateBaseline) estimateBaseline(i_ch);
@@ -305,10 +306,9 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       // quick estimate prompt and preliminary light, assuming sampling rate of 500 MHz (2 ns per bin)
       if (fCalculatePEMetrics){
         double baseline = pmtInfo.baseline;
-        std::cout << " ch: " << i_ch << " baseline: " << baseline << std::endl; 
         
-        auto prelim_offset = (windowStartBin - fMetricsWindow*us_to_ticks) < 0 ? 0 : windowStartBin - fMetricsWindow*us_to_ticks;
-        auto prompt_window = std::vector<uint16_t>(wvfm.begin()+windowStartBin, wvfm.begin()+windowStartBin+fMetricsWindow*us_to_ticks);
+        auto prelim_offset = (windowStartBin - fPrelimWindow*us_to_ticks) < 0 ? 0 : windowStartBin - fPrelimWindow*us_to_ticks;
+        auto prompt_window = std::vector<uint16_t>(wvfm.begin()+windowStartBin, wvfm.begin()+windowStartBin+fPromptWindow*us_to_ticks);
         auto prelim_window = std::vector<uint16_t>(wvfm.begin()+prelim_offset, wvfm.begin()+windowStartBin);
 
         if (fFindPulses == false){
@@ -322,20 +322,32 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
         if (fFindPulses == true){
           SimpleThreshAlgo(i_ch);
           for (auto pulse : pmtInfo.pulseVec){
-            if (pulse.t_start > windowStartBin && pulse.t_end < (windowStartBin+fMetricsWindow*us_to_ticks)) promptPE+=pulse.pe;
+            if (pulse.t_start > windowStartBin && pulse.t_end < (windowStartBin+fPromptWindow*us_to_ticks)) promptPE+=pulse.pe;
             if (pulse.t_start > prelim_offset && pulse.t_end < windowStartBin) prelimPE+=pulse.pe;
             }
           }
         }
       else { promptPE = -9999; prelimPE = -9999;}
-    } // end of wvfm loop
 
+      if (fFindFlashInfo) wvfm_sum = sumWvfms(wvfm_sum, wvfm);
+    } // end of wvfm loop
+    if (fFindFlashInfo){
+      // find and remove the baseline
+      auto flash_baseline = estimateBaseline(wvfm_sum);
+      flash_peakPE   = (flash_baseline-(*std::min_element(wvfm_sum.begin()+windowStartBin, wvfm_sum.end())))/fADCtoPE;
+      flash_peaktime = (std::min_element(wvfm_sum.begin()+windowStartBin, wvfm_sum.end()) - wvfm_sum.begin()-windowStartBin)*ticks_to_us;
+    }
     pmtSoftwareTriggerMetrics->nAboveThreshold = nAboveThreshold;
     pmtSoftwareTriggerMetrics->promptPE = promptPE;
     pmtSoftwareTriggerMetrics->prelimPE = prelimPE;
-    if (fVerbose) std::cout << "nPMTs Above Threshold: " << nAboveThreshold << std::endl;
-    if (fVerbose) std::cout << "prompt pe: " << promptPE << std::endl;
-    if (fVerbose) std::cout << "prelim pe: " << prelimPE << std::endl;
+    pmtSoftwareTriggerMetrics->peakPE = flash_peakPE;
+    pmtSoftwareTriggerMetrics->peaktime = flash_peaktime;
+
+    if (fVerbose==1) std::cout << "nPMTs Above Threshold: " << nAboveThreshold << std::endl;
+    if (fVerbose==1) std::cout << "prompt pe: " << promptPE << std::endl;
+    if (fVerbose==1) std::cout << "prelim pe: " << prelimPE << std::endl;
+    if (fVerbose==1) std::cout << "peak pe: "   << flash_peakPE << std::endl;
+    if (fVerbose==1) std::cout << "peak time: " << flash_peaktime << " us" << std::endl;
 
     if(metricMan != nullptr) {
         //send flag metrics
@@ -344,14 +356,14 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
             nAboveThreshold,
             "Num PMTs Above Software Trigger Threshold", 5, artdaq::MetricMode::LastPoint);
 
-        if (fVerbose) {
+        if (fVerbose==1) {
           TLOG(TLVL_INFO) << "nPMTs Above Threshold: " << nAboveThreshold;
         }
 
     }
   }  // if found beam trigger
   else{
-    if (fVerbose) {
+    if (fVerbose==1) {
       std::cout << "Beam and wvfms not found" << std::endl;
       TLOG(TLVL_INFO) << "PMT Software Trigger Metric: Beam and wvfms not found";
 
@@ -361,15 +373,24 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     pmtSoftwareTriggerMetrics->nAboveThreshold = -9999;
     pmtSoftwareTriggerMetrics->promptPE = -9999;
     pmtSoftwareTriggerMetrics->prelimPE = -9999;
+    pmtSoftwareTriggerMetrics->peakPE   = -9999;
+    pmtSoftwareTriggerMetrics->peaktime = -9999;
   }
   e.put(std::move(pmtSoftwareTriggerMetrics));
+}
+
+std::vector<uint32_t> sbnd::trigger::pmtSoftwareTriggerProducer::sumWvfms(const std::vector<uint32_t>& v1, const std::vector<uint16_t>& v2) {
+    std::vector<uint32_t>  result(v1.size(),0);
+    for (size_t i = 0; i < v1.size(); i++)
+        result.at(i) = (v1[i] + v2[i]);
+    return result;
 }
 
 void sbnd::trigger::pmtSoftwareTriggerProducer::find_beam_spill(const artdaq::Fragment &frag) {
 
   // check fragId
   uint fragId = static_cast<int>(frag.fragmentID());
-  if (fVerbose) std::cout << "Looking for beam spill, fragID is " << fragId <<
+  if (fVerbose==2) std::cout << "Looking for beam spill, fragID is " << fragId <<
 		  " and timestamp is " << frag.timestamp() << std::endl;
   if (fragId!=fETrigFragid)  return;
 
@@ -381,14 +402,14 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::find_beam_spill(const artdaq::Fr
   size_t nChannels = md->nChannels;
 
   uint32_t ev_size_quad_bytes = header.eventSize;
-  if (fVerbose) std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
+  if (fVerbose==2) std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
   uint32_t evt_header_size_quad_bytes = sizeof(sbndaq::CAENV1730EventHeader)/sizeof(uint32_t);
   uint32_t data_size_double_bytes = 2*(ev_size_quad_bytes - evt_header_size_quad_bytes);
   //-  uint32_t wfm_length = data_size_double_bytes/nChannels;
   fWvfmLength = data_size_double_bytes/nChannels;
-  if (fVerbose) std::cout << "Channel waveform length = " << fWvfmLength << " [ticks], or " << fWvfmLength*ticks_to_us << "us\n";
+  if (fVerbose==2) std::cout << "Channel waveform length = " << fWvfmLength << " [ticks], or " << fWvfmLength*ticks_to_us << "us\n";
   size_t ch_offset = (size_t)(15*fWvfmLength);
-  if (fVerbose) std::cout << " frag timestamp is " << frag.timestamp()  << std::endl;
+  if (fVerbose==2) std::cout << " frag timestamp is " << frag.timestamp()  << std::endl;
 
   // access beam signal, in ch15 of first PMT of each fragment set
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes()
@@ -436,14 +457,14 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::analyzeCAEN1730Fragment(const ar
   uint32_t data_size_double_bytes = 2*(ev_size_quad_bytes - evt_header_size_quad_bytes);
   fWvfmLength = data_size_double_bytes/nChannels;
 
-  if (fVerbose) std::cout << "From header, downsampled TTT is " << ttt << "\n";
-  if (fVerbose) std::cout << "\tNumber of channels: " << nChannels << "\n";
-  if (fVerbose) std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
-  if (fVerbose) std::cout << "Channel waveform length = " << fWvfmLength << "\n";
+  if (fVerbose==2) std::cout << "From header, downsampled TTT is " << ttt << "\n";
+  if (fVerbose==2) std::cout << "\tNumber of channels: " << nChannels << "\n";
+  if (fVerbose==2) std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
+  if (fVerbose==2) std::cout << "Channel waveform length = " << fWvfmLength << "\n";
 
   auto trigger_position = ttt - fWvfmPostPercent*fWvfmLength; // ticks, position of trigger in waveform (bin)
-  auto trigger_time = trigger_position*ticks_to_us; // (2 ns per tick) * (1 us per 1000 ns)
-  if (fVerbose) std::cout << "\tFlash trigger time is " << trigger_time << " us" << std::endl;
+  auto trigger_time = trigger_position*ticks_to_us;
+  if (fVerbose==2) std::cout << "\tFlash trigger time is " << trigger_time << " us" << std::endl;
 
   refTimestamp = trigger_time;
   fTriggerBin = trigger_position;
@@ -473,22 +494,39 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::estimateBaseline(int i_ch){
   auto wvfm = fWvfmsVec[i_ch];
   auto &pmtInfo = fpmtInfoVec[i_ch];
   // assuming that the first 500 ns doesn't include peaks, find the mean of the ADC count as the baseline
-  std::vector<uint16_t> subset = std::vector<uint16_t>(wvfm.begin(), wvfm.begin()+250);
+  std::vector<uint16_t> subset = std::vector<uint16_t>(wvfm.begin(),  wvfm.begin()+int(fBaselineWindow*us_to_ticks));
   double subset_mean = (std::accumulate(subset.begin(), subset.end(), 0))/(subset.size());
   double val = 0;
   for (size_t i=0; i<subset.size();i++){ val += (subset[i] - subset_mean)*(subset[i] - subset_mean);}
   double subset_stddev = sqrt(val/subset.size());
 
-  // if the first 500 ns seem to be messy, use the last 500
   if (subset_stddev > 3){ // make this fcl parameter?
     val = 0; subset.clear(); subset_stddev = 0;
-    subset = std::vector<uint16_t>(wvfm.end()-500, wvfm.end());
+    subset = std::vector<uint16_t>(wvfm.end()-int(fBaselineWindow*us_to_ticks), wvfm.end());
     subset_mean = (std::accumulate(subset.begin(), subset.end(), 0))/(subset.size());
     for (size_t i=0; i<subset.size();i++){ val += (subset[i] - subset_mean)*(subset[i] - subset_mean);}
     subset_stddev = sqrt(val/subset.size());
   }
+  if (fVerbose==3) std::cout << "Baseline mean: " << subset_mean << " ADC, with " << subset_stddev << " sigma" << std::endl;
   pmtInfo.baseline = subset_mean;
   pmtInfo.baselineSigma = subset_stddev;
+}
+
+double sbnd::trigger::pmtSoftwareTriggerProducer::estimateBaseline(std::vector<uint32_t> wvfm){
+  std::vector<uint32_t> subset = std::vector<uint32_t>(wvfm.begin(), wvfm.begin()+int(fBaselineWindow*us_to_ticks));
+  double subset_mean = (std::accumulate(subset.begin(), subset.end(), 0))/(subset.size());
+  double val = 0;
+  for (size_t i=0; i<subset.size();i++){ val += (subset[i] - subset_mean)*(subset[i] - subset_mean);}
+  double subset_stddev = sqrt(val/subset.size());
+
+  if (subset_stddev > 3){ // make this fcl parameter?
+    val = 0; subset.clear(); subset_stddev = 0;
+    subset = std::vector<uint32_t>(wvfm.end()-int(fBaselineWindow*us_to_ticks), wvfm.end());
+    subset_mean = (std::accumulate(subset.begin(), subset.end(), 0))/(subset.size());
+    for (size_t i=0; i<subset.size();i++){ val += (subset[i] - subset_mean)*(subset[i] - subset_mean);}
+    subset_stddev = sqrt(val/subset.size());
+  }
+  return subset_mean;
 }
 
 void sbnd::trigger::pmtSoftwareTriggerProducer::SimpleThreshAlgo(int i_ch){
@@ -541,8 +579,5 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::SimpleThreshAlgo(int i_ch){
   // calculate PE from area 
   for (auto &pulse : pmtInfo.pulseVec){pulse.pe = pulse.area/fPEArea;}
 }
-
-// void sbnd::trigger:pmtSoftwareTriggerProducer::SlidingThreshAlgo(){
-// }
 
 DEFINE_ART_MODULE(sbnd::trigger::pmtSoftwareTriggerProducer)
