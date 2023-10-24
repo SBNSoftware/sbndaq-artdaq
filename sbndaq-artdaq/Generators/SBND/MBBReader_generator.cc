@@ -136,7 +136,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
 
   // Check and print firmware version
   uint32_t mbb_fw_version = mbb->Read("FIRMWARE_VERSION");
-  TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
+   
   
   TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
         << std::hex << std::setw(8) << std::setfill('0')
