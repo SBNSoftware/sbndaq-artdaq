@@ -31,6 +31,7 @@
 #include "sbndaq-artdaq-core/Overlays/FragmentType.hh"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq-core/Data/ContainerFragment.hh"
+#include "artdaq-core/Data/RawEvent.hh"
 
 #include "sbndaq-artdaq-core/Obj/SBND/pmtSoftwareTrigger.hh"
 
@@ -43,6 +44,19 @@
 #include <algorithm>
 #include <valarray>
 #include <numeric>
+
+// TODO: list of things to add: 
+// - noise levels? (sigma of baseline?)
+
+// how to get the beam time in the software trigger?
+// (option 1) DAQ event time from the "art" event (N(evis)TB frag time)
+// look for the fragments that are closest to the DAQ event time 
+
+// (option 2) or... open up the 1730 timings -> look at a specific channel (that you know stores the ET)
+// you have to open all the fragments until you find this speific channel/event trigger 
+// ^^ use **that** fragment timestamp 
+
+// open up TDC or PTB fragment, and get the ET time and find fragments around that time 
 
 using artdaq::MetricMode;
 
@@ -108,6 +122,7 @@ private:
   // event information
   int fRun, fSubrun;
   art::EventNumber_t fEvent;
+  // art::Timestamp fTime;
 
   // event-by-event global variables
   uint64_t refTimestamp; // the reference time stamp, either beam trigger or trigger time stamp (flash) depending on configuration
@@ -157,6 +172,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
   // Initialize member data here
   is_persistable_     = p.get<bool>("is_persistable", true) ? art::Persistable::Yes : art::Persistable::No;
   fUseBeamTrigger     = p.get<bool>("UseBeamTrigger",false);
+
   fWindowOffset       = p.get<double>("WindowOffset",0.1);  //units of us
 
   fTrigWindowFrag     = p.get<uint32_t>("TrigWindowFrag",100);  //units of ticks, 1 tick=2ns
@@ -194,6 +210,20 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
   fRun = e.run();
   fSubrun = e.subRun();
   fEvent = e.id().event();
+  // uint64_t fTime = e.time().value();
+
+
+  art::Handle<artdaq::detail::RawEventHeader> header_handle;
+  e.getByLabel("daq", "RawEventHeader", header_handle);
+
+  if (header_handle.isValid())
+  {
+    auto rawheader = artdaq::RawEvent(*header_handle);
+    std::cout << "run from rawheader is: " << rawheader.runID() << std::endl;
+    std::cout << "sub from rawheader is: " << rawheader.subrunID() << std::endl;
+    std::cout << "evt from rawheader is: " << rawheader.eventID() << std::endl;
+    std::cout << "timestamp from rawheader is: " << rawheader.timestamp() << std::endl;
+  }
 
   if (fVerbose==1) std::cout << "Processing Run: " << fRun << ", Subrun: " << fSubrun << ", Event: " << fEvent << std::endl;
 
@@ -500,7 +530,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::estimateBaseline(int i_ch){
   for (size_t i=0; i<subset.size();i++){ val += (subset[i] - subset_mean)*(subset[i] - subset_mean);}
   double subset_stddev = sqrt(val/subset.size());
 
-  if (subset_stddev > 3){ // make this fcl parameter?
+  if (subset_stddev > 3){ // ! make this fcl parameter?
     val = 0; subset.clear(); subset_stddev = 0;
     subset = std::vector<uint16_t>(wvfm.end()-int(fBaselineWindow*us_to_ticks), wvfm.end());
     subset_mean = (std::accumulate(subset.begin(), subset.end(), 0))/(subset.size());
@@ -519,7 +549,7 @@ double sbnd::trigger::pmtSoftwareTriggerProducer::estimateBaseline(std::vector<u
   for (size_t i=0; i<subset.size();i++){ val += (subset[i] - subset_mean)*(subset[i] - subset_mean);}
   double subset_stddev = sqrt(val/subset.size());
 
-  if (subset_stddev > 3){ // make this fcl parameter?
+  if (subset_stddev > 3){ // ! make this fcl parameter?
     val = 0; subset.clear(); subset_stddev = 0;
     subset = std::vector<uint32_t>(wvfm.end()-int(fBaselineWindow*us_to_ticks), wvfm.end());
     subset_mean = (std::accumulate(subset.begin(), subset.end(), 0))/(subset.size());

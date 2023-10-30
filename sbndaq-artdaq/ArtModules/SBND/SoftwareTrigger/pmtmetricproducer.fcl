@@ -9,7 +9,7 @@ pmtmetricproducer: {
       #                            #  in ticks (1 tick=2 ns), default 100 ticks - WAG for now         
         WindowLength: 0.5 #1.6     # beam window length after trigger time, default 1.6 us                                       
      	WvfmPostPercent:  0.9      # this should be a fraction! % of the wvfm contained in the 10 us window.
-                                   # having 1+9 -> 0.9. having 2+8 -> 0.8, etc.
+                                   # having 1+9 -> 0.9. having 2+8 -> 0.8,
 
         # event trigger configurables
         ETrigFragID: 9           # fragID of 1730 with event trigger in ch15
@@ -49,8 +49,8 @@ pmtmetricproducer: {
         InputBaseline:  [8000.0, 2.0] # in ADC, used if CalculateBaseline is FALSE // first entry is baseline, second entry is baseline error/sigma
         BaselineWindow: 0.5           # in us; window used to calculate basline
         
-        PromptWindow:   0.1           # in us; window to calculate prompt light 
-        PrelimWindow:   0.5           # in us; window to calculate prelim PE 
+        PromptWindow:   0.1           # in us; window to calculate prompt light (after the trigger)
+        PrelimWindow:   0.5           # in us; window to calculate prelim PE (before the trigger)
         
         ADCThreshold:   7960          # in ADC, corresponds to ~5 PE in ideal response, used for CountPMTs (above threshold)  
         ADCtoPE:        8.0           # conversion factor from ADC to PE count (for a single bin) **not tuned**
