@@ -167,7 +167,11 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
     else
     {
       std::cout << "Failed to connect to "<< dbName << " at " << port << "@" << hostName << std::endl;
+#if PQXX_MAJOR_VERSION == 6
       dbConnection->disconnect();
+#else
+      delete dbConnection;
+#endif
       exit(-1);
     }
   }
@@ -262,8 +266,32 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
       message[0] = gps.gps.data.messageStatus;
 
       pqxx::work work(*dbConnection);
+#if PQXX_MAJOR_VERSION >= 7
+      pqxx::result result = work.exec_prepared("insertGPS",
+	(gps.gps.data.timeStamp)              ,
+	(gps.gps.data.systemTimer.tv_sec)      ,
+	(gps.gps.data.systemTimer.tv_nsec)     ,
+	(gps.gps.data.systemDifference)        ,
+	(gps.gps.data.status)                  ,
+	(gps.gps.data.oscillatorQuality)       ,
+	(gps.gps.data.ppsDifference)           ,
+	(gps.gps.data.finePhaseComparator)     ,
+	(gps.gps.data.message)                 ,
+	(gps.gps.data.transferQuality)         ,
+	(gps.gps.data.actualFrequency)         ,
+	(gps.gps.data.holdoverFrequency)       ,
+	(gps.gps.data.eepromFrequency)         ,
+	(gps.gps.data.loopTimeConstantMode)    ,
+	(gps.gps.data.loopTimeConstantInUse)   ,
+	(gps.gps.data.sigmaPPS)                ,
+	(message)           ,
+	(gps.gps.data.latitude)                ,
+	(hemiNS)            ,
+	(gps.gps.data.longitude)               ,
+	(hemiEW)            );
+#else
       pqxx::result result = work.prepared("insertGPS")
-	(gps.gps.data.timeStamp)               
+	(gps.gps.data.timeStamp)              
 	(gps.gps.data.systemTimer.tv_sec)      
 	(gps.gps.data.systemTimer.tv_nsec)     
 	(gps.gps.data.systemDifference)        
@@ -283,12 +311,17 @@ GPSBroadcast::GPSBroadcast(std::string experiment,
 	(gps.gps.data.latitude)                
 	(hemiNS)            
 	(gps.gps.data.longitude)               
-	(hemiEW)            
-	.exec();        
+	(hemiEW)         
+	.exec();
+#endif
       work.commit();
     }
   }
+#if PQXX_MAJOR_VERSION == 6
   dbConnection->disconnect();
+#else
+  delete dbConnection;
+#endif
 }
 
 int main(int argc, char* argv[])

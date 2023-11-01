@@ -1,30 +1,31 @@
 set ( LIBRARY_CORE_LIB_LIST
-      artdaq_DAQdata
-      artdaq_CommandableFragmentGenerator
-      artdaq-utilities_Plugins
+      artdaq::DAQdata
+      artdaq_plugin_types::CommandableFragmentGenerator
       artdaq_core::artdaq-core_Utilities
       artdaq_core::artdaq-core_Data
-      ${Boost_SYSTEM_LIBRARY}
-      art_Utilities
-      fhiclcpp
-      MF_MessageLogger
-      cetlib
-      cetlib_except
+      Boost::boost
+      art::Utilities
+      fhiclcpp::fhiclcpp
+      messagefacility::MF_MessageLogger
+      cetlib::cetlib
+      cetlib_except::cetlib_except
 )
 
 set(BUILD_PLUGIN_CORE_LIB_LIST
   ${LIBRARY_CORE_LIB_LIST}
-  artdaq_Application
+  artdaq::Application
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
+include(artdaq::commandableGenerator)
+
 add_subdirectory(Common)
 
-IF(ICARUS_BUILD)
+IF(ICARUS_BUILD EQUAL 1)
   add_subdirectory(ICARUS)
 ENDIF()
 
-IF(SBND_BUILD)
+IF(SBND_BUILD EQUAL 1)
   add_subdirectory(SBND)
 ENDIF()

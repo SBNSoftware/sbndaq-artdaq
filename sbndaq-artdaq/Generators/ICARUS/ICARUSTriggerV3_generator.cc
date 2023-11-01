@@ -31,6 +31,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   , ip_config_(ps.get<std::string>("config_ip", "127.0.0.1"))
   , dataport_(ps.get<int>("data_port", 63000))
   , ip_data_(ps.get<std::string>("data_ip", "127.0.0.1"))
+  , configdatafd_(-1)
+  , dataconnfd_(-1)
   , pmtdataport_(ps.get<int>("data_port_pmt", 63002))
   , ip_data_pmt_(ps.get<std::string>("data_pmt_ip", "127.0.0.1"))
   , n_init_retries_(ps.get<int>("n_init_retries",10))
@@ -41,7 +43,6 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   , initialization_data_fpga_(ps.get<fhicl::ParameterSet>("fpga_init_params"))
   , initialization_data_spexi_(ps.get<fhicl::ParameterSet>("spexi_init_params"))
 {
-  
   configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (configsocket_ < 0)
     {
@@ -93,28 +94,42 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
       exit(1);
     }
 
-  socklen_t configlen = sizeof((struct sockaddr_in&) si_config_);
-  bind(configsocket_, (struct sockaddr *) &si_config_, configlen);
-  if(listen(configsocket_, 1) >= 0)
-    {
-      TLOG(TLVL_INFO) << "Moving to accept function" << "\n";
-      datafd_ = accept(configsocket_, (struct sockaddr *) &si_config_, &configlen);
-      TLOG(TLVL_INFO) << "After datafd_ accept(configsocket_...." << "\n";
-    }
-  else
-    {
+  configlen_ = sizeof((struct sockaddr_in&) si_config_);
+
+  datalen_ = sizeof((struct sockaddr_in&) si_data_);
+  bind(datasocket_, (struct sockaddr *) &si_data_, datalen_);                     
+  if(listen(datasocket_, 1) < 0)            
+    {                               
+    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI -- data transfer" << "\n";
+    abort();
+  }                                                                            
+
+
+
+  bind(configsocket_, (struct sockaddr *) &si_config_, configlen_);
+  if(listen(configsocket_, 1) < 0)
+    { 
       throw art::Exception(art::errors::Configuration) << "Unable to accept request to connect to SPEXI" << "\n";
       exit(1);
     }
+  else
+    { 
+      TLOG(TLVL_INFO) << "Moving to accept function" << "\n";
+    }
+
+      configdatafd_ = accept(configsocket_, (struct sockaddr *) &si_config_, &configlen_);
+      TLOG(TLVL_INFO) << "After configdatafd_ accept(configsocket_...." << "\n";
+
+
   TLOG(TLVL_INFO) << "Sending Initialization Parameters for FPGA";
   std::vector<std::string> fpga_init_keys = initialization_data_fpga_.get_pset_names();
   if(fpga_init_keys.size() > 0)
-  {
+  { 
     int setup_fpga = send_init_params(fpga_init_keys, initialization_data_fpga_);
     if(setup_fpga == 0)
-    {
+    { 
       throw art::Exception(art::errors::Configuration) <<
-	"ICARUSTriggerV3: Did not successfully communicate FPGA parameters to SPEXI ";
+        "ICARUSTriggerV3: Did not successfully communicate FPGA parameters to SPEXI ";
       exit(1);
     }
   TLOG(TLVL_INFO) << "Initialization Parameters for FPGA successfully communicated to SPEXI";
@@ -122,6 +137,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   else
     TLOG(TLVL_WARNING) << "No keys detected for FPGA parameter initialization, continuing";
   TLOG(TLVL_INFO) << "Sending Initialization Parameters for SPEXI";
+
+
   std::vector<std::string> spexi_init_keys = initialization_data_spexi_.get_pset_names();
   if(spexi_init_keys.size() > 0)
   {
@@ -129,7 +146,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
     if(setup_spexi == 0)
     {
       throw art::Exception(art::errors::Configuration) <<
-	"ICARUSTriggerV3: Did not successfully communicate SPEXI Initialize parameters to SPEXI ";
+        "ICARUSTriggerV3: Did not successfully communicate SPEXI Initialize parameters to SPEXI ";
       exit(1);
     }
     TLOG(TLVL_INFO) << "Initialization Parameters for SPEXI successfully communicated to SPEXI";
@@ -143,18 +160,18 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
 
   int tries = n_init_retries_;
   while(tries>-1){
-    int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_*2);
+    int size_bytes = poll_with_timeout(configdatafd_,ip_config_, si_config_, n_init_timeout_ms_*2);
       if(size_bytes>0){
         buffer[size_bytes+1] = {'\0'};
-        readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
+        readTCP(configdatafd_,ip_config_,si_config_,size_bytes,buffer);
         TLOG(TLVL_DEBUG) << "Initialization final step - received:: " << buffer;
-	break;
+        break;
       }
       if(tries == 0)
       {
-	throw art::Exception(art::errors::Configuration) <<
-	  "ICARUSTriggerV3: Did not successfully communicate ability to go to start of run communication to SPEXI";
-	exit(1);
+        throw art::Exception(art::errors::Configuration) <<
+          "ICARUSTriggerV3: Did not successfully communicate ability to go to start of run communication to SPEXI";
+        exit(1);
       }
       --tries;
   }
@@ -224,6 +241,8 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fStartOfRun = 0;
   fInitialStep = 0;
 }
+
+
 bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 {
   static auto start= std::chrono::steady_clock::now();
@@ -317,8 +336,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
   if(generated_fragments_per_event_==0){
     fLastEvent = fEventCounter;
     ++fEventCounter;
-    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-    metricMan->sendMetric("EventCounter",uint64_t{fEventCounter}, "Triggers", 1,artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("EventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
+    metricMan->sendMetric("EventCounter",uint64_t{fEventCounter}, "Triggers", 11,artdaq::MetricMode::LastPoint);
     return true;
   }
   
@@ -363,8 +382,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     }
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
-    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-    metricMan->sendMetric("EventCounter", uint64_t(fEventCounter), "Triggers", 1,artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("EventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
+    metricMan->sendMetric("EventCounter", uint64_t(fEventCounter), "Triggers", 11,artdaq::MetricMode::LastPoint);
     
     if(fDeltaGates <= 0)
       TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
@@ -391,8 +410,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       }
       else
 	TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for BNB trigger!";
-      metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      metricMan->sendMetric("BNBEventTotal",uint64_t(fTotalTriggerBNB), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("BNBEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("BNBEventTotal",uint64_t(fTotalTriggerBNB), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 2)
     {
@@ -416,8 +435,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       }
       else
 	TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for NuMI trigger!";
-      metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      metricMan->sendMetric("NuMIEventTotal",uint64_t(fTotalTriggerNuMI), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("NuMIEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("NuMIEventTotal",uint64_t(fTotalTriggerNuMI), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 3)
     {
@@ -441,8 +460,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       } 
       else
         TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for BNBOffBeam trigger!";
-      metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
-      metricMan->sendMetric("BNBOffbeamEventTotal",uint64_t(fTotalTriggerBNBOff), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 11, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("BNBOffbeamEventTotal",uint64_t(fTotalTriggerBNBOff), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 4)
     {
@@ -466,8 +485,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       }
       else
 	TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for NuMIOffBeam trigger!";
-      metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
-      metricMan->sendMetric("NuMIOffbeamEventTotal",uint64_t(fTotalTriggerNuMIOff), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 11, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("NuMIOffbeamEventTotal",uint64_t(fTotalTriggerNuMIOff), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 5)
     {
@@ -489,12 +508,12 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 	if(fDeltaGatesCalibMinbias <= 0)
 	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for Calibration Minbias <= 0!";
       } 
-      metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
-      metricMan->sendMetric("CalibrationTotal",uint64_t(fTotalTriggerCalib), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("CalibrationRate",1, "Hz", 11, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("CalibrationTotal",uint64_t(fTotalTriggerCalib), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else {
       fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
-      metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("OtherEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
       if(fDeltaGatesOther <= 0)
         TLOG(TLVL_WARNING) << "Change in total number of beam gates for Other <= 0!";
     }
@@ -648,26 +667,20 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 
 void sbndaq::ICARUSTriggerV3::start()
 {
+
   if(initialization(n_init_retries_,n_init_timeout_ms_) < 0) //comment out for fake trigger tests
   {
      TLOG(TLVL_ERROR) << "Was not able to initialize SPEXI" << "\n";
      abort();
 
   }
-  //send_TRIG_ALLW();
-  //////////////close(datafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
-  socklen_t datalen = sizeof((struct sockaddr_in&) si_data_);
-  bind(datasocket_, (struct sockaddr *) &si_data_, datalen);                     
-  if(listen(datasocket_, 1) >= 0)            
+
   {               
     TLOG(TLVL_INFO) << "Moving to accept function -- data transfer" << "\n";
-    dataconnfd_ = accept(datasocket_, (struct sockaddr *) &si_data_, &datalen);
+    dataconnfd_ = accept(datasocket_, (struct sockaddr *) &si_data_, &datalen_);
   }                                                                                   
-  else                                                                                
-    {                               
-    TLOG(TLVL_ERROR) << "Unable to accept request to connect to SPEXI -- data transfer" << "\n";
-    abort();
-  }                                                                            
+
+
 }
 
 
@@ -675,14 +688,20 @@ void sbndaq::ICARUSTriggerV3::stop()
 {
   if(send_stop(n_init_retries_) < 0) //comment out for fake trigger tests
   {  
-     TLOG(TLVL_ERROR) << "Was not able to STOP LabVIEW: closing socket  " << "\n";
-     close(datafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
+     TLOG(TLVL_ERROR) << "Was not able to STOP LabVIEW: closing both sockets  configdatafd_ and dataconn_fd  " << "\n";
+     close(configdatafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
+     close(dataconnfd_); ////// close the communication socket === connection1 in LabVIEW
+     configdatafd_ = dataconnfd_ = -1;
      abort();
   
   }
   else {
-     TLOG(TLVL_ERROR) << " STOPPED LabVIEW; closing socket  " << "\n";
-     close(datafd_); ///////////// DO NOT CLOSE this soecket ??? we'll use if for STOP command
+     TLOG(TLVL_ERROR) << " STOPPED LabVIEW; closing both sockets configdatafd_ and dataconn_fd  " << "\n";
+     close(dataconnfd_); ////// close the communication socket === connection1 in LabVIEW
+     close(configdatafd_); ///////////// close the DATA socket : communication 2 in LabVIEW DO NOT CLOSE this soecket ??? we'll use if for STOP command
+     configdatafd_ = dataconnfd_ = -1;
+     close(configsocket_);
+     configsocket_ = -1;
   }
   //send_TRIG_VETO();
 }
@@ -787,14 +806,14 @@ int sbndaq::ICARUSTriggerV3::initialization(int retries, int sleep_time_ms)
     
     TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
     //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
-    int sendcode = send(datafd_,&cmd,16, 0); //datafd
+    int sendcode = send(configdatafd_,&cmd,16, 0); //datafd
     TLOG(TLVL_INFO) << "retcode from send call is: " << sendcode;
     TLOG(TLVL_DEBUG) << "sent:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
     //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
-    int size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, sleep_time_ms);  
+    int size_bytes = poll_with_timeout(configdatafd_,ip_config_, si_config_, sleep_time_ms);  
     if(size_bytes>0){
       buffer[size_bytes+1] = {'\0'};
-      readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
+      readTCP(configdatafd_,ip_config_,si_config_,size_bytes,buffer);
       TLOG(TLVL_DEBUG) << "TTLK_INIT step - received:: " << buffer;
       return 0;
     }
@@ -814,7 +833,7 @@ int sbndaq::ICARUSTriggerV3::send_stop(int retries)
     
     TLOG(TLVL_INFO) << "to send:: COMMAND " << cmd << "  to " << ip_config_.c_str() << ":" << configport_ << "\n";
     //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
-    int sendcode = send(datafd_,&cmd,7, 0); //datafd
+    int sendcode = send(configdatafd_,&cmd,7, 0); //datafd
     TLOG(TLVL_INFO) << "retcode from send call is: " << sendcode;
     TLOG(TLVL_INFO) << "sent:: COMMAND " << cmd << "  to " << ip_config_.c_str() << ":" << configport_ << "\n";
     //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
@@ -852,15 +871,15 @@ int sbndaq::ICARUSTriggerV3::send_init_params(std::vector<std::string> param_key
   }
   init_send += "\r\n";
   TLOG(TLVL_INFO) << "Initialization step - sending:: " << init_send;
-  int sendcode = send(datafd_,&init_send[0],init_send.size(),0);
+  int sendcode = send(configdatafd_,&init_send[0],init_send.size(),0);
   int size_bytes = 0;
   int attempts = 0;
   while(size_bytes <= 0 && attempts < n_init_retries_)
   {
-      size_bytes = poll_with_timeout(datafd_,ip_config_, si_config_, n_init_timeout_ms_);
+      size_bytes = poll_with_timeout(configdatafd_,ip_config_, si_config_, n_init_timeout_ms_);
       if(size_bytes>0){
 	buffer[size_bytes+1] = {'\0'};
-	readTCP(datafd_,ip_config_,si_config_,size_bytes,buffer);
+	readTCP(configdatafd_,ip_config_,si_config_,size_bytes,buffer);
 	TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
 	if(buffer[0] == '1')
 	{

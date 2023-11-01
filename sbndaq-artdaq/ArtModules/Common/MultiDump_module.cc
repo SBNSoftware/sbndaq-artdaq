@@ -314,11 +314,7 @@ void sbndaq::MultiDump::analyze(const art::Event& evt)
 
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
 
-  #if ART_HEX_VERSION < 0x30900
-          evt.getManyByType(fragmentHandles);
-  #else
           fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
-  #endif
 
   /************************************************************************************************/
   if (finclude_caen) {
@@ -385,11 +381,7 @@ void sbndaq::MultiDump::analyze(const art::Event& evt)
 
     std::vector<art::Handle<artdaq::Fragments>> fragmentHandles;
 
-  #if ART_HEX_VERSION < 0x30900
-          evt.getManyByType(fragmentHandles);
-  #else
           fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
-  #endif
 
   	for (auto handle : fragmentHandles) {
       if (!handle.isValid() || handle->size() == 0)
@@ -532,13 +524,12 @@ void sbndaq::MultiDump::analyze_caen_fragment(artdaq::Fragment & frag)  {
   CAENV1730EventHeader header = event_ptr->Header;
 
   int fragId = static_cast<int>(frag.fragmentID());
-  fragId-=fShift;
+
   //
   if (fverbose)      std::cout << "\tFrom CAEN header, event counter is "  << header.eventCounter   << "\n";
   if (fverbose)      std::cout << "\tFrom CAEN header, triggerTimeTag is " << header.triggerTimeTag << "\n";
   if (fverbose)       std::cout << "\tFrom CAEN header, board id is "       << header.boardID       << "\n";
   if (fverbose)       std::cout << "\tFrom CAEN fragment, fragment id is "  << fragId << "\n";
-  if (fverbose)       std::cout << "\tShift back, fragment id of "  << fShift << "\n";
 
   uint32_t t0 = header.triggerTimeTag;
   TTT = (int)t0;
