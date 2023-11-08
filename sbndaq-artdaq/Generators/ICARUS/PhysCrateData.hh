@@ -45,6 +45,7 @@ namespace icarus {
     void ForceClear();
     void ForceReset();
     void SetCompressionBits();
+    void ReadFirmwareVersion();
 
     std::unique_ptr<PhysCrate> physCr;
 
