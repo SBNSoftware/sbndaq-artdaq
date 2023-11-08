@@ -116,7 +116,7 @@ void icarus::PhysCrateData::ReadFirmwareVersion()
     uint8_t  revision_day   = 10*((ctrlReg & 0x00F00000) >> 20) + ((ctrlReg & 0x000F0000) >> 16); // this is an insane way to store a day
     uint8_t  revision_month = ((ctrlReg & 0x0F000000) >> 24);
     uint16_t revision_year  = 2016 + ((ctrlReg & 0xF0000000) >> 28);
-    TRACEN("PhysCrateData", TLVL_DEBUG+1, "Board %d is running firmware version %d.%d, realized on %02d/%02d/%04d (DD/MM/YYYY)", ib, version_major, version_minor, revision_day, revision_month, revision_year);
+    TRACEN("PhysCrateData", TLVL_INFO, "Board %d is running firmware version %d.%d, realized on %02d/%02d/%04d (DD/MM/YYYY)", ib, version_major, version_minor, revision_day, revision_month, revision_year);
   }
 }
 
