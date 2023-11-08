@@ -100,7 +100,7 @@ void sbndaq::CAENV1730WaveformAna::analyze(art::Event const & evt)
     //get the number of 32-bit words from the header
     size_t const& ev_size(header.eventSize);
     
-    size_t nChannels = md->nChannels; //fixme
+    size_t nChannels = md->nChannels(); //fixme
     fWvfmsVec.resize(nChannels);
     
     //use that to get the number of 16-bit words for each channel

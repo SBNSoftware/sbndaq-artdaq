@@ -217,7 +217,7 @@ void sbndaq::testStandTriggerProducer::analyze_caen_fragment(artdaq::Fragment & 
   TTT_ns = t0*8;
   if (fVerbose)       std::cout << "\n\tTriggerTimeTag in ns is " << TTT_ns << "\n";  // 500 MHz is 2 ns per tick
 
-  nChannels = md->nChannels;
+  nChannels = md->nChannels();
   if (fVerbose)       std::cout << "\tNumber of channels: " << nChannels << "\n";
   
   //--get the number of 32-bit words (quad_bytes) from the header
