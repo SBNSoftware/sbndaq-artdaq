@@ -101,6 +101,7 @@ void icarus::PhysCrateData::SetCompressionBits()
     ctrlReg |= 0x20;
     CAENComm_Write32(bdhandle, A_ControlReg, ctrlReg);
   }
+  TRACEN("PhysCrateData", TLVL_INFO, "Enabled TPC hardware compression scheme %ld", _compressionScheme);
 }
 
 // read the firmware version off the A2795 boards
