@@ -3,6 +3,7 @@
 #include "artdaq/DAQdata/Globals.hh"
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTPC2StreamNUandSNXMIT.hh"
+#include <zmq.hpp>
 
 #include <chrono>
 #include <ctime>
@@ -18,6 +19,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fDumpBinaryDir = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout = ps_.get<bool>("DoSNReadout", true);
   fSNChunkSize = ps_.get<int>("SNChunkSize", 100000);
+  fGPSTimeFreq = ps_.get<double>("GPSTimeFrequency", -1);
 
   SNDMABuffer_.reset(new uint16_t[fSNChunkSize]);
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
@@ -113,7 +115,20 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ; 
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
+
+  //set up thread GPS time                                                                                                                  
+  share::ThreadFunctor GPSTime_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::GPSTime, this );
+  auto GPSTime_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( GPSTime_functor, "GPSTimeWorkerThread" ) );
+  auto GPSTime_worker = share::WorkerThread::createWorkerThread( GPSTime_worker_functor );
+  GPSTime_thread_.swap(GPSTime_worker);
+  if( fGPSTimeFreq > 0 ) GPSTime_thread_->start();
+  TLOG(TLVL_INFO) << "Started GPS thread" << TLOG_ENDL;
+  TLOG(TLVL_INFO)<< "Successful " << __func__ ;
+  mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
+
+
 }
+
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
   if( fSNReadout ){
@@ -179,6 +194,71 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::MonitorCrate() {
 
   return true;
 }
+
+
+bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
+  static int fGPSTimePeriod_us = 0.5/fGPSTimeFreq * 1e6; //convert frequency to period in us                                                                                         
+  static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fGPSTimePeriod_us)};
+  //create time point                                                                                                                                                                
+  static nevistpc::TriggerModuleGPSStamp lastGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister(); //get most recent GPS stamp                                           
+  if(fGPSTimeFreq < 0 || next_check_time > std::chrono::steady_clock::now() ) return false;
+  //otherwise get the current gps stamp                                                                                                                                              
+  nevistpc::TriggerModuleGPSStamp nowGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister();
+
+  struct timespec unixtime;
+  clock_gettime(CLOCK_REALTIME, &unixtime);
+  time_t ntp_time = unixtime.tv_sec + (unixtime.tv_nsec*1e-9);
+  // Check if the new gps time/frame is different from the old one                                                                                                                   
+
+  if( (nowGPSStamp.gps_frame != lastGPSStamp.gps_frame) ||
+      (nowGPSStamp.gps_sample != lastGPSStamp.gps_sample) ||
+      (nowGPSStamp.gps_sample_div != lastGPSStamp.gps_sample_div) ){
+
+    double diff_time = nowGPSStamp.gps_frame -  lastGPSStamp.gps_frame;
+    TLOG(TLVL_INFO) << "NTP time " << unixtime.tv_sec << " , " << unixtime.tv_nsec  << " , " << ntp_time << TLOG_ENDL;
+    TLOG(TLVL_INFO) << "Check on conditions 1 : " << nowGPSStamp.gps_frame << " , " << lastGPSStamp.gps_frame << TLOG_ENDL;
+    TLOG(TLVL_INFO) << "Check on conditions 2 : " <<nowGPSStamp.gps_sample << " , " << lastGPSStamp.gps_sample << TLOG_ENDL;
+    TLOG(TLVL_INFO) << "Check on conditions 3 : " <<nowGPSStamp.gps_sample_div << " , " << lastGPSStamp.gps_sample_div << TLOG_ENDL;
+
+
+    //std::map<int32_t, unsigned long> timeMap;                                                                                                                           
+    //  timeMap.insert(std::pair<int32_t, unsigned long>(nowGPSStamp.gps_frame*0.00128, ntp_time));                                                                       
+    //update stamps                                                                                                                                                       
+    lastGPSStamp = nowGPSStamp;
+
+    //Sending lastGPSStamp to NevisTriggerBoard board reader                                                                                                
+    zmq::context_t context(1);
+    zmq::socket_t publisher(context, ZMQ_PUB);
+    publisher.bind("udp://localhost:5555"); // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
+    // Any port > 10000 can be used by artdaq (netstat -lpnu4 --> this will tell you the used ports)
+    //    publisher.bind("udp://127.0.0.1:7620");
+
+
+      std::string stringStamp;                                                                                                                                      
+      std::string message = std::to_string(lastGPSStamp.gps_frame) + ","
+	+ std::to_string(lastGPSStamp.gps_sample) + ","
+	+ std::to_string(lastGPSStamp.gps_sample_div);                                                                                                        
+                                                                  
+      TLOG(TLVL_INFO) << "Message to send over zmq: " << message <<  TLOG_ENDL;                                                                                 
+    
+      zmq::message_t zmqMessage(message.size());
+      memcpy(zmqMessage.data(), message.c_str(), message.size());
+      publisher.send(zmqMessage);
+
+    //********************************************        
+
+
+
+
+    TLOG(TLVL_INFO) << "updated time stamp " << TLOG_ENDL;
+  }
+  //update check time                                                                                                                                                       
+  next_check_time = std::chrono::steady_clock::now() + std::chrono::microseconds( fGPSTimePeriod_us );
+  return true;
+}
+
+
+
 
 size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   

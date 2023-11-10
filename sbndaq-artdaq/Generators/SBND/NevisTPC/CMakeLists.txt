@@ -32,7 +32,7 @@ list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq-artdaq_NevisTPCGeneratorBase)
 
 
 basic_plugin(NevisTPCData "generator" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
-basic_plugin(NevisTPC2StreamNUandSNXMIT "generator" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
+basic_plugin(NevisTPC2StreamNUandSNXMIT "generator" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} zmq)
 basic_plugin(NevisTBStream "generator" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} sbndaq-artdaq_NevisTBGeneratorBase)
 basic_plugin(NevisTPCNUXMIT "generator" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
 basic_plugin(NevisTPCCALIB "generator" LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST})
