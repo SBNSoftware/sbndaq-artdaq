@@ -16,6 +16,7 @@
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
 
 #include <fstream> // temp
+#include <zmq.hpp>
 
 namespace sbndaq {
 
@@ -25,7 +26,8 @@ namespace sbndaq {
       NevisTPC_generatorBase(_p),
       fControllerModule( new nevistpc::ControllerModule(_p) ),
       fNUXMITReader( new nevistpc::XMITReader("nu_xmit_reader", _p) ),
-      fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) )
+      fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) ),
+      context(1), _zmqGPSPublisher(context, ZMQ_PUB)
     {
       ConfigureStart();
     }
@@ -57,6 +59,10 @@ namespace sbndaq {
     share::WorkerThreadUPtr MonitorCrate_thread_;
     int fMonitorPeriod;  //!< Period in seconds to read electronics status
 
+    bool GPSTime();
+    share::WorkerThreadUPtr GPSTime_thread_;
+    int fGPSTimeFreq;
+
     bool fSNReadout; //!< Do continuous readout (supernova stream)
     bool GetSNData(); //! Get SN stream data
     share::WorkerThreadUPtr GetSNData_thread_;
@@ -65,6 +71,9 @@ namespace sbndaq {
     bool WriteSNData(); //! Write SN stream data
     share::WorkerThreadUPtr WriteSNData_thread_;
     uint16_t* SNBuffer_;
+
+    zmq::context_t context;
+    zmq::socket_t _zmqGPSPublisher;
 
     bool fDumpBinary; //!< Write binary file before the artdaq back-end
     std::string fDumpBinaryDir; //!< Directory for binary file dump

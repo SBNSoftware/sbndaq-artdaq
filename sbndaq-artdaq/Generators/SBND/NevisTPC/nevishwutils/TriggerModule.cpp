@@ -400,6 +400,19 @@ namespace nevistpc
     TLOG(TLVL_INFO) << "TriggerModule: called " <<  __func__ << " " << size ;
   }
 
+  void TriggerModule::setGPSClockRegister(TriggerModuleGPSStamp currentStamp)
+  {  
+    _GPSframe  = currentStamp.gps_frame;
+    _GPSsample = currentStamp.gps_sample;
+    _GPSdiv    = currentStamp.gps_sample_div;
+  }
+
+  TriggerModuleGPSStamp TriggerModule::getGPSClockRegister()
+  {
+    TriggerModuleGPSStamp thisstamp(_GPSframe,  _GPSsample, _GPSdiv);
+    return thisstamp;
+  }
+
   // Simplified version of uboonedaq TriggerModule::readTriggerBoardGPSClockRegister
   TriggerModuleGPSStamp TriggerModule::getLastGPSClockRegister()
   {
@@ -412,9 +425,15 @@ namespace nevistpc
     controller()->query(ControlDataPacket(_slot_number, device::gps, GPS::GPS_TB_FRAME_SAMPLE), status, 10);
     ControlDataPacket::iterator dataIterator{status.dataBegin()};
     
-    TriggerModuleGPSStamp lastStamp( uint32_t(*dataIterator & 0xffffff), 
-				     uint16_t(*++dataIterator & 0xfff), 
-				     uint16_t((*dataIterator & 0x70000) >> 16) );
+    unsigned int frame = *dataIterator;
+    unsigned int sample = *++dataIterator;
+
+    frame = uint32_t(frame & 0xffffff);
+    sample =  uint16_t(sample & 0xfff);    
+
+    TriggerModuleGPSStamp lastStamp(frame,
+                                    sample,
+                                    uint16_t((*dataIterator & 0x70000) >> 16) );
 
     TLOG(TLVL_INFO) << "TriggerModule: called " <<  __func__ ;
     TLOG(TLVL_INFO) << "TriggerModule: last GPS timestamp frame " << lastStamp.gps_frame 

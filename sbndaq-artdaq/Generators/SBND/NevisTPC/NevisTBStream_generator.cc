@@ -4,9 +4,9 @@
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTBStream.hh"
 
-
 #include <chrono>
 #include <ctime>
+#include <zmq.hpp>
 
 void sbndaq::NevisTBStream::ConfigureNTBStart() {
   TLOG(TLVL_INFO) << "ConfigureStart NTB";
@@ -43,7 +43,7 @@ void sbndaq::NevisTBStream::ConfigureNTBStart() {
   fntbreader->initializePCIeCard();
   fntbreader->setupTXModeRegister();
   TLOG(TLVL_INFO) << "Configured NTB PCIe card";
-
+ 
 }
 
 void sbndaq::NevisTBStream::ConfigureNTBStop() {
@@ -59,7 +59,7 @@ void sbndaq::NevisTBStream::ConfigureNTBStop() {
 }
 
 size_t sbndaq::NevisTBStream::GetNevisTBData() {
-  TLOG(TLVL_INFO)<< "GetNevisTBData";
+  //TLOG(TLVL_INFO)<< "GetNevisTBData";
 
   std::streamsize bytesRead = fntbreader->readsome(reinterpret_cast<char*>(&DMABufferNTB_[0]), fNTBChunkSize);  
 

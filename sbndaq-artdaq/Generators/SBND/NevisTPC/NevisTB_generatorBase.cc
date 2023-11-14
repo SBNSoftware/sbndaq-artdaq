@@ -15,8 +15,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <zmq.hpp>
 
-sbndaq::NevisTB_generatorBase::NevisTB_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
+sbndaq::NevisTB_generatorBase::NevisTB_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), rec_context(1), _zmqGPSSubscriber(rec_context, ZMQ_SUB), ps_(ps) {
   
   Initialize();
 }
@@ -35,9 +36,14 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   events_seen_ = 0;
   _subrun_event_0 = -1;
   _this_event = -1;
-
-
+  GPSinitialized = false;
   pseudo_ntbfragment = 1;  
+
+  _zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+  //_zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "ntb_gps_timestamp:", 18);
+  _zmqGPSSubscriber.connect("tcp://10.226.36.6:11212");
+  TLOG(TLVL_INFO) << "Subscriber Connected to port 11212";
+
 
   //Build buffer for NTB        
   if( CircularBufferSizeBytesNTB_%sizeof(uint16_t)!=0)                                                                                                
@@ -52,14 +58,24 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   auto GetNTBData_worker = share::WorkerThread::createWorkerThread(worker_ntbfunctor);                                                                
   GetNTBData_thread_.swap(GetNTBData_worker);
 
+  // Set up worker getGPStime thread. 
+  share::ThreadFunctor GPStime_functor = std::bind(&NevisTB_generatorBase::GPStime,this);                                                              
+  auto worker_GPStime_functor = share::WorkerThreadFunctorUPtr(new share::WorkerThreadFunctor(GPStime_functor,"GetGPStimeWorkerThread"));                       
+  auto GPStime_worker = share::WorkerThread::createWorkerThread(worker_GPStime_functor);                                                                
+  GPStime_thread_.swap(GPStime_worker);
+  TLOG(TLVL_INFO) << "GPStimeWorkerThread Initialized";
+ 
+
 }
 
 void sbndaq::NevisTB_generatorBase::start(){
   GetNTBData_thread_->start();  
+  GPStime_thread_->start();
 }
 
 void sbndaq::NevisTB_generatorBase::stopAll(){
   GetNTBData_thread_->stop();   
+  GPStime_thread_->stop();
 }
 
 
@@ -69,7 +85,6 @@ void sbndaq::NevisTB_generatorBase::stop(){
 }
 
 void sbndaq::NevisTB_generatorBase::stopNoMutex(){
-
   stopAll();
 }
 
@@ -107,13 +122,57 @@ size_t sbndaq::NevisTB_generatorBase::CircularBuffer::Erase(size_t n_words){
 bool sbndaq::NevisTB_generatorBase::GetNTBData(){                                                                                                     
                                                                                                                                                         
   size_t ntb_words = GetNevisTBData()/sizeof(uint16_t);                                                                                                 
-  TLOG(TLVL_INFO)<< "NTB words" << ntb_words;                                                                                                           
+  //TLOG(TLVL_INFO)<< "NTB words" << ntb_words;                                                                                                           
   if(ntb_words==0) return false;                                                                                                                        
   size_t new_NTBbuffer_size = CircularBufferNTB_.Insert(ntb_words,DMABufferNTB_);                                                                       
                                                                                                                                                         
   return true;                                                                                                                                          
 }                                          
 
+bool sbndaq::NevisTB_generatorBase::GPStime(){                                                                                                     
+
+    zmq::pollitem_t items[] = {{static_cast<void*>(_zmqGPSSubscriber), 0, ZMQ_POLLIN, 0}};
+
+    bool keepGoing=true;
+    while (keepGoing) {
+        zmq::poll(items, 1, 10); // Check for messages every 10ms
+
+        if (items[0].revents & ZMQ_POLLIN) {
+            zmq::message_t zmqMessage;
+            _zmqGPSSubscriber.recv(&zmqMessage);
+
+            std::string message(static_cast<char*>(zmqMessage.data()), zmqMessage.size());
+            // Remove the prefix and parse the three integers
+            std::istringstream iss(message); 
+            std::vector<uint32_t> numbers;
+            std::string token;
+            while (std::getline(iss, token, ',')) {
+   
+                // Convert the string to an integer and add it to the vector
+              numbers.push_back(std::stoi(token));
+              //} catch (const std::invalid_argument& e) {
+              //    std::cerr << "Invalid argument: " << e.what() << std::endl;
+              //} catch (const std::out_of_range& e) {
+              //      std::cerr << "Out of range: " << e.what() << std::endl;   
+          }
+          if(!GPSinitialized || GPSframe != numbers[0] || GPSsample != numbers[1] || GPSdiv != numbers[2]){
+            GPSstamp nowGPSstamp(numbers[0], numbers[1], numbers[2]);
+            setGPSstamp(nowGPSstamp); 
+            TLOG(TLVL_INFO)<< "Received new time stamp: " << numbers[0] << " " << numbers[1] << " " << numbers[2] ;           
+            keepGoing=false;
+            GPSinitialized = true;
+          } 
+        }
+    }
+  return true;                                                                                                               
+}                                          
+
+void sbndaq::NevisTB_generatorBase::setGPSstamp(GPSstamp currentStamp)
+  {  
+    GPSframe  = currentStamp.gps_frame;
+    GPSsample = currentStamp.gps_sample;
+    GPSdiv    = currentStamp.gps_sample_div;
+  }
 
 bool sbndaq::NevisTB_generatorBase::getNext_(artdaq::FragmentPtrs & frags){
   //this function doesn't run over event by event.                                                                                                      
@@ -130,7 +189,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
   // Check that we've got at least 4*32 bits of data for NevisTB                                                                                        
   // We need 4*32bit data because for NTB, the trailer end marker is the fixed one 0xffffffff unlike the TPCs where we have XMIT header that starts with 0xffffffff                                                                                                                                           
   if(CircularBufferNTB_.buffer.size()*sizeof(uint16_t) < 4*sizeof(uint32_t)){                                                                         
-    TLOG(TLVL_INFO)<< "Size of NTB Circular buffer:" << CircularBufferNTB_.buffer.size();                                                             
+    //TLOG(TLVL_INFO)<< "Size of NTB Circular buffer:" << CircularBufferNTB_.buffer.size();                                                             
     return false;                                                                                                                                     
   }            
 
@@ -187,6 +246,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     _subrun_event_0 = _this_event;  
 
   }
+
     struct timespec unixtime;                                                                                                                             
     clock_gettime(CLOCK_REALTIME, &unixtime);                                                                                                             
     artdaq::Fragment::timestamp_t unixtime_ns = static_cast<artdaq::Fragment::timestamp_t>(unixtime.tv_sec)*1000000000 +                                  
