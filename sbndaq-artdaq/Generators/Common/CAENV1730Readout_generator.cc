@@ -1332,8 +1332,9 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     memfullStream << "CAENV1730.Card" << fBoardID
 		  << ".Channel" << ch << ".MemoryFull"; 
    
+    CAEN_DGTZ_ErrorCode retcod;
 
-    CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
+    retcod = CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
     TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
                                << ": " << ch_temps[ch] << "  C"
                                << TLOG_ENDL;
@@ -1341,11 +1342,21 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
 			  artdaq::MetricMode::Average);
 
-    if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
-      TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
-                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
-		       << TLOG_ENDL;
+    if ( ( retcod == CAEN_DGTZ_Success) && ( fCAEN.maxTemp > 0 ))
+    {
+      // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
+      if (( ch_temps[ch] > fCAEN.maxTemp ) && ( ch_temps[ch] < V1730_UNPHYSICAL_TEMPERATURE ))
+      { 
+	// V1730(S) shuts down at 70(85) celsius, give a warning ahead of that
+	TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
+			 << "Temperature above " << fCAEN.maxTemp << 
+	  " degrees Celsius for channel " << ch
+			 << TLOG_ENDL;
+      }
     }
+    // Ignore readout errors from S/N 164.  CAEN advises not to read temperatures 
+    //   while the readout is running, but we cannot do that.  Only one sensors on one 
+    //   V1730 has ever malfunctioned.
 
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
     TLOG_ARB(TTEMP,TRACE_NAME) << statStream.str()
