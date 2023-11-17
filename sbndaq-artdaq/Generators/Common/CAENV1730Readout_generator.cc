@@ -1546,7 +1546,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     if(fUseTimeTagForTimeStamp){
       fTTT = uint32_t{header->triggerTimeTag}; // 
-      fTTT_ns = fTTT*8;
+      fTTT_ns = fTTT*8.0;
       
       // Scheme borrowed from what Antoni developed for CRT.
       // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
@@ -1557,7 +1557,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     }
     else if(fUseTimeTagShiftForTimeStamp){
       fTTT = uint32_t{header->triggerTimeTag}; // 
-      fTTT_ns = fTTT*8 - fCAEN.recordLength * fCAEN.postPercent / 100 * 2;
+      fTTT_ns = (fTTT*8) - ((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0);
       
       // Scheme borrowed from what Antoni developed for CRT.
       // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
@@ -1757,7 +1757,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 	uint64_t t_truetriggertime = t_offset_ticks + TTT;
 	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
 	
-	ts_frag = (t_truetriggertime*8) - fCAEN.recordLength * fCAEN.postPercent / 100 * 2; //in 1ns ticks
+	ts_frag = (t_truetriggertime*8) - ((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0); //in 1ns ticks
       }
       else{
 	using namespace boost::gregorian;
