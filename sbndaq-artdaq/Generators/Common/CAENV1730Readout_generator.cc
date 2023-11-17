@@ -1546,7 +1546,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     if(fUseTimeTagForTimeStamp){
       fTTT = uint32_t{header->triggerTimeTag}; // 
-      fTTT_ns = fTTT*8.0;
+      fTTT_ns = fTTT*8;
       
       // Scheme borrowed from what Antoni developed for CRT.
       // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
