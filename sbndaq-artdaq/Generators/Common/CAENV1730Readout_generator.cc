@@ -1653,7 +1653,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   double min_fragment_create_time = 10000.0;
   struct timespec now;
   clock_gettime(CLOCK_REALTIME,&now);
-  const auto metadata = CAENV1730FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec,fCAEN.postPercent,ch_temps);
+  const auto metadata = CAENV1730FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec,ch_temps);
   const auto fragment_datasize_bytes = metadata.ExpectedDataSize();
   TLOG(TMAKEFRAG)<< "Created CAENV1730FragmentMetadata with expected data size of "
                  << fragment_datasize_bytes << " bytes.";
