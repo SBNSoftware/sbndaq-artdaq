@@ -294,7 +294,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
 	  for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
 	    double temp_rate = _metric_HLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
-            if(i < 5 || i >= 29) { //is event or flash trigger (excl calibration)
+            if(i < 5 || i >= 29 || i == 20 || i == 21) { //is event or flash trigger (excl calibration) or crt reset
 	      artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
             }
             else if(i == 5) { //calibration
