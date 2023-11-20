@@ -1,5 +1,6 @@
 add_subdirectory(GPS)
 add_subdirectory(Bern)
+add_subdirectory(CAEN)
 
 add_definitions(-DLINUX)
 

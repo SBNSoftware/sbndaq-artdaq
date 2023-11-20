@@ -15,7 +15,7 @@ enum
   N_LINKS = 8  // 4 link per A3818 PCIe board
 };
 
-int main(int argc, char **argv)
+int main() //int argc, char **argv)
 {
   int link, retcod, board, handle;
   uint32_t data;
@@ -34,10 +34,10 @@ int main(int argc, char **argv)
       retcod = CAEN_DGTZ_GetInfo(handle,&info);
       if ( retcod == CAEN_DGTZ_Success )
       {
-	printf("  %s Serial %d\n      %s\n      %s %d\n", info.ModelName, 
-	       info.SerialNumber, info.ROC_FirmwareRel, info.AMC_FirmwareRel);
+	printf("  %s Serial %d\n      %s\n      %s \n", info.ModelName, 
+	       info.SerialNumber, info.ROC_FirmwareRel, info.AMC_FirmwareRel); //%d
 
-	uint32_t mode;
+	/*uint32_t mode;
 	mode = 999;
 	retcod = CAEN_DGTZ_ReadRegister(handle,CAEN_DGTZ_MON_MODE_ADD,&mode);
 	if ( retcod == CAEN_DGTZ_Success )
@@ -46,8 +46,32 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-	  printf("      AMode:E", mode);
+	  printf("      AMode:E");
+	}*/
+
+    uint32_t readback4, readback5;
+    for(uint32_t chn=0; chn<16; ++chn)
+    {    
+      retcod = CAEN_DGTZ_GetChannelSelfTrigger(handle, chn, (CAEN_DGTZ_TriggerMode_t *)&readback4);
+      if ( retcod == CAEN_DGTZ_Success )
+	{
+	  printf("      Channel:%d SLFMODE:%d", chn, readback4);
 	}
+	else
+	{
+	  printf("     Channel:%d SLFMODE:E", chn);
+	}
+      retcod = CAEN_DGTZ_GetExtTriggerInputMode(handle,(CAEN_DGTZ_TriggerMode_t *)&readback5);
+      if ( retcod == CAEN_DGTZ_Success )
+	{
+	  printf("      Channel:%d EXTMODE:%d", chn, readback5);
+	}
+	else
+	{
+	  printf("     Channel:%d EXTMODE:E", chn);
+	}
+     }
+     
 
     uint32_t readback;
     for(uint32_t ch=0; ch<16; ++ch)
@@ -71,7 +95,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-	  printf("       GLBMSK:E", readback2);
+	  printf("       GLBMSK:E");
 	}  
      
       uint32_t readback3;
@@ -82,7 +106,7 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-	  printf("       TRGOUT:E", readback3);
+	  printf("       TRGOUT:E");
 	} 
 	//retcod = CAEN_DGTZ_GetTriggerPolarity(handle,CAEN_DGTZ_ACQ_STATUS_ADD,(CAEN_DGTZ_TriggerPolarity_t *)&data);
 
