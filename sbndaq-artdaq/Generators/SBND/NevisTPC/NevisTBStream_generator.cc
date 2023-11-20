@@ -49,7 +49,7 @@ void sbndaq::NevisTBStream::ConfigureNTBStart() {
 void sbndaq::NevisTBStream::ConfigureNTBStop() {
 
   if( fDumpNTBBinary ){
-    TLOG(TLVL_INFO)<< "Closig raw binary file " << binFileNameNevisTB;
+    TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameNevisTB;
     binFileNTB.close();
   }
 

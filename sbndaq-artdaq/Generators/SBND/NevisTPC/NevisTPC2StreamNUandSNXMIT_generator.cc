@@ -206,7 +206,9 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::MonitorCrate() {
 }
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
-  static int fGPSTimePeriod_us = 0.25/fGPSTimeFreq * 1e6; //convert frequency to period in us 
+  //static int fGPSTimePeriod_us = 0.25/fGPSTimeFreq * 1e6; //convert frequency to period in us 
+  static int fGPSTimePeriod_us = 100; //convert frequency to period in us
+
   static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fGPSTimePeriod_us)};
   //create time point                                                                                                                                    
   static nevistpc::TriggerModuleGPSStamp lastGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister(); //get most recent GPS stamp   
@@ -216,31 +218,32 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
 
   struct timespec unixtime;
   clock_gettime(CLOCK_REALTIME, &unixtime);
-  time_t ntp_time = unixtime.tv_sec + (unixtime.tv_nsec*1e-9);
-  // Check if the new gps time/frame is different from the old one                                                                                     
 
+  // Check if the new gps time/frame is different from the old one                                                                                     
   if( (nowGPSStamp.gps_frame != lastGPSStamp.gps_frame) ||
       (nowGPSStamp.gps_sample != lastGPSStamp.gps_sample) ||
       (nowGPSStamp.gps_sample_div != lastGPSStamp.gps_sample_div) ){
-
-      //TLOG(TLVL_INFO) << "NTP time " << unixtime.tv_sec << " , " << unixtime.tv_nsec  << " , " << ntp_time << TLOG_ENDL;
-      TLOG(TLVL_INFO) << "Check on conditions 1 : " << nowGPSStamp.gps_frame << " , " << lastGPSStamp.gps_frame << TLOG_ENDL;
-      TLOG(TLVL_INFO) << "Check on conditions 2 : " <<nowGPSStamp.gps_sample << " , " << lastGPSStamp.gps_sample << TLOG_ENDL;
-      TLOG(TLVL_INFO) << "Check on conditions 3 : " <<nowGPSStamp.gps_sample_div << " , " << lastGPSStamp.gps_sample_div << TLOG_ENDL;
-
+    
+      TLOG(TLVL_INFO) << "NTP time GPS Received by TPC " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
       //update time stamp in trigger module class
       fCrate->getTriggerModule()->setGPSClockRegister(nowGPSStamp);
 
       //update stamps                                                                                                                                        
       lastGPSStamp = nowGPSStamp;
-      TLOG(TLVL_INFO) << "updated time stamp " << TLOG_ENDL;
       
+      //create message to send
       std::string message = std::to_string(lastGPSStamp.gps_frame) + ","
 	+ std::to_string(lastGPSStamp.gps_sample) + ","
 	+ std::to_string(lastGPSStamp.gps_sample_div);  
       
-      TLOG(TLVL_INFO) << "Message to send over zmq: " << message <<  TLOG_ENDL;                                                                                 
       zmq::message_t zmqMessage(message.size());
+
+      //create timestamp to send with message. this will help correct NTP time to GPS time (we just need the "second" part)
+      long long timestamp = unixtime.tv_sec;
+      zmq::message_t zmqTimestamp(sizeof(timestamp));
+      memcpy(zmqTimestamp.data(), &timestamp, sizeof(timestamp));
+      _zmqGPSPublisher.send(zmqTimestamp, ZMQ_SNDMORE);
+
       memcpy(zmqMessage.data(), message.c_str(), message.size());
       _zmqGPSPublisher.send(zmqMessage);
       TLOG(TLVL_INFO) << "Message sent succesfully: " << message <<  TLOG_ENDL;

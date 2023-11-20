@@ -31,7 +31,8 @@ namespace sbndaq
     
     zmq::context_t rec_context;
     zmq::socket_t _zmqGPSSubscriber;
-    
+    long long receivedNTPsecond;
+   
     class GPSstamp {
     public:
     GPSstamp( uint32_t new_frame, uint16_t new_sample, uint16_t new_div ) 
