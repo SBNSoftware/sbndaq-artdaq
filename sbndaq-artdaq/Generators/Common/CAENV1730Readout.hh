@@ -179,7 +179,7 @@ namespace sbndaq
 
     enum
     {
-      V1730_UNPHYSICAL_TEMPERATURE = 1000  // degC
+      V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
     };
 
     //fhicl parameters
