@@ -59,6 +59,7 @@ class CAENConfiguration
     int  majorityLevel; 
     int  majorityCoincidenceWindow;
     uint32_t  maxTemp;
+    uint32_t temperatureCheckMask; // 8 bit mask saying which ADCs to perforrm the temperature check
 
     void print(std::ostream & os = std::cout);
 };

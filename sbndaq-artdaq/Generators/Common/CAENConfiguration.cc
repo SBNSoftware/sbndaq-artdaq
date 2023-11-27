@@ -35,7 +35,8 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   triggerLogic(0),
   majorityLevel(0),
   majorityCoincidenceWindow(0),
-  maxTemp(0)
+  maxTemp(0),
+  temperatureCheckMask(0xFFFF)
 {
   link                 = ps.get<int>("link");
   enableReadout        = ps.get<int>("enableReadout");
@@ -62,6 +63,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   majorityLevel        = ps.get<int>("majorityLevel"); 
   majorityCoincidenceWindow = ps.get<int>("majorityCoincidenceWindow"); 
   maxTemp              = ps.get<uint32_t>("maxTempCelsius");
+  temperatureCheckMask = ps.get<uint32_t>("temperatureCheckMask",0xFFFF);
 
   char tag[1024];
   channelEnableMask = 0;
