@@ -107,6 +107,8 @@ namespace sbndaq
       size_t Erase(size_t);
     } CircularBuffer_t;
     
+    int GPSZMQPortNTB_; 
+
     uint32_t DMABufferSizeBytesNTB_;
     std::unique_ptr<uint16_t[]> DMABufferNTB_;
     

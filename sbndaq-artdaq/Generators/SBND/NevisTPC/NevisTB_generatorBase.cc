@@ -31,6 +31,11 @@ sbndaq::NevisTB_generatorBase::~NevisTB_generatorBase(){
 void sbndaq::NevisTB_generatorBase::Initialize(){
   CircularBufferSizeBytesNTB_ = ps_.get<uint32_t>("CircularBufferSizeBytesNTB_",1e9);  
   DMABufferSizeBytesNTB_ = ps_.get<uint32_t>("DMABufferSizeNTB",1e4);                                                                                
+
+  GPSZMQPortNTB_ = ps_.get<int>("GPSZMQPortNTB", 11212);
+
+  TLOG(TLVL_INFO) << "GPSZMQPortNTB_ set to " << GPSZMQPortNTB_ ;
+
   DMABufferNTB_.reset(new uint16_t[DMABufferSizeBytesNTB_]);       
   current_subrun_ = 0;
   events_seen_ = 0;
@@ -40,9 +45,9 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   pseudo_ntbfragment = 1;  
 
   _zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
-  //_zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "ntb_gps_timestamp:", 18);
-  _zmqGPSSubscriber.connect("tcp://10.226.36.6:11212");
-  TLOG(TLVL_INFO) << "Subscriber Connected to port 11212";
+  std::string connectionString = "tcp://10.226.36.6:" + std::to_string(GPSZMQPortNTB_);
+  _zmqGPSSubscriber.connect(connectionString.c_str());
+  TLOG(TLVL_INFO) << "Subscriber Connected to port " << GPSZMQPortNTB_ ;
 
 
   //Build buffer for NTB        
@@ -133,47 +138,51 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
     //static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(10)};
     zmq::pollitem_t items[] = {{static_cast<void*>(_zmqGPSSubscriber), 0, ZMQ_POLLIN, 0}};
 
-    bool keepGoing=true;
-    while (keepGoing) {
-        zmq::poll(items, 1, 1000); //timeout after 1000 milliseconds
+//    bool keepGoing=true;
+//    while (keepGoing) {
+    zmq::poll(items, 1, 1000); //timeout after 1000 milliseconds
 
-        if (items[0].revents & ZMQ_POLLIN) {
+    if (items[0].revents & ZMQ_POLLIN) {
 
-            zmq::message_t zmqTimestamp;
-            _zmqGPSSubscriber.recv(&zmqTimestamp);
+        zmq::message_t zmqTimestamp;
+        _zmqGPSSubscriber.recv(&zmqTimestamp);
 
-            zmq::message_t zmqMessage;
-            _zmqGPSSubscriber.recv(&zmqMessage);
+        zmq::message_t zmqMessage;
+        _zmqGPSSubscriber.recv(&zmqMessage);
 
-            struct timespec unixtime;
-            clock_gettime(CLOCK_REALTIME, &unixtime);
-            time_t ntp_time = unixtime.tv_sec + (unixtime.tv_nsec*1e-9);
+        struct timespec unixtime;
+        clock_gettime(CLOCK_REALTIME, &unixtime);
+        time_t ntp_time = unixtime.tv_sec + (unixtime.tv_nsec*1e-9);
 
-            // Extract timestamp from the received message
-            TLOG(TLVL_INFO) << "NTP time GPS received by NTB " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
+        // Extract timestamp from the received message
+        TLOG(TLVL_INFO) << "NTP time GPS received by NTB " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
 
-            std::string message(static_cast<char*>(zmqMessage.data()), zmqMessage.size());
-            // Remove the prefix and parse the three integers
-            std::istringstream iss(message); 
-            std::vector<uint32_t> numbers;
-            std::string token;
+        std::string message(static_cast<char*>(zmqMessage.data()), zmqMessage.size());
+        // Remove the prefix and parse the three integers
+        std::istringstream iss(message); 
+        std::vector<uint32_t> numbers;
+        std::string token;
 
-            memcpy(&receivedNTPsecond, zmqTimestamp.data(), sizeof(receivedNTPsecond));
+        memcpy(&receivedNTPsecond, zmqTimestamp.data(), sizeof(receivedNTPsecond));
 
-            while (std::getline(iss, token, ',')) { 
-              numbers.push_back(std::stoi(token));
-            }
-            if(!GPSinitialized || GPSframe != numbers[0] || GPSsample != numbers[1] || GPSdiv != numbers[2]){
-              GPSstamp nowGPSstamp(numbers[0], numbers[1], numbers[2]);
-              setGPSstamp(nowGPSstamp); 
-              //TLOG(TLVL_INFO)<< "Received new time stamp: " << numbers[0] << " " << numbers[1] << " " << numbers[2] ;           
-              //TLOG(TLVL_INFO)<< "Latency (ns): " << latency ;
-              keepGoing=false;
-              GPSinitialized = true;
-            } 
+        while (std::getline(iss, token, ',')) { 
+          numbers.push_back(std::stoi(token));
         }
+        if(!GPSinitialized || GPSframe != numbers[0] || GPSsample != numbers[1] || GPSdiv != numbers[2]){
+          GPSstamp nowGPSstamp(numbers[0], numbers[1], numbers[2]);
+          setGPSstamp(nowGPSstamp); 
+          //TLOG(TLVL_INFO)<< "Received new time stamp: " << numbers[0] << " " << numbers[1] << " " << numbers[2] ;           
+          //TLOG(TLVL_INFO)<< "Latency (ns): " << latency ;
+          //keepGoing=false;
+          GPSinitialized = true;
+          return true;
+        }
+        else{
+          return false;
+        } 
     }
-  return true;                                                                                                               
+//    }
+    return true;
 }                                          
 
 void sbndaq::NevisTB_generatorBase::setGPSstamp(GPSstamp currentStamp)

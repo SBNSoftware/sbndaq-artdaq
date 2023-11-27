@@ -12,11 +12,8 @@ void sbndaq::NevisTBStream::ConfigureNTBStart() {
   TLOG(TLVL_INFO) << "ConfigureStart NTB";
 
   fNTBChunkSize = ps_.get<int>("NTBChunkSize", 96);
-
   fDumpNTBBinary = ps_.get<bool>("DumpNTBBinary", false);
   fDumpNTBBinaryDir = ps_.get<std::string>("DumpNTBBinaryDir", ".");
-
- 
 
   NTBDMABuffer_.reset(new uint16_t[fNTBChunkSize]);
   NTBCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl                                             
