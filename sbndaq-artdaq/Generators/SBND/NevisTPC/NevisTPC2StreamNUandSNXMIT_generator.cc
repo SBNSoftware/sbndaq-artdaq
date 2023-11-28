@@ -192,6 +192,7 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   //std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(buffer), fChunkSize);
   std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(&DMABuffer_[0]), fChunkSize);
   //unsigned wordsRead = bytesRead * sizeof(char) / sizeof(uint16_t);
+  TLOG(TGETDATA) << "Number of bytes read:" << int(bytesRead) ;
 
   //std::copy(buffer, buffer + wordsRead, &DMABuffer_[0]);
 

@@ -124,11 +124,24 @@ size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
 bool sbndaq::NevisTPC_generatorBase::GetData(){
   
   TRACE(TGETDATA,"GetData() called");
-  
+  auto start_getdatatime = std::chrono::steady_clock::now();
+
   size_t n_words = GetFEMCrateData()/sizeof(uint16_t);
   TRACE(TGETDATA,"GetFEMCrateData() return %lu words",n_words);
-  if(n_words==0)
+  //if(n_words==0)
+  //    return false;
+
+  // If no data is received for ~3 sec, issue an error
+  while (n_words == 0) {
+    auto elapsed_getdatatime = std::chrono::steady_clock::now() - start_getdatatime;
+
+    // Timeout duration is set to 3 seconds
+    if (std::chrono::duration_cast<std::chrono::seconds>(elapsed_getdatatime).count() >= 3) {
+      TRACE(TGETDATA, "Timeout: No data received for 3 seconds");
       return false;
+    }
+    n_words = GetFEMCrateData() / sizeof(uint16_t);
+  }
 
   size_t new_buffer_size = CircularBuffer_.Insert(n_words,DMABuffer_);	
   

@@ -152,7 +152,9 @@ namespace nevistpc{
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(100);
+      //      getTriggerModule()->setDeadtimeSize(100);
+      //Changing the dead time size that aligns with the shorter TPC readout window
+      getTriggerModule()->setDeadtimeSize(0x59);
     }
     
     // Load xmit firmware
@@ -229,8 +231,10 @@ namespace nevistpc{
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(100);
-    }
+      //  getTriggerModule()->setDeadtimeSize(100);
+      //Changing the dead time size that aligns with the shorter TPC readout window                                               
+      getTriggerModule()->setDeadtimeSize(0x59);
+ }
     
     // Load xmit firmware
     getXMITModule()->setMax3000Config();
@@ -303,7 +307,9 @@ namespace nevistpc{
     getControllerModule()->runOff(); // using Controller triggers
     //getControllerModule()->testOff(); // using CALIB triggers
     // To do: move instructions below to fcl
-    getControllerModule()->setFrameLength(0xffff & 20479);
+    //    getControllerModule()->setFrameLength(0xffff & 20479);
+    //Framelength that matches to drift window of 1.3 ms 
+    getControllerModule()->setFrameLength(0xffff & 20799); 
     getControllerModule()->setNUTrigPosition(0xa);
     
     // Load xmit firmware
@@ -377,10 +383,14 @@ namespace nevistpc{
       // Temp: from CALIB, to avoid leaving the function generator on all weekend
       getControllerModule()->testOff(); //v
       // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
-      getTriggerModule()->setDeadtimeSize(0x1);//v
+      //      getTriggerModule()->setDeadtimeSize(0x1);//v
+      //Changing the dead time size that aligns with the shorter TPC readout window                                               
+      getTriggerModule()->setDeadtimeSize(0x59);
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20479);
+      //      getTriggerModule()->setFrameLength(0xffff & 20479);
+      //Framelength that matches to drift window of 1.3 ms
+      getTriggerModule()->setFrameLength(0xffff & 20799);  
       ///////////////////////
 
       getTriggerModule()->disableTriggers(false);
@@ -466,10 +476,14 @@ namespace nevistpc{
       getTriggerModule()->runOnSyncOff(); //v
       getControllerModule()->testOff(); //v
       // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
-      getTriggerModule()->setDeadtimeSize(0x1);//v
+      //      getTriggerModule()->setDeadtimeSize(0x1);//v
+      //Changing the dead time size that aligns with the shorter TPC readout window                                               
+      getTriggerModule()->setDeadtimeSize(0x59);
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20479);
+      //getTriggerModule()->setFrameLength(0xffff & 20479);
+      //Framelength that matches to drift window of 1.3 ms
+      getTriggerModule()->setFrameLength(0xffff & 20799);       
       //getTriggerModule()->runOnSyncOn(); //v
       //usleep(5000);
       getTriggerModule()->disableTriggers(false);
