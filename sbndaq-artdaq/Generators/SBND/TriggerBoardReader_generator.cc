@@ -274,10 +274,8 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  double llt_rate  = _metric_LLT_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 
 	  double beam_rate = _metric_beam_trigger_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
-	  //double good_part_rate = _metric_good_particle_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
-	  //double beam_eff = _metric_good_particle_counter != 0 ? _metric_beam_trigger_counter / (double) _metric_good_particle_counter : 1. ;
 
-	  //double cs_rate   = _metric_CS_counter  * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
+	  double cs_rate   = _metric_CS_counter  * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 
 	  // publish metrics
 	  artdaq::Globals::metricMan_->sendMetric("PTB_Word_rate", word_rate, "Hz", 11, artdaq::MetricMode::Average) ;
@@ -286,11 +284,8 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  artdaq::Globals::metricMan_->sendMetric("PTB_LLT_rate", llt_rate, "Hz", 11, artdaq::MetricMode::Average) ;
 
 	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Trig_rate", beam_rate, "Hz", 11, artdaq::MetricMode::Average) ;
-	  //artdaq::Globals::metricMan_->sendMetric("PTB_Good_Part_rate", good_part_rate, "Hz", 11, artdaq::MetricMode::Average) ;
 
-	  //artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Eff", beam_eff, "ratio", 11, artdaq::MetricMode::Average) ;
-
-	  //artdaq::Globals::metricMan_->sendMetric("PTB_CS_rate",  cs_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_CS_rate",  cs_rate,  "Hz", 20, artdaq::MetricMode::Average) ;
 
 	  for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
 	    double temp_rate = _metric_HLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
@@ -322,9 +317,8 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  _metric_Word_counter =
 	  _metric_HLT_counter =
 	  _metric_LLT_counter =
-	  _metric_beam_trigger_counter = 0 ;
-	  //_metric_good_particle_counter =
-	  //_metric_CS_counter  = 0 ;
+	  _metric_beam_trigger_counter =
+	  _metric_CS_counter  = 0 ;
 
 	for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
 	  _run_HLT_counters[i] += _metric_HLT_counters[i] ;
@@ -356,27 +350,6 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       for ( auto it = trigs.begin(); it != trigs.end() ; ++it ) {
 	++ _metric_LLT_counters[*it] ;
       }
-/*
-      if ( t -> IsTrigger(1) ) {
-	_close_to_good_part = true ; 
-
-	if ( t -> timestamp > _latest_part_TS + 2*_cherenkov_coincidence )  
-	  _latest_part_TS = t -> timestamp ;
-	++ _metric_good_particle_counter ;
-      }  // this was a LLT_1
-
-
-      // always fill the cherenkov counter because 
-      // we have to evaluate a coincidence 
-      // and we cannot know if a good particle is about to come
-      if ( t -> IsTrigger(2) ) {
-	_hp_TSs.insert( t -> timestamp ) ; 
-      }  // if it is a high pressure cherenkov LLT
-
-      if ( t -> IsTrigger(3) ) {
-	_lp_TSs.insert( t -> timestamp ) ; 
-      }  // if it is a low pressure cherenkov LLT
-*/
       if ( ! _is_beam_spill ) {
 
 	if ( t -> IsTrigger(6) )  {
@@ -411,8 +384,8 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       }
     }  // if this was a HLT
 
-    //else if (  temp_word.word_type == ptb::content::word::t_ch )
-    //  ++ _metric_CS_counter ;
+    else if (  temp_word.word_type == ptb::content::word::t_ch )
+      ++ _metric_CS_counter ;
 
     else if ( PTB_Receiver::IsFeedbackWord( temp_word ) ) {
       TLOG_ERROR(TNAME) << "PTB issued a feedback word" << TLOG_ENDL;
