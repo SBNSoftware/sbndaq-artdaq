@@ -153,6 +153,7 @@ private:
 
   //--default values
   uint32_t nChannels;//    = 16;
+  uint32_t postTrigger;
   uint32_t Ttt_DownSamp;// =  4;
  /* the waveforms are sampled at 500MHz sampling. The trigger timestamp is
                                * sampled 4 times slower than input channels*/
@@ -926,8 +927,10 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   hEventCounter->Fill(header.eventCounter);
   hTriggerTimeTag->Fill((int)t0);
   nt_header->Fill(fEvent,header.eventCounter,t0);
-  nChannels = md->nChannels;
+  nChannels = md->nChannels();
+  postTrigger = md->getPostTrigger();
   if (fverbose)       std::cout << "\tNumber of channels: " << nChannels << "\n";
+  if (fverbose)       std::cout << "\tPost Trigger Percent: " << postTrigger << "\n";
 
   //--get the number of 32-bit words (quad_bytes) from the header
   uint32_t ev_size_quad_bytes = header.eventSize;

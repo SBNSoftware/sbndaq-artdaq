@@ -538,7 +538,7 @@ void sbndaq::MultiDump::analyze_caen_fragment(artdaq::Fragment & frag)  {
   hEventCounter->Fill(header.eventCounter);
   hTriggerTimeTag->Fill((int)t0);
   nt_header->Fill(fEvent,header.eventCounter,t0);
-  nChannels = md->nChannels;
+  nChannels = md->nChannels();
   if (fverbose)       std::cout << "\tNumber of channels: " << nChannels << "\n";
 
   //--get the number of 32-bit words (quad_bytes) from the header

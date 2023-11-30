@@ -430,7 +430,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::find_beam_spill(const artdaq::Fr
   sbndaq::CAENV1730Event const* event_ptr = bb.Event();
   sbndaq::CAENV1730EventHeader header = event_ptr->Header;
   // - not used-  seqID = static_cast<int>(frag.sequenceID());
-  size_t nChannels = md->nChannels;
+  size_t nChannels = md->nChannels();
   //  if (fVerbose) std::cout << "\tNumber of channels: " << nChannels << "\n";
   //  if (fVerbose) std::cout << "Timestamp in metadata is " << md->timeStampNSec<<std::endl;
 
@@ -503,7 +503,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::analyzeCAEN1730Fragment(const ar
   std::map<int,int>::iterator it = map_fragid_index.find(fragId);
   int findex = it->second;
 
-  size_t nChannels = md->nChannels;
+  size_t nChannels = md->nChannels();
   if (fVerbose) std::cout << "\tNumber of channels: " << nChannels << "\n";
 
   uint32_t ev_size_quad_bytes = header.eventSize;

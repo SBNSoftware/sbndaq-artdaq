@@ -69,6 +69,7 @@ private:
 
   //--default values
   uint32_t nChannels;//    = 16;
+  uint32_t postTrigger;
   uint32_t Ttt_DownSamp;// =  4; 
  /* the trigger time resolution is 16ns when waveforms are sampled at
                                * 500MHz sampling. The trigger timestamp is
@@ -203,8 +204,10 @@ void sbndaq::CAENV1730Dump::analyze_caen_fragment(artdaq::Fragment & frag)  {
     hEventCounter->Fill(header.eventCounter);
     hTriggerTimeTag->Fill(t0);
     nt_header->Fill(fEvent,header.eventCounter,t0);
-    nChannels = md->nChannels;
+    nChannels = md->nChannels();
+    postTrigger = md->getPostTrigger();
     std::cout << "\tNumber of channels: " << nChannels << "\n";
+    std::cout << "\tPost Trigger Percent: " << postTrigger << "\n";
     
     //--get the number of 32-bit words (quad_bytes) from the header
     uint32_t ev_size_quad_bytes = header.eventSize;
