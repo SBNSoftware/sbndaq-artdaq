@@ -61,14 +61,12 @@ MBBReader::MBBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerato
   }
 }
 
-
 void MBBReader::setupMBB(fhicl::ParameterSet const& ps) 
 {
 
   const std::string identification = "MBBReader::setupMBB";
   TLOG_INFO(identification) << "Starting setupMBB " << TLOG_ENDL;
-  
-  // Reading in the fhicl parameters.
+
   auto mbb_address              = ps.get<std::string>("MBB.address");
   auto mbb_table                = ps.get<std::string>("MBB.mbb_table");
   auto expected_mbb_fw_version  = ps.get<unsigned>("MBB.expected_mbb_fw_version"); 
@@ -128,7 +126,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   const auto ptc_03             = ps.get<uint32_t>("MBB.ptc_03");
   const auto ptc_04             = ps.get<uint32_t>("MBB.ptc_04");
 
-  // connecting to mbb.
+
   TLOG_INFO(identification) << "Connecting to MBB at " << mbb_address << TLOG_ENDL;
   mbb = std::make_unique<MBB>( mbb_address, mbb_table );
   TLOG_INFO(identification) << "Connected to MBB at " <<  mbb_address << TLOG_ENDL;
@@ -136,26 +134,25 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
 
   // Check and print firmware version
   uint32_t mbb_fw_version = mbb->Read("FIRMWARE_VERSION");
-   
-//  This block needs to be rewritten according to C++ best practice
-//  TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
-//        << std::hex << std::setw(8) << std::setfill('0')
-//        <<  mbb_fw_version
-//        << " Synthesized: " 
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.CENTURY")
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.YEAR") << "-"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.MONTH") << "-"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.DAY") << " "
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_TIME.HOUR") << ":"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_TIME.MINUTE") << ":"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_TIME.SECOND")  << TLOG_ENDL; 
+  
+  TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
+        << std::hex << std::setw(8) << std::setfill('0')
+        <<  mbb_fw_version
+        << " Synthesized: " 
+        << std::hex << std::setw(2) << std::setfill('0')
+        << mbb->Read("SYSTEM.SYNTH_DATE.CENTURY")
+        << std::hex << std::setw(2) << std::setfill('0')
+        << mbb->Read("SYSTEM.SYNTH_DATE.YEAR") << "-"
+        << std::hex << std::setw(2) << std::setfill('0')
+        << mbb->Read("SYSTEM.SYNTH_DATE.MONTH") << "-"
+        << std::hex << std::setw(2) << std::setfill('0')
+        << mbb->Read("SYSTEM.SYNTH_DATE.DAY") << " "
+        << std::hex << std::setw(2) << std::setfill('0')
+        << mbb->Read("SYSTEM.SYNTH_TIME.HOUR") << ":"
+        << std::hex << std::setw(2) << std::setfill('0')
+        << mbb->Read("SYSTEM.SYNTH_TIME.MINUTE") << ":"
+        << std::hex << std::setw(2) << std::setfill('0')
+        << mbb->Read("SYSTEM.SYNTH_TIME.SECOND")  << TLOG_ENDL; 
   
   if (expected_mbb_fw_version != mbb_fw_version)
   {
@@ -170,7 +167,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
     throw excpt;
   }
 
-  // Throwing errors if the fhicl parameters are not logical.
+  // Throwing errors if the argument is not logical.
   if (PULSE_SOURCE > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
@@ -458,7 +455,6 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   }
 
   sleep(5);
-
   if (ptc_14 > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
@@ -507,104 +503,32 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   sleep(5);
 
   // configuring the MBB with pulse source and pulse period: will be the same for all PTCs.
-  const auto config_mbb = ps.get<uint32_t>("MBB.config_mbb");
-  if(config_mbb > 1){
-    cet::exception excpt(identification);
-    excpt << "setupMBB:"
-	  << " config_mbb should be 0 or 1, but is: "
-	  << config_mbb;
-    throw excpt;
-  }
-  if(config_mbb == 1){
-    mbb->ConfigMBB(PULSE_SOURCE, PULSE_PERIOD);
-  }
+  mbb->ConfigMBB(PULSE_SOURCE, PULSE_PERIOD);
 
-  //configuring the PTCs.
-  const auto config_ptc = ps.get<uint32_t>("MBB.config_ptc");
-  if(config_ptc > 1){
-    cet::exception excpt(identification);
-    excpt << "setupMBB:"
-          << " config_ptc should be 0 or 1, but is: "
-          << config_ptc;
-    throw excpt;
-  }
-  if(config_ptc == 1){
-    if(ptc_14==1) {
-      mbb->ConfigPTC(14, wib_pwr1400, wib_pwr1401, wib_pwr1402, wib_pwr1403, wib_pwr1404, wib_pwr1405);
-    }
+  //configuring PTCs.
+  if(ptc_14==1) {
+     mbb->ConfigPTC(14, wib_pwr1400, wib_pwr1401, wib_pwr1402, wib_pwr1403, wib_pwr1404, wib_pwr1405);
+     }
  
-    if(ptc_00==1) {
-      mbb->ConfigPTC(0, wib_pwr000, wib_pwr001, wib_pwr002, wib_pwr003, wib_pwr004, wib_pwr005);
-    }
+  if(ptc_00==1) {
+     mbb->ConfigPTC(0, wib_pwr000, wib_pwr001, wib_pwr002, wib_pwr003, wib_pwr004, wib_pwr005);
+     }
 
-    if(ptc_01==1) {
-      mbb->ConfigPTC(1, wib_pwr100, wib_pwr101, wib_pwr102, wib_pwr103, wib_pwr104, wib_pwr105);     
-    }
+  if(ptc_01==1) {
+     mbb->ConfigPTC(1, wib_pwr100, wib_pwr101, wib_pwr102, wib_pwr103, wib_pwr104, wib_pwr105);     
+     }
 
-    if(ptc_02==1) {
-      mbb->ConfigPTC(2, wib_pwr200, wib_pwr201, wib_pwr202, wib_pwr203, wib_pwr204, wib_pwr205);
-    }
+  if(ptc_02==1) {
+     mbb->ConfigPTC(2, wib_pwr200, wib_pwr201, wib_pwr202, wib_pwr203, wib_pwr204, wib_pwr205);
+     }
 
-    if(ptc_03==1) {
-      mbb->ConfigPTC(3, wib_pwr300, wib_pwr301, wib_pwr302, wib_pwr303, wib_pwr304, wib_pwr305);
-    }
+  if(ptc_03==1) {
+     mbb->ConfigPTC(3, wib_pwr300, wib_pwr301, wib_pwr302, wib_pwr303, wib_pwr304, wib_pwr305);
+     }
 
-    if(ptc_04==1) {
-      mbb->ConfigPTC(4, wib_pwr400, wib_pwr401, wib_pwr402, wib_pwr403, wib_pwr404, wib_pwr405);
-    }
-  }
-
-
-  //after turning everything on/off sleep for some time for changes to take effect.
-  const auto sleep_time = ps.get<uint32_t>("MBB.sleep_time");
-  if(sleep_time > 100){
-    cet::exception excpt(identification);
-    excpt << "setupMBB:"
-          << " sleep_time should be between 0 and 100 seconds, but is: "
-          << sleep_time;
-    throw excpt;
-  }
-  sleep(sleep_time);
-
-
-  // synchronous FEMB start.
-  const auto start_femb_daq   = ps.get<uint32_t>("MBB.start_femb_daq");
-  if(start_femb_daq > 1){
-    cet::exception excpt(identification);
-    excpt << "setupMBB:"
-          << " start_femb_daq should be 0 or 1, but is: "
-          << start_femb_daq;
-    throw excpt;
-  }
-  if(start_femb_daq == 1){
-    TLOG_INFO(identification) << "Resetting the timestamp and starting FEMB Daq." << TLOG_ENDL;
-    mbb->TimeStampReset();
-    mbb->StartFEMBDaq();
-    TLOG_INFO(identification) << "FEMB Daq started." << TLOG_ENDL;
-    sleep(sleep_time);
-  }
-  else{
-    TLOG_INFO(identification) << "Not running start FEMB Daq right now." << TLOG_ENDL;
-  }
-
-  // synchronous femb stop.
-  const auto stop_femb_daq   = ps.get<uint32_t>("MBB.stop_femb_daq");
-  if(stop_femb_daq > 1){
-    cet::exception excpt(identification);
-    excpt << "setupMBB:"
-          << " stop_femb_daq should be 0 or 1, but is: "
-          << stop_femb_daq;
-    throw excpt;
-  }
-  if(stop_femb_daq == 1){
-    TLOG_INFO(identification) << "Stopping FEMB Daq." << TLOG_ENDL;
-    mbb->StopFEMBDaq();
-    TLOG_INFO(identification) << "FEMB Daq stopped." << TLOG_ENDL;
-    sleep(sleep_time);
-  }
-  else{
-    TLOG_INFO(identification) << "Not running stop FEMB Daq right now." << TLOG_ENDL;
-  }
+  if(ptc_04==1) {
+     mbb->ConfigPTC(4, wib_pwr400, wib_pwr401, wib_pwr402, wib_pwr403, wib_pwr404, wib_pwr405);
+     }
 
 }
   
@@ -625,6 +549,7 @@ void MBBReader::start()
     excpt << "MBB object pointer NULL";
     throw excpt;
   }
+  mbb->TimeStampReset();
 }
 
 // "stop" transition
