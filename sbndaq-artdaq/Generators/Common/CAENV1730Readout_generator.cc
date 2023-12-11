@@ -321,6 +321,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 
   fUseTimeTagForTimeStamp = ps.get<bool>("UseTimeTagForTimeStamp",true);
   TLOG(TINFO) <<"fUseTimeTagForTimeStamp=" << fUseTimeTagForTimeStamp;
+  
+  fUseTimeTagShiftForTimeStamp = ps.get<bool>("UseTimeTagShiftForTimeStamp",false);
+  TLOG(TINFO) <<"fUseTimeTagShiftForTimeStamp=" << fUseTimeTagShiftForTimeStamp;
 
   fTimeOffsetNanoSec = ps.get<uint32_t>("TimeOffsetNanoSec",0); //0ms by default
   TLOG(TINFO) <<"fTimeOffsetNanoSec=" << fTimeOffsetNanoSec;
@@ -1552,6 +1555,18 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
 	- fTimeOffsetNanoSec;
     }
+    else if(fUseTimeTagShiftForTimeStamp){
+      fTTT = uint32_t{header->triggerTimeTag}; // 
+      // TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
+      fTTT_ns = (fTTT*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1 ns
+      
+      // Scheme borrowed from what Antoni developed for CRT.
+      // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
+      fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
+	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
+	- fTimeOffsetNanoSec;
+    }
     else{
       fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
     }
@@ -1728,6 +1743,23 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
 	
 	ts_frag = (t_truetriggertime*8); //in 1ns ticks
+      }
+      else if(fUseTimeTagShiftForTimeStamp){
+	const auto TTT = uint32_t {header->triggerTimeTag};
+	
+	using namespace boost::gregorian;
+	using namespace boost::posix_time;
+	
+	ptime t_now(second_clock::universal_time());
+	ptime time_t_epoch(date(1970,1,1));
+	time_duration diff = t_now - time_t_epoch;
+	uint32_t t_offset_s = diff.total_seconds();
+	uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+	uint64_t t_truetriggertime = t_offset_ticks + TTT;
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+
+	// TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
+	ts_frag = (t_truetriggertime*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1ns ticks
       }
       else{
 	using namespace boost::gregorian;

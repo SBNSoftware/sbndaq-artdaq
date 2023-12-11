@@ -200,6 +200,7 @@ namespace sbndaq
     bool fOutputClkPhase;
 
     bool fUseTimeTagForTimeStamp;
+    bool fUseTimeTagShiftForTimeStamp;
     uint32_t fTimeOffsetNanoSec;
 
     // Animesh & Aiwu add fhicl parameters - LVDS logic
