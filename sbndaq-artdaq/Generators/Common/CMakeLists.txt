@@ -23,6 +23,7 @@ cet_make_library(
     workerThread.cpp
     CircularBuffer.cc
     PoolBuffer.cc
+    ExitTimerManager.cc
   LIBRARIES
     pthread
     artdaq::DAQdata
