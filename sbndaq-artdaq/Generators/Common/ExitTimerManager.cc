@@ -4,6 +4,7 @@
 
 #include "trace.h"
 using sbndaq::ExitTimerManager;
+
 void ExitTimerManager::startExitTimer(unsigned int seconds) {
   std::lock_guard<std::mutex> lock(_mutex);
   if (!_timerThread.joinable()) {
@@ -28,3 +29,8 @@ void ExitTimerManager::stopTimer() {
   }
   TLOG(TLVL_INFO) << "Timer stopped.";
 }
+
+// void test_ExitTimerManager() {
+//   ExitTimerManager exitTimerManager;
+//   exitTimerManager.startExitTimer(3);
+// }

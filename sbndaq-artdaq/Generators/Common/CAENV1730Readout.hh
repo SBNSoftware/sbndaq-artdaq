@@ -19,6 +19,7 @@
 //#include "CircularBuffer.hh"
 #include "PoolBuffer.hh"
 #include "workerThread.hh"
+#include "sbndaq-artdaq/Generators/Common/ExitTimerManager.hh"
 
 #include <string>
 #include <unordered_map>
@@ -297,7 +298,7 @@ namespace sbndaq
 
     CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address,
 					     uint32_t data, uint32_t bitmask); 
-    
+    ExitTimerManager exitTimerManager;    
   };
 
 }

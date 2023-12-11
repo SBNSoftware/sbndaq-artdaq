@@ -1305,7 +1305,7 @@ void sbndaq::CAENV1730Readout::stop()
   if(fVerbosity>0)
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
-
+  exitTimerManager.startExitTimer(10);
   GetData_thread_->stop();
 
   CAEN_DGTZ_ErrorCode retcode;

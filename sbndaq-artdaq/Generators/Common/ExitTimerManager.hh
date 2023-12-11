@@ -21,11 +21,4 @@ private:
   std::thread _timerThread;
 };
 } // namespace sbndaq
-
-// int mainTest() {
-//   ExitTimerManager exitTimerManager;
-//   exitTimerManager.startExitTimer(3);
-//
-//   return 0;
-// }
 #endif // _ExitTimerManager_H_
