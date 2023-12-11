@@ -28,7 +28,8 @@ using namespace sbndaq;
 sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   CommandableFragmentGenerator(ps),
   fCAEN(ps),
-  fAcqMode(CAEN_DGTZ_SW_CONTROLLED)
+  fAcqMode(CAEN_DGTZ_SW_CONTROLLED),
+  exitTimerManager()
 {
   uint32_t data;
 
