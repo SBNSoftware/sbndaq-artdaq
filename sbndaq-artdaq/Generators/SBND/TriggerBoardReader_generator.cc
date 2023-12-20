@@ -28,7 +28,7 @@
 #include <string>
 
 #include <unistd.h>
-
+#include <thread>
 
 
 sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)

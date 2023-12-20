@@ -3,6 +3,8 @@ add_subdirectory(Bern)
 
 add_definitions(-DLINUX)
 
+SET_SOURCE_FILES_PROPERTIES(febdrv.cc PROPERTIES COMPILE_FLAGS "-Wno-stringop-truncation")
+
 if(DEFINED ENV{CAENCOMM_DIR})
     include_directories($ENV{CAENCOMM_INC})
     link_directories($ENV{CAENCOMM_LIB})
@@ -57,6 +59,7 @@ cet_make_library(
     sbndaq_artdaq::sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
 )
 
+SET_SOURCE_FILES_PROPERTIES(WhiteRabbitReadout_generator.cc PROPERTIES COMPILE_FLAGS "-Wno-dangling-pointer")
 cet_make_library(
   LIBRARY_NAME
     sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase

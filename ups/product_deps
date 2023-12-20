@@ -28,7 +28,7 @@ pqxx                  v7_7_4c
 epics                 v7_0_7b
 artdaq_epics_plugin   v1_05_06
 zmq                   v4_3_1
-jsoncpp               v1_7_7e
+jsoncpp               v1_9_5a
 wibtools              v1_08_06     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
