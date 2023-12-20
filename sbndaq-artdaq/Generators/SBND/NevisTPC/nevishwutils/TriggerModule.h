@@ -227,9 +227,6 @@ public:
     void sendOutPCtrigger();
     void sendOutCalibTrigger();
     TriggerModuleGPSStamp getLastGPSClockRegister();
-    void setGPSClockRegister(TriggerModuleGPSStamp);  //this function updates private members corresponding to last GPS stamp
-    TriggerModuleGPSStamp getGPSClockRegister();      //this function gets the private members corresponding to last GPS stamp
-
 
     TriggerModule() = delete;
     TriggerModule(TriggerModule const &) = delete;

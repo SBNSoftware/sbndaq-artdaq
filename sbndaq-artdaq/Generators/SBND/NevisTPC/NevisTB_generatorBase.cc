@@ -32,9 +32,8 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   CircularBufferSizeBytesNTB_ = ps_.get<uint32_t>("CircularBufferSizeBytesNTB_",1e9);  
   DMABufferSizeBytesNTB_ = ps_.get<uint32_t>("DMABufferSizeNTB",1e4);                                                                                
 
-  GPSZMQPortNTB_ = ps_.get<int>("GPSZMQPortNTB", 11212);
-
-  TLOG(TLVL_INFO) << "GPSZMQPortNTB_ set to " << GPSZMQPortNTB_ ;
+  GPSZMQPortNTB_ = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
+  framesize_ = ps_.get<uint32_t>("framesize", 20479);
 
   DMABufferNTB_.reset(new uint16_t[DMABufferSizeBytesNTB_]);       
   current_subrun_ = 0;
@@ -44,11 +43,10 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   GPSinitialized = false;
   pseudo_ntbfragment = 1;  
 
+  //set up zmq to listen for messages from TPC server
   _zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
-  std::string connectionString = "tcp://10.226.36.6:" + std::to_string(GPSZMQPortNTB_);
-  _zmqGPSSubscriber.connect(connectionString.c_str());
+  _zmqGPSSubscriber.connect(GPSZMQPortNTB_.c_str());
   TLOG(TLVL_INFO) << "Subscriber Connected to port " << GPSZMQPortNTB_ ;
-
 
   //Build buffer for NTB        
   if( CircularBufferSizeBytesNTB_%sizeof(uint16_t)!=0)                                                                                                
@@ -138,9 +136,7 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
     //static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(10)};
     zmq::pollitem_t items[] = {{static_cast<void*>(_zmqGPSSubscriber), 0, ZMQ_POLLIN, 0}};
 
-//    bool keepGoing=true;
-//    while (keepGoing) {
-    zmq::poll(items, 1, 1000); //timeout after 1000 milliseconds
+    zmq::poll(items, 1, 1); //timeout after 1 milliseconds (last item)
 
     if (items[0].revents & ZMQ_POLLIN) {
 
@@ -152,9 +148,6 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
 
         struct timespec unixtime;
         clock_gettime(CLOCK_REALTIME, &unixtime);
-        time_t ntp_time = unixtime.tv_sec + (unixtime.tv_nsec*1e-9);
-
-        // Extract timestamp from the received message
         TLOG(TLVL_INFO) << "NTP time GPS received by NTB " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
 
         std::string message(static_cast<char*>(zmqMessage.data()), zmqMessage.size());
@@ -163,7 +156,9 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
         std::vector<uint32_t> numbers;
         std::string token;
 
+        // Extract timestamp from the received message
         memcpy(&receivedNTPsecond, zmqTimestamp.data(), sizeof(receivedNTPsecond));
+        TLOG(TLVL_INFO) << "ZMQ Timestamp NTP second received:  " << receivedNTPsecond << TLOG_ENDL;
 
         while (std::getline(iss, token, ',')) { 
           numbers.push_back(std::stoi(token));
@@ -173,7 +168,6 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
           setGPSstamp(nowGPSstamp); 
           //TLOG(TLVL_INFO)<< "Received new time stamp: " << numbers[0] << " " << numbers[1] << " " << numbers[2] ;           
           //TLOG(TLVL_INFO)<< "Latency (ns): " << latency ;
-          //keepGoing=false;
           GPSinitialized = true;
           return true;
         }
@@ -264,27 +258,29 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     _subrun_event_0 = _this_event;  
 
   }
+
+    struct timespec unixtime;
+    clock_gettime(CLOCK_REALTIME, &unixtime);
+    //long long framesize   = 20479; //this is extremely bad.
     
-    struct timespec unixtime;                                                                                                                             
-    clock_gettime(CLOCK_REALTIME, &unixtime);                                                                                                             
-    long long framesize = 20479; //this is extremely bad. 
-    long long frame_diff  = std::abs(static_cast<int>(ntbheader->getFrame() - GPSframe));
-    long long sample_diff = std::abs(ntbheader->get2MHzSampleNumber() - GPSsample);
-    long long nticks = frame_diff*(framesize+1) + sample_diff*8 + GPSdiv;
-    long long ns_diff = (nticks/16e6)*1e9;
+    long long t_trig   = 1e9*((ntbheader->getFrame()*(framesize_+1) + ntbheader->get2MHzSampleNumber()*8 + ntbheader->get16MHzRemainderNumber())/16e6);
+    long long t_pps    = 1e9*((GPSframe*(framesize_+1) + GPSsample*8 + GPSdiv)/16e6);
 
-    auto old_timestamp = unixtime.tv_sec*1000000000 + unixtime.tv_nsec;
-    auto new_timestamp = receivedNTPsecond*1000000000 + ns_diff;
-
-    TLOG(TLVL_INFO) << "Old timestamp: " << old_timestamp ;
-    TLOG(TLVL_INFO) << "NEW timestamp: " << new_timestamp ;
+    long long pps_offset   = t_trig - t_pps;
+    auto freq_offset      = 62.5*98*static_cast<int>(pps_offset/1000000000);
+    int final_offset    = static_cast<int>(freq_offset+final_offset); //62.5 ns/tick * 98 ticks constant offset per second * number of seconds since PPS
  
-
+    auto old_timestamp = unixtime.tv_sec*1000000000   + unixtime.tv_nsec;
+    auto new_timestamp = receivedNTPsecond*1000000000 + pps_offset + constant_offset;
+    
+    //TLOG(TLVL_INFO) << "Old timestamp: " << old_timestamp ;
+    //TLOG(TLVL_INFO) << "NEW timestamp: " << new_timestamp ;
+ 
     artdaq::Fragment::timestamp_t unixtime_ns = static_cast<artdaq::Fragment::timestamp_t>(receivedNTPsecond)*1000000000 + 
-    static_cast<artdaq::Fragment::timestamp_t>(ns_diff);                                                                                        
+    static_cast<artdaq::Fragment::timestamp_t>(pps_offset + constant_offset);                                                                                 
 
-    TLOG(TLVL_INFO) << "Last PPS time: " << GPSframe << " " << GPSsample << " " << GPSdiv ;
-    TLOG(TLVL_INFO) << "Trigger  time: " << ntbheader->getFrame() << " " << ntbheader->get2MHzSampleNumber() ;
+    //TLOG(TLVL_INFO) << "Last PPS time: " << GPSframe << " " << GPSsample << " " << GPSdiv ;
+    //TLOG(TLVL_INFO) << "Trigger  time: " << ntbheader->getFrame() << " " << ntbheader->get2MHzSampleNumber() << " " << ntbheader->get16MHzRemainderNumber();
                                                                                                                                                 
     ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
     frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,                                                                                    

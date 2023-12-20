@@ -400,19 +400,6 @@ namespace nevistpc
     TLOG(TLVL_INFO) << "TriggerModule: called " <<  __func__ << " " << size ;
   }
 
-  void TriggerModule::setGPSClockRegister(TriggerModuleGPSStamp currentStamp)
-  {  
-    _GPSframe  = currentStamp.gps_frame;
-    _GPSsample = currentStamp.gps_sample;
-    _GPSdiv    = currentStamp.gps_sample_div;
-  }
-
-  TriggerModuleGPSStamp TriggerModule::getGPSClockRegister()
-  {
-    TriggerModuleGPSStamp thisstamp(_GPSframe,  _GPSsample, _GPSdiv);
-    return thisstamp;
-  }
-
   // Simplified version of uboonedaq TriggerModule::readTriggerBoardGPSClockRegister
   TriggerModuleGPSStamp TriggerModule::getLastGPSClockRegister()
   {

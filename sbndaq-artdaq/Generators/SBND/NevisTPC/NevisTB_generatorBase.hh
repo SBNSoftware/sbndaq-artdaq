@@ -107,13 +107,15 @@ namespace sbndaq
       size_t Erase(size_t);
     } CircularBuffer_t;
     
-    int GPSZMQPortNTB_; 
+    std::string GPSZMQPortNTB_; 
 
     uint32_t DMABufferSizeBytesNTB_;
     std::unique_ptr<uint16_t[]> DMABufferNTB_;
     
     uint32_t CircularBufferSizeBytesNTB_;
     CircularBuffer_t CircularBufferNTB_;
+
+    uint32_t framesize_;
 
     bool GetNTBData();
     share::WorkerThreadUPtr GetNTBData_thread_;

@@ -20,17 +20,16 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fSNReadout = ps_.get<bool>("DoSNReadout", true);
   fSNChunkSize = ps_.get<int>("SNChunkSize", 100000);
   fGPSTimeFreq = ps_.get<double>("GPSTimeFrequency", -1);
-  fGPSZMQPortNTB = ps_.get<int>("GPSZMQPortNTB", 11212);
+  fGPSZMQPortNTB = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
 
 
   SNDMABuffer_.reset(new uint16_t[fSNChunkSize]);
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
   SNCircularBuffer_.Init();
   SNBuffer_ = new uint16_t[fSNChunkSize];
-  
-  std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
+  //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
 
-  _zmqGPSPublisher.bind(connectionString.c_str()); // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
+  _zmqGPSPublisher.bind(fGPSZMQPortNTB); // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
       // Any port > 10000 can be used by artdaq (netstat -lpnu4 --> this will tell you the used ports)
       //    publisher.bind("udp://127.0.0.1:7620");
 
@@ -127,18 +126,6 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   GPSTime_thread_.swap(GPSTime_worker);
   if( fGPSTimeFreq > 0 ) GPSTime_thread_->start();
   TLOG(TLVL_INFO) << "Started GPS thread" << TLOG_ENDL;
-  TLOG(TLVL_INFO)<< "Successful " << __func__ ;
-  mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
-
-  //set up thread NTB comms thread                                                                                                                              
-  /*share::ThreadFunctor NTB2TPC_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::NTB2TPC, this );
-  auto NTB2TPC_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( NTB2TPC_functor, "NTB2TPCWorkerThread" ) );
-  auto NTB2TPC_worker = share::WorkerThread::createWorkerThread( NTB2TPC_worker_functor );
-  NTB2TPC_thread_.swap(NTB2TPC_worker);
-  if( fNTB2TPCFreq > 0 ) NTB2TPC_thread_->start();
-  TLOG(TLVL_INFO) << "Started NTB2TPC thread" << TLOG_ENDL;
-  TLOG(TLVL_INFO)<< "Successful " << __func__ ;
-  mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;*/
 
 }
 
@@ -218,7 +205,6 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
   //otherwise get the current gps stamp                                                                                                                
   nevistpc::TriggerModuleGPSStamp nowGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister();
   const auto start = std::chrono::steady_clock::now();
-
   struct timespec unixtime;
   clock_gettime(CLOCK_REALTIME, &unixtime);
 
@@ -227,10 +213,9 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
       (nowGPSStamp.gps_sample != lastGPSStamp.gps_sample) ||
       (nowGPSStamp.gps_sample_div != lastGPSStamp.gps_sample_div) ){
     
-      TLOG(TLVL_INFO) << "NTP time GPS Received by TPC " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
-      //update time stamp in trigger module class
-      fCrate->getTriggerModule()->setGPSClockRegister(nowGPSStamp);
-
+      //TLOG(TLVL_INFO) << "NTP time GPS Received by TPC " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
+      //TLOG(TLVL_INFO) << "Nevis Clock time GPS Received by TPC " << nowGPSStamp.gps_frame << " , " << nowGPSStamp.gps_sample << " , " << nowGPSStamp.gps_sample_div << TLOG_ENDL;
+     
       //update stamps                                                                                                                                        
       lastGPSStamp = nowGPSStamp;
       
@@ -241,7 +226,14 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
       
       zmq::message_t zmqMessage(message.size());
 
-      //create timestamp to send with message. this will help correct NTP time to GPS time (we just need the "second" part)
+      //create timestamp to send with message. this will help correct NTP time to GPS time (we just need the "second" part) 
+      long remainder = unixtime.tv_nsec % 1000000000;
+      // Adjust the timespec to the nearest second
+      if (remainder >= 500000000) {
+        // Round up to the next second
+        unixtime.tv_sec += 1;
+      }
+
       long long timestamp = unixtime.tv_sec;
       zmq::message_t zmqTimestamp(sizeof(timestamp));
 
@@ -256,11 +248,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
       const auto end   = std::chrono::steady_clock::now();
 
       auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start2).count();
-      TLOG(TLVL_INFO) << "ZMQ Message sending latency: " << duration << TLOG_ENDL;
+      //TLOG(TLVL_INFO) << "ZMQ Message sending latency: " << duration << TLOG_ENDL;
 
       auto duration2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
-      TLOG(TLVL_INFO) << "latency from time GPS is received to after message is sent: " << duration2 << TLOG_ENDL;
-      //TLOG(TLVL_INFO) << "Message sent succesfully: " << message <<  TLOG_ENDL;
+      //TLOG(TLVL_INFO) << "latency from time GPS is received to after message is sent: " << duration2 << TLOG_ENDL;
 
   }
   //update check time                                                                                                                                  
