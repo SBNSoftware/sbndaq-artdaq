@@ -152,7 +152,7 @@ namespace nevistpc{
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(0x59); //100);
+      getTriggerModule()->setDeadtimeSize(100); //0x59); //100);
     }
     
     // Load xmit firmware
@@ -229,7 +229,7 @@ namespace nevistpc{
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(0x59); //100);
+      getTriggerModule()->setDeadtimeSize(100);//0x59); //100);
     }
     
     // Load xmit firmware
@@ -303,7 +303,7 @@ namespace nevistpc{
     getControllerModule()->runOff(); // using Controller triggers
     //getControllerModule()->testOff(); // using CALIB triggers
     // To do: move instructions below to fcl
-    getControllerModule()->setFrameLength(0xffff & 20799);
+    getControllerModule()->setFrameLength(0xffff & 9119); //20799);
     getControllerModule()->setNUTrigPosition(0xa);
     
     // Load xmit firmware
@@ -377,10 +377,10 @@ namespace nevistpc{
       // Temp: from CALIB, to avoid leaving the function generator on all weekend
       getControllerModule()->testOff(); //v
       // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
-      getTriggerModule()->setDeadtimeSize(0x59); //0x1);//v
+      getTriggerModule()->setDeadtimeSize(0x59);//0x59); //0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20799);
+      getTriggerModule()->setFrameLength(0xffff & 9119); // 9119);// 20799);// 9071); // 20799); //20479);// 20799);
       ///////////////////////
 
       getTriggerModule()->disableTriggers(false);
@@ -469,7 +469,7 @@ namespace nevistpc{
       getTriggerModule()->setDeadtimeSize(0x59);//0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20799);
+      getTriggerModule()->setFrameLength(0xffff & 9119); // 20799);
       //getTriggerModule()->runOnSyncOn(); //v
       //usleep(5000);
       getTriggerModule()->disableTriggers(false);

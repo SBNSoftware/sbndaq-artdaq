@@ -22,10 +22,10 @@ public:
   virtual ~NevisTPCFile() {}
 
 private:
-  void ConfigureStart();
-  void ConfigureStop();
+  void ConfigureStart() override;
+  void ConfigureStop() override;
 
-  size_t GetFEMCrateData();
+  size_t GetFEMCrateData() override;
 
   uint32_t fChunkSize;  //!< Number of bytes to read at once
   int fWaitTime;  //!< Time to wait between events

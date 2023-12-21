@@ -32,6 +32,7 @@ namespace sbndaq
 {
 
  WIBReader::WIBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps),
+     use_semaphores{ps.get<bool>("use_semaphores",false)}, 
      semaphore_acquire_timeout_ms{ps.get<decltype(semaphore_acquire_timeout_ms)>("semaphore_acquire_timeout_ms")}, // 10000
      calibration_mode{ps.get<decltype(calibration_mode)>("calibration_mode")},
      sem_wib_yld{nullptr},sem_wib_lck{nullptr},
@@ -1487,24 +1488,40 @@ WIBReader::~WIBReader()
 void WIBReader::start() 
 {
   const std::string identification = "WIBReader::start";
+  TLOG_INFO(identification) << "=================== Start function started ==========================" << TLOG_ENDL;
+  time_t start, end;
+  time(&start);
   if (!wib && calibration_mode) 
   {
     cet::exception excpt(identification);
     excpt << "WIB object pointer NULL";
     throw excpt;
   }
+  time(&end);
+  double time_taken = double(end - start);
+  TLOG_INFO(identification) << "============== Time took to run START function : " << time_taken << std::setprecision(5) << TLOG_ENDL;  
+  //wib->GetAddress() << " =================" << TLOG_ENDL;
+  TLOG_INFO(identification) << "=================== Start function completed ==========================" << TLOG_ENDL;
 }
 
 // "stop" transition
 void WIBReader::stop() 
 {
   const std::string identification = "WIBReader::stop";
+  TLOG_INFO(identification) << "=================== Stop function started ==========================" << TLOG_ENDL;
+  time_t start, end;
+  time(&start);
   if (!wib && calibration_mode ) 
   {
     cet::exception excpt(identification);
     excpt << "WIB object pointer NULL";
     throw excpt;
   }
+  time(&end);
+  double time_taken = double(end - start);
+  TLOG_INFO(identification) << "=============== Time took to run STOP function : " << time_taken << std::setprecision(5) << TLOG_ENDL;
+  //wib->GetAddress() << " ==================" << TLOG_ENDL;
+  TLOG_INFO(identification) << "=================== Stop function completed ==========================" << TLOG_ENDL;
 }
 
 // Called by BoardReaderMain in a loop between "start" and "stop"
@@ -1561,6 +1578,7 @@ release_semaphores:
 }
 
 bool WIBReader::acquireSemaphores_ThrowOnFailure(){
+  if(!use_semaphores) return false;
   if (acquireSemaphores())
     return true;
 
@@ -1593,6 +1611,7 @@ void WIBReader::releaseSemaphores(){
 }
 
 void WIBReader::disconnectWIB_releaseSemaphores(){
+  if(!use_semaphores) return;
   wib.reset();
   sleep(2);
   releaseSemaphores();

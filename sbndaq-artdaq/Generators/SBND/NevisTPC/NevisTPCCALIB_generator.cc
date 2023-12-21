@@ -38,7 +38,7 @@ void sbndaq::NevisTPCCALIB::ConfigureStart() {
   auto FireCALIB_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( FireCALIB_functor, "FireCALIBWorkerThread" ) );
   auto FireCALIB_worker = share::WorkerThread::createWorkerThread( FireCALIB_worker_functor );
   FireCALIB_thread_.swap(FireCALIB_worker);
-  FireCALIB_thread_->start();
+  //FireCALIB_thread_->start();
 
   // Get timestamp for binary file name
   time_t t = time(0);
@@ -53,6 +53,13 @@ void sbndaq::NevisTPCCALIB::ConfigureStart() {
   }
 
   TLOG(TLVL_INFO) << "Successful " << __func__ ;
+}
+
+void sbndaq::NevisTPCCALIB::startFireCalibTrig() {
+  // if( fCALIBFreq > 0 ){
+    FireCALIB_thread_->start();
+    TLOG(TLVL_INFO) << "Started FireCALIB thread" << TLOG_ENDL;                                                   \
+    //}
 }
 
 void sbndaq::NevisTPCCALIB::ConfigureStop() {
