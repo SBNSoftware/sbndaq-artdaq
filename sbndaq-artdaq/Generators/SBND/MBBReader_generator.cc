@@ -138,25 +138,26 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   uint32_t mbb_fw_version = mbb->Read("FIRMWARE_VERSION");
    
 //  This block needs to be rewritten according to C++ best practice
-//  TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
-//        << std::hex << std::setw(8) << std::setfill('0')
-//        <<  mbb_fw_version
-//        << " Synthesized: " 
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.CENTURY")
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.YEAR") << "-"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.MONTH") << "-"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_DATE.DAY") << " "
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_TIME.HOUR") << ":"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_TIME.MINUTE") << ":"
-//        << std::hex << std::setw(2) << std::setfill('0')
-//        << mbb->Read("SYSTEM.SYNTH_TIME.SECOND")  << TLOG_ENDL; 
-  
+// In the current form it causes problems
+  // TLOG_INFO(identification) << "MBB Firmware Version: 0x" 
+  //       << std::hex << std::setw(8) << std::setfill('0')
+  //       <<  mbb_fw_version
+  //       << " Synthesized: " 
+  //       << std::hex << std::setw(2) << std::setfill('0')
+  //       << mbb->Read("SYSTEM.SYNTH_DATE.CENTURY")
+  //       << std::hex << std::setw(2) << std::setfill('0')
+  //       << mbb->Read("SYSTEM.SYNTH_DATE.YEAR") << "-"
+  //       << std::hex << std::setw(2) << std::setfill('0')
+  //       << mbb->Read("SYSTEM.SYNTH_DATE.MONTH") << "-"
+  //       << std::hex << std::setw(2) << std::setfill('0')
+  //       << mbb->Read("SYSTEM.SYNTH_DATE.DAY") << " "
+  //       << std::hex << std::setw(2) << std::setfill('0')
+  //       << mbb->Read("SYSTEM.SYNTH_TIME.HOUR") << ":"
+  //       << std::hex << std::setw(2) << std::setfill('0')
+  //       << mbb->Read("SYSTEM.SYNTH_TIME.MINUTE") << ":"
+  //       << std::hex << std::setw(2) << std::setfill('0')
+  //       << mbb->Read("SYSTEM.SYNTH_TIME.SECOND")  << TLOG_ENDL; 
+
   if (expected_mbb_fw_version != mbb_fw_version)
   {
     cet::exception excpt(identification);
@@ -556,7 +557,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
 
 
   //after turning everything on/off sleep for some time for changes to take effect.
-  const auto sleep_time = ps.get<uint32_t>("MBB.sleep_time");
+  sleep_time = ps.get<uint32_t>("MBB.sleep_time");
   if(sleep_time > 100){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
@@ -567,8 +568,8 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   sleep(sleep_time);
 
 
-  // synchronous FEMB start.
-  const auto start_femb_daq   = ps.get<uint32_t>("MBB.start_femb_daq");
+  // synchronous FEMB start, performed at START transition
+  start_femb_daq   = ps.get<uint32_t>("MBB.start_femb_daq");
   if(start_femb_daq > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
@@ -576,19 +577,9 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
           << start_femb_daq;
     throw excpt;
   }
-  if(start_femb_daq == 1){
-    TLOG_INFO(identification) << "Resetting the timestamp and starting FEMB Daq." << TLOG_ENDL;
-    mbb->TimeStampReset();
-    mbb->StartFEMBDaq();
-    TLOG_INFO(identification) << "FEMB Daq started." << TLOG_ENDL;
-    sleep(sleep_time);
-  }
-  else{
-    TLOG_INFO(identification) << "Not running start FEMB Daq right now." << TLOG_ENDL;
-  }
 
-  // synchronous femb stop.
-  const auto stop_femb_daq   = ps.get<uint32_t>("MBB.stop_femb_daq");
+  // synchronous femb stop, performed at CONFIGURE transition
+  stop_femb_daq   = ps.get<uint32_t>("MBB.stop_femb_daq");
   if(stop_femb_daq > 1){
     cet::exception excpt(identification);
     excpt << "setupMBB:"
@@ -596,6 +587,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
           << stop_femb_daq;
     throw excpt;
   }
+
   if(stop_femb_daq == 1){
     TLOG_INFO(identification) << "Stopping FEMB Daq." << TLOG_ENDL;
     mbb->StopFEMBDaq();
@@ -616,6 +608,7 @@ MBBReader::~MBBReader()
 }
 
 // "start" transition
+// Need to add call to start_daq
 void MBBReader::start() 
 {
   const std::string identification = "MBBReader::start";
@@ -624,6 +617,16 @@ void MBBReader::start()
     cet::exception excpt(identification);
     excpt << "MBB object pointer NULL";
     throw excpt;
+  }
+  if(start_femb_daq == 1){
+    TLOG_INFO(identification) << "Resetting the timestamp and starting FEMB Daq." << TLOG_ENDL;
+    mbb->TimeStampReset();
+    mbb->StartFEMBDaq();
+    TLOG_INFO(identification) << "FEMB Daq started." << TLOG_ENDL;
+    sleep(sleep_time);
+  }
+  else{
+    TLOG_INFO(identification) << "Not running start FEMB Daq right now." << TLOG_ENDL;
   }
 }
 

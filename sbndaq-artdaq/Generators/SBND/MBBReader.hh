@@ -29,7 +29,10 @@ namespace sbndaq
      void stopNoMutex() override {}
 
      void setupMBB(fhicl::ParameterSet const& MBB_config);
-     
+
+    uint32_t stop_femb_daq;
+    uint32_t start_femb_daq;
+    uint32_t sleep_time;     
 std::unique_ptr<MBB> mbb;
   };
 }
