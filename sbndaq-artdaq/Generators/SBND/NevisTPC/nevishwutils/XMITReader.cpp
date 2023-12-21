@@ -1,3 +1,5 @@
+#define TRACE_NAME "XMITReader"
+#include "artdaq/DAQdata/Globals.hh"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -6,8 +8,6 @@
 #include "daqExceptions.h"
 #include "TimeUtils.h"
 #include "StringUtils.h"
-#include "trace.h"
-#define TRACE_NAME "XMITReader"
 
 namespace nevistpc {
 
@@ -62,7 +62,7 @@ namespace nevistpc {
       nevisDeviceInfo = std::unique_ptr<DeviceInfo>( new DeviceInfo(streamconfig) );
 
       uint32_t dma_buffer_size = streamconfig.get<uint32_t>( "dma_buffer_size", 1000000 );
-      _do_timing = streamconfig.get<bool>( "profile_time", false );       
+      _do_timing = streamconfig.get<bool>( "profile_time", true );       
       uint32_t dma_max_polling_time_microseconds = streamconfig.get<uint32_t>( "maxpoll", 10000000 ); 
       
       _dma_settings.reset( new nevistpc::dma_settings( dma_buffer_size, 
@@ -157,8 +157,10 @@ namespace nevistpc {
     
     if ( ( ( dma.pDMABuffer->Page->pPhysicalAddr >> 32 ) & 0xffffffff ) == 0 ) {
       u32Data = dma_detail::dma_tr12 + dma_detail::dma_3dw_rec;
+      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "DMA First address: " << u32Data;
     } else {
       u32Data = dma_detail::dma_tr12 + dma_detail::dma_4dw_rec;
+      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "DMA Second address: " << u32Data;
     }
     
     nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, u32Data );
@@ -221,6 +223,9 @@ namespace nevistpc {
 
   std::streamsize XMITReader::readsome ( char* buffer, std::streamsize size )
   {
+    std::cout << "READSOME FUNCTION CALLED!!!!!!!!!!!!" << std::endl;
+    //    exit(0);
+
     static unsigned long int _loopNumber = 0;
 
     struct timeval t1, t2;
@@ -258,10 +263,11 @@ namespace nevistpc {
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 1 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-    }
+      }
 
     std::streamsize readSize = -1;
   
+
     if ( dmaWaitWithTimeout ( _dma_settings->dma_max_polling_time_microseconds ) == dma_completion_status::timeout ) {
     
       UINT64 dmaReadback {0};
@@ -295,6 +301,7 @@ namespace nevistpc {
     }
 
     readSize = dma.readSize;
+
     ::memcpy ( buffer, ( char* ) dma.pUserModeBuffer, readSize );
   
     if(_do_timing) {
@@ -305,9 +312,11 @@ namespace nevistpc {
     }
 
     _loopNumber++;
-
+    //    exit(0);
     return readSize;
+
   }
+
 
 
 

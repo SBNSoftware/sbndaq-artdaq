@@ -29,10 +29,10 @@ namespace sbndaq {
     virtual ~NevisTPCNUXMIT() {}
     
   private:
-    void ConfigureStart();
-    void ConfigureStop();
+    void ConfigureStart() override;
+    void ConfigureStop() override;
     
-    size_t GetFEMCrateData();
+    size_t GetFEMCrateData() override;
 
     nevistpc::ControllerModuleSPtr fControllerModule;
     nevistpc::XMITReaderSPtr fNUXMITReader;
