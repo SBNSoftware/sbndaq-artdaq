@@ -35,6 +35,7 @@ namespace sbndaq
      void setupWIB(fhicl::ParameterSet const& WIB_config);
      void setupFEMBFakeData(size_t iFEMB, fhicl::ParameterSet const& FEMB_config,bool continueOnFEMBRegReadError);
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
+     bool use_semaphores;
      uint64_t semaphore_acquire_timeout_ms;
      bool calibration_mode;
      sem_t *sem_wib_yld;
@@ -43,4 +44,3 @@ namespace sbndaq
      std::unique_ptr<WIB> wib;
   };
 }
-
