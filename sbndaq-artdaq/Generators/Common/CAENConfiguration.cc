@@ -139,6 +139,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  MajorityLevel         " << e.majorityLevel << std::endl;
   os << "  MajorityCoincidenceWindow " << e.majorityCoincidenceWindow << std::endl;
   os << "  MaxTempCelsius        " << e.maxTemp << std::endl;
+  os << "  TemperatureCheckMask  0x" << std::hex << e.temperatureCheckMask << std::dec << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )
