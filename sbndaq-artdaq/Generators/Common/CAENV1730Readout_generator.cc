@@ -1871,11 +1871,6 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
 
-  //wes ... this shouldn't be called here!   --   ???
-  // Now controlled by a separate thread controlled by artdaq and FCL 
-  //   parameters "separate_monitoring_thread" and "hardware_poll_interval_us"
-  //checkHWStatus_();
-
   TLOG(TGETNEXT) << "End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 
   start= std::chrono::steady_clock::now();
