@@ -1345,9 +1345,9 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 			    artdaq::MetricMode::Average);
 
       //Need 3 requirements to shut down for high temperature: 
-      // 1. Can successfully reead temperature: return code = 0 since S/N 164 can fail to read temperature during acquisition
-      // 2. Temperature > Requirement , 70C for V1730 and 85C for V1730S
-      // 3. Temperature < non_physical temperature, 200C since S/N 164 can produce non-physical temperature
+      // 1. Can successfully read temperature: return code = 0 since S/N 164 can fail to read temperature during acquisition
+      // 2. Temperature < non_physical temperature, 200C since S/N 164 can produce non-physical temperature
+      // 3. Temperature > Requirement , 70C for V1730 and 85C for V1730S
       if ( retcod == CAEN_DGTZ_Success )
       {  
 	if ( ch_temps[ch] > fCAEN.maxTemp ) 
