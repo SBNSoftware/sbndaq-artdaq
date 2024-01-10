@@ -116,6 +116,7 @@ namespace sbndaq
     CircularBuffer_t CircularBufferNTB_;
 
     uint32_t framesize_;
+    uint32_t NevisClockFreq_;
 
     bool GetNTBData();
     share::WorkerThreadUPtr GetNTBData_thread_;

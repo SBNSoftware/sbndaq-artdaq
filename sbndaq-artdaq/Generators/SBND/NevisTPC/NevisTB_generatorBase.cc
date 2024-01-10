@@ -34,6 +34,7 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
 
   GPSZMQPortNTB_ = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
   framesize_ = ps_.get<uint32_t>("framesize", 20479);
+  NevisClockFreq_ = ps_.get<uint32_t>("NevisClockFrequency", 15999907);
 
   DMABufferNTB_.reset(new uint16_t[DMABufferSizeBytesNTB_]);       
   current_subrun_ = 0;
@@ -46,7 +47,7 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   //set up zmq to listen for messages from TPC server
   _zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
   _zmqGPSSubscriber.connect(GPSZMQPortNTB_.c_str());
-  TLOG(TLVL_INFO) << "Subscriber Connected to port " << GPSZMQPortNTB_ ;
+  TLOG(TLVL_INFO) << "NTB Subscriber Connected to port " << GPSZMQPortNTB_ ;
 
   //Build buffer for NTB        
   if( CircularBufferSizeBytesNTB_%sizeof(uint16_t)!=0)                                                                                                
@@ -263,21 +264,22 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     clock_gettime(CLOCK_REALTIME, &unixtime);
     //long long framesize   = 20479; //this is extremely bad.
     
-    long long t_trig   = 1e9*((ntbheader->getFrame()*(framesize_+1) + ntbheader->get2MHzSampleNumber()*8 + ntbheader->get16MHzRemainderNumber())/16e6);
-    long long t_pps    = 1e9*((GPSframe*(framesize_+1) + GPSsample*8 + GPSdiv)/16e6);
+    long long t_trig   = 1e9*((ntbheader->getFrame()*(framesize_+1) + ntbheader->get2MHzSampleNumber()*8 + ntbheader->get16MHzRemainderNumber())/NevisClockFreq_);
+    long long t_pps    = 1e9*((GPSframe*(framesize_+1) + GPSsample*8 + GPSdiv)/NevisClockFreq_);
 
     long long pps_offset   = t_trig - t_pps;
-    auto freq_offset      = 62.5*98*static_cast<int>(pps_offset/1000000000);
-    int final_offset    = static_cast<int>(freq_offset+final_offset); //62.5 ns/tick * 98 ticks constant offset per second * number of seconds since PPS
+
+    //auto freq_offset       = 62.5*98*static_cast<int>(pps_offset/1000000000);
+    //int final_offset       = static_cast<int>(freq_offset+pps_offset); //62.5 ns/tick * 98 ticks constant offset per second * number of seconds since PPS
  
-    auto old_timestamp = unixtime.tv_sec*1000000000   + unixtime.tv_nsec;
-    auto new_timestamp = receivedNTPsecond*1000000000 + pps_offset + constant_offset;
+    //auto old_timestamp = unixtime.tv_sec*1000000000   + unixtime.tv_nsec;
+    //auto new_timestamp = receivedNTPsecond*1000000000 + pps_offset + freq_offset;
     
     //TLOG(TLVL_INFO) << "Old timestamp: " << old_timestamp ;
     //TLOG(TLVL_INFO) << "NEW timestamp: " << new_timestamp ;
  
     artdaq::Fragment::timestamp_t unixtime_ns = static_cast<artdaq::Fragment::timestamp_t>(receivedNTPsecond)*1000000000 + 
-    static_cast<artdaq::Fragment::timestamp_t>(pps_offset + constant_offset);                                                                                 
+    static_cast<artdaq::Fragment::timestamp_t>(pps_offset);                                                                                 
 
     //TLOG(TLVL_INFO) << "Last PPS time: " << GPSframe << " " << GPSsample << " " << GPSdiv ;
     //TLOG(TLVL_INFO) << "Trigger  time: " << ntbheader->getFrame() << " " << ntbheader->get2MHzSampleNumber() << " " << ntbheader->get16MHzRemainderNumber();
