@@ -641,6 +641,7 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
 
     
         // GVS: inserted triggerLogic for each PAIR of channels.
+	//For a couple of channels of adjacent channels, triggerLogic sets the logic to generate the trigger request signal upon the self‐triggers from the two channels of the couple. Docdb 29785
         if(chn%2==0){
       
            retcod = CAEN_DGTZ_ReadRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),&aux);
