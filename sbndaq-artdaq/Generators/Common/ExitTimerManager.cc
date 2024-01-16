@@ -2,7 +2,7 @@
 #include "ExitTimerManager.hh"
 #define TRACE_NAME "ExitTimerManager"
 
-#include "trace.h"
+#include "artdaq/DAQdata/Globals.hh"
 using sbndaq::ExitTimerManager;
 
 void ExitTimerManager::startExitTimer(unsigned int seconds) {
@@ -11,7 +11,7 @@ void ExitTimerManager::startExitTimer(unsigned int seconds) {
     _timerThread = std::thread(&ExitTimerManager::startTimer, seconds);
     TLOG(TLVL_INFO) << "Timer started.";
   } else {
-    TLOG(TLVL_ERROR) << "Timer already started. Stopping and exiting...";
+    TLOG(TLVL_WARNING) << "Timer already started. Stopping and exiting...";
     stopTimer();
     std::exit(1);
   }
