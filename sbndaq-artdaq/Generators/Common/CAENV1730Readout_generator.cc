@@ -1324,8 +1324,8 @@ void sbndaq::CAENV1730Readout::stop()
 // The two relevant fcl parameters are: "poll_hardware_status" (true/false) and "hardware_poll_interval_us" (period in us)
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
-  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
-
+  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  {
     std::ostringstream tempStream;
     tempStream << "CAENV1730.Card" << fBoardID
 		  << ".Channel" << ch << ".Temp"; 
@@ -1336,19 +1336,47 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     memfullStream << "CAENV1730.Card" << fBoardID
 		  << ".Channel" << ch << ".MemoryFull"; 
    
+    CAEN_DGTZ_ErrorCode retcod;
 
-    CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
-    TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
-                               << ": " << ch_temps[ch] << "  C"
-                               << TLOG_ENDL;
+    if ( fCAEN.temperatureCheckMask & ( 1 << ch ) ) // Channels temperature readout enabled?
+    {
+      retcod = CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
+      TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
+				 << ": " << ch_temps[ch] << "  C"
+				 << TLOG_ENDL;
+      
+      metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
+			    artdaq::MetricMode::Average);
 
-    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
-			  artdaq::MetricMode::Average);
-
-    if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
-      TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
-                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
-		       << TLOG_ENDL;
+      //Need 3 requirements to shut down for high temperature: 
+      // 1. Can successfully read temperature: return code = 0 since S/N 164 can fail to read temperature during acquisition
+      // 2. Temperature < non_physical temperature, 200C since S/N 164 can produce non-physical temperature
+      // 3. Temperature > Requirement , 70C for V1730 and 85C for V1730S
+      if ( retcod == CAEN_DGTZ_Success && ch_temps[ch] < V1730_UNPHYSICAL_TEMPERATURE )
+      {  
+	if ( ch_temps[ch] > fCAEN.maxTemp ) 
+	{
+	   // V1730(S) shuts down at 70(85) celsius, give a warning ahead of that
+	   TLOG(TLVL_ERROR) << "SHUTTING DOWN CAENV1730 BoardID " << fBoardID << " : "
+			     << " Channel " << ch
+			     << " temperature " << ch_temps[ch]
+			     << " > " << fCAEN.maxTemp << " degrees Celsius."
+			     << " ReadTemperature Return Code = " << retcod
+			     << TLOG_ENDL;
+	}
+      }
+      else
+      {
+	    // Ignore unphysical temperatures/bad return codes from S/N 164.  CAEN advises not to read temperatures 
+	    //   while the readout is running, but we cannot do that.  Only one sensors on one 
+	    //   V1730 has ever malfunctioned.
+	    // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
+	    TLOG(TLVL_WARNING) << "CAENV1730 BoardID " << fBoardID << " : "
+			       << " Channel " << ch
+			       << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
+			       << " ReadTemperature Return Code = " << retcod
+			       << TLOG_ENDL;
+       }
     }
 
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
@@ -1849,9 +1877,6 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
   metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
-
-  //wes ... this shouldn't be called here!
-  //checkHWStatus_();
 
   TLOG(TGETNEXT) << "End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 

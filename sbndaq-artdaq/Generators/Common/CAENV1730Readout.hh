@@ -178,6 +178,11 @@ namespace sbndaq
       TTEMP     = 30
     };
 
+    enum
+    {
+      V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
+    };
+
     //fhicl parameters
     int fVerbosity;
     int fBoardChainNumber;

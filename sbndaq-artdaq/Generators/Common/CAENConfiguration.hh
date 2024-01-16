@@ -5,9 +5,9 @@
 #ifndef _CAENConfiguration_h
 #define _CAENConfiguration_h
 
-#include <iostream>
 #include "CAENDecoder.hh"
 #include "fhiclcpp/ParameterSet.h"
+#include <iostream>
 
 namespace sbndaq
 {
@@ -59,6 +59,7 @@ class CAENConfiguration
     int  majorityLevel; 
     int  majorityCoincidenceWindow;
     uint32_t  maxTemp;
+    uint32_t temperatureCheckMask; // 8 bit mask saying which ADCs to perforrm the temperature check
 
     void print(std::ostream & os = std::cout);
 };
@@ -66,5 +67,15 @@ class CAENConfiguration
 
 std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e);
 
-#endif
+#include <trace.h>
+namespace {
+template <>
+inline TraceStreamer &TraceStreamer::
+operator<<(const sbndaq::CAENConfiguration &r) {
+  std::ostringstream s;
+  s << r;
+  return *this;
+}
+} // namespace
 
+#endif

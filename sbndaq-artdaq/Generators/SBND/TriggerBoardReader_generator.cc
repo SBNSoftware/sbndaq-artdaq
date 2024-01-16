@@ -28,7 +28,7 @@
 #include <string>
 
 #include <unistd.h>
-
+#include <thread>
 
 
 sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
@@ -274,8 +274,6 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  double llt_rate  = _metric_LLT_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 
 	  double beam_rate = _metric_beam_trigger_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
-	  double good_part_rate = _metric_good_particle_counter * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
-	  double beam_eff = _metric_good_particle_counter != 0 ? _metric_beam_trigger_counter / (double) _metric_good_particle_counter : 1. ;
 
 	  double cs_rate   = _metric_CS_counter  * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
 
@@ -286,15 +284,24 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  artdaq::Globals::metricMan_->sendMetric("PTB_LLT_rate", llt_rate, "Hz", 11, artdaq::MetricMode::Average) ;
 
 	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Trig_rate", beam_rate, "Hz", 11, artdaq::MetricMode::Average) ;
-	  artdaq::Globals::metricMan_->sendMetric("PTB_Good_Part_rate", good_part_rate, "Hz", 11, artdaq::MetricMode::Average) ;
 
-	  artdaq::Globals::metricMan_->sendMetric("PTB_Beam_Eff", beam_eff, "ratio", 11, artdaq::MetricMode::Average) ;
-
-	  artdaq::Globals::metricMan_->sendMetric("PTB_CS_rate",  cs_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
+	  artdaq::Globals::metricMan_->sendMetric("PTB_CS_rate",  cs_rate,  "Hz", 20, artdaq::MetricMode::Average) ;
 
 	  for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
 	    double temp_rate = _metric_HLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
-	    artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
+            if(i < 5 || i >= 29 || i == 20 || i == 21) { //is event or flash trigger (excl calibration) or crt reset
+	      artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
+            }
+            else if(i == 5) { //calibration
+	      artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 12, artdaq::MetricMode::Average) ;
+            }
+            else { //spare level is 20
+	      artdaq::Globals::metricMan_->sendMetric( _metric_HLT_names[i], temp_rate,  "Hz", 20, artdaq::MetricMode::Average) ;
+            }
+	  }
+	  for ( unsigned short i = 0 ; i < _metric_LLT_names.size() ; ++i ) {
+	    double temp_rate = _metric_LLT_counters[i] * TriggerBoardReader::PTB_Clock() / _metric_TS_max / _rollover ;
+	    artdaq::Globals::metricMan_->sendMetric( _metric_LLT_names[i], temp_rate,  "Hz", 11, artdaq::MetricMode::Average) ;
 	  }
 
 
@@ -303,6 +310,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	// transfer HLT counters to run counters
 	//<--_run_gool_part_counter += _metric_good_particle_counter ;
 	_run_HLT_counter += _metric_HLT_counter ; 
+	_run_LLT_counter += _metric_LLT_counter ; 
 	
 	// reset counters
 	_metric_TS_counter =
@@ -310,12 +318,15 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	  _metric_HLT_counter =
 	  _metric_LLT_counter =
 	  _metric_beam_trigger_counter =
-	  _metric_good_particle_counter =
 	  _metric_CS_counter  = 0 ;
 
 	for ( unsigned short i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
 	  _run_HLT_counters[i] += _metric_HLT_counters[i] ;
 	  _metric_HLT_counters[i] = 0 ;
+	}
+	for ( unsigned short i = 0 ; i < _metric_LLT_names.size() ; ++i ) {
+	  _run_LLT_counters[i] += _metric_LLT_counters[i] ;
+	  _metric_LLT_counters[i] = 0 ;
 	}
 
       }  // if it is necessary to publish the metric
@@ -335,26 +346,10 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
       const ptb::content::word::trigger_t * t = reinterpret_cast<const ptb::content::word::trigger_t *>( & temp_word  ) ;
 
-      if ( t -> IsTrigger(1) ) {
-	_close_to_good_part = true ; 
-
-	if ( t -> timestamp > _latest_part_TS + 2*_cherenkov_coincidence )  
-	  _latest_part_TS = t -> timestamp ;
-	++ _metric_good_particle_counter ;
-      }  // this was a LLT_1
-
-
-      // always fill the cherenkov counter because 
-      // we have to evaluate a coincidence 
-      // and we cannot know if a good particle is about to come
-      if ( t -> IsTrigger(2) ) {
-	_hp_TSs.insert( t -> timestamp ) ; 
-      }  // if it is a high pressure cherenkov LLT
-
-      if ( t -> IsTrigger(3) ) {
-	_lp_TSs.insert( t -> timestamp ) ; 
-      }  // if it is a low pressure cherenkov LLT
-
+      std::set<unsigned short> trigs = t -> Triggers(32) ;
+      for ( auto it = trigs.begin(); it != trigs.end() ; ++it ) {
+	++ _metric_LLT_counters[*it] ;
+      }
       if ( ! _is_beam_spill ) {
 
 	if ( t -> IsTrigger(6) )  {
@@ -383,7 +378,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       if ( t -> trigger_word & 0xEE )  // request at least a trigger not cosmic trigger nor random triggers
 	++ _metric_beam_trigger_counter ;    // count beam related HLT
 
-      std::set<unsigned short> trigs = t -> Triggers(8) ;
+      std::set<unsigned short> trigs = t -> Triggers(32) ;
       for ( auto it = trigs.begin(); it != trigs.end() ; ++it ) {
 	++ _metric_HLT_counters[*it] ;
       }
@@ -471,6 +466,10 @@ void sbndaq::TriggerBoardReader::start() {
   _run_HLT_counter = 0 ;
   for ( unsigned int i = 0 ; i < _metric_HLT_names.size() ; ++i ) {
     _run_HLT_counters[i] = 0 ; 
+  }
+  _run_LLT_counter = 0 ;
+  for ( unsigned int i = 0 ; i < _metric_LLT_names.size() ; ++i ) {
+    _run_LLT_counters[i] = 0 ; 
   }
 
   if ( _has_calibration_stream ) {
@@ -577,6 +576,10 @@ bool sbndaq::TriggerBoardReader::store_run_trigger_counters( unsigned int run_nu
   out << "Total \t " << _run_HLT_counter << std::endl ;
   for ( unsigned int i = 0; i < _metric_HLT_names.size() ; ++i ) {
     out << "HLT " << i << " \t " << _run_HLT_counters[i] << std::endl ;
+  }
+  out << "Total \t " << _run_LLT_counter << std::endl ;
+  for ( unsigned int i = 0; i < _metric_LLT_names.size() ; ++i ) {
+    out << "LLT " << i << " \t " << _run_LLT_counters[i] << std::endl ;
   }
 
 
