@@ -10,11 +10,14 @@ void ExitTimerManager::startExitTimer(unsigned int seconds) {
   if (!_timerThread.joinable()) {
     _timerThread = std::thread(&ExitTimerManager::startTimer, seconds);
     TLOG(TLVL_INFO) << "Timer started.";
-  } else {
+  }
+  /*
+  else {
     TLOG(TLVL_WARNING) << "Timer already started. Stopping and exiting...";
     stopTimer();
     std::exit(1);
   }
+ */
 }
 
 void ExitTimerManager::startTimer(unsigned int seconds) {
