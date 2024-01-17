@@ -1626,8 +1626,8 @@ void WIBReader::releaseSemaphores(){
 }
 
 void WIBReader::disconnectWIB_releaseSemaphores(){
-  if(!use_semaphores) return;
   wib.reset();
+  if(!use_semaphores) return;
   sleep(2);
   releaseSemaphores();
 }
