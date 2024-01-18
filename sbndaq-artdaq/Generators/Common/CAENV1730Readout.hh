@@ -177,6 +177,11 @@ namespace sbndaq
       TTEMP     = 30
     };
 
+    enum
+    {
+      V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
+    };
+
     //fhicl parameters
     int fVerbosity;
     int fBoardChainNumber;
@@ -200,6 +205,7 @@ namespace sbndaq
     bool fOutputClkPhase;
 
     bool fUseTimeTagForTimeStamp;
+    bool fUseTimeTagShiftForTimeStamp;
     uint32_t fTimeOffsetNanoSec;
 
     // Animesh & Aiwu add fhicl parameters - LVDS logic
