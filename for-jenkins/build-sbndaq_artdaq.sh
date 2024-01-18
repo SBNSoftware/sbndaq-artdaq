@@ -48,7 +48,7 @@ IFS=':' read -r -a quals <<< "$qual_set"
 
 for onequal in "${quals[@]}"; do
   case ${onequal} in
-    e19|e20|c[0-9])
+    e19|e20|e26|c[0-9])
       basequal=${onequal}
       ;;
     s1[0-2][0-9]*)
@@ -182,6 +182,7 @@ python3 ${src_dir}/${product_name}/for-jenkins/generate-manifest.py \
 cd ${products_dir} || exit 1
 
 [[ "${basequal}" == e20 ]] && wget https://github.com/SBNSoftware/sbndaq-build-dependencies/raw/main/zmq-4.3.1-sl7-x86_64-e20.tar.bz2 && tar xf zmq-4.3.1-sl7-x86_64-e20.tar.bz2
+[[ "${basequal}" == e26 ]] && wget https://github.com/SBNSoftware/sbndaq-build-dependencies/raw/main/zmq-4.3.1-sl7-x86_64-e26.tar.bz2 && tar xf zmq-4.3.1-sl7-x86_64-e26.tar.bz2
 ./pullProducts -l  ${products_dir} ${flvr} ${product_name}-current ${manifest_qual_set//:/-} ${build_type} 2>&1 |tee -a ${products_dir}/pullproducts.log
 
 unsetup_all
