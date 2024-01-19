@@ -517,7 +517,7 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, Firm
   //AA: The CAEN manual says all 30 bits of the timestamp are
   //    encoded in Gray Code. This is apparently not true.
   //IK: Two LSBs of the time stamp are indeed coded normal binary, not Gray
-  
+
   uint8_t ls2b0=ts0 & 0x00000003;
   uint8_t ls2b1=ts1 & 0x00000003;
   uint32_t tt0=(ts0 & 0x3fffffff) >> 2;
@@ -542,7 +542,7 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, Firm
   if(!NOts1)    hit.flags |= 2;
   if(REFEVTts0) hit.flags |= 4; //bit indicating TS0 reference hit
   if(REFEVTts1) hit.flags |= 8; //bit indicating TS1 reference hit
-  
+
   for(int kk=0; kk<32; kk++) {
     auto adc_ptr = reinterpret_cast<uint16_t*>(&(rpkt).Data[jj]);
     hit.adc[kk] = *adc_ptr;
@@ -558,7 +558,7 @@ void sbndaq::FEBDRV::processSingleHit(int & jj, sbndaq::BernCRTHitV2 & hit, Firm
 
 }
 
-int sbndaq::FEBDRV::GetData() {
+int sbndaq::FEBDRV::GetData(FirmwareVersion firmwareFlag = ICARUS) {
   /**
    * Read another portion of data from FEB
    * Returns number of bytes read, and 0 or -1 if there is no more data
@@ -581,7 +581,7 @@ int sbndaq::FEBDRV::GetData() {
     return -1;
   }
   
-  const int hit_size = 80; //size of data received from FEB
+  const int hit_size = (firmwareFlag == SBND) ? 76 : 80; //size of data received from FEB
   if(numbytes % hit_size != 18) {
     TLOG(TLVL_ERROR)<<"Size of data: "<<(numbytes - 18)<<" received from FEB is not a multiple of "<<std::to_string(hit_size);
   }

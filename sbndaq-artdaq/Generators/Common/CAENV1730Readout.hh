@@ -177,6 +177,11 @@ namespace sbndaq
       TTEMP     = 30
     };
 
+    enum
+    {
+      V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
+    };
+
     //fhicl parameters
     int fVerbosity;
     int fBoardChainNumber;
@@ -196,8 +201,11 @@ namespace sbndaq
     bool     fLockTempCalibration;
     bool     fWriteCalibration;
     uint32_t fFragmentID;
+    bool fOutputClk;
+    bool fOutputClkPhase;
 
     bool fUseTimeTagForTimeStamp;
+    bool fUseTimeTagShiftForTimeStamp;
     uint32_t fTimeOffsetNanoSec;
 
     // Animesh & Aiwu add fhicl parameters - LVDS logic
@@ -260,6 +268,7 @@ namespace sbndaq
     void ConfigureAcquisition();
     void ConfigureLVDS();
     void ConfigureSelfTriggerMode();
+    void ConfigureClkToTrgOut();
     void RunADCCalibration();
     void SetLockTempCalibration(bool onOff, uint32_t ch);
     CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);

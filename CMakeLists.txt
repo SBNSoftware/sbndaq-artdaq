@@ -8,20 +8,13 @@
 # ======================================================================
 
 
-cmake_minimum_required (VERSION 3.18.2)
+cmake_minimum_required (VERSION 3.19 FATAL_ERROR)
 
-find_package(cetmodules)
-set(CET_CETBUILDTOOLS_COMPAT TRUE)
-include(Compatibility)
-set(CET_WARN_DEPRECATED)
+find_package(cetmodules 3.16.00 REQUIRED)
 
-project(sbndaq_artdaq VERSION 1.08.01)
+project(sbndaq_artdaq VERSION 1.08.06)
 
-set(CMAKE_MODULE_PATH
-  $ENV{ARTDAQ_UTILITIES_DIR}/Modules
-  ${CMAKE_MODULE_PATH})
 include(CetCMakeEnv)
-
 cet_cmake_env()
 
 cet_set_compiler_flags(DIAGS VIGILANT
@@ -70,25 +63,23 @@ if(BTYPE_UC STREQUAL DEBUG)
   add_definitions(-DDEBUGME)
 endif()
 
+message("Searching ${sbndaq_artdaq_EXEC_PREFIX} for icarus or sbnd qualifiers")
+string(FIND "x${sbndaq_artdaq_EXEC_PREFIX}" "icarus" ICARUS_FOUND)
+string(FIND "x${sbndaq_artdaq_EXEC_PREFIX}" "sbnd" SBND_FOUND)
 
+IF (ICARUS_FOUND EQUAL -1)
+   MESSAGE ("No ICARUS_BUILD?")
+ELSE()
+   SET(ICARUS_BUILD 1)
+   MESSAGE ("Performing ICARUS_BUILD")
+ENDIF()
 
-if(DEFINED $ENV{MRB_QUALS})
-  string(FIND $ENV{MRB_QUALS} "icarus" ICARUS_FOUND)
-  IF (ICARUS_FOUND EQUAL -1)
-     MESSAGE ("No ICARUS_BUILD?")
-  ELSE()
-     SET(ICARUS_BUILD 1)
-     MESSAGE ("Performing ICARUS_BUILD")
-  ENDIF()
-
-  string(FIND $ENV{MRB_QUALS} "sbnd" SBND_FOUND)
-  IF (SBND_FOUND EQUAL -1)
-     MESSAGE ("No SBND_BUILD?")
-  ELSE()
-     SET(SBND_BUILD 1)
-     MESSAGE ("Performing SBND_BUILD")
-  ENDIF()
-endif()
+IF (SBND_FOUND EQUAL -1)
+   MESSAGE ("No SBND_BUILD?")
+ELSE()
+   SET(SBND_BUILD 1)
+   MESSAGE ("Performing SBND_BUILD")
+ENDIF()
 
 IF (NOT(SBND_BUILD OR ICARUS_BUILD))
    MESSAGE("No experiment-specific build specified. Building all.")
@@ -96,87 +87,46 @@ IF (NOT(SBND_BUILD OR ICARUS_BUILD))
    SET(ICARUS_BUILD 1)
 ENDIF()
 
-# macros for artdaq_dictionary and basic_plugin
-include(ArtMake)
-include(BuildPlugins)
-
 # these are minimum required versions, not the actual product versions
-find_ups_product( artdaq v3_12_05 )
-find_ups_product( artdaq_utilities v1_08_04)
-find_ups_product( artdaq_core v3_09_13 )
-find_ups_product( canvas v3_12_04 )
-find_ups_product( art v3_09_03 )
-find_ups_product( art_root_io v1_08_03 )
-find_ups_product( fhiclcpp v4_15_03 )
-find_ups_product( messagefacility v2_08_04)
-find_ups_product( cetlib v3_13_04 )
-find_ups_product( cetlib_except  v1_07_04)
-find_ups_root(  v6_22_08d )
-find_ups_boost( v1_75_0 filesystem
+find_package( artdaq 3.12.05 REQUIRED EXPORT)
+find_package( artdaq_utilities 1.08.04 REQUIRED EXPORT)
+find_package( artdaq_core 3.09.13 REQUIRED EXPORT )
+find_package( canvas 3.12.04  REQUIRED EXPORT)
+find_package( art 3.09.03  REQUIRED EXPORT)
+find_package( art_root_io 1.08.03  REQUIRED EXPORT)
+find_package( fhiclcpp 4.15.03 REQUIRED EXPORT )
+find_package( messagefacility 2.08.04 REQUIRED EXPORT)
+find_package( cetlib 3.13.04  REQUIRED EXPORT)
+find_package( cetlib_except  1.07.04 REQUIRED EXPORT)
+find_package( Boost 1.75.0 QUIET COMPONENTS filesystem
                         program_options
                         system
-                        unit_test_framework
+                        unit_test_framework REQUIRED EXPORT
  )
-find_ups_product( pqxx v6_2_5a )
+#find_package( pqxx 6.2.5  REQUIRED EXPORT)
 
-find_ups_product( sqlite v3_34_01_00)
-find_ups_product( libxml2 )
+#find_package( sqlite 3.34.01.00 REQUIRED EXPORT)
+find_package( libxml2 REQUIRED EXPORT )
 
-find_ups_product( caenvme v2_50 )
-find_ups_product( caencomm v1_2a )
-find_ups_product( caendigitizer v2_7_2 )
+#find_package( caenvme 2.50 REQUIRED EXPORT )
+#find_package( caencomm 1.2  REQUIRED EXPORT)
+#find_package( caendigitizer 2.7.2  REQUIRED EXPORT)
 
-find_ups_product( sbndaq_artdaq_core v1_04_00 )
+find_package( sbndaq_artdaq_core 1.04.00  REQUIRED EXPORT)
 
-find_ups_product (jsoncpp v1_7_7c)
+#find_package (jsoncpp 1.7.7 REQUIRED EXPORT)
 
-find_ups_product (TRACE v3_17_09)
+find_package (TRACE 3.17.09 REQUIRED EXPORT)
 
-find_ups_product( zmq v4_3_1 )
-find_ups_product( redis v5_0_5 )
-
-
-link_directories("$ENV{ROOTSYS}/lib")
-#include_directories("$ENV{ARTDAQ_INC}")
-#link_directories("$ENV{ARTDAQ_LIB}")
-link_directories("$ENV{ARTDAQ_UTILITIES_LIB}")
-
-string(REGEX MATCHALL "[0-9][0-9]?[0-9]?" ART_VERSION_LIST "$ENV{ART_VERSION}")
-list(GET ART_VERSION_LIST 0 ART_MAJOR_VERSION)
-list(GET ART_VERSION_LIST 1 ART_MINOR_VERSION)
-list(GET ART_VERSION_LIST 2 ART_PATCH_VERSION)
-message("-DART_HEX_VERSION=0x${ART_MAJOR_VERSION}${ART_MINOR_VERSION}${ART_PATCH_VERSION}")
-set(ART_HEX_VERSION 0x${ART_MAJOR_VERSION}${ART_MINOR_VERSION}${ART_PATCH_VERSION})
-add_definitions(-DART_HEX_VERSION=0x${ART_MAJOR_VERSION}${ART_MINOR_VERSION}${ART_PATCH_VERSION})
-link_directories("$ENV{ART_LIB}")
-
-string(REGEX MATCHALL "[0-9][0-9]?[0-9]?" MESSAGEFACILITY_VERSION_LIST "$ENV{MESSAGEFACILITY_VERSION}")
-list(GET MESSAGEFACILITY_VERSION_LIST 0 MESSAGEFACILITY_MAJOR_VERSION)
-list(GET MESSAGEFACILITY_VERSION_LIST 1 MESSAGEFACILITY_MINOR_VERSION)
-list(GET MESSAGEFACILITY_VERSION_LIST 2 MESSAGEFACILITY_PATCH_VERSION)
-message("-DMESSAGEFACILITY_HEX_VERSION=0x${MESSAGEFACILITY_MAJOR_VERSION}${MESSAGEFACILITY_MINOR_VERSION}${MESSAGEFACILITY_PATCH_VERSION}")
-add_definitions(-DMESSAGEFACILITY_HEX_VERSION=0x${MESSAGEFACILITY_MAJOR_VERSION}${MESSAGEFACILITY_MINOR_VERSION}${MESSAGEFACILITY_PATCH_VERSION})
-link_directories("$ENV{MESSAGEFACILITY_LIB}")
-
-string(REGEX MATCHALL "[0-9][0-9]?[0-9]?" CANVAS_VERSION_LIST "$ENV{CANVAS_VERSION}")
-list(GET CANVAS_VERSION_LIST 0 CANVAS_MAJOR_VERSION)
-list(GET CANVAS_VERSION_LIST 1 CANVAS_MINOR_VERSION)
-list(GET CANVAS_VERSION_LIST 2 CANVAS_PATCH_VERSION)
-message("-DCANVAS_HEX_VERSION=0x${CANVAS_MAJOR_VERSION}${CANVAS_MINOR_VERSION}${CANVAS_PATCH_VERSION}")
-add_definitions(-DCANVAS_HEX_VERSION=0x${CANVAS_MAJOR_VERSION}${CANVAS_MINOR_VERSION}${CANVAS_PATCH_VERSION})
-
-string(REGEX MATCHALL "[0-9][0-9]?[0-9]?" FHICLCPP_VERSION_LIST "$ENV{FHICLCPP_VERSION}")
-list(GET FHICLCPP_VERSION_LIST 0 FHICLCPP_MAJOR_VERSION)
-list(GET FHICLCPP_VERSION_LIST 1 FHICLCPP_MINOR_VERSION)
-list(GET FHICLCPP_VERSION_LIST 2 FHICLCPP_PATCH_VERSION)
-message("-DFHICLCPP_HEX_VERSION=0x${FHICLCPP_MAJOR_VERSION}${FHICLCPP_MINOR_VERSION}${FHICLCPP_PATCH_VERSION}")
-add_definitions(-DFHICLCPP_HEX_VERSION=0x${FHICLCPP_MAJOR_VERSION}${FHICLCPP_MINOR_VERSION}${FHICLCPP_PATCH_VERSION})
+if( DEFINED SPACK_BUILD )
+find_package( cppzmq 4.3.1  REQUIRED EXPORT)
+else()
+find_package( zmq 4.3.1  REQUIRED EXPORT)
+endif()
+#find_package( redis 5.0.5 REQUIRED EXPORT )
 
 # macros for art_dictionary and basic_plugin
-#include(ArtDictionary)
-include(ArtMake)
 include(BuildPlugins)
-include(CetTest)
 
 # source
 add_subdirectory(sbndaq-artdaq)

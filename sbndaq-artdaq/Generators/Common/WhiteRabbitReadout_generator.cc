@@ -21,7 +21,6 @@
 // Constructor
 sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
-  generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0)),
   ps_(ps)
 {
   fragmentId  = ps.get<uint32_t>("fragmentId");
@@ -298,26 +297,26 @@ bool sbndaq::WhiteRabbitReadout::getData()
 
 //  PPS
     if(data->channel == 0) 
-    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 11,
                           artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_PPS");
 // $1D from MI12
     if(data->channel == 1) 
-    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 11,
                           artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$1D");
 
 // gatedBES from MI12
     if(data->channel == 4)
-    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 11,
                           artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_gatedBES");
 
 // $AE from MI60
     if(data->channel == 2)
-    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 11,
                           artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$AE");
 
 // $74 from MI60
     if(data->channel == 3) 
-    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 1,
+    metricMan->sendMetric(tsStream.str(), int(data->nstamp), "Hz", 11,
                           artdaq::MetricMode::Rate, "WR_CLK02_SPEC_DIO_$74");
 
 
@@ -337,14 +336,6 @@ bool sbndaq::WhiteRabbitReadout::getData()
 
 bool sbndaq::WhiteRabbitReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
-
-  //copied from TriggerUDP code: if shouldn't send fragments, then don't create fragment/send
-  if(generated_fragments_per_event_== 0){
-    fLastEvent = fEventCounter;
-    ++fEventCounter;
-    return true;
-  }
-
   FillFragment(frags,true);
 
   for (auto const& frag : frags) {

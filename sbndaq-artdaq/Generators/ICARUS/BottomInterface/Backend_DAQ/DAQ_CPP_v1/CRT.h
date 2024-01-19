@@ -23,10 +23,10 @@ void initializeboard(string define_runnumber, int trigger_num, int pmtini, int p
 
 void process_signal(int usb);
 
-void loadconfig(string mode_local, int usb_board, int pmt_board, int triggerbox, string filename);
+void loadconfig(string mode_local, int usb_board, int pmt_board, string filename);
 int scanFiles(string inputDirectory);
-void starttakedata(int pmtini, int pmtfin, int boxini, int boxfin);
-void stoptakedata(int pmtini, int pmtfin, int boxini, int boxfin, string online_path);
+void starttakedata(int pmtini, int pmtfin);
+void stoptakedata(int pmtini, int pmtfin, string online_path);
 void getpmtdata(int usbboard, int pmtnumber);
 void SplitString(string s, vector<string> &v, string c);
 int eventbuilder(string DataPath, int totalusb, int totalpmt, string online_path);

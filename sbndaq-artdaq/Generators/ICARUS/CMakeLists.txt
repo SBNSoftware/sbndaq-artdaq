@@ -1,9 +1,6 @@
 add_subdirectory(icarus-base)
 add_subdirectory(BottomInterface)
 
-link_directories($ENV{CAENCOMM_LIB})
-link_directories($ENV{REDIS_LIB})
-
 list(APPEND LIBRARY_CORE_LIB_LIST sbndaq-artdaq_Common_Utilities sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_ICARUS)
 
 cet_make_library(
@@ -25,6 +22,8 @@ cet_build_plugin(PhysCrateData artdaq::commandableGenerator
     hiredis
     CAENComm
 )
+target_include_directories(sbndaq-artdaq_Generators_ICARUS_PhysCrateData_generator PRIVATE $ENV{REDIS_INC} $ENV{CAENCOMM_INC})
+target_link_directories(sbndaq-artdaq_Generators_ICARUS_PhysCrateData_generator PRIVATE $ENV{REDIS_LIB} $ENV{CAENCOMM_LIB})
 
 # cet_build_plugin(PhysCrateFakeData artdaq::commandableGenerator
 #  LIBRARIES REG
@@ -55,23 +54,15 @@ cet_build_plugin(ICARUSTriggerV3 artdaq::commandableGenerator
 #)
 
 cet_build_plugin(CRTFragGen artdaq::commandableGenerator
-  LIBRARIES
+  LIBRARIES REG
   sbndaq-artdaq_ICARUS_BottomInterface_StartBackend
   sbndaq-artdaq_ICARUS_BottomInterface_StopBackend
   sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays
   sbndaq-artdaq_Generators_ICARUS_BottomInterface
-  artdaq_Application
-  #artdaq_Generators 
-  artdaq_DAQdata
-  #artdaq-core_Utilities
-  #artdaq-core_Data
-  artdaq-utilities_Plugins
-  ${CANVAS_LIB_LIST}
-  ${FHICLCPP}
-  ${MF_MESSAGELOGGER}
-  ${MF_UTILITIES}
-  ${CETLIB}
-  ${CETLIB_EXCEPT}
+  artdaq::Application
+  artdaq::DAQdata
+  artdaq_utilities::artdaq-utilities_Plugins
+  
   )
 
 install_source()

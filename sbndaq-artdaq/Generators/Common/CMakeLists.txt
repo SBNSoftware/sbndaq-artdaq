@@ -1,13 +1,22 @@
 add_subdirectory(GPS)
 add_subdirectory(Bern)
 
-include_directories( ./GPS )
-
 add_definitions(-DLINUX)
-link_directories($ENV{CAENCOMM_LIB})
-link_directories($ENV{CAENVME_LIB})
-link_directories($ENV{CAENDIGITIZER_LIB})
 
+SET_SOURCE_FILES_PROPERTIES(febdrv.cc PROPERTIES COMPILE_FLAGS "-Wno-stringop-truncation")
+
+if(DEFINED ENV{CAENCOMM_DIR})
+    include_directories($ENV{CAENCOMM_INC})
+    link_directories($ENV{CAENCOMM_LIB})
+endif()
+if(DEFINED ENV{CAENVME_DIR})
+    include_directories($ENV{CAENVME_INC})
+    link_directories($ENV{CAENVME_LIB})
+endif()
+if(DEFINED ENV{CAENDIGITIZER_DIR})
+    include_directories($ENV{CAENDIGITIZER_INC})
+    link_directories($ENV{CAENDIGITIZER_LIB})
+endif()
 
 cet_make_library(
   LIBRARY_NAME
@@ -18,10 +27,9 @@ cet_make_library(
     PoolBuffer.cc
   LIBRARIES
     pthread
-    artdaq_DAQdata
-    ${MF_UTILITIES}
-    MF_MessageLogger
-    ${Boost_SYSTEM_LIBRARY}
+    artdaq::DAQdata
+    messagefacility::MF_MessageLogger
+    Boost::boost
 )
 
 list(APPEND LIBRARY_CORE_LIB_LIST sbndaq-artdaq_Common_Utilities )
@@ -45,12 +53,13 @@ cet_make_library(
     sbndaq-artdaq_Common_SpectraTime_GeneratorBase
   SOURCE
     SpectraTimeReadout_generator.cc
-    GPS/GPSInfo.cc
   LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
+    sbndaq_artdaq::sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
 )
 
-
+SET_SOURCE_FILES_PROPERTIES(WhiteRabbitReadout_generator.cc PROPERTIES COMPILE_FLAGS "-Wno-dangling-pointer")
 cet_make_library(
   LIBRARY_NAME
     sbndaq-artdaq_Common_WhiteRabbit_GeneratorBase
@@ -58,6 +67,7 @@ cet_make_library(
     WhiteRabbitReadout_generator.cc
   LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
+    sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
 )
 
 cet_make_library(
@@ -66,8 +76,9 @@ cet_make_library(
   SOURCE
     BernCRTFEBConfiguration.cc
   LIBRARIES
-    fhiclcpp
-    cetlib_except
+    TRACE::TRACE
+    fhiclcpp::fhiclcpp
+    cetlib_except::cetlib_except
 )
 
 cet_make_library(
@@ -99,8 +110,8 @@ cet_make_library(
     febdrv.cc
   LIBRARIES
     sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_Common
-    fhiclcpp
-    cetlib_except
+    fhiclcpp::fhiclcpp
+    cetlib_except::cetlib_except
 )
 
 
@@ -140,21 +151,28 @@ cet_build_plugin(BernCRTData artdaq::commandableGenerator
     zmq
     febdrv
 )
+if(DEFINED ENV{ZMQ_DIR})
+target_include_directories(sbndaq-artdaq_Generators_Common_BernCRTZMQData_generator PRIVATE  $ENV{ZMQ_INC})
+target_include_directories(sbndaq-artdaq_Generators_Common_BernCRTData_generator PRIVATE  $ENV{ZMQ_INC})
+target_link_directories(sbndaq-artdaq_Generators_Common_BernCRTZMQData_generator PRIVATE  $ENV{ZMQ_LIB})
+target_link_directories(sbndaq-artdaq_Generators_Common_BernCRTData_generator PRIVATE  $ENV{ZMQ_LIB})
+endif()
 
 cet_build_plugin(DummyGenerator artdaq::commandableGenerator
   LIBRARIES REG
     ${BUILD_PLUGIN_CORE_LIB_LIST}
 )
 
-cet_make_exec( ConvertCRTConfiguration
+cet_make_exec(NAME ConvertCRTConfiguration
   SOURCE
     ConvertCRTConfiguration.cc
   LIBRARIES
     sbndaq-artdaq_Common_BernCRTFEBConfiguration
-    fhiclcpp
-    cetlib
-    cetlib_except
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+    fhiclcpp::fhiclcpp
+    cetlib::cetlib
+    cetlib_except::cetlib_except
+    Boost::program_options
 )
+
 install_source()
 install_headers()

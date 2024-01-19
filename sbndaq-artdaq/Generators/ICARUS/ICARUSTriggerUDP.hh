@@ -112,7 +112,6 @@ namespace sbndaq
     bool use_wr_time_;
     long wr_time_offset_ns_;
     //expected fragments
-    int generated_fragments_per_event_;
     static constexpr std::size_t BufferSize = 1500;
     char buffer[BufferSize] = {'\0'};
     // char buffer[1000] = {'\0'};

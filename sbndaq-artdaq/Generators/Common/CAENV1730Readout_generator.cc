@@ -324,9 +324,18 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 
   fUseTimeTagForTimeStamp = ps.get<bool>("UseTimeTagForTimeStamp",true);
   TLOG(TINFO) <<"fUseTimeTagForTimeStamp=" << fUseTimeTagForTimeStamp;
+  
+  fUseTimeTagShiftForTimeStamp = ps.get<bool>("UseTimeTagShiftForTimeStamp",false);
+  TLOG(TINFO) <<"fUseTimeTagShiftForTimeStamp=" << fUseTimeTagShiftForTimeStamp;
 
   fTimeOffsetNanoSec = ps.get<uint32_t>("TimeOffsetNanoSec",0); //0ms by default
   TLOG(TINFO) <<"fTimeOffsetNanoSec=" << fTimeOffsetNanoSec;
+
+  fOutputClk = ps.get<bool>("OutputClk", 0); // To output Motherboard CLK to TRG-OUT, default 0
+  TLOG(TINFO)<<"OutputClk=" << fOutputClk;
+
+  fOutputClkPhase = ps.get<bool>("OutputClkPhase", 0); // To output Motherboard CLK PHASE to TRG-OUT, default 0
+  TLOG(TINFO)<<"OutputClkPhase=" << fOutputClkPhase;
 }
 
 void sbndaq::CAENV1730Readout::Configure()
@@ -682,6 +691,33 @@ void sbndaq::CAENV1730Readout::Write_ADC_CalParams_V1730(int handle, int ch, uin
   }
 }
 
+void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
+{
+  /* Check to output ONLY CLK OR CLK PHASE */
+  if ( fOutputClk && fOutputClkPhase ){
+    TLOG(TLVL_ERROR) << "Error configuring output clock: Cannot output clock and its phase at the same time." << std::endl;
+    abort();
+  } 
+
+  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+  uint32_t data;
+
+  /* Check the output of the 0x811C */
+  retcod = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL, &data);
+  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
+
+  uint32_t value16 = 0x1; 
+  uint32_t value18 = 0x0;
+  if (fOutputClk) value18 = 0x1;
+  if (fOutputClkPhase) value18 = 0x2;
+  data |= ((value16 & 0x3)<<16) + ((value18 &0x3)<<18);
+
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, data);
+  sbndaq::CAENDecoder::checkError(retcod,"ClkToTrgOutCheckError",fBoardID);
+
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+  TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
+}
 
 void sbndaq::CAENV1730Readout::ConfigureLVDS()
 {
@@ -1019,6 +1055,9 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
 
   // for ICARUS
   if(fModeLVDS!=0){ ConfigureLVDS();  }
+	
+  // for clock synchronization studies
+  if( fOutputClk || fOutputClkPhase ){ ConfigureClkToTrgOut(); } 
 
   ConfigureSelfTriggerMode();
 
@@ -1270,7 +1309,6 @@ void sbndaq::CAENV1730Readout::stop()
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
 
-
   GetData_thread_->stop();
 
   CAEN_DGTZ_ErrorCode retcode;
@@ -1288,8 +1326,8 @@ void sbndaq::CAENV1730Readout::stop()
 // The two relevant fcl parameters are: "poll_hardware_status" (true/false) and "hardware_poll_interval_us" (period in us)
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
-  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
-
+  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  {
     std::ostringstream tempStream;
     tempStream << "CAENV1730.Card" << fBoardID
 		  << ".Channel" << ch << ".Temp"; 
@@ -1300,19 +1338,47 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     memfullStream << "CAENV1730.Card" << fBoardID
 		  << ".Channel" << ch << ".MemoryFull"; 
    
+    CAEN_DGTZ_ErrorCode retcod;
 
-    CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
-    TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
-                               << ": " << ch_temps[ch] << "  C"
-                               << TLOG_ENDL;
+    if ( fCAEN.temperatureCheckMask & ( 1 << ch ) ) // Channels temperature readout enabled?
+    {
+      retcod = CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
+      TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
+				 << ": " << ch_temps[ch] << "  C"
+				 << TLOG_ENDL;
+      
+      metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
+			    artdaq::MetricMode::Average);
 
-    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 1,
-			  artdaq::MetricMode::Average);
-
-    if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
-      TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
-                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
-		       << TLOG_ENDL;
+      //Need 3 requirements to shut down for high temperature: 
+      // 1. Can successfully read temperature: return code = 0 since S/N 164 can fail to read temperature during acquisition
+      // 2. Temperature < non_physical temperature, 200C since S/N 164 can produce non-physical temperature
+      // 3. Temperature > Requirement , 70C for V1730 and 85C for V1730S
+      if ( retcod == CAEN_DGTZ_Success && ch_temps[ch] < V1730_UNPHYSICAL_TEMPERATURE )
+      {  
+	if ( ch_temps[ch] > fCAEN.maxTemp ) 
+	{
+	   // V1730(S) shuts down at 70(85) celsius, give a warning ahead of that
+	   TLOG(TLVL_ERROR) << "SHUTTING DOWN CAENV1730 BoardID " << fBoardID << " : "
+			     << " Channel " << ch
+			     << " temperature " << ch_temps[ch]
+			     << " > " << fCAEN.maxTemp << " degrees Celsius."
+			     << " ReadTemperature Return Code = " << retcod
+			     << TLOG_ENDL;
+	}
+      }
+      else
+      {
+	    // Ignore unphysical temperatures/bad return codes from S/N 164.  CAEN advises not to read temperatures 
+	    //   while the readout is running, but we cannot do that.  Only one sensors on one 
+	    //   V1730 has ever malfunctioned.
+	    // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
+	    TLOG(TLVL_WARNING) << "CAENV1730 BoardID " << fBoardID << " : "
+			       << " Channel " << ch
+			       << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
+			       << " ReadTemperature Return Code = " << retcod
+			       << TLOG_ENDL;
+       }
     }
 
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
@@ -1326,10 +1392,10 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
       TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << ch;
     }
     else{
-      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 1,
+      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
-      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 1,
+      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
       /*
@@ -1520,6 +1586,18 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
 	- fTimeOffsetNanoSec;
     }
+    else if(fUseTimeTagShiftForTimeStamp){
+      fTTT = uint32_t{header->triggerTimeTag}; // 
+      // TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
+      fTTT_ns = (fTTT*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1 ns
+      
+      // Scheme borrowed from what Antoni developed for CRT.
+      // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
+      fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
+	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
+	- fTimeOffsetNanoSec;
+    }
     else{
       fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
     }
@@ -1591,7 +1669,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
 
   if (delta.count() >0.005*fGetNextFragmentBunchSize) {
-     metricMan->sendMetric("Laggy getNext",1,"count",1,artdaq::MetricMode::Accumulate);
+     metricMan->sendMetric("Laggy getNext",1,"count",11,artdaq::MetricMode::Accumulate);
      TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_seqid;
    }
 
@@ -1697,6 +1775,23 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 	
 	ts_frag = (t_truetriggertime*8); //in 1ns ticks
       }
+      else if(fUseTimeTagShiftForTimeStamp){
+	const auto TTT = uint32_t {header->triggerTimeTag};
+	
+	using namespace boost::gregorian;
+	using namespace boost::posix_time;
+	
+	ptime t_now(second_clock::universal_time());
+	ptime time_t_epoch(date(1970,1,1));
+	time_duration diff = t_now - time_t_epoch;
+	uint32_t t_offset_s = diff.total_seconds();
+	uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+	uint64_t t_truetriggertime = t_offset_ticks + TTT;
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+
+	// TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
+	ts_frag = (t_truetriggertime*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1ns ticks
+      }
       else{
 	using namespace boost::gregorian;
 	using namespace boost::posix_time;
@@ -1727,8 +1822,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 			 << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 			 << TLOG_ENDL;
     }
-    metricMan->sendMetric("FragmentCreationGapMax", (ts_now-ts_frag), "ns", 2, artdaq::MetricMode::Maximum);
-    metricMan->sendMetric("FragmentCreationGapAvg", (ts_now-ts_frag), "ns", 2, artdaq::MetricMode::Average);
+    metricMan->sendMetric("FragmentCreationGapMax", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Maximum);
+    metricMan->sendMetric("FragmentCreationGapAvg", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Average);
 
 
     fragment_uptr->setTimestamp( ts_frag );
@@ -1745,7 +1840,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       {
 	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / "
                         << readoutwindow_sequence_id_gap;
-	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 1, artdaq::MetricMode::Accumulate);
+	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
       }
     }
 
@@ -1776,17 +1871,14 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     max_fragment_create_time=std::max(delta.count(),max_fragment_create_time);
 
     if (delta.count() >0.0005 ) {
-      metricMan->sendMetric("Laggy Fragments",1,"frags",1,artdaq::MetricMode::Maximum);
+      metricMan->sendMetric("Laggy Fragments",1,"frags",11,artdaq::MetricMode::Maximum);
       TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_seqid <<  " took " << delta.count()*1000 << " ms";
 //TRACE_CNTL("modeM", 0);
     }
   }
 
-  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
+  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
-
-  //wes ... this shouldn't be called here!
-  //checkHWStatus_();
 
   TLOG(TGETNEXT) << "End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 

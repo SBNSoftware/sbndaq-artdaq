@@ -40,6 +40,7 @@ CRTInterface::CRTInterface(fhicl::ParameterSet const& ps) :
 
 void CRTInterface::StartDatataking()
 {
+  TLOG(TLVL_INFO, "CRTInterface") << "CRTInterface: starting data-taking"; 
   if(inotifyfd != -1){
     TLOG(TLVL_WARNING, "CRTInterface")
       << "inotify already init'd. Ok if we stopped and restarted data taking.\n";
@@ -47,6 +48,7 @@ void CRTInterface::StartDatataking()
   }
 
   if(-1 == (inotifyfd = inotify_init())){
+    TLOG(TLVL_WARNING, "CRTInterface") << "StartDatataking: " << strerror(errno);
     throw cet::exception("CRTInterface")
       << "CRTInterface::StartDatataking: " << strerror(errno);
   }
@@ -58,6 +60,7 @@ void CRTInterface::StartDatataking()
 
 void CRTInterface::StopDatataking()
 {
+  TLOG(TLVL_INFO, "CRTInterface") << "CRTInterface: stopping data-taking";
   errno = 0;
   if(-1 == inotify_rm_watch(inotifyfd, inotify_watchfd))
     TLOG(TLVL_WARNING, "CRTInterface") << "StopDatataking: " << strerror(errno);

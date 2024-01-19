@@ -39,7 +39,6 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
-  , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
   , initialization_data_fpga_(ps.get<fhicl::ParameterSet>("fpga_init_params"))
   , initialization_data_spexi_(ps.get<fhicl::ParameterSet>("spexi_init_params"))
 {
@@ -332,15 +331,6 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     return true;
   }
 
-  //if shouldn't send fragments, then don't create fragment/send
-  if(generated_fragments_per_event_==0){
-    fLastEvent = fEventCounter;
-    ++fEventCounter;
-    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-    metricMan->sendMetric("EventCounter",uint64_t{fEventCounter}, "Triggers", 1,artdaq::MetricMode::LastPoint);
-    return true;
-  }
-  
   icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerV3String(buffer);
 
   uint64_t event_no = fEventCounter;
@@ -382,8 +372,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     }
 
     fDeltaGates = datastream_info.gate_id - fLastGatesNum;
-    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-    metricMan->sendMetric("EventCounter", uint64_t(fEventCounter), "Triggers", 1,artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("EventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
+    metricMan->sendMetric("EventCounter", uint64_t(fEventCounter), "Triggers", 11,artdaq::MetricMode::LastPoint);
     
     if(fDeltaGates <= 0)
       TLOG(TLVL_WARNING) << "Change in total number of beam gates for ALL <= 0!";
@@ -410,8 +400,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       }
       else
 	TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for BNB trigger!";
-      metricMan->sendMetric("BNBEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      metricMan->sendMetric("BNBEventTotal",uint64_t(fTotalTriggerBNB), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("BNBEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("BNBEventTotal",uint64_t(fTotalTriggerBNB), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 2)
     {
@@ -435,8 +425,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       }
       else
 	TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for NuMI trigger!";
-      metricMan->sendMetric("NuMIEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-      metricMan->sendMetric("NuMIEventTotal",uint64_t(fTotalTriggerNuMI), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("NuMIEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("NuMIEventTotal",uint64_t(fTotalTriggerNuMI), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 3)
     {
@@ -460,8 +450,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       } 
       else
         TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for BNBOffBeam trigger!";
-      metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
-      metricMan->sendMetric("BNBOffbeamEventTotal",uint64_t(fTotalTriggerBNBOff), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("BNBOffbeamEventRate",1, "Hz", 11, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("BNBOffbeamEventTotal",uint64_t(fTotalTriggerBNBOff), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 4)
     {
@@ -485,8 +475,8 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
       }
       else
 	TLOG(TLVL_ERROR) << "Unsupported light-based trigger type found for NuMIOffBeam trigger!";
-      metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 1, artdaq::MetricMode::Rate);
-      metricMan->sendMetric("NuMIOffbeamEventTotal",uint64_t(fTotalTriggerNuMIOff), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("NuMIOffbeamEventRate",1, "Hz", 11, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("NuMIOffbeamEventTotal",uint64_t(fTotalTriggerNuMIOff), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else if(datastream_info.gate_type == 5)
     {
@@ -508,12 +498,12 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 	if(fDeltaGatesCalibMinbias <= 0)
 	  TLOG(TLVL_WARNING) << "Change in total number of beam gates for Calibration Minbias <= 0!";
       } 
-      metricMan->sendMetric("CalibrationRate",1, "Hz", 1, artdaq::MetricMode::Rate);
-      metricMan->sendMetric("CalibrationTotal",uint64_t(fTotalTriggerCalib), "Triggers", 1,artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric("CalibrationRate",1, "Hz", 11, artdaq::MetricMode::Rate);
+      metricMan->sendMetric("CalibrationTotal",uint64_t(fTotalTriggerCalib), "Triggers", 11,artdaq::MetricMode::LastPoint);
     }
     else {
       fDeltaGatesOther = datastream_info.gate_id - fLastGatesNumOther;
-      metricMan->sendMetric("OtherEventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
+      metricMan->sendMetric("OtherEventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
       if(fDeltaGatesOther <= 0)
         TLOG(TLVL_WARNING) << "Change in total number of beam gates for Other <= 0!";
     }

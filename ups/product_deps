@@ -1,7 +1,7 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
 parent sbndaq_artdaq
-defaultqual     e20:s112
+defaultqual     e20:s120a
 
 
 # These optional lines define the installed directories where
@@ -19,19 +19,20 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_12_05
-sbndaq_artdaq_core    v1_08_00
+artdaq                v3_12_07
+sbndaq_artdaq_core    v1_08_06
 caencomm              v1_6_0a
 caenvme               v3_4_4
 caendigitizer         v2_17_3a
-pqxx                  v6_2_5e
+pqxx                  v7_7_4c
 epics                 v7_0_7b
+artdaq_epics_plugin   v1_05_06
 zmq                   v4_3_1
-jsoncpp               v1_7_7e
-wibtools              v1_08_00     -
+jsoncpp               v1_9_5a
+wibtools              v1_08_06     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
-cetmodules            v3_21_02     -       only_for_build
+cetmodules            v3_22_02     -       only_for_build
 smc_compiler          v6_6_0       -nq-    only_for_build
 end_product_list
 
@@ -39,19 +40,19 @@ end_product_list
 # -nq- here means there is no qualifier
 # a "-" here means the dependent product is not required by the parent and will not be setup
 
-qualifier                   artdaq               sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx              epics  zmq   jsoncpp    wibtools        windriver redis
-e20:prof:s112               e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s112   prof      prof
-e20:debug:s112              e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s112  debug     debug
-e20:prof:s112:icarus        e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   -              -          prof
-e20:debug:s112:icarus       e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
-e20:prof:s112:sbnd          e20:s112:prof        e20:prof:s112         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s112   prof      prof
-e20:debug:s112:sbnd         e20:s112:debug       e20:debug:s112        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s112  debug     debug
-e20:prof:s117               e20:s117:prof        e20:prof:s117         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s117   prof      prof
-e20:debug:s117              e20:s117:debug       e20:debug:s117        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s117  debug     debug
-e20:prof:s117:icarus        e20:s117:prof        e20:prof:s117         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   -              -          prof
-e20:debug:s117:icarus       e20:s117:debug       e20:debug:s117        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  -              -          debug
-e20:prof:s117:sbnd          e20:s117:prof        e20:prof:s117         -nq-    -nq-     -nq-          e20:p392:prof     e20    e20   e20:prof   e20:prof:s117   prof      prof
-e20:debug:s117:sbnd         e20:s117:debug       e20:debug:s117        -nq-    -nq-     -nq-          e20:p392:debug    e20    e20   e20:debug  e20:debug:s117  debug     debug
+qualifier                   artdaq               sbndaq_artdaq_core    caenvme caencomm caendigitizer pqxx              epics  zmq   jsoncpp    wibtools        windriver redis  artdaq_epics_plugin
+e20:prof:s120a              e20:s120a:prof       e20:prof:s120a        -nq-    -nq-     -nq-          e20:p3913:prof    e20    e20   e20:prof   e20:prof:s120a  prof      prof   e20:s120a:prof
+e20:debug:s120a             e20:s120a:debug      e20:debug:s120a       -nq-    -nq-     -nq-          e20:p3913:debug   e20    e20   e20:debug  e20:debug:s120a debug     debug  e20:s120a:debug
+e20:prof:s120a:icarus       e20:s120a:prof       e20:prof:s120a        -nq-    -nq-     -nq-          e20:p3913:prof    e20    e20   e20:prof   -               -         prof   e20:s120a:prof
+e20:debug:s120a:icarus      e20:s120a:debug      e20:debug:s120a       -nq-    -nq-     -nq-          e20:p3913:debug   e20    e20   e20:debug  -               -         debug  e20:s120a:debug
+e20:prof:s120a:sbnd         e20:s120a:prof       e20:prof:s120a        -nq-    -nq-     -nq-          e20:p3913:prof    e20    e20   e20:prof   e20:prof:s120a  prof      prof   e20:s120a:prof
+e20:debug:s120a:sbnd        e20:s120a:debug      e20:debug:s120a       -nq-    -nq-     -nq-          e20:p3913:debug   e20    e20   e20:debug  e20:debug:s120a debug     debug  e20:s120a:debug
+e26:prof:s120a              e26:s120a:prof       e26:prof:s120a        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s120a  prof      prof   e26:s120a:prof
+e26:debug:s120a             e26:s120a:debug      e26:debug:s120a       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s120a debug     debug  e26:s120a:debug
+e26:prof:s120a:icarus       e26:s120a:prof       e26:prof:s120a        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   -               -         prof   e26:s120a:prof
+e26:debug:s120a:icarus      e26:s120a:debug      e26:debug:s120a       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  -               -         debug  e26:s120a:debug
+e26:prof:s120a:sbnd         e26:s120a:prof       e26:prof:s120a        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s120a  prof      prof   e26:s120a:prof
+e26:debug:s120a:sbnd        e26:s120a:debug      e26:debug:s120a       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s120a debug     debug  e26:s120a:debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")

@@ -190,7 +190,6 @@ namespace sbndaq
     bool use_wr_time_;
     long wr_time_offset_ns_;
     //expected fragments
-    int generated_fragments_per_event_;
     char buffer[1000] = {'\0'};
     uint8_t peekBuffer[2] = {0,0};
 

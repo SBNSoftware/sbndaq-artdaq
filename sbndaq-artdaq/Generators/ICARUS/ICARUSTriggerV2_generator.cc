@@ -37,7 +37,6 @@ sbndaq::ICARUSTriggerV2::ICARUSTriggerV2(fhicl::ParameterSet const& ps)
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
-  , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
   , initialization_data_fpga_(ps.get<fhicl::ParameterSet>("fpga_init_params"))
   , initialization_data_spexi_(ps.get<fhicl::ParameterSet>("spexi_init_params"))
 {
@@ -283,15 +282,6 @@ bool sbndaq::ICARUSTriggerV2::getNext_(artdaq::FragmentPtrs& frags)
 
   if(data_input==""){
     TLOG(TLVL_DEBUG) << "No data after poll with timeout? " << data_input;
-    return true;
-  }
-
-  //if shouldn't send fragments, then don't create fragment/send
-  if(generated_fragments_per_event_==0){
-    fLastEvent = fEventCounter;
-    ++fEventCounter;
-    metricMan->sendMetric("EventRate",1, "Hz", 1,artdaq::MetricMode::Rate);
-    metricMan->sendMetric("EventCounter",uint64_t{fEventCounter}, "Triggers", 1,artdaq::MetricMode::LastPoint);
     return true;
   }
   
