@@ -101,7 +101,7 @@ public:
 	fhicl::Comment("end of beam window cut on t1 timestamp (ns)"),
 	341000
 	};
-    fhicl::Atom<int> TimeCoinc {
+    fhicl::Atom<uint64_t> TimeCoinc {
       fhicl::Name("TimeCoinc"),
 	fhicl::Comment("cut on time difference of two strip hits for CRT 3D reco (ns)"),
 	100
@@ -126,6 +126,7 @@ public:
 	fhicl::Comment("if true make adc histos for each sipm"),
 	false
 	};
+/*
     fhicl::Sequence<int> LeftAframeHList {
       fhicl::Name("LeftAframeHList"),
 	fhicl::Comment("list of horizontal modules on left side of Aframe")
@@ -142,6 +143,7 @@ public:
       fhicl::Name("RightAframeVList"),
 	fhicl::Comment("list of vertical modules on right side of Aframe")
 	};
+*/
 
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
@@ -286,7 +288,7 @@ private:
   // new fcls for crt hit tree
   int fBeamTimeWindowStart; 
   int fBeamTimeWindowEnd;
-  int fTimeCoinc;
+  uint64_t fTimeCoinc;
   bool fMakeCRTHitTree;
   bool fMakeAnaTree;
   bool fMakeRecoTree;
@@ -302,6 +304,8 @@ private:
   std::vector<int> fLeftAframeHList;
 
   // Add elements of the Flat Reco Tree -> TODO Also Get the object oriented tree working
+ 
+  int ClusterCount; // number of clusters with reco hits per Art Event  
   std::vector<int> cluster_id;
   std::vector<int> hit_feb_h;
   std::vector<int> hit_feb_v;
@@ -332,11 +336,13 @@ sbndaq::CRTAframeReco::CRTAframeReco(CRTAframeReco::Parameters const& pset): art
   fMakeAnaTree= pset().MakeAnaTree(); 
   fMakeRecoTree = pset().MakeRecoTree(); 
 
-   //fMakeHistos=pset().MakeHistos(); 
-  fRightAframeVList=pset().RightAframeVList();
-  fLeftAframeVList=pset().LeftAframeVList();
-  fRightAframeHList=pset().RightAframeHList();
-  fLeftAframeHList=pset().LeftAframeHList();
+   //fMakeHistos=pset().MakeHistos();
+
+ // Comment out the following and replace with ChannelMap Code 
+  //fRightAframeVList=pset().RightAframeVList();
+  //fLeftAframeVList=pset().LeftAframeVList();
+  //fRightAframeHList=pset().RightAframeHList();
+  //fLeftAframeHList=pset().LeftAframeHList();
 
 }
 
@@ -450,6 +456,7 @@ void sbndaq::CRTAframeReco::beginJob()
     recotree = tfs->make<TTree>("reco_tree", "reco_tree");
     recotree->Branch("Run", &fRun, "fRun/I");
     recotree->Branch("Event", &fEvent, "fEvent/I");
+    recotree->Branch("ClusterCount", &ClusterCount, "ClusterCount/I");
     recotree->Branch("t_low", &t_low, "t_low/l");
     recotree->Branch("cluster_id", &cluster_id);  
     recotree->Branch("hit_feb_h", &hit_feb_h);  
@@ -468,6 +475,8 @@ void sbndaq::CRTAframeReco::beginJob()
     //recotree->Branch("event", &event);
   }
 
+// Remove Michelle's code and replace with the ChannelMap Class
+/*
   // left Aframe
   horiz.clear();
   std::vector<int> match;  
@@ -499,9 +508,58 @@ void sbndaq::CRTAframeReco::beginJob()
     int thisfebh=fLeftAframeVList.at(i);
     CrossingFEBs.insert(std::make_pair(thisfebh,match));
   }
+*/
 
+// Implement Michelle's code using the ChannelMap Class
+// My version of the code ...
 
-
+  // Right Aframe
+  horiz.clear();
+  std::vector<int> match;
+  for (int i = 0; i < (int)map.mac5.size(); ++i) {  // Fill match with right vertical FEB IDs
+    if ( map.is_Left(map.mac5.at(i)) == 0 && map.is_Horiz(map.mac5.at(i)) == 0 ) {match.push_back(map.mac5.at(i));}
+  }
+  for (int i = 0; i < (int)map.mac5.size(); ++i) { // match horizontals on the right with the verticals on the right
+    if ( map.is_Left(map.mac5.at(i)) == 0 && map.is_Horiz(map.mac5.at(i)) == 1 ) {
+      int thisfebh = map.mac5.at(i);
+      CrossingFEBs.insert(std::make_pair(thisfebh, match));
+      horiz.push_back(thisfebh);
+    }
+  }  
+  match.clear(); 
+  for (int i = 0; i < (int)map.mac5.size(); ++i) {  // Fill match with right Horizontal FEB IDs
+    if ( map.is_Left(map.mac5.at(i)) == 0 && map.is_Horiz(map.mac5.at(i)) == 1 ) {match.push_back(map.mac5.at(i));}
+  }
+  for (int i = 0; i < (int)map.mac5.size(); ++i) { // match verticals on the right with the horizontals on the right
+    if ( map.is_Left(map.mac5.at(i)) == 0 && map.is_Horiz(map.mac5.at(i)) == 0 ) {
+      int thisfebv = map.mac5.at(i);
+      CrossingFEBs.insert(std::make_pair(thisfebv, match));
+    }
+  }  
+  match.clear();
+ 
+  // Left Aframe
+  for (int i = 0; i < (int)map.mac5.size(); ++i) {  // Fill match with left vertical FEB IDs
+    if ( map.is_Left(map.mac5.at(i)) == 1 && map.is_Horiz(map.mac5.at(i)) == 0 ) {match.push_back(map.mac5.at(i));}
+  }
+  for (int i = 0; i < (int)map.mac5.size(); ++i) { // match horizontals on the left with the verticals on the left
+    if ( map.is_Left(map.mac5.at(i)) == 1 && map.is_Horiz(map.mac5.at(i)) == 1 ) {
+      int thisfebh = map.mac5.at(i);
+      CrossingFEBs.insert(std::make_pair(thisfebh, match));
+      horiz.push_back(thisfebh);
+    }
+  }  
+  match.clear(); 
+  for (int i = 0; i < (int)map.mac5.size(); ++i) {  // Fill match with left Horizontal FEB IDs
+    if ( map.is_Left(map.mac5.at(i)) == 1 && map.is_Horiz(map.mac5.at(i)) == 1 ) {match.push_back(map.mac5.at(i));}
+  }
+  for (int i = 0; i < (int)map.mac5.size(); ++i) { // match verticals on the left with the horizontals on the left
+    if ( map.is_Left(map.mac5.at(i)) == 1 && map.is_Horiz(map.mac5.at(i)) == 0 ) {
+      int thisfebv = map.mac5.at(i);
+      CrossingFEBs.insert(std::make_pair(thisfebv, match));
+    }
+  }  
+  // End of my implementation
 
 }
 
@@ -587,7 +645,7 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
  
    // Duplicate Michelle's Code here to find t_low for this Art Event -> Not necessary !!!!!
    
-   std::cout << "t_low for this Art Event after being reset: " << t_low << std::endl;
+   //std::cout << "t_low for this Art Event after being reset: " << t_low << std::endl;
    /////////////////////////////////////////////////////////////////////////////////////////
    /////////////////////////////////////////////////////////////////////////////////////////
    /////////////////////////////////////////////////////////////////////////////////////////
@@ -627,18 +685,18 @@ void sbndaq::CRTAframeReco::analyze(const art::Event& evt)
     if (t_low == 0) { t_low = timestamp.at(i); }
     if (timestamp.at(i) < t_low) { t_low = timestamp.at(i); }
   }
-  std::cout << "t_low for this Art Event: " << t_low << std::endl;
+  //std::cout << "t_low for this Art Event: " << t_low << std::endl;
 
-  std::cout << std::endl;  
-  std::cout << "The number of Clusters in this event " << mac5_window.size() << std::endl;
-  std::cout << std::endl;
+  //std::cout << std::endl;  
+  //std::cout << "The number of Clusters in this event " << mac5_window.size() << std::endl;
+  //std::cout << std::endl;
 
   if (fMakeAnaTree) events->Fill();
   if (fMakeCRTHitTree) CRTmaketree();
   std::cout << "Filled Michelle's Trees" << std::endl;
   // Add a function for Aframe Reconstruction which fills the flattened tree
   if (fMakeRecoTree) AframeMakeRecoTree();
-  std::cout << "Filled My Tree" << std::endl;
+  std::cout << "Filled the Reco Tree" << std::endl;
 
 /*
 
@@ -770,7 +828,11 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
   //for (long unsigned int i = 0; i < window.size(); ++i) { 
   int num_bad = 0;
   int cluster_count = 0;
+  ClusterCount = 0; // this will hold the number of clusters which end up having reco hits
+
+  std::cout << "The total possible number of clusters for this Event: " << mac5_window.size() << std::endl;
   for (const auto & [key, value] : mac5_window) {
+    int num_reco_hits = 0;
   
     // Important: value holds a vector of BernCRTHitV2 objects associated with the Cluster ID: key
       
@@ -806,7 +868,7 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
       	    if (window_flags[key].at(ih2) == 3) {
     	      thisFEB2 = mac5_window[key].at(ih2);
       	      // are hits 100 ns apart or less in time?
-      	      float tdiff = fabs(thistime1-thistime2);
+      	      uint64_t tdiff = fabs(thistime1-thistime2);
       	      if (tdiff<fTimeCoinc) {
         	// next check if they are from crossing strips
       	        if (checkList(thisFEB2,match)) {
@@ -817,22 +879,28 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
 			  //int strip_vert = getstrip_reco(value.at(ih2));
 			  //int adcA_vert = adca; int adcB_vert = adcb;
                           // using new std::maps
+			  num_reco_hits += 1;
                           int strip_horiz = window_strip_num[key].at(ih1);
                           int adcA_horiz = window_adcA[key].at(ih1);
                           int adcB_horiz = window_adcB[key].at(ih1);
                           int strip_vert = window_strip_num[key].at(ih2);
                           int adcA_vert = window_adcA[key].at(ih2);
                           int adcB_vert = window_adcB[key].at(ih2);
-                          
+                          //if (thisFEB2 == 72) {std::cout << "We have vertical 72" << std::endl;} 
   			  TVector3 horiz_pos; 
   			  TVector3 vert_pos;
                           if (freco_mode == 0) {
-  			    horiz_pos = map.CalculatePosHoriz(thisFEB1, strip_horiz, 50, 50, 0); 
-  			    vert_pos = map.CalculatePosVert(thisFEB2, strip_vert, 50, 50, 0);
+  			    TVector3 horiz_pos_temp = map.CalculatePosHoriz(thisFEB1, strip_horiz, 50, 50, 0); 
+  			    TVector3 vert_pos_temp = map.CalculatePosVert(thisFEB2, strip_vert, 50, 50, 0);
+                            //if (thisFEB2 == 72) {std::cout << "Just set vert_pos_temp: x = " << vert_pos_temp.X() << std::endl;} 
+			    horiz_pos.SetXYZ(horiz_pos_temp.X(), horiz_pos_temp.Y(), horiz_pos_temp.Z());
+			    vert_pos.SetXYZ(vert_pos_temp.X(), vert_pos_temp.Y(), vert_pos_temp.Z());
                           }
                           else if (freco_mode == 1) { // Tanh weighting
-  			    horiz_pos = map.CalculatePosHoriz(thisFEB1, strip_horiz, adcA_horiz, adcB_horiz, 1); 
-  			    vert_pos = map.CalculatePosVert(thisFEB2, strip_vert, adcA_vert, adcB_vert, 1);
+  			    TVector3 horiz_pos_temp = map.CalculatePosHoriz(thisFEB1, strip_horiz, adcA_horiz, adcB_horiz, 1); 
+  			    TVector3 vert_pos_temp = map.CalculatePosVert(thisFEB2, strip_vert, adcA_vert, adcB_vert, 1);
+			    horiz_pos.SetXYZ(horiz_pos_temp.X(), horiz_pos_temp.Y(), horiz_pos_temp.Z());
+			    vert_pos.SetXYZ(vert_pos_temp.X(), vert_pos_temp.Y(), vert_pos_temp.Z());
                           }
 			  else {
                             std::cout << std::endl;
@@ -862,6 +930,11 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
 			    //std::cout << "YES We have some different paired times !!!!!!" << std::endl;   			  
 			  //  std::cout << std::endl;
 			  //}
+
+			  uint64_t t_1 = hit.time_h;			
+			  uint64_t t_2 = hit.time_v;			
+			  if (t_1 < t_low || t_2 < t_low) {std::cout << "Hit object times less than t_low ????" << std::endl;}
+
    			  if (thistime1 < t_low || thistime2 < t_low) {
  			    std::cout << std::endl;
   			    std::cout << std::endl;
@@ -879,7 +952,7 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
   			  hit_x_err.push_back(hit.x_err); hit_y_err.push_back(hit.y_err); hit_z_err.push_back(hit.z_err);
 			  hit_adcA_v.push_back(hit.adcA_v); hit_adcB_v.push_back(hit.adcB_v); hit_adcA_h.push_back(hit.adcA_h); hit_adcB_h.push_back(hit.adcB_h);  
 			  x_vert.push_back(hit.x_vert); y_horiz.push_back(hit.y_horiz); z_horiz.push_back(hit.z_horiz);
-
+			  
                         }
                         else {
 			  //int strip_horiz = getstrip_reco(value.at(ih2)); 
@@ -887,22 +960,29 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
 			  //int strip_vert = getstrip_reco(value.at(ih1));
 			  //int adcA_vert = adca; int adcB_vert = adcb;   
 			  // using new std::maps
+			  num_reco_hits += 1;
                           int strip_horiz = window_strip_num[key].at(ih2);
                           int adcA_horiz = window_adcA[key].at(ih2);
                           int adcB_horiz = window_adcB[key].at(ih2);
                           int strip_vert = window_strip_num[key].at(ih1);
                           int adcA_vert = window_adcA[key].at(ih1);
                           int adcB_vert = window_adcB[key].at(ih1);
+                          //if (thisFEB1 == 72) {std::cout << "We have vertical 72" << std::endl;} 
   			  
                           TVector3 horiz_pos; 
   			  TVector3 vert_pos;
                           if (freco_mode == 0) {
-  			    horiz_pos = map.CalculatePosHoriz(thisFEB1, strip_horiz, 50, 50, 0); 
-  			    vert_pos = map.CalculatePosVert(thisFEB2, strip_vert, 50, 50, 0);
+  			    TVector3 horiz_pos_temp = map.CalculatePosHoriz(thisFEB2, strip_horiz, 50, 50, 0); 
+  			    TVector3 vert_pos_temp = map.CalculatePosVert(thisFEB1, strip_vert, 50, 50, 0);
+                            //if (thisFEB1 == 72) {std::cout << "Just set vert_pos_temp: x = " << vert_pos_temp.X() << std::endl;} 
+			    horiz_pos.SetXYZ(horiz_pos_temp.X(), horiz_pos_temp.Y(), horiz_pos_temp.Z());
+			    vert_pos.SetXYZ(vert_pos_temp.X(), vert_pos_temp.Y(), vert_pos_temp.Z());
                           }
                           else if (freco_mode == 1) { // Tanh weighting
-  			    horiz_pos = map.CalculatePosHoriz(thisFEB1, strip_horiz, adcA_horiz, adcB_horiz, 1); 
-  			    vert_pos = map.CalculatePosVert(thisFEB2, strip_vert, adcA_vert, adcB_vert, 1);
+  			    TVector3 horiz_pos_temp = map.CalculatePosHoriz(thisFEB2, strip_horiz, adcA_horiz, adcB_horiz, 1); 
+  			    TVector3 vert_pos_temp = map.CalculatePosVert(thisFEB1, strip_vert, adcA_vert, adcB_vert, 1);
+			    horiz_pos.SetXYZ(horiz_pos_temp.X(), horiz_pos_temp.Y(), horiz_pos_temp.Z());
+			    vert_pos.SetXYZ(vert_pos_temp.X(), vert_pos_temp.Y(), vert_pos_temp.Z());
                           }
 			  else {
                             std::cout << std::endl;
@@ -932,6 +1012,10 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
 			    //std::cout << "YES We have some different paired times !!!!!!" << std::endl;   			  
 			  //  std::cout << std::endl;
 			  //}
+			  uint64_t t_1 = hit.time_h;			
+			  uint64_t t_2 = hit.time_v;			
+			  if (t_1 < t_low || t_2 < t_low) {std::cout << "Hit object times less than t_low ????" << std::endl;}
+			  
 			  if (thistime1 < t_low || thistime2 < t_low) {
  			    std::cout << std::endl;
   			    std::cout << std::endl;
@@ -960,11 +1044,12 @@ void sbndaq::CRTAframeReco::AframeMakeRecoTree()
     } // ih1 for loop
     // TODO Call the TrackMaker code here before clearing !!!!!
     cluster_count += 1; 
+    if (num_reco_hits > 0) {ClusterCount += 1;} 
   } // Loop over clusters in the window
   // fill the object-oriented tree entries -> Each entry is all the stuff associated with one full readout
   recotree->Fill();
-  std::cout << "number of bad timestamps for Event id: " << fEvent <<" --> num_bad: " << num_bad << std::endl;
-  std::cout << std::endl;
+ // std::cout << "number of bad timestamps for Event id: " << fEvent <<" --> num_bad: " << num_bad << std::endl;
+  //std::cout << std::endl;
   // Below code for object oriented eventually
   //for (int s = 0; s < event->GetClusterCount(); ++s) {
   //  event->GetCluster(s)->ClearHits();
@@ -1143,7 +1228,7 @@ void sbndaq::CRTAframeReco::analyze_bern_fragment(artdaq::Fragment & frag)  {
 
     // TODO Check that this is exactly what we want !!!
     uint64_t bin = (stamp - t_low)/dt;
-    
+    //std::cout << "Bin Value " << bin << std::endl;    
   
     //if(bin <= 1692301930000000000){
       //std::cout<<"bin: " << bin << " t_low: " << t_low << " stamp: " << stamp <<std::endl;

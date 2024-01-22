@@ -291,7 +291,8 @@ TVector3 ChannelMap::CalculatePosHoriz(int _mac5, int strip, int adcA, int adcB,
 
 
 TVector3 ChannelMap::CalculatePosVert(int _mac5, int strip, int adcA, int adcB, int mode) {
-        long unsigned int v_index = ChannelMap::GetFEBIndex(_mac5);
+        //std::cout << "Doing a vertical calculation" << std::endl;
+	long unsigned int v_index = ChannelMap::GetFEBIndex(_mac5);
         float d = GetHypotenuse(channel_ascending.at(v_index), strip, 0);
         //std::cout << "Calculated d" << std::endl;
         float corr = 0.0;
@@ -318,11 +319,14 @@ TVector3 ChannelMap::CalculatePosVert(int _mac5, int strip, int adcA, int adcB, 
                 if (v_index == mac5.size() - 2) {
                         // We have the vertical on the right closest to us
                         x = -1*( (module_length_h/2) - xpos.at(v_index) - d );
-
+			if (x > 0) {std::cout << "Warning: Wrong sign in vertical calculation !!!" << std::endl;}
                 }
                 else {
+			float check = module_width_v - d;
+			if (check < 0) {std::cout << "PROBLEM -> Vertical Check is wrong sign !!!" << std::endl;}
                         // We have the vertical on the right farthest away from us
                         x = (module_length_h/2) - xpos.at(v_index) - (module_width_v - d);
+			if (x < 0) {std::cout << "Warning: Wrong sign in vertical calculation !!!" << std::endl;}
 
                 }
         }
@@ -331,10 +335,15 @@ TVector3 ChannelMap::CalculatePosVert(int _mac5, int strip, int adcA, int adcB, 
                 if (v_index == 0) {
                         // We have the vertical on the left closest to us
                         x = -1*( (module_length_h/2) - xpos.at(v_index) - d );
+			if (x > 0) {std::cout << "Warning: Wrong sign in vertical calculation !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;}
+			//if (_mac5 == 72) { std::cout << "x in ChannelMap for FEB 72: " << x << std::endl; }
                 }
                 else {
+			float check = module_width_v - d;
+			if (check < 0) {std::cout << "PROBLEM -> Vertical Check is wrong sign !!!" << std::endl;}
                         // We have the vertical on the left farthest from us
                         x = (module_length_h/2) - xpos.at(v_index) - (module_width_v - d);
+			if (x < 0) {std::cout << "Warning: Wrong sign in vertical calculation !!!" << std::endl;}
                 }
 
         }
@@ -391,15 +400,15 @@ std::vector<float> ChannelMap::CalculateError(int _mac5_v, int _mac5_h) {
 	// Note: We will use 1 to denote vertical and 2 to denote horizontal 
 
 	// Note: For this approach, the x-position errors are always the same
-	float dx1 = strip_w_v/12; // assume uniform distribution
-	float dx2 = strip_l_h/12; 
+	float dx1 = strip_w_v/std::sqrt(12.0); // assume uniform distribution
+	float dx2 = strip_l_h/std::sqrt(12.0); 
 	errors.push_back(dx1); errors.push_back(dx2);
 
 	int index_v = GetFEBIndex(_mac5_v);
 	int index_h = GetFEBIndex(_mac5_h);
 		
-	float dw1 = strip_l_v/12;
-	float dw2 = strip_w_h/12;
+	float dw1 = strip_l_v/std::sqrt(12);
+	float dw2 = strip_w_h/std::sqrt(12);
 	
 	float dy1 = dw1*TMath::Sin(angle.at(index_v)); 
 	float dy2 = dw2*TMath::Sin(angle.at(index_h)); 
