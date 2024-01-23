@@ -19,10 +19,10 @@ namespace sbndaq {
 
   		private:
 
-			void ConfigureStart();
-			void ConfigureStop(){};
+			void ConfigureStart() override;
+			void ConfigureStop() override {};
 
-			size_t GetFEMCrateData();
+			size_t GetFEMCrateData() override;
 
 			std::mt19937 engine_;
 			int data_wait_time_;

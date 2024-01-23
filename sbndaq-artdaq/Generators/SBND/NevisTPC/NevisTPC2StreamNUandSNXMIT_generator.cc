@@ -97,10 +97,11 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   auto FireCALIB_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( FireCALIB_functor, "FireCALIBWorkerThread" ) );
   auto FireCALIB_worker = share::WorkerThread::createWorkerThread( FireCALIB_worker_functor );
   FireCALIB_thread_.swap(FireCALIB_worker);
-  if( fCALIBFreq > 0 ){
-    FireCALIB_thread_->start();
-    TLOG(TLVL_INFO) << "Started FireCALIB thread" << TLOG_ENDL;
-  }
+  //  if( fCALIBFreq > 0 ){
+  // FireCALIB_thread_->start();
+  // TLOG(TLVL_INFO) << "Started FireCALIB thread" << TLOG_ENDL;
+  //}
+
   // Set up worker FireController thread.
   share::ThreadFunctor FireController_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::FireController, this );
   auto FireController_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( FireController_functor, "FireControllerWorkerThread" ) );
@@ -115,12 +116,27 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
 }
 
+void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
+  if( fCALIBFreq > 0 ){                                                                                         
+    FireCALIB_thread_->start();
+    TLOG(TLVL_INFO) << "Started FireCALIB thread" << TLOG_ENDL;
+}
+
+  if( fControllerTriggerFreq > 0 ){
+    FireController_thread_->start();
+    TLOG(TLVL_INFO) << "Started FireController thread" << TLOG_ENDL;
+  }
+
+  //  if( fControllerTriggerFreq < 0 and  ){
+
+}
+
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
   if( fSNReadout ){
     GetSNData_thread_->stop();
     WriteSNData_thread_->stop();
   }
-  FireCALIB_thread_->stop();
+  //  FireCALIB_thread_->stop();
   FireController_thread_->stop();
   MonitorCrate_thread_->stop();
 
@@ -188,10 +204,11 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   // Taken from NevisTPCFile_generator and adapted to use an XMITReader
   // To be reviewed
   // uint16_t* buffer = new uint16_t[fChunkSize];
-
+  TLOG(TGETDATA) << "Going to call Readsome function";
   //std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(buffer), fChunkSize);
   std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(&DMABuffer_[0]), fChunkSize);
   //unsigned wordsRead = bytesRead * sizeof(char) / sizeof(uint16_t);
+  TLOG(TGETDATA) << "Number of bytes read:" << int(bytesRead) ;
 
   //std::copy(buffer, buffer + wordsRead, &DMABuffer_[0]);
 

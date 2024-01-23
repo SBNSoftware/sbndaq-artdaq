@@ -69,14 +69,17 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 }
 
 void sbndaq::NevisTPC_generatorBase::start(){
-  
-  // Magically start getdata thread
+
+ // Magically start getdata thread
   GetData_thread_->start();
+  startFireCalibTrig();
+
 }
 
 void sbndaq::NevisTPC_generatorBase::stopAll(){
-  
-  GetData_thread_->stop();
+  //FireCALIB_thread_->stop();
+    GetData_thread_->stop();
+ 
 }
 
 void sbndaq::NevisTPC_generatorBase::stop(){
@@ -124,11 +127,34 @@ size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
 bool sbndaq::NevisTPC_generatorBase::GetData(){
   
   TRACE(TGETDATA,"GetData() called");
-  
+
+  auto start_time = std::chrono::steady_clock::now(); 
+
   size_t n_words = GetFEMCrateData()/sizeof(uint16_t);
   TRACE(TGETDATA,"GetFEMCrateData() return %lu words",n_words);
-  if(n_words==0)
+  //  if(n_words==0)
+  //   return false;
+
+  while (n_words == 0) {
+    n_words = GetFEMCrateData()/sizeof(uint16_t);
+    auto current_time = std::chrono::steady_clock::now();
+    auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
+    if (elapsed_time > 5){
+
+      char line[132];
+      sprintf(line,"There is no data for 5 seconds"); //,current_event,header->getEventNum());                                                                 
+      TRACE(TERROR,line);
+      throw std::runtime_error(line);
+
       return false;
+    }
+    // Introduce a delay to avoid continuous checking                                                                                                          
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+
+
+
 
   size_t new_buffer_size = CircularBuffer_.Insert(n_words,DMABuffer_);	
   
