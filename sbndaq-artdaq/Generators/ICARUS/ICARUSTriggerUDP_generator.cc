@@ -37,7 +37,6 @@ sbndaq::ICARUSTriggerUDP::ICARUSTriggerUDP(fhicl::ParameterSet const& ps)
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
-  , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
 {
   
   configsocket_ = socket(AF_INET, SOCK_STREAM, 0);
@@ -154,13 +153,6 @@ bool sbndaq::ICARUSTriggerUDP::getNext_(artdaq::FragmentPtrs& frags)
 
   if(data_input==""){
     TLOG(TLVL_DEBUG) << "No data after poll with timeout? " << data_input;
-    return true;
-  }
-
-  //if shouldn't send fragments, then don't create fragment/send
-  if(generated_fragments_per_event_==0){
-    fLastEvent = fEventCounter;
-    ++fEventCounter;
     return true;
   }
 
