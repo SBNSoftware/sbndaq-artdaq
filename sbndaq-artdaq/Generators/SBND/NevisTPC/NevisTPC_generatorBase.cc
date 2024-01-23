@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <thread>
 
 sbndaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
 	
