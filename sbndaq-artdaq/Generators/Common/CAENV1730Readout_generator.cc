@@ -1932,11 +1932,11 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
   retcod = CAENVME_SWRelease( VMESWrel );
   retcod = CAENComm_SWRelease( CommSWrel );
   TLOG(TLVL_INFO) << "Software releases"
-		  << "\nCAENDGTZ: " << DGTZSWrel
-                  << "\nCAENVME: " << VMESWrel
-                  << "\nCAENComm: " << CommSWrel;
+		  << "\ncaendigitizer: " << DGTZSWrel
+                  << "\ncaenvme: " << VMESWrel
+                  << "\ncaencomm: " << CommSWrel;
   
-  // A3818 Firmware / Driver
+  // A3818 firmware / driver
   short Device = 0;
   int32_t BHandle;
 
@@ -1945,14 +1945,19 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
     char fwrev[100];
     char drrev[100];
     auto ret = CAENVME_BoardFWRelease(BHandle,fwrev);
-    if (!ret)
-      TLOG(TLVL_INFO) << "A3818 Firmware: " << fwrev;
-    else TLOG(TLVL_INFO) << "Unable to fetch A3818 firmware: " << CAENVME_DecodeError(ret);
+
+    std::ostringstream a3818Stream;
+    a3818Stream << "A3818 firmware: ";
+    if (!ret) a3818Stream << fwrev << "\n";
+    else a3818Stream << CAENVME_DecodeError(ret) << "\n";
+
     ret = CAENVME_DriverRelease( BHandle, drrev );
-    if (!ret)
-      TLOG(TLVL_INFO) << "A3818 Driver: " << drrev;
-    else TLOG(TLVL_INFO) << "Unable to fetch A3818 driver: " << CAENVME_DecodeError(ret);
+    a3818Stream << "A3818 driver: ";
+    if (!ret) a3818Stream << drrev;
+    else a3818Stream << CAENVME_DecodeError(ret);
    
+    TLOG(TLVL_INFO) << a3818Stream.str();
+
     CAENVME_End(BHandle);
   }
 }
