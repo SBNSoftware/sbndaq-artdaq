@@ -21,7 +21,6 @@
 // Constructor
 sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   CommandableFragmentGenerator(ps),
-  generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0)),
   ps_(ps)
 {
   fragmentId  = ps.get<uint32_t>("fragmentId");
@@ -337,14 +336,6 @@ bool sbndaq::WhiteRabbitReadout::getData()
 
 bool sbndaq::WhiteRabbitReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
-
-  //copied from TriggerUDP code: if shouldn't send fragments, then don't create fragment/send
-  if(generated_fragments_per_event_== 0){
-    fLastEvent = fEventCounter;
-    ++fEventCounter;
-    return true;
-  }
-
   FillFragment(frags,true);
 
   for (auto const& frag : frags) {
