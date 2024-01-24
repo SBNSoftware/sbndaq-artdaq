@@ -16,6 +16,7 @@
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
 
 #include <fstream> // temp
+#include <zmq.hpp>
 
 namespace sbndaq {
 
@@ -25,17 +26,19 @@ namespace sbndaq {
       NevisTPC_generatorBase(_p),
       fControllerModule( new nevistpc::ControllerModule(_p) ),
       fNUXMITReader( new nevistpc::XMITReader("nu_xmit_reader", _p) ),
-      fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) )
+      fSNXMITReader( new nevistpc::XMITReader("sn_xmit_reader", _p) ),
+      context(1), _zmqGPSPublisher(context, ZMQ_PUB)
     {
       ConfigureStart();
     }
     virtual ~NevisTPC2StreamNUandSNXMIT() {}
-    
+    void startFireCalibTrig() override;
+
   private:
-    void ConfigureStart();
-    void ConfigureStop();
+    void ConfigureStart() override;
+    void ConfigureStop() override;
     
-    size_t GetFEMCrateData();
+    size_t GetFEMCrateData() override;
 
     nevistpc::ControllerModuleSPtr fControllerModule;
     nevistpc::XMITReaderSPtr fNUXMITReader;
@@ -44,6 +47,7 @@ namespace sbndaq {
 
     uint32_t fChunkSize;  //!< Number of bytes to read at once in NU stream
     uint32_t fSNChunkSize;  //!< Number of bytes to read at once in SN stream
+    std::string fGPSZMQPortNTB; //! Port used to connect NTB and TPC board readers. must be the same port defined in NTB fcl
 
     bool FireCALIB(); //! Fire CALIB trigger
     share::WorkerThreadUPtr FireCALIB_thread_;
@@ -57,6 +61,10 @@ namespace sbndaq {
     share::WorkerThreadUPtr MonitorCrate_thread_;
     int fMonitorPeriod;  //!< Period in seconds to read electronics status
 
+    bool GPSTime();
+    share::WorkerThreadUPtr GPSTime_thread_;
+    int fGPSTimeFreq;
+
     bool fSNReadout; //!< Do continuous readout (supernova stream)
     bool GetSNData(); //! Get SN stream data
     share::WorkerThreadUPtr GetSNData_thread_;
@@ -65,6 +73,9 @@ namespace sbndaq {
     bool WriteSNData(); //! Write SN stream data
     share::WorkerThreadUPtr WriteSNData_thread_;
     uint16_t* SNBuffer_;
+
+    zmq::context_t context;
+    zmq::socket_t _zmqGPSPublisher;
 
     bool fDumpBinary; //!< Write binary file before the artdaq back-end
     std::string fDumpBinaryDir; //!< Directory for binary file dump

@@ -28,7 +28,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   _redisHost(ps.get<std::string>("redisHost","localhost")),
   _redisPort(ps.get<int>("redisPort",6379)),
   _issueStart(ps.get<bool>("issueStart",true)),
-  _readTemps(ps.get<bool>("readTemps",true))
+  _readTemps(ps.get<bool>("readTemps",true)),
+  _compressionScheme(ps.get<size_t>("CompressionScheme",0))
 {
   InitializeHardware();
   InitializeVeto();
@@ -55,6 +56,7 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
       throw cet::exception("PhysCrateData") << "Could not setup redis context without error";
     }
   }
+
 
 }
 
@@ -85,6 +87,37 @@ void icarus::PhysCrateData::ForceReset()
   for(int ib=0; ib<physCr->NBoards(); ++ib){
     auto bdhandle = physCr->BoardHandle(ib);
     CAENComm_Write32(bdhandle, A_Signals, 0x1);
+  }
+}
+
+// if we were to use more types of compressions schema this would likely need an arguement, but as it stands it's just a toggle
+void icarus::PhysCrateData::SetCompressionBits()
+{
+  for(int ib=0; ib<physCr->NBoards(); ++ib)
+  {
+    auto bdhandle = physCr->BoardHandle(ib);
+    uint32_t ctrlReg;
+    CAENComm_Read32(bdhandle, A_ControlReg, (uint32_t*) &ctrlReg);
+    ctrlReg |= 0x20;
+    CAENComm_Write32(bdhandle, A_ControlReg, ctrlReg);
+  }
+  TRACEN("PhysCrateData", TLVL_INFO, "Enabled TPC hardware compression scheme %ld", _compressionScheme);
+}
+
+// read the firmware version off the A2795 boards
+void icarus::PhysCrateData::ReadFirmwareVersion()
+{
+  for(int ib=0; ib<physCr->NBoards(); ++ib)
+  {
+    auto bdhandle = physCr->BoardHandle(ib);
+    uint32_t ctrlReg;
+    CAENComm_Read32(bdhandle, A_FWRevision, (uint32_t*) &ctrlReg);
+    uint8_t  version_major  = ((ctrlReg & 0x0000FF00) >> 8); // these version numbers might be intended to be read as the revision_day below
+    uint8_t  version_minor  = (ctrlReg & 0x000000FF);        // but it's still sequential, so I don't think it matters too much
+    uint8_t  revision_day   = 10*((ctrlReg & 0x00F00000) >> 20) + ((ctrlReg & 0x000F0000) >> 16); // this is an insane way to store a day
+    uint8_t  revision_month = ((ctrlReg & 0x0F000000) >> 24);
+    uint16_t revision_year  = 2016 + ((ctrlReg & 0xF0000000) >> 28);
+    TRACEN("PhysCrateData", TLVL_INFO, "Board %d is running firmware version %d.%d, realized on %02d/%02d/%04d (DD/MM/YYYY)", ib, version_major, version_minor, revision_day, revision_month, revision_year);
   }
 }
 
@@ -201,6 +234,8 @@ void icarus::PhysCrateData::InitializeHardware(){
   physCr->initialize(pcieLinks_);
   this->nBoards_ = (uint16_t)(physCr->NBoards());
   ForceReset();
+  if(_compressionScheme != 0) SetCompressionBits(); // CompressionScheme is set up to mulitple compression schema, but currently there are only two
+  ReadFirmwareVersion();
 
   SetDCOffset();
   SetTestPulse();

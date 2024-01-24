@@ -21,15 +21,18 @@ namespace sbndaq
     private:
 
      // "start" transition
-     void start() override;
+    void start() override;
  
      // "stop" transition
-     void stop() override;
+    void stop() override;
      bool getNext_(artdaq::FragmentPtrs& output) override;
      void stopNoMutex() override {}
 
      void setupMBB(fhicl::ParameterSet const& MBB_config);
 
-     std::unique_ptr<MBB> mbb;
+    uint32_t stop_femb_daq;
+    uint32_t start_femb_daq;
+    uint32_t sleep_time;     
+std::unique_ptr<MBB> mbb;
   };
 }

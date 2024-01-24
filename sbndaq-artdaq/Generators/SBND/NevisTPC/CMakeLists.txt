@@ -4,6 +4,11 @@ if(DEFINED ENV{WINDRIVER_INC})
 add_subdirectory(nevishwutils)
 include_directories ( $ENV{WINDRIVER_INC} )
 
+if(DEFINED ENV{ZMQ_DIR})
+    include_directories($ENV{ZMQ_INC})
+    link_directories($ENV{ZMQ_LIB})
+endif()
+
 SET_SOURCE_FILES_PROPERTIES(NevisTPC2StreamNUandSNXMIT_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTBStream_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCNUXMIT_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
@@ -17,6 +22,7 @@ cet_make_library(
    LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
     sbndaq-artdaq_nevishwutils
+    zmq
 )
 
 cet_make_library(
@@ -27,6 +33,7 @@ cet_make_library(
    LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
     sbndaq-artdaq_nevishwutils
+    zmq
 )
 
 
