@@ -6,6 +6,8 @@
 
 #include "icarus-base/VetoUDP.h"
 
+#include "CAENVMElib.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "hiredis/hiredis.h"

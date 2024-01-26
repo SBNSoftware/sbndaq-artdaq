@@ -104,9 +104,23 @@ void icarus::PhysCrateData::SetCompressionBits()
   TRACEN("PhysCrateData", TLVL_INFO, "Enabled TPC hardware compression scheme %ld", _compressionScheme);
 }
 
-// read the firmware version off the A2795 boards
+// read the firmware versions
 void icarus::PhysCrateData::ReadFirmwareVersion()
 {
+  // A3818 firmware / driver
+  for (const auto& link : pcieLinks_)
+  {
+    int32_t bdhandle;
+    CAENVME_Init2(cvA3818, &link, 0, &bdhandle);
+    char firmwareRev[100];
+    char driverRev  [100];
+    CAENVME_BoardFWRelease(bdhandle, firmwareRev);
+    CAENVME_DriverRelease (bdhandle, driverRev  );
+    TRACEN("PhysCrateData", TLVL_INFO, "A3818 on link %d firmware revision: %s\n                  driver revision: %s", link, firmwareRev, driverRev);
+    CAENVME_End(bdhandle);
+  }
+
+  // A2795 firmware
   for(int ib=0; ib<physCr->NBoards(); ++ib)
   {
     auto bdhandle = physCr->BoardHandle(ib);
@@ -117,7 +131,7 @@ void icarus::PhysCrateData::ReadFirmwareVersion()
     uint8_t  revision_day   = 10*((ctrlReg & 0x00F00000) >> 20) + ((ctrlReg & 0x000F0000) >> 16); // this is an insane way to store a day
     uint8_t  revision_month = ((ctrlReg & 0x0F000000) >> 24);
     uint16_t revision_year  = 2016 + ((ctrlReg & 0xF0000000) >> 28);
-    TRACEN("PhysCrateData", TLVL_INFO, "Board %d is running firmware version %d.%d, realized on %02d/%02d/%04d (DD/MM/YYYY)", ib, version_major, version_minor, revision_day, revision_month, revision_year);
+    TRACEN("PhysCrateData", TLVL_INFO, "A2795 board %d is running firmware version %d.%d, realized on %02d/%02d/%04d (DD/MM/YYYY)", ib, version_major, version_minor, revision_day, revision_month, revision_year);
   }
 }
 
