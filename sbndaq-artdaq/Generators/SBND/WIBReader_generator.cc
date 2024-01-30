@@ -104,7 +104,7 @@ namespace sbndaq
    auto femb_table                 = WIB_config.get<std::string>("WIB.femb_table");
    auto DTS_source                 = WIB_config.get<uint8_t>("WIB.DTS_source");
    auto enable_FEMBs               = WIB_config.get<std::vector<bool> >("WIB.enable_FEMBs");
-   auto FEMB_configs               = WIB_config.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
+   auto FEMB_configs               = WIB_config.get<fhicl::ParameterSet>("WIB.FEMBs");
    auto wib_fake_data              = WIB_config.get<bool>("WIB.run_wib_fake_data_mode");
    auto wib_fake_data_id           = WIB_config.get<uint8_t>("WIB.wib_fake_data_mode");
    auto do_femb_scan               = WIB_config.get<bool>("WIB.run_femb_scan");
@@ -149,7 +149,7 @@ namespace sbndaq
    if (!use_old_wib_config){
       if (do_femb_scan){ 
          TLOG_INFO(identification) << "Now Trying to execute FEMB_SCAN function " << TLOG_ENDL;
-         FEMB_SCAN(enable_FEMBs, (FEMB_configs.at(0)).get<uint32_t>("expected_femb_fw_version"));
+         FEMB_SCAN(enable_FEMBs, FEMB_configs.get<fhicl::ParameterSet>("femb0").get<uint32_t>("expected_femb_fw_version"));
       }
    }
    
@@ -173,19 +173,19 @@ namespace sbndaq
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
        TLOG_INFO(identification) << "FEMB No. " << iFEMB << TLOG_ENDL; 
        
-       fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
+       fhicl::ParameterSet const& FEMB_config = FEMB_configs.get<fhicl::ParameterSet>(std::string("femb").append(std::to_string(iFEMB-1)));
        
        if(enable_FEMBs.at(iFEMB-1)){
-          TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
-	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
-	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
-	  if (!wib_fake_data) setupFEMB(iFEMB,FEMB_config);
-	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
-       }
-       else{
+          TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL;
+	        TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
+	        if (!wib_fake_data) { 
+             setupFEMB(iFEMB,FEMB_config); 
+          }
+	        TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
+       }else{
          if(use_FEMB_fake_data.at(iFEMB-1) && !wib_fake_data){
-	    setupFEMB_to_send_fake_data(iFEMB, femb_fake_data_mode.at(iFEMB-1));
-	 }
+	          setupFEMB_to_send_fake_data(iFEMB, femb_fake_data_mode.at(iFEMB-1));
+	       }
        }
    }
    
