@@ -11,17 +11,17 @@
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   TLOG(TLVL_INFO) << "ConfigureStart";
 
-  fChunkSize = ps_.get<int>("ChunkSize", 4096);
-  fMonitorPeriod = ps_.get<int>("MonitorPeriod", 12);
-  fCALIBFreq = ps_.get<double>("CALIBTriggerFrequency", -1);
+  fChunkSize             = ps_.get<int>("ChunkSize", 4096);
+  fMonitorPeriod         = ps_.get<int>("MonitorPeriod", 12);
+  fCALIBFreq             = ps_.get<double>("CALIBTriggerFrequency", -1);
   fControllerTriggerFreq = ps_.get<double>("ControllerTriggerFrequency", -1);
-  fDumpBinary = ps_.get<bool>("DumpBinary", false);
-  fDumpBinaryDir = ps_.get<std::string>("DumpBinaryDir", ".");
-  fSNReadout = ps_.get<bool>("DoSNReadout", true);
-  fSNChunkSize = ps_.get<int>("SNChunkSize", 100000);
-  fGPSTimeFreq = ps_.get<double>("GPSTimeFrequency", -1);
-  fGPSZMQPortNTB = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
-
+  fDumpBinary            = ps_.get<bool>("DumpBinary", false);
+  fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
+  fSNReadout             = ps_.get<bool>("DoSNReadout", true);
+  fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
+  fGPSTimeFreq           = ps_.get<double>("GPSTimeFrequency", -1);
+  fGPSZMQPortNTB         = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
+  fUseZMQ                = ps_.get<bool>("UseZMQ",false);
 
   SNDMABuffer_.reset(new uint16_t[fSNChunkSize]);
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
@@ -29,7 +29,8 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   SNBuffer_ = new uint16_t[fSNChunkSize];
   //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
 
-  _zmqGPSPublisher.bind(fGPSZMQPortNTB); // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
+  if(fUseZMQ){
+      _zmqGPSPublisher.bind(fGPSZMQPortNTB);} // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
       // Any port > 10000 can be used by artdaq (netstat -lpnu4 --> this will tell you the used ports)
       //    publisher.bind("udp://127.0.0.1:7620");
 
@@ -125,7 +126,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   auto GPSTime_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( GPSTime_functor, "GPSTimeWorkerThread" ) );
   auto GPSTime_worker = share::WorkerThread::createWorkerThread( GPSTime_worker_functor );
   GPSTime_thread_.swap(GPSTime_worker);
-  if( fGPSTimeFreq > 0 ) GPSTime_thread_->start();
+  if( fGPSTimeFreq > 0 && fUseZMQ ) GPSTime_thread_->start();
   TLOG(TLVL_INFO) << "Started GPS thread" << TLOG_ENDL;
 
 }
@@ -220,7 +221,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
   if(fGPSTimeFreq < 0 || next_check_time > std::chrono::steady_clock::now() ) return false;
   //otherwise get the current gps stamp                                                                                                                
   nevistpc::TriggerModuleGPSStamp nowGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister();
-  const auto start = std::chrono::steady_clock::now();
+  //const auto start = std::chrono::steady_clock::now();
   struct timespec unixtime;
   clock_gettime(CLOCK_REALTIME, &unixtime);
 
@@ -229,9 +230,6 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
       (nowGPSStamp.gps_sample != lastGPSStamp.gps_sample) ||
       (nowGPSStamp.gps_sample_div != lastGPSStamp.gps_sample_div) ){
     
-      //TLOG(TLVL_INFO) << "NTP time GPS Received by TPC " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
-      //TLOG(TLVL_INFO) << "Nevis Clock time GPS Received by TPC " << nowGPSStamp.gps_frame << " , " << nowGPSStamp.gps_sample << " , " << nowGPSStamp.gps_sample_div << TLOG_ENDL;
-     
       //update stamps                                                                                                                                        
       lastGPSStamp = nowGPSStamp;
       
@@ -253,20 +251,16 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
       long long timestamp = unixtime.tv_sec;
       zmq::message_t zmqTimestamp(sizeof(timestamp));
 
-      const auto start2 = std::chrono::steady_clock::now();
-
       memcpy(zmqTimestamp.data(), &timestamp, sizeof(timestamp));
       _zmqGPSPublisher.send(zmqTimestamp, ZMQ_SNDMORE);
 
       memcpy(zmqMessage.data(), message.c_str(), message.size());
       _zmqGPSPublisher.send(zmqMessage);
 
-      const auto end   = std::chrono::steady_clock::now();
-
-      auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start2).count();
+      //const auto end   = std::chrono::steady_clock::now();
+      //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start2).count();
       //TLOG(TLVL_INFO) << "ZMQ Message sending latency: " << duration << TLOG_ENDL;
-
-      auto duration2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+      //auto duration2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
       //TLOG(TLVL_INFO) << "latency from time GPS is received to after message is sent: " << duration2 << TLOG_ENDL;
 
   }

@@ -48,6 +48,7 @@ namespace sbndaq {
     uint32_t fChunkSize;  //!< Number of bytes to read at once in NU stream
     uint32_t fSNChunkSize;  //!< Number of bytes to read at once in SN stream
     std::string fGPSZMQPortNTB; //! Port used to connect NTB and TPC board readers. must be the same port defined in NTB fcl
+    bool fUseZMQ;    //! Must be turned on to initiate zmq port and send messages. should be specified in corresponding tpc fcl (currently tpc01)
 
     bool FireCALIB(); //! Fire CALIB trigger
     share::WorkerThreadUPtr FireCALIB_thread_;
