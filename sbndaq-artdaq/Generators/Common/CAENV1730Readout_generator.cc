@@ -65,7 +65,10 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
     TLOG(TLVL_ERROR) << "Terminating process";
     abort();
   }
-
+ 
+  // check current firmware/software versions
+  GetSWInfo();
+  
   retcode = CAEN_DGTZ_Reset(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
   
@@ -1908,6 +1911,55 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
     //throw(e);
   }
   
+}
+
+void sbndaq::CAENV1730Readout::GetSWInfo(){
+
+  int retcod=0;
+  CAEN_DGTZ_BoardInfo_t info;
+
+  // CAEV1730 S/N and firmware
+  retcod = CAEN_DGTZ_GetInfo(fHandle,&info);
+  if( retcod == CAEN_DGTZ_Success ){
+    TLOG(TLVL_INFO) << info.ModelName << " S/N: " << info.SerialNumber 
+                    << "\nFirmware ROC: " << info.ROC_FirmwareRel 
+                    << "\nFirmware AMC: " << info.AMC_FirmwareRel;
+  }
+
+  // CAEN software releases
+  char CommSWrel[30], VMESWrel[30], DGTZSWrel[30];
+  retcod = CAEN_DGTZ_SWRelease( DGTZSWrel );
+  retcod = CAENVME_SWRelease( VMESWrel );
+  retcod = CAENComm_SWRelease( CommSWrel );
+  TLOG(TLVL_INFO) << "Software releases"
+		  << "\ncaendigitizer: " << DGTZSWrel
+                  << "\ncaenvme: " << VMESWrel
+                  << "\ncaencomm: " << CommSWrel;
+  
+  // A3818 firmware / driver
+  short Device = 0;
+  int32_t BHandle;
+
+  if( CAENVME_Init2(cvA3818, &fCAEN.link, Device, &BHandle) == cvSuccess ) {
+  
+    char fwrev[100];
+    char drrev[100];
+    auto ret = CAENVME_BoardFWRelease(BHandle,fwrev);
+
+    std::ostringstream a3818Stream;
+    a3818Stream << "A3818 firmware: ";
+    if (!ret) a3818Stream << fwrev << "\n";
+    else a3818Stream << CAENVME_DecodeError(ret) << "\n";
+
+    ret = CAENVME_DriverRelease( BHandle, drrev );
+    a3818Stream << "A3818 driver: ";
+    if (!ret) a3818Stream << drrev;
+    else a3818Stream << CAENVME_DecodeError(ret);
+   
+    TLOG(TLVL_INFO) << a3818Stream.str();
+
+    CAENVME_End(BHandle);
+  }
 }
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::CAENV1730Readout)

@@ -36,6 +36,7 @@ cet_make_library( LIBRARY_NAME sbndaq-artdaq_nevishwutils
        TimeUtils.cpp
        StringUtils.cpp
   LIBRARIES
+       ${LIBRARY_CORE_LIB_LIST}
        cetlib::cetlib
        fhiclcpp::fhiclcpp
        artdaq_utilities::artdaq-utilities_Plugins
