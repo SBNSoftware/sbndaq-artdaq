@@ -39,7 +39,6 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
-  , generated_fragments_per_event_(ps.get<int>("generated_fragments_per_event",0))
   , initialization_data_fpga_(ps.get<fhicl::ParameterSet>("fpga_init_params"))
   , initialization_data_spexi_(ps.get<fhicl::ParameterSet>("spexi_init_params"))
 {
@@ -332,15 +331,6 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     return true;
   }
 
-  //if shouldn't send fragments, then don't create fragment/send
-  if(generated_fragments_per_event_==0){
-    fLastEvent = fEventCounter;
-    ++fEventCounter;
-    metricMan->sendMetric("EventRate",1, "Hz", 11,artdaq::MetricMode::Rate);
-    metricMan->sendMetric("EventCounter",uint64_t{fEventCounter}, "Triggers", 11,artdaq::MetricMode::LastPoint);
-    return true;
-  }
-  
   icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerV3String(buffer);
 
   uint64_t event_no = fEventCounter;

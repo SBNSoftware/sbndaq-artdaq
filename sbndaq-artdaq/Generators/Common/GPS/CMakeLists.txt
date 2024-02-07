@@ -8,8 +8,12 @@ find_package(EPICS 7.0.6 REQUIRED)
 set(PQXX_MAJOR_VERSION 7)
 if(DEFINED ENV{PQXX_DIR})
     include_directories($ENV{PQXX_INC})
-    link_directories($ENV{PQXX_LIB})
-    set(PQXX_MAJOR_VERSION 6)
+
+    if(DEFINED ENV{PQXX_LIBRARIES})
+      link_directories($ENV{PQXX_LIBRARIES})
+    else()
+      link_directories($ENV{PQXX_LIB})
+    endif()
 endif()
 
 cet_make_library(LIBRARY_NAME sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase

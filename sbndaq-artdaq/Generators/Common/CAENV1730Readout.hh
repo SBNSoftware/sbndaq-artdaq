@@ -177,6 +177,11 @@ namespace sbndaq
       TTEMP     = 30
     };
 
+    enum
+    {
+      V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
+    };
+
     //fhicl parameters
     int fVerbosity;
     int fBoardChainNumber;
@@ -200,6 +205,7 @@ namespace sbndaq
     bool fOutputClkPhase;
 
     bool fUseTimeTagForTimeStamp;
+    bool fUseTimeTagShiftForTimeStamp;
     uint32_t fTimeOffsetNanoSec;
 
     // Animesh & Aiwu add fhicl parameters - LVDS logic
@@ -252,6 +258,7 @@ namespace sbndaq
     uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
     
     //functions
+    void GetSWInfo();
     void Configure();
 
     void ConfigureRecordFormat();    
@@ -269,7 +276,6 @@ namespace sbndaq
     void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
     void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
     void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
-
 
     bool WaitForTrigger();
     bool GetData();
