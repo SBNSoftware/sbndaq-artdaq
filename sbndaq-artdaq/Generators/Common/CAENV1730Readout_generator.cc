@@ -28,7 +28,8 @@ using namespace sbndaq;
 sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   CommandableFragmentGenerator(ps),
   fCAEN(ps),
-  fAcqMode(CAEN_DGTZ_SW_CONTROLLED)
+  fAcqMode(CAEN_DGTZ_SW_CONTROLLED),
+  exitTimerManager()
 {
   uint32_t data;
 
@@ -1308,7 +1309,7 @@ void sbndaq::CAENV1730Readout::stop()
   if(fVerbosity>0)
     TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop()" << TLOG_ENDL;
-
+  exitTimerManager.startExitTimer(10);
   GetData_thread_->stop();
 
   CAEN_DGTZ_ErrorCode retcode;
