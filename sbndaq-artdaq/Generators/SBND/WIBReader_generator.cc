@@ -27,6 +27,7 @@
 #include <thread>
 #include <ctime>
 #include <time.h>
+#include <cstdlib>
 
 namespace sbndaq 
 {
@@ -92,7 +93,7 @@ namespace sbndaq
     TLOG_INFO(identification) << "CRATE ADDRESS : " << std::hex << int(wib->Read("CRATE_ADDR")) << TLOG_ENDL;
     TLOG_INFO(identification) << "FIRMWARE TRACKER : " << std::hex << int(wib->Read(0x100)) << TLOG_ENDL;
 
-    if(!calibration_mode) disconnectWIB_releaseSemaphores();
+    if(!calibration_mode) disconnectWIB_releaseSemaphores(); // commented out 01/19/2024 by Varuna
     TLOG_INFO(identification) << "WIBReader constructor completed";
  }
 
@@ -111,6 +112,8 @@ namespace sbndaq
    auto use_old_wib_config         = WIB_config.get<bool>("WIB.use_old_wib_config");
    auto use_FEMB_fake_data         = WIB_config.get<std::vector<bool> >("WIB.use_FEMB_fake_data");
    auto femb_fake_data_mode        = WIB_config.get<std::vector<uint8_t> >("WIB.femb_fake_data_mode");
+   auto use_mbb_cmd                = WIB_config.get<bool>("WIB.use_mbb_cmd");
+   auto do_err_chk                 = WIB_config.get<bool>("WIB.do_err_chk");
    
    const std::string identification = "SBNDWIBReader::setupWIB";
    
@@ -179,7 +182,11 @@ namespace sbndaq
           TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
 	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
-	  if (!wib_fake_data) setupFEMB(iFEMB,FEMB_config);
+	  if (!wib_fake_data) {
+	     setupFEMB(iFEMB,FEMB_config);
+	     if(use_mbb_cmd) prepFEMB_MBB_Calib(iFEMB);
+	     //setupFEMB_to_send_fake_data(iFEMB, femb_fake_data_mode.at(iFEMB-1));
+	  }
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
        else{
@@ -191,8 +198,21 @@ namespace sbndaq
    
    TLOG_INFO(identification) << "FEMBs are configured." << TLOG_ENDL;
    TLOG_INFO(identification) << "About to issue WIB sync command once. " << TLOG_ENDL;
-   IssueWIBSYNC();
-   
+   //IssueWIBSYNC();
+   /*sleep(0.5);
+   IssueWIBSYNC();*/
+//   sleep(0.5);
+//   IssueWIBSYNC();
+//   sleep(0.5);
+//   IssueWIBSYNC();
+//   sleep(0.5);
+//   IssueWIBSYNC();
+//   wib->WIB_sync();
+//   sleep(0.5);
+//   wib->WIB_sync();
+   if(do_err_chk){
+      Do_Err_Check(enable_FEMBs);
+   } 
    TLOG_INFO(identification) << "***************** setupWIB completed **************************" << TLOG_ENDL;
  }
 
@@ -433,6 +453,8 @@ void WIBReader::setupNoiseMinConfig(int FEMB_NO, int tries)
 void WIBReader::IssueWIBSYNC()
 {
   const std::string identification = "WIBReader::IssueWIBSYNC";
+  TLOG_INFO(identification) << "=================== Start IssueWIBSYNC() ==========================" << TLOG_ENDL;
+
   wib->Write(0x14, 0x0);
   sleep(0.1);
   if (wib->Read(0x14) != 0x0){
@@ -440,9 +462,9 @@ void WIBReader::IssueWIBSYNC()
       excpt << "WIB register 0x14 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(0x14);
       throw excpt;
   }
-  wib->Write(0x14, 0x2);
+  wib->Write(0x14, 0x2); // wib->Write(0x14, 0x2);
   sleep(0.1);
-  if (wib->Read(0x14) != 0x2){
+  if (wib->Read(0x14) != 0x2){ // wib->Read(0x14) != 0x2
      cet::exception excpt(identification);
      excpt << "WIB register 0x14 is not properly written. Written value : " << std::hex << 0x2 << " Read value : " << std::hex << wib->Read(0x14);
      throw excpt; 
@@ -455,6 +477,9 @@ void WIBReader::IssueWIBSYNC()
       excpt << "WIB register 0x14 is not properly written. Written value : " << std::hex << 0x0 << " Read value : " << std::hex << wib->Read(0x14);
       throw excpt;
   }
+
+  TLOG_INFO(identification) << "=================== End IssueWIBSYNC() ==========================" << TLOG_ENDL;
+
 }
 
 void WIBReader::FEMBHsLinkCheck(int FEMB_NO, int tries)
@@ -1488,9 +1513,102 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 void WIBReader::setupFEMB_to_send_fake_data(int FEMB_NO, int fake_mode){
      const std::string identification = "WIBReader::setupFEMB_to_send_fake_data";
      TLOG_INFO(identification) << "************* Now Starting setupFEMB_to_send_fake_data for FEMB " << FEMB_NO << " with fake data mode " <<  fake_mode << " ***************" << TLOG_ENDL;
-     wib->WIB_PWR_FEMB(FEMB_NO);
+     //wib->WIB_PWR_FEMB(FEMB_NO);
      wib->ConfigFEMB_to_send_fake_data(FEMB_NO,fake_mode);
      TLOG_INFO(identification) << "************* setupFEMB_to_send_fake_data completed ****************" << TLOG_ENDL;
+}
+
+void WIBReader::prepFEMB_MBB_Calib(int FEMB_NO){
+     const std::string identification = "WIBReader::prepFEMB_MBB_Calib";
+     TLOG_INFO(identification) << "************* Now Starting prepFEMB_MBB_Calib for FEMB " << FEMB_NO << " ***************** "<< TLOG_ENDL;
+     wib->Prepare_FEMBs_for_MBB_Calib(FEMB_NO);
+     TLOG_INFO(identification) << "************* prepFEMB_MBB_Calib completed ****************" << TLOG_ENDL;
+}
+
+void WIBReader::Do_Err_Check(std::vector<bool> enable_FEMBs){
+     const std::string identification = "WIBReader::Do_Err_Check";
+     TLOG_INFO(identification) << "************* Now Starting Do_Err_Check" << " ***************** "<< TLOG_ENDL;
+     IssueWIBSYNC(); // send NEVIS sync command
+     sleep(0.1);
+     wib->Config_FEMBs_to_ChnlMap_Mode(enable_FEMBs);
+     sleep(0.1);
+     auto crate_no = (wib->Read(0xFF)&0xFF000000)>>28;
+     auto wib_slot_no = ((wib->Read(0xFF))>>24)&0x7;
+     auto val = wib->Read(43);
+     int Itry = 1;
+     if (crate_no == 3 && wib_slot_no == 3){
+        if (val == 0xf) {
+	    TLOG_INFO(identification) << "************* Links are all good in WIB at crate " << crate_no 
+	    << " and slot " << wib_slot_no << " ***************** , so going back no normal data takin mode." << TLOG_ENDL;
+	    wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+	}
+	else{
+	   while(val != 0xf){
+	     TLOG_WARNING(identification) << "********** BAD LINKS FOUND in wib at crate " << 
+	     crate_no << " and slot " << wib_slot_no << " in attempt " << Itry << ". Sending WIB resync command again." << TLOG_ENDL;
+	     IssueWIBSYNC();
+	     sleep(0.1);
+	     val = wib->Read(43);
+	     Itry++;
+	     if (val == 0xf){
+	        TLOG_INFO(identification) << "**************** Links are back to normal in WIB at crate " << crate_no
+		<< " and slot " << wib_slot_no << " in the attempt " << Itry << ". so going back to normal data taking mode." << TLOG_ENDL;
+		wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+		break;
+	     }
+	   }
+	}
+     } // This is the bad link check for WIB at crate 3 and slot 3
+     
+     else if (wib_slot_no == 5){
+        if (val == 0xff00){
+	    TLOG_INFO(identification) << "************* Links are all good in WIB at crate " << crate_no 
+	    << " and slot " << wib_slot_no << " ***************** , so going back no normal data takin mode." << TLOG_ENDL;
+	    wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+	}
+	else{
+	   while(val != 0xff00){
+	     TLOG_WARNING(identification) << "********** BAD LINKS FOUND in wib at crate " << 
+	     crate_no << " and slot " << wib_slot_no << " in attempt " << Itry << ". Sending WIB resync command again." << TLOG_ENDL;
+	     IssueWIBSYNC();
+	     sleep(0.1);
+	     val = wib->Read(43);
+	     Itry++;
+	     if (val == 0xff00){
+	        TLOG_INFO(identification) << "**************** Links are back to normal in WIB at crate " << crate_no
+		<< " and slot " << wib_slot_no << " in the attempt " << Itry << ". so going back to normal data taking mode." << TLOG_ENDL;
+		wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+		break;
+	     }
+	   }
+	}
+     } // This is the bad link check for WIBs at last slot in each crate
+     
+     else{
+        if (val == 0){
+	    TLOG_INFO(identification) << "************* Links are all good in WIB at crate " << crate_no 
+	    << " and slot " << wib_slot_no << " ***************** , so going back no normal data takin mode." << TLOG_ENDL;
+	    wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+	}
+	else{
+	   while(val != 0){
+	     TLOG_WARNING(identification) << "********** BAD LINKS FOUND in wib at crate " << 
+	     crate_no << " and slot " << wib_slot_no << " in attempt " << Itry << ". Sending WIB resync command again." << TLOG_ENDL;
+	     IssueWIBSYNC();
+	     sleep(0.1);
+	     val = wib->Read(43);
+	     Itry++;
+	     if (val == 0){
+	        TLOG_INFO(identification) << "**************** Links are back to normal in WIB at crate " << crate_no
+		<< " and slot " << wib_slot_no << " in the attempt " << Itry << ". so going back to normal data taking mode." << TLOG_ENDL;
+		wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+		break;
+	     }
+	   }
+	}
+     } // This is the bad link check for all other WIBs
+     
+     TLOG_INFO(identification) << "************* Do_Err_Check completed ****************" << TLOG_ENDL;
 }
 
 // "shutdown" transition
@@ -1504,6 +1622,9 @@ void WIBReader::start()
 {
   const std::string identification = "WIBReader::start";
   TLOG_INFO(identification) << "=================== Start function started ==========================" << TLOG_ENDL;
+//  IssueWIBSYNC();
+//  sleep(0.5);
+//  IssueWIBSYNC();
   time_t start, end;
   time(&start);
   if (!wib && calibration_mode) 
