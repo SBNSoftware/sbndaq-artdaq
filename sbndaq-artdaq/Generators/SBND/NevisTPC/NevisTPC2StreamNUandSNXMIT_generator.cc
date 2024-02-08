@@ -6,23 +6,33 @@
 
 #include <chrono>
 #include <ctime>
+#include <zmq.hpp>
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   TLOG(TLVL_INFO) << "ConfigureStart";
 
-  fChunkSize = ps_.get<int>("ChunkSize", 4096);
-  fMonitorPeriod = ps_.get<int>("MonitorPeriod", 12);
-  fCALIBFreq = ps_.get<double>("CALIBTriggerFrequency", -1);
+  fChunkSize             = ps_.get<int>("ChunkSize", 4096);
+  fMonitorPeriod         = ps_.get<int>("MonitorPeriod", 12);
+  fCALIBFreq             = ps_.get<double>("CALIBTriggerFrequency", -1);
   fControllerTriggerFreq = ps_.get<double>("ControllerTriggerFrequency", -1);
-  fDumpBinary = ps_.get<bool>("DumpBinary", false);
-  fDumpBinaryDir = ps_.get<std::string>("DumpBinaryDir", ".");
-  fSNReadout = ps_.get<bool>("DoSNReadout", true);
-  fSNChunkSize = ps_.get<int>("SNChunkSize", 100000);
+  fDumpBinary            = ps_.get<bool>("DumpBinary", false);
+  fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
+  fSNReadout             = ps_.get<bool>("DoSNReadout", true);
+  fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
+  fGPSTimeFreq           = ps_.get<double>("GPSTimeFrequency", -1);
+  fGPSZMQPortNTB         = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
+  fUseZMQ                = ps_.get<bool>("UseZMQ",false);
 
   SNDMABuffer_.reset(new uint16_t[fSNChunkSize]);
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
   SNCircularBuffer_.Init();
   SNBuffer_ = new uint16_t[fSNChunkSize];
+  //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
+
+  if(fUseZMQ){
+      _zmqGPSPublisher.bind(fGPSZMQPortNTB);} // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
+      // Any port > 10000 can be used by artdaq (netstat -lpnu4 --> this will tell you the used ports)
+      //    publisher.bind("udp://127.0.0.1:7620");
 
   if( fDumpBinary ){
     // Get timestamp for binary file name
@@ -111,9 +121,14 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
     FireController_thread_->start();
     TLOG(TLVL_INFO) << "Started FireController thread" << TLOG_ENDL;
   }
+  //set up thread GPS time                                                                                                                               
+  share::ThreadFunctor GPSTime_functor = std::bind( &NevisTPC2StreamNUandSNXMIT::GPSTime, this );
+  auto GPSTime_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( GPSTime_functor, "GPSTimeWorkerThread" ) );
+  auto GPSTime_worker = share::WorkerThread::createWorkerThread( GPSTime_worker_functor );
+  GPSTime_thread_.swap(GPSTime_worker);
+  if( fGPSTimeFreq > 0 && fUseZMQ ) GPSTime_thread_->start();
+  TLOG(TLVL_INFO) << "Started GPS thread" << TLOG_ENDL;
 
-  TLOG(TLVL_INFO)<< "Successful " << __func__ ; 
-  mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
 }
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
@@ -196,6 +211,64 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::MonitorCrate() {
   return true;
 }
 
+bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
+  //static int fGPSTimePeriod_us = 0.25/fGPSTimeFreq * 1e6; //convert frequency to period in us 
+  static int fGPSTimePeriod_us = 100; //convert frequency to period in us
+
+  static std::chrono::steady_clock::time_point next_check_time{std::chrono::steady_clock::now() + std::chrono::microseconds(fGPSTimePeriod_us)};
+  //create time point                                                                                                                                    
+  static nevistpc::TriggerModuleGPSStamp lastGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister(); //get most recent GPS stamp   
+  if(fGPSTimeFreq < 0 || next_check_time > std::chrono::steady_clock::now() ) return false;
+  //otherwise get the current gps stamp                                                                                                                
+  nevistpc::TriggerModuleGPSStamp nowGPSStamp = fCrate->getTriggerModule()->getLastGPSClockRegister();
+  //const auto start = std::chrono::steady_clock::now();
+  struct timespec unixtime;
+  clock_gettime(CLOCK_REALTIME, &unixtime);
+
+  // Check if the new gps time/frame is different from the old one                                                                                     
+  if( (nowGPSStamp.gps_frame != lastGPSStamp.gps_frame) ||
+      (nowGPSStamp.gps_sample != lastGPSStamp.gps_sample) ||
+      (nowGPSStamp.gps_sample_div != lastGPSStamp.gps_sample_div) ){
+    
+      //update stamps                                                                                                                                        
+      lastGPSStamp = nowGPSStamp;
+      
+      //create message to send
+      std::string message = std::to_string(lastGPSStamp.gps_frame) + ","
+	+ std::to_string(lastGPSStamp.gps_sample) + ","
+	+ std::to_string(lastGPSStamp.gps_sample_div);  
+      
+      zmq::message_t zmqMessage(message.size());
+
+      //create timestamp to send with message. this will help correct NTP time to GPS time (we just need the "second" part) 
+      long remainder = unixtime.tv_nsec % 1000000000;
+      // Adjust the timespec to the nearest second
+      if (remainder >= 500000000) {
+        // Round up to the next second
+        unixtime.tv_sec += 1;
+      }
+
+      long long timestamp = unixtime.tv_sec;
+      zmq::message_t zmqTimestamp(sizeof(timestamp));
+
+      memcpy(zmqTimestamp.data(), &timestamp, sizeof(timestamp));
+      _zmqGPSPublisher.send(zmqTimestamp, ZMQ_SNDMORE);
+
+      memcpy(zmqMessage.data(), message.c_str(), message.size());
+      _zmqGPSPublisher.send(zmqMessage);
+
+      //const auto end   = std::chrono::steady_clock::now();
+      //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start2).count();
+      //TLOG(TLVL_INFO) << "ZMQ Message sending latency: " << duration << TLOG_ENDL;
+      //auto duration2 = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
+      //TLOG(TLVL_INFO) << "latency from time GPS is received to after message is sent: " << duration2 << TLOG_ENDL;
+
+  }
+  //update check time                                                                                                                                  
+  next_check_time = std::chrono::steady_clock::now() + std::chrono::microseconds( fGPSTimePeriod_us );
+  return true;
+}
+
 size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
@@ -214,7 +287,8 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
 
   //if( fDumpBinary ) binFileNU.write( (char*)buffer, fChunkSize );
   if( fDumpBinary ) binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
-  
+
+  binFileNU.flush();
   //delete[] buffer;
 
   return bytesRead;
@@ -236,7 +310,6 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
 
   //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
-  
   //delete[] SNBuffer_;
   //memset(SNBuffer_, 0, fSNChunkSize*sizeof(uint16_t)); // avoid clearing?
 
@@ -250,6 +323,8 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
   std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + fSNChunkSize, SNBuffer_);
 
   binFileSN.write((char*)SNBuffer_, fSNChunkSize );
+
+  binFileSN.flush();
 
   size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize);
   TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize << " . SN Buffer occupancy now " << new_buffer_size;

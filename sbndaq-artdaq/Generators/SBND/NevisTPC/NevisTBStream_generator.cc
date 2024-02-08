@@ -4,19 +4,16 @@
 #include "artdaq/Generators/GeneratorMacros.hh"
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/NevisTBStream.hh"
 
-
 #include <chrono>
 #include <ctime>
+#include <zmq.hpp>
 
 void sbndaq::NevisTBStream::ConfigureNTBStart() {
   TLOG(TLVL_INFO) << "ConfigureStart NTB";
 
   fNTBChunkSize = ps_.get<int>("NTBChunkSize", 96);
-
   fDumpNTBBinary = ps_.get<bool>("DumpNTBBinary", false);
   fDumpNTBBinaryDir = ps_.get<std::string>("DumpNTBBinaryDir", ".");
-
- 
 
   NTBDMABuffer_.reset(new uint16_t[fNTBChunkSize]);
   NTBCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl                                             
@@ -43,13 +40,13 @@ void sbndaq::NevisTBStream::ConfigureNTBStart() {
   fntbreader->initializePCIeCard();
   fntbreader->setupTXModeRegister();
   TLOG(TLVL_INFO) << "Configured NTB PCIe card";
-
+ 
 }
 
 void sbndaq::NevisTBStream::ConfigureNTBStop() {
 
   if( fDumpNTBBinary ){
-    TLOG(TLVL_INFO)<< "Closig raw binary file " << binFileNameNevisTB;
+    TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameNevisTB;
     binFileNTB.close();
   }
 
@@ -59,7 +56,7 @@ void sbndaq::NevisTBStream::ConfigureNTBStop() {
 }
 
 size_t sbndaq::NevisTBStream::GetNevisTBData() {
-  TLOG(TLVL_INFO)<< "GetNevisTBData";
+  //TLOG(TLVL_INFO)<< "GetNevisTBData";
 
   std::streamsize bytesRead = fntbreader->readsome(reinterpret_cast<char*>(&DMABufferNTB_[0]), fNTBChunkSize);  
 

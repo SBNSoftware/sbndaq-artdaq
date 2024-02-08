@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <thread>
 
 sbndaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), ps_(ps){
 	
@@ -40,7 +41,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   fSamplesPerChannel = ps_.get<uint32_t>("SamplesPerChannel",9600);
   fNChannels         = ps_.get<uint32_t>("NChannels",64);
   fUseCompression    = ps_.get<bool>("UseCompression",false);
-  
+   
   DMABufferSizeBytes_ = ps_.get<uint32_t>("DMABufferSize",1e6);	
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
 

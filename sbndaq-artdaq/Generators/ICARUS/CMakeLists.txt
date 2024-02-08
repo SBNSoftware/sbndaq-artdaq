@@ -21,9 +21,10 @@ cet_build_plugin(PhysCrateData artdaq::commandableGenerator
     icarus-base_PhysCrate
     hiredis
     CAENComm
+    CAENVME
 )
-target_include_directories(sbndaq-artdaq_Generators_ICARUS_PhysCrateData_generator PRIVATE $ENV{REDIS_INC} $ENV{CAENCOMM_INC})
-target_link_directories(sbndaq-artdaq_Generators_ICARUS_PhysCrateData_generator PRIVATE $ENV{REDIS_LIB} $ENV{CAENCOMM_LIB})
+target_include_directories(sbndaq-artdaq_Generators_ICARUS_PhysCrateData_generator PRIVATE $ENV{REDIS_INC} $ENV{CAENCOMM_INC} $ENV{CAENVME_INC})
+target_link_directories(sbndaq-artdaq_Generators_ICARUS_PhysCrateData_generator PRIVATE $ENV{REDIS_LIB} $ENV{CAENCOMM_LIB} $ENV{CAENVME_LIB})
 
 # cet_build_plugin(PhysCrateFakeData artdaq::commandableGenerator
 #  LIBRARIES REG

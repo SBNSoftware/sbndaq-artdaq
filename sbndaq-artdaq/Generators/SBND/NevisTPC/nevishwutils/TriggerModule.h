@@ -246,6 +246,9 @@ public:
     };
     
   private:
+    uint32_t _GPSframe;
+    uint16_t _GPSsample;
+    uint16_t _GPSdiv;
     uint8_t _slot_number; 
     TriggerModuleStatus _status;
     std::string _timeinfo_file_path;

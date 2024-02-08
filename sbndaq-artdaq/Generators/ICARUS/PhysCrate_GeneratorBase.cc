@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <thread>
 
 #include "sbndaq-artdaq-core/Trace/trace_defines.h"
 using namespace std::chrono_literals;

@@ -6,6 +6,8 @@
 
 #include "icarus-base/VetoUDP.h"
 
+#include "CAENVMElib.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "hiredis/hiredis.h"
@@ -44,6 +46,8 @@ namespace icarus {
     void SetDCOffset();
     void ForceClear();
     void ForceReset();
+    void SetCompressionBits();
+    void ReadFirmwareVersion();
 
     std::unique_ptr<PhysCrate> physCr;
 
@@ -87,6 +91,9 @@ namespace icarus {
 
     //if we want to read board temps
     bool _readTemps;
+
+    //is the crate's data compressed? size_t for future-proofing
+    size_t _compressionScheme;
 
  };
 }

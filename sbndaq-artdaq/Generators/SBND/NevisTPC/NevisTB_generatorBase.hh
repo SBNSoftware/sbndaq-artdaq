@@ -18,7 +18,7 @@
 #include "sbndaq-artdaq-core/Overlays/SBND/NevisTBFragment.hh"
 #include <unistd.h>
 #include <vector>
-
+#include <zmq.hpp>
 
 namespace sbndaq
 {
@@ -29,6 +29,24 @@ namespace sbndaq
     explicit NevisTB_generatorBase(fhicl::ParameterSet const & ps);
     virtual ~NevisTB_generatorBase();
     
+    zmq::context_t rec_context;
+    zmq::socket_t _zmqGPSSubscriber;
+    long long receivedNTPsecond;
+   
+    class GPSstamp {
+    public:
+    GPSstamp( uint32_t new_frame, uint16_t new_sample, uint16_t new_div ) 
+      : gps_frame(new_frame),
+        gps_sample(new_sample),
+        gps_sample_div(new_div)
+        {}
+    
+    ~GPSstamp() {}
+    uint32_t gps_frame; // Frame number when GPS pulse was received
+    uint16_t gps_sample; // 2 MHz sample when GPS pulse was received
+    uint16_t gps_sample_div; // 16 MHz sample when GPS pulse was received
+    };  
+
   protected:
     
     bool getNext_(artdaq::FragmentPtrs & output) override;
@@ -37,7 +55,7 @@ namespace sbndaq
     void stopNoMutex() override;
     void stopAll();
     void Initialize();
-
+    bool GPSinitialized;
     //These functions MUST be defined by the derived classes
     virtual void ConfigureNTBStart() = 0; //called in start()
     virtual void ConfigureNTBStop() = 0;  //called in stop()
@@ -89,13 +107,23 @@ namespace sbndaq
       size_t Erase(size_t);
     } CircularBuffer_t;
     
+    std::string GPSZMQPortNTB_; 
+
     uint32_t DMABufferSizeBytesNTB_;
     std::unique_ptr<uint16_t[]> DMABufferNTB_;
     
     uint32_t CircularBufferSizeBytesNTB_;
     CircularBuffer_t CircularBufferNTB_;
+
+    uint32_t framesize_;
+    double NevisClockFreq_;
+
     bool GetNTBData();
     share::WorkerThreadUPtr GetNTBData_thread_;
+
+    bool GPStime();
+    share::WorkerThreadUPtr GPStime_thread_;
+    void setGPSstamp(GPSstamp);
 
     virtual bool FillNTBFragment(artdaq::FragmentPtrs &,bool clear_buffer=false);
     
@@ -103,7 +131,11 @@ namespace sbndaq
     bool desyncCrash;
     uint64_t pseudo_ntbfragment; 
 
-  };
+    uint32_t GPSframe;
+    uint16_t GPSsample;
+    uint16_t GPSdiv;
+
+      };
 }
 
 #endif

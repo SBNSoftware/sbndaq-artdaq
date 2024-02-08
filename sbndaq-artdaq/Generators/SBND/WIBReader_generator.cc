@@ -93,7 +93,7 @@ namespace sbndaq
     TLOG_INFO(identification) << "CRATE ADDRESS : " << std::hex << int(wib->Read("CRATE_ADDR")) << TLOG_ENDL;
     TLOG_INFO(identification) << "FIRMWARE TRACKER : " << std::hex << int(wib->Read(0x100)) << TLOG_ENDL;
 
-    if(!calibration_mode) disconnectWIB_releaseSemaphores(); // commented out 01/19/2024 by Varuna
+    if(!calibration_mode) disconnectWIB_releaseSemaphores(); 
     TLOG_INFO(identification) << "WIBReader constructor completed";
  }
 
@@ -105,7 +105,7 @@ namespace sbndaq
    auto femb_table                 = WIB_config.get<std::string>("WIB.femb_table");
    auto DTS_source                 = WIB_config.get<uint8_t>("WIB.DTS_source");
    auto enable_FEMBs               = WIB_config.get<std::vector<bool> >("WIB.enable_FEMBs");
-   auto FEMB_configs               = WIB_config.get<std::vector<fhicl::ParameterSet> >("WIB.FEMBs");
+   auto FEMB_configs               = WIB_config.get<fhicl::ParameterSet>("WIB.FEMBs");
    auto wib_fake_data              = WIB_config.get<bool>("WIB.run_wib_fake_data_mode");
    auto wib_fake_data_id           = WIB_config.get<uint8_t>("WIB.wib_fake_data_mode");
    auto do_femb_scan               = WIB_config.get<bool>("WIB.run_femb_scan");
@@ -152,7 +152,7 @@ namespace sbndaq
    if (!use_old_wib_config){
       if (do_femb_scan){ 
          TLOG_INFO(identification) << "Now Trying to execute FEMB_SCAN function " << TLOG_ENDL;
-         FEMB_SCAN(enable_FEMBs, (FEMB_configs.at(0)).get<uint32_t>("expected_femb_fw_version"));
+         FEMB_SCAN(enable_FEMBs, FEMB_configs.get<fhicl::ParameterSet>("femb0").get<uint32_t>("expected_femb_fw_version"));
       }
    }
    
@@ -176,7 +176,7 @@ namespace sbndaq
    for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
        TLOG_INFO(identification) << "FEMB No. " << iFEMB << TLOG_ENDL; 
        
-       fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
+       fhicl::ParameterSet const& FEMB_config = FEMB_configs.get<fhicl::ParameterSet>(std::string("femb").append(std::to_string(iFEMB-1)));
        
        if(enable_FEMBs.at(iFEMB-1)){
           TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
@@ -185,31 +185,19 @@ namespace sbndaq
 	  if (!wib_fake_data) {
 	     setupFEMB(iFEMB,FEMB_config);
 	     if(use_mbb_cmd) prepFEMB_MBB_Calib(iFEMB);
-	     //setupFEMB_to_send_fake_data(iFEMB, femb_fake_data_mode.at(iFEMB-1));
 	  }
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
        else{
-         if(use_FEMB_fake_data.at(iFEMB-1) && !wib_fake_data){
-	    setupFEMB_to_send_fake_data(iFEMB, femb_fake_data_mode.at(iFEMB-1));
-	 }
+          if(use_FEMB_fake_data.at(iFEMB-1) && !wib_fake_data){
+	     setupFEMB_to_send_fake_data(iFEMB, femb_fake_data_mode.at(iFEMB-1));
+	  }
        }
    }
    
    TLOG_INFO(identification) << "FEMBs are configured." << TLOG_ENDL;
    TLOG_INFO(identification) << "About to issue WIB sync command once. " << TLOG_ENDL;
    //IssueWIBSYNC();
-   /*sleep(0.5);
-   IssueWIBSYNC();*/
-//   sleep(0.5);
-//   IssueWIBSYNC();
-//   sleep(0.5);
-//   IssueWIBSYNC();
-//   sleep(0.5);
-//   IssueWIBSYNC();
-//   wib->WIB_sync();
-//   sleep(0.5);
-//   wib->WIB_sync();
    if(do_err_chk){
       Do_Err_Check(enable_FEMBs);
    } 
