@@ -180,7 +180,6 @@ namespace sbndaq
        
        if(enable_FEMBs.at(iFEMB-1)){
           TLOG_INFO(identification) << "FEMB is enabled" << TLOG_ENDL; 
-	  fhicl::ParameterSet const& FEMB_config = FEMB_configs.at(iFEMB-1);
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
 	  if (!wib_fake_data) {
 	     setupFEMB(iFEMB,FEMB_config);
