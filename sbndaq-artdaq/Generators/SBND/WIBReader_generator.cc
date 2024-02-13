@@ -183,7 +183,7 @@ namespace sbndaq
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
 	  if (!wib_fake_data) {
 	     setupFEMB(iFEMB,FEMB_config);
-	     if(use_mbb_cmd) prepFEMB_MBB_Calib(iFEMB);
+	     //if(use_mbb_cmd) prepFEMB_MBB_Calib(iFEMB);
 	  }
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
@@ -199,7 +199,10 @@ namespace sbndaq
    //IssueWIBSYNC();
    if(do_err_chk){
       Do_Err_Check(enable_FEMBs);
-   } 
+   }
+   if(use_mbb_cmd){ 
+      prepFEMB_MBB_Calib(enable_FEMBs);
+   }  
    TLOG_INFO(identification) << "***************** setupWIB completed **************************" << TLOG_ENDL;
  }
 
@@ -1512,6 +1515,17 @@ void WIBReader::prepFEMB_MBB_Calib(int FEMB_NO){
      TLOG_INFO(identification) << "************* prepFEMB_MBB_Calib completed ****************" << TLOG_ENDL;
 }
 
+void WIBReader::prepFEMB_MBB_Calib(std::vector<bool> enable_FEMBs){
+     const std::string identification = "WIBReader::prepFEMB_MBB_Calib";
+     for(size_t iFEMB=1; iFEMB <= 4; iFEMB++){
+         TLOG_INFO(identification) << "************* Now Starting prepFEMB_MBB_Calib for FEMB " << iFEMB << " ***************** "<< TLOG_ENDL;
+         if(enable_FEMBs.at(iFEMB-1)){
+            wib->Prepare_FEMBs_for_MBB_Calib(iFEMB);
+	 }
+     }
+     TLOG_INFO(identification) << "************* prepFEMB_MBB_Calib completed ****************" << TLOG_ENDL;
+}
+
 void WIBReader::Do_Err_Check(std::vector<bool> enable_FEMBs){
      const std::string identification = "WIBReader::Do_Err_Check";
      TLOG_INFO(identification) << "************* Now Starting Do_Err_Check" << " ***************** "<< TLOG_ENDL;
@@ -1546,6 +1560,33 @@ void WIBReader::Do_Err_Check(std::vector<bool> enable_FEMBs){
 	   }
 	}
      } // This is the bad link check for WIB at crate 3 and slot 3
+     
+          //============================ For test stand WIB =======================
+     
+     else if (crate_no == 99999 && wib_slot_no == 999999){
+         if (val == 0xf000){ // assume last FEMB is turned off
+	     TLOG_INFO(identification) << "************* Links are good in test stand WIB " << TLOG_ENDL;
+	     wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+	 }
+	 else{
+	    while(val != 0xf000){
+	      TLOG_WARNING(identification) << "********** BAD LINKS FOUND in test stand WIB in the attempt " << Itry
+	      << ". Sending WIB resync command again." << TLOG_ENDL;
+	      IssueWIBSYNC();
+	      sleep(0.1);
+	      val = wib->Read(43);
+	      Itry++;
+	      if (val == 0xf000){
+	          TLOG_INFO(identification) << "**************** Links are back to normal in the test stand WIB " <<
+	          ". so going back to normal data taking mode." << TLOG_ENDL;
+	          wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+	          break;
+	      }
+	   }
+	}
+     } // This is the bad link check for WIB at test-stand
+     
+     // ======================== For test stand WIB ==========================
      
      else if (wib_slot_no == 5){
         if (val == 0xff00){
