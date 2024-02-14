@@ -23,7 +23,7 @@ namespace sbndaq
 {
 
 // "initialize" transition
-MBBReader::MBBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps) 
+MBBReader::MBBReader(fhicl::ParameterSet const& ps): CommandableFragmentGenerator(ps)
 {
   const std::string identification = "MBBReader";
   TLOG_INFO(identification) << "MBBReader constructor" << TLOG_ENDL;
@@ -127,6 +127,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   const auto ptc_02             = ps.get<uint32_t>("MBB.ptc_02");
   const auto ptc_03             = ps.get<uint32_t>("MBB.ptc_03");
   const auto ptc_04             = ps.get<uint32_t>("MBB.ptc_04");
+  
 
   // connecting to mbb.
   TLOG_INFO(identification) << "Connecting to MBB at " << mbb_address << TLOG_ENDL;
@@ -565,7 +566,7 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
           << sleep_time;
     throw excpt;
   }
-  sleep(sleep_time);
+  //sleep(sleep_time);
 
 
   // synchronous FEMB start, performed at START transition
@@ -597,7 +598,8 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   else{
     TLOG_INFO(identification) << "Not running stop FEMB Daq right now." << TLOG_ENDL;
   }
-
+  
+  sync_fembs  = ps.get<bool>("MBB.sync_fembs");
 }
   
 
@@ -628,6 +630,11 @@ void MBBReader::start()
   else{
     TLOG_INFO(identification) << "Not running start FEMB Daq right now." << TLOG_ENDL;
   }
+  
+  if (sync_fembs){
+     TLOG_INFO(identification) << "Starting MBB calibration to test FEMB syncronization." << TLOG_ENDL;
+     SyncFEMBs();
+  }
 }
 
 // "stop" transition
@@ -647,6 +654,15 @@ bool MBBReader::getNext_(artdaq::FragmentPtrs& /*frags*/)
 {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   return (! should_stop()); // returning false before should_stop makes all other BRs stop
+}
+
+// Send Calibration pulse CMD via MBB to syncronize all FEMB data
+void MBBReader::SyncFEMBs()
+{
+  for (unsigned int i=0; i<100; i++){
+      mbb->NewCalibrationPulse();
+      sleep(0.01);    
+  }
 }
 
 } // namespace
