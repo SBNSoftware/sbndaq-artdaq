@@ -2,11 +2,7 @@ pmtmetricproducer: {
         module_type: "PMTMetricProducer"
         is_persistable: true
         # UseBeamTrigger:   false  # use flash trigger (trigger time stamp) or beam trigger
-        
-      #   WindowTimeOffset: 0.1    # (uint) offset of trigger time in ticks (1 tick = 2 ns)         
-      #                            #    default 30 ticks - WAG for now                         
-      #   TrigWindowFrag: 1500     # max time difference for frag timestamp to be part of beam window  
-      #                            #  in ticks (1 tick=2 ns), default 100 ticks - WAG for now         
+               
         WindowLength: 0.5 #1.6     # beam window length after trigger time, default 1.6 us                                       
      	  WvfmPostPercent:  0.8      # this should be a decimal! % of the wvfm contained in the 10 us window.
                                    # having 1+9 -> 0.9. having 2+8 -> 0.8,
@@ -21,31 +17,10 @@ pmtmetricproducer: {
         TimingType: 0
         NTBDelay: 367392 # NTB - FTRIG, ns 
 
-        # ETrigFragID: 9           # fragID of 1730 with event trigger in ch15
-        # ETrigThresh: 9000        # adc threshold for event trigger
-     	
         # CAEN 1730 configuration
         ## the timing caen is 40968, so skip it
         FragIDs: [40960,40961,40962,40963,40964,40965,40966,40967]
-        
-        # PMT channel configurations
-        ## 120 entries in order of modules in frag ID list
-        # Uncoated: [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
-        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
-        #            0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
-        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
-        #            0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
-        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
-        #            0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,                                                  
-        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1]   # 0 is Coated, 1 is Uncoated                   
-        # TPC:      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
-        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
-        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
-        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1]  #  TPC=0(1) is neg(pos) x and beam right(left)
+  
      	  Verbose: 1 # 0: no printout, 1: printout for each event, 2: printout for each fragment, 3: printout for each channel
 
         # turn on/off various metric calculations 
@@ -56,12 +31,10 @@ pmtmetricproducer: {
 
         # metric input parameters 
         InputBaseline:  [15100.0, 2.0] # in ADC, used if CalculateBaseline is FALSE // first entry is baseline, second entry is baseline error/sigma
-        # BaselineWindow: 0.5           # in us; window used to calculate basline
         
         PromptWindow:   0.1           # in us; window to calculate prompt light (after the trigger)
         PrelimWindow:   0.5           # in us; window to calculate prelim PE (before the trigger)
         
         ADCThreshold:   14900         # in ADC, corresponds to ~5 PE in ideal response, used for CountPMTs (above threshold)  
         ADCtoPE:        8.0           # conversion factor from ADC to PE count (for a single bin) **not tuned**
-
     }

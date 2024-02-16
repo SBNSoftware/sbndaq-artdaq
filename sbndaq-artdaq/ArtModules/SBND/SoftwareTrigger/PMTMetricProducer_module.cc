@@ -76,22 +76,14 @@ private:
   // fhicl parameters
   art::Persistable is_persistable_;
   // bool     fUseBeamTrigger;  // whether to use flash trigger or beam trigger 
-  // float   fWindowOffset;    // offset of trigger time in us
-  // uint32_t fTrigWindowFrag;  //max time difference for frag timestamp to be part of beam window
-                             //  in ticks (1 tick=2 ns), default 100 ticks - WAG for now
   float    fWindowLength;    // in us, window length after trigger time, default 1.6 us
   float    fWvfmPostPercent; // post percent of wvfm, 9 us after wvfm = 0.9
   uint16_t fWvfmNominalLength;      // in ticks, length of wvfm, default 5000 ticks
-
-  // uint32_t    fETrigFragid;
-  // uint32_t    fETrigThresh;
   
   uint8_t     fTimingType;  // 0 for rawheader, 1 for SPEC TDC, 2 for PTB, and 3 for the **TIMING** CAEN board
   uint32_t    fNTBDelay;    // in ns, delay between TDC and PPS
   
   std::vector<uint16_t> fFragIDs;
-  // std::vector<uint8_t> fUncoated;
-  // std::vector<uint8_t> fTPC;
 
   uint16_t fVerbose;
 
@@ -101,13 +93,11 @@ private:
   bool fFindFlashInfo;
 
   std::vector<float> fInputBaseline; 
-  // float fBaselineWindow;
   float fPromptWindow;
   float fPrelimWindow; 
 
   float fADCThreshold;  
   float fADCtoPE;       
-  // float fPEArea;        
   // end fhicl parameters
 
   // event-by-event global variables
@@ -117,15 +107,12 @@ private:
   float ticks_to_us;
   float us_to_ticks;
 
-  // uint32_t fTriggerBin; 
-
   // pmt information
   std::map<int,int> map_fragid_index;
 
   void     getWaveforms(const artdaq::Fragment &frag, std::vector<std::vector<uint16_t>> &wvfm_v);
   uint32_t getStartTime(const artdaq::Fragment &frag);
   uint32_t getLength   (const artdaq::Fragment &frag);
-  // void   find_beam_spill(const artdaq::Fragment &frag);
   float    estimateBaseline(std::vector<uint32_t> &wvfm);
   float    estimateBaseline(std::vector<uint16_t> &wvfm);
   void     reconfigure(fhicl::ParameterSet const & p);
@@ -155,9 +142,6 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
   is_persistable_     = p.get<bool>("is_persistable", true) ? art::Persistable::Yes : art::Persistable::No;
   // fUseBeamTrigger     = p.get<bool>("UseBeamTrigger",false);
 
-  // fWindowOffset       = p.get<float>("WindowOffset",0.1);  //units of us
-
-  // fTrigWindowFrag     = p.get<uint32_t>("TrigWindowFrag",100);  //units of ticks, 1 tick=2ns
   fWindowLength       = p.get<float>("WindowLength", 1.8);
   fWvfmPostPercent    = p.get<float>("WvfmPostPercent", 0.9);
   fWvfmNominalLength         = p.get<uint16_t>("WvfmNominalLength", 5000); // units of ticks
@@ -165,13 +149,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
   fTimingType         = p.get<uint8_t>("TimingType", 0);
   fNTBDelay           = p.get<uint32_t>("NTBDelay", 367392); // units of ns
 
-  // fETrigFragid        = p.get<uint32_t>("ETrigFragID",0);
-  // fETrigThresh        = p.get<uint32_t>("ETrigThresh",5000);
-
   fFragIDs            = p.get<std::vector<uint16_t>>("FragIDs");
-
-  // fUncoated           = p.get<std::vector<uint8_t>>("Uncoated");  // =0 for Coated, =1 for Uncoated
-  // fTPC                = p.get<std::vector<uint8_t>>("TPC");  // TPC=0(1) is neg(pos) x and beam right(left)
 
   fVerbose            = p.get<uint8_t>("Verbose", 0);
 
@@ -181,7 +159,6 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
   fFindFlashInfo      = p.get<bool>("FindFlashInfo",false);
 
   fInputBaseline      = p.get<std::vector<float>>("InputBaseline");
-  // fBaselineWindow     = p.get<float>("BaselineWindow", 0.5);
   fPromptWindow       = p.get<float>("PromptWindow", 0.1);
   fPrelimWindow       = p.get<float>("PrelimWindow", 0.5);
   fADCThreshold       = p.get<float>("ADCThreshold", 7960);
@@ -212,17 +189,13 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
 
   // reset for this event
   // foundBeamTrigger = false;
-  // fTriggerBin = 0; 
-
 
   std::vector<std::vector<uint16_t>> wvfms_v;
   std::vector<float>                 baselines_v;
-  // std::vector<sbnd::trigger::pmtInfo> fpmtInfoVec;
 
   auto nboards = fFragIDs.size();
   wvfms_v.resize(15*nboards); // 15 PMT channels per 1730 fragment, 8 fragments per trigger
   baselines_v.resize(15*nboards); 
-  // fpmtInfoVec.resize(15*8); // 15 PMTs per fragment, 8 fragments per trigger
 
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles = e.getMany<std::vector<artdaq::Fragment>>();
 
@@ -302,9 +275,8 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
 
     // create a vector to contain the sum of all the wvfms
     std::vector<uint32_t> wvfm_sum(fWvfmNominalLength, 0);
-    // wvfm loop to calculate metrics
+
     for (size_t i_ch = 0; i_ch < wvfms_v.size(); ++i_ch){
-      // auto &pmtInfo = fpmtInfoVec.at(i_ch);
       auto wvfm = wvfms_v[i_ch];
 
       if (wvfm.begin() == wvfm.end()) continue;
@@ -312,13 +284,9 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       int windowStartBin = (1.0 - fWvfmPostPercent)*wvfm.size(); 
       int windowEndBin = windowStartBin + int(fWindowLength*us_to_ticks);
 
-      // assign channel
-      // pmtInfo.channel = i_ch;
-
       // calculate baseline
       if (fCalculateBaseline) baselines_v.at(i_ch) = estimateBaseline(wvfm);
       else baselines_v.at(i_ch) = fInputBaseline.at(0);
-      // else { pmtInfo.baseline=fInputBaseline.at(0); pmtInfo.baselineSigma = fInputBaseline.at(1); }
       
       // count number of PMTs above threshold
       if (fCountPMTs){
@@ -330,7 +298,6 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       }
       else { nAboveThreshold = -9999; }
 
-      // quick estimate prompt and preliminary light, assuming sampling rate of 500 MHz (2 ns per bin)
       if (fCalculatePEMetrics){
         float baseline = baselines_v.at(i_ch);
         
@@ -348,7 +315,6 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       if (fFindFlashInfo) wvfm_sum = sumWvfms(wvfm_sum, wvfm);
     }
     if (fFindFlashInfo){
-      // find and remove the baseline
       int windowStartBin = (1.0 - fWvfmPostPercent)*wvfm_sum.size(); 
       int windowEndBin = windowStartBin + int(fWindowLength*us_to_ticks);
       auto prelimStart = (windowStartBin - fPrelimWindow*us_to_ticks) < 0 ? 0 : windowStartBin - fPrelimWindow*us_to_ticks;
@@ -387,7 +353,6 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     }
     // clear variables to free memory
     wvfms_v.clear(); 
-    // fpmtInfoVec.clear();
 
     if(metricMan != nullptr) {
         //send flag metrics
@@ -431,57 +396,6 @@ std::vector<uint32_t> sbnd::trigger::pmtSoftwareTriggerProducer::sumWvfms(const 
   return result;
 }
 
-// void sbnd::trigger::pmtSoftwareTriggerProducer::find_beam_spill(const artdaq::Fragment &frag) {
-
-//   // check fragId
-//   uint fragId = static_cast<int>(frag.fragmentID());
-//   if (fVerbose==2) std::cout << "Looking for beam spill, fragID is " << fragId <<
-// 		  " and timestamp is " << frag.timestamp() << std::endl;
-//   if (fragId!=fETrigFragid)  return;
-
-//   //--get number of channels from metadata and waveform length from header
-//   sbndaq::CAENV1730Fragment bb(frag);
-//   auto const* md = bb.Metadata();
-//   sbndaq::CAENV1730Event const* event_ptr = bb.Event();
-//   sbndaq::CAENV1730EventHeader header = event_ptr->Header;
-//   size_t nChannels = md->nChannels;
-
-//   uint32_t ev_size_quad_bytes = header.eventSize;
-//   if (fVerbose==2) std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
-//   uint32_t evt_header_size_quad_bytes = sizeof(sbndaq::CAENV1730EventHeader)/sizeof(uint32_t);
-//   uint32_t data_size_double_bytes = 2*(ev_size_quad_bytes - evt_header_size_quad_bytes);
-//   //-  uint32_t wfm_length = data_size_double_bytes/nChannels;
-//   fWvfmLength = data_size_double_bytes/nChannels;
-//   if (fVerbose==2) std::cout << "Channel waveform length = " << fWvfmLength << " [ticks], or " << fWvfmLength*ticks_to_us << "us\n";
-//   size_t ch_offset = (size_t)(15*fWvfmLength);
-//   if (fVerbose==2) std::cout << " frag timestamp is " << frag.timestamp()  << std::endl;
-
-//   // access beam signal, in ch15 of first PMT of each fragment set
-//   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes()
-// 					   + sizeof(sbndaq::CAENV1730EventHeader));
-//   const uint16_t* value_ptr =  data_begin;
-//   uint16_t value = 0;
-
-//   // not currently used because there's no guarantee where the trigger is in the waveform
-//   //  size_t tr_offset = refTimestampOffset*1e3;
-//   size_t tr_offset = 0;
-//   value_ptr = data_begin + ch_offset + tr_offset; // pointer arithmetic
-
-//   for (uint ind=0;ind<fWvfmLength;++ind){
-//     value = *(value_ptr+ind);
-//     if (value>fETrigThresh) {
-//       foundBeamTrigger = true;
-//       fTriggerBin = ind;
-//       refTimestamp = frag.timestamp();
-//       std::cout << "Found beam trigger : ind= " << ind << " adc is " << value;
-//       std::cout << "timestamp is " << refTimestamp << std::endl;
-//       break;
-//     }
-//   }
-
-//   std::cout << "leaving find_beam_spill, timestamp is " << refTimestamp << std::endl;
-// }
-
 void sbnd::trigger::pmtSoftwareTriggerProducer::getWaveforms(const artdaq::Fragment &frag, std::vector<std::vector<uint16_t>> & wvfm_v)
 {
   //--get number of channels from metadata and waveform length from header
@@ -506,13 +420,10 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::getWaveforms(const artdaq::Fragm
   if (fVerbose==2) std::cout << "\tChannel waveform length = " << wvfm_length << "\n";
 
   auto wvfm_start = ttt - wvfm_length*ticks_to_us*1e3; // ns, start of waveform w.r.t. pps
-  // auto trigger_position = ttt - fWvfmPostPercent*wvfm_length; // ticks, position of trigger in waveform (bin)
-  // auto trigger_time = trigger_position*ticks_to_us;
   if (fVerbose==2) std::cout << "\tFlash start time is " << int(wvfm_start) << " us" << std::endl;
 
-  // refTimestamp = wvfm_start;
-
   //--access waveforms in fragment and save
+
   const uint16_t* data_begin = reinterpret_cast<const uint16_t*>(frag.dataBeginBytes()
 					+ sizeof(sbndaq::CAENV1730EventHeader));
   const uint16_t* value_ptr =  data_begin;
