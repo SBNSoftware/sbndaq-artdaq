@@ -1,58 +1,67 @@
 pmtmetricproducer: {
         module_type: "PMTMetricProducer"
         is_persistable: true
-        UseBeamTrigger:   false  # use flash trigger (trigger time stamp) or beam trigger
+        # UseBeamTrigger:   false  # use flash trigger (trigger time stamp) or beam trigger
         
       #   WindowTimeOffset: 0.1    # (uint) offset of trigger time in ticks (1 tick = 2 ns)         
       #                            #    default 30 ticks - WAG for now                         
       #   TrigWindowFrag: 1500     # max time difference for frag timestamp to be part of beam window  
       #                            #  in ticks (1 tick=2 ns), default 100 ticks - WAG for now         
         WindowLength: 0.5 #1.6     # beam window length after trigger time, default 1.6 us                                       
-     	WvfmPostPercent:  0.9      # this should be a fraction! % of the wvfm contained in the 10 us window.
+     	  WvfmPostPercent:  0.8      # this should be a decimal! % of the wvfm contained in the 10 us window.
                                    # having 1+9 -> 0.9. having 2+8 -> 0.8,
+                                   # IMPORTANT! this variable will determine where 0 is in our timing reference frame!
+                                   #
+        WvfmNominalLength: 5060    # Used to initialize the flash wvfm length (will be resized if necessary)
 
-        # event trigger configurables
-        ETrigFragID: 9           # fragID of 1730 with event trigger in ch15
-        ETrigThresh: 9000        # adc threshold for event trigger
+        # event trigger timing configuruables 
+        ## priority system 
+        ## NTB (RawEventHeader) [0] -> SPEC TDC ETT [1] -> PTB ETT [2] -> TIMING CAEN [3]
+        ## if the first one is not available, it will go to the next one
+        TimingType: 0
+        NTBDelay: 367392 # NTB - FTRIG, ns 
+
+        # ETrigFragID: 9           # fragID of 1730 with event trigger in ch15
+        # ETrigThresh: 9000        # adc threshold for event trigger
      	
         # CAEN 1730 configuration
-        FragIDlist: [9, 17, 17, 20, 21, 22, 23, 24, 25]  # should have 8 modules
+        ## the timing caen is 40968, so skip it
+        FragIDs: [40960,40961,40962,40963,40964,40965,40966,40967]
         
         # PMT channel configurations
         ## 120 entries in order of modules in frag ID list
-        Uncoated: [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
-                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
-                   0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
-                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
-                   0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
-                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
-                   0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,                                                  
-                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1]   # 0 is Coated, 1 is Uncoated                   
-        TPC:      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-                   0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
-                   0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-                   0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
-                   0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-                   0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
-                   0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
-                   0,1,0,1,0,1,0,1,0,1,0,1,0,1,1]  #  TPC=0(1) is neg(pos) x and beam right(left)
-     	  Verbose: 0 # 0: no printout, 1: printout for each event, 2: printout for each fragment, 3: printout for each channel
+        # Uncoated: [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
+        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
+        #            0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
+        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
+        #            0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,                                                  
+        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,                                                  
+        #            0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,                                                  
+        #            0,0,0,1,1,0,0,0,0,0,0,0,0,1,1]   # 0 is Coated, 1 is Uncoated                   
+        # TPC:      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
+        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
+        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
+        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+        #            0,1,0,1,0,1,0,1,0,1,0,1,0,1,1]  #  TPC=0(1) is neg(pos) x and beam right(left)
+     	  Verbose: 1 # 0: no printout, 1: printout for each event, 2: printout for each fragment, 3: printout for each channel
 
         # turn on/off various metric calculations 
-        CalculateBaseline:  true   # if true, will calculate baseline, if false, will use provided InputBaseline parameters below! 
+        CalculateBaseline:  false  # if true, will calculate baseline, if false, will use provided InputBaseline parameters below! 
         CountPMTs:          true   # if true, will count number of PMTS above threshold in the beam window
-        CalculatePEMetrics: true   # if true, will calculate prompt/preliminary PE 
+        CalculatePEMetrics: false  # if true, will calculate prompt/preliminary PE 
         FindFlashInfo:      true   # if true, will find flash time and flash peak PE by summming all wvfms and finding the peak
-        FindPulses:         false  # if true, will use crude pulse finding algorithm. You probably want this set to false!
 
         # metric input parameters 
-        InputBaseline:  [8000.0, 2.0] # in ADC, used if CalculateBaseline is FALSE // first entry is baseline, second entry is baseline error/sigma
-        BaselineWindow: 0.5           # in us; window used to calculate basline
+        InputBaseline:  [15100.0, 2.0] # in ADC, used if CalculateBaseline is FALSE // first entry is baseline, second entry is baseline error/sigma
+        # BaselineWindow: 0.5           # in us; window used to calculate basline
         
         PromptWindow:   0.1           # in us; window to calculate prompt light (after the trigger)
         PrelimWindow:   0.5           # in us; window to calculate prelim PE (before the trigger)
         
-        ADCThreshold:   7960          # in ADC, corresponds to ~5 PE in ideal response, used for CountPMTs (above threshold)  
+        ADCThreshold:   14900         # in ADC, corresponds to ~5 PE in ideal response, used for CountPMTs (above threshold)  
         ADCtoPE:        8.0           # conversion factor from ADC to PE count (for a single bin) **not tuned**
-        PEArea:         66.33         # conversion factor from ADCxns area to PE count **not tuned** 
+
     }
