@@ -195,7 +195,7 @@ namespace sbndaq
    }
    
    TLOG_INFO(identification) << "FEMBs are configured." << TLOG_ENDL;
-   TLOG_INFO(identification) << "About to issue WIB sync command once. " << TLOG_ENDL;
+   //TLOG_INFO(identification) << "About to issue WIB sync command once. " << TLOG_ENDL;
    //IssueWIBSYNC();
    if(do_err_chk){
       Do_Err_Check(enable_FEMBs);
@@ -1469,9 +1469,21 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      }
   
      if (pls_mode == 0){
-         wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+         /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
                          BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
-		         0, BNL_output_coupl, 0, 0, 0, false);
+		         0, BNL_output_coupl, 0, 0, 0, false);*/
+	
+	// ========================= Testing Shanshan suggesition ==============================================================================
+	// SET pls_cs=0 && dac_sel=0 -> current board reader has pulse_cs = 1 && dac_sel = 1
+	// SET swdac1=1 & swdac2=0 -> current board reader has swdac1=0 && swdac2=0
+	 
+	 wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 0, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+                         BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		         0, BNL_output_coupl, 1, 0, 0, false);
+			 
+	 wib->Write_Missing_FEMB_Regs(0,iFEMB);
+	 
+	// ======================== End of testing shanshan suggestions ========================================================================
      }
   
      else if (pls_mode == 1){
@@ -1487,13 +1499,27 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      }
   
      else if (pls_mode == 2){
-         if (chnl_mapping_mode){
+         /*if (chnl_mapping_mode){
 	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                   BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0, false);
 	 }
 	 
 	 else{
 	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                                           BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                   BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0, false);
+	 }*/
+	 
+	 // ========================= Testing Shanshan suggesition ==============================================================================
+	 
+	 // SET swdac1=1 & swdac2=0 & dac=0x0b000000 -> current board reader has swdac1=1 && swdac2=0 && dac = 0
+	 
+	 if (chnl_mapping_mode){
+	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                    BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
 	 }
+	 
+	 else{
+	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                                           BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                    BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	 }
+	 
+	 // ======================== End of testing shanshan suggestions ========================================================================
      }
   }
   
