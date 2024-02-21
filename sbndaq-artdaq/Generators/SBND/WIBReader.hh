@@ -48,6 +48,9 @@ namespace sbndaq
      void FEMB_SCAN(std::vector<bool> &FEMB_NOs, uint32_t FEMB_V); // This function is a modified version of a function copied from shanshan's python script to configure WIB/FEMB
      void setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configure);
      void setupFEMB_to_send_fake_data(int FEMB_NO, int fake_mode); // setup to send fake data as per shanshan's instructions
+     void prepFEMB_MBB_Calib(int FEMB_NO);
+     void prepFEMB_MBB_Calib(std::vector<bool> enable_FEMBs); 
+     void Do_Err_Check(std::vector<bool> enable_FEMBs); // perform error checking for bad channels
      bool use_semaphores;
      uint64_t semaphore_acquire_timeout_ms;
      bool calibration_mode;

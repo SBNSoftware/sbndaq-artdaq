@@ -1,7 +1,7 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
 parent sbndaq_artdaq
-defaultqual     e20:s120a
+defaultqual     e26:s120a
 
 
 # These optional lines define the installed directories where
@@ -20,7 +20,7 @@ fcldir      -
 #
 product               version      optional
 artdaq                v3_12_07
-sbndaq_artdaq_core    v1_09_00
+sbndaq_artdaq_core    v1_09_01
 caencomm              v1_7_0
 caenvme               v4_0_1
 caendigitizer         v2_17_3b
@@ -29,7 +29,7 @@ epics                 v7_0_7b
 artdaq_epics_plugin   v1_05_06
 zmq                   v4_3_1
 jsoncpp               v1_9_5a
-wibtools              v1_09_00     -
+wibtools              v1_09_01     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
 cetmodules            v3_22_02     -       only_for_build
