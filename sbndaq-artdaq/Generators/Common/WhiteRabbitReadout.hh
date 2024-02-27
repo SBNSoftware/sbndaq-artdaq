@@ -106,6 +106,7 @@ namespace sbndaq
     struct sockaddr_ll address;
     int	               agentSocket;
     struct ifreq       agentDevice;
+    bool sends_no_fragments; 
   };
 }
 
