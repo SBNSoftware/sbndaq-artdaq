@@ -153,6 +153,7 @@ void sbndaq::MetricProducer::produce(art::Event& evt)
 
 
   for (int i=0;i<7;++i) {CRTMetricInfo->hitsperplane[i] = hitsperplane[i];}
+  for (uint i=0;i<ts1s.size();i++){CRTMetricInfo->ts1inbeam.push_back(ts1s.at(i));}
 
   if (fVerbose) {
     std::cout << "CRT hit count during beam spill ";
@@ -208,7 +209,7 @@ void sbndaq::MetricProducer::analyze_crt_fragment(artdaq::Fragment & frag)
 	  metricMan->sendMetric(
 				"CRT_T1_in_beam",
 				(double)thistime,
-				"CRT T1 times for hits in beam", 12, artdaq::MetricMode::LastPoint);
+				"CRT T1 times for hits in beam", 15, artdaq::MetricMode::LastPoint);
 	}
       }
       //CRTMetricInfo->hitsperplane[plane]++;
