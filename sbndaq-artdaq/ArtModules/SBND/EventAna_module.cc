@@ -147,7 +147,7 @@ public:
 private:
 
 
-  bool choputctime=true;
+  bool choputctime=true;//only keep the utc time %1e13 to make it easier to hand scan 
   void analyze_caen_fragment(artdaq::Fragment & frag);
   void analyze_wr_fragment_dio(artdaq::Fragment & frag);
   void analyze_bern_fragment(artdaq::Fragment & frag);
@@ -284,7 +284,8 @@ private:
   std::vector<uint64_t>  timestamp               ; //absolute timestamp
   std::vector<uint>  last_accepted_timestamp ; //timestamp of previous accepted hit
   std::vector<int>  lost_hits               ; //number of lost hits from the previous one
-
+  std::vector<uint64_t>  t1_timestamp_utc;//absolute timestamp of t1 reset. (picking just one feb)
+  
   // CRT metadata
   std::vector<int>  mac5; //last 8 bits of FEB mac5 address
   std::vector<uint>  run_start_time;
@@ -508,6 +509,7 @@ void sbndaq::EventAna::beginJob()
     events->Branch("max_chan",        &max_chan);
     if (fcrt_keepall) {
       events->Branch("timestamp",     &timestamp);
+      events->Branch("t1_timestamp_utc",     &t1_timestamp_utc);
       events->Branch("lostcpu",       &lostcpu);
       events->Branch("lostfpga",      &lostfpga);
       events->Branch("feb_hit_number",&feb_hit_number);
@@ -598,7 +600,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 
 
   feb_hit_number.clear()       ;   timestamp.clear()      ;    last_accepted_timestamp.clear();
-  lost_hits.clear()            ;   run_start_time.clear() ;    this_poll_start.clear()        ;   this_poll_end.clear();
+  lost_hits.clear()            ;   run_start_time.clear() ;    this_poll_start.clear()        ;   this_poll_end.clear(); t1_timestamp_utc.clear();
   last_poll_start.clear()      ;   last_poll_end.clear()  ;    system_clock_deviation.clear();    feb_hits_in_poll.clear();
   feb_hits_in_fragment.clear() ;   sequence_id.clear();
 
@@ -1315,7 +1317,9 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
       system_clock_deviation.push_back(    md->system_clock_deviation());
       feb_hits_in_poll.push_back(          md->hits_in_poll());
       feb_hits_in_fragment.push_back(      md->hits_in_fragment());
-      timestamp.push_back(                 bevt->timestamp);
+      timestamp.push_back( chopTimeStamp(  bevt->timestamp) ); 
+      if(bevt->flags==11) t1_timestamp_utc.push_back( chopTimeStamp(  bevt->timestamp) ); 
+      else t1_timestamp_utc.push_back( 0 ); 
       //event info
       lostcpu.push_back(                   bevt->lostcpu);
       lostfpga.push_back(                  bevt->lostfpga);
