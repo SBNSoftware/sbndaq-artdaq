@@ -1284,9 +1284,9 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto clk_phases   = FEMB_configure.get<std::vector<uint16_t> >("clk_phases");
   const auto pls_mode     = FEMB_configure.get<uint32_t>("pls_mode");
   const auto pls_dac_val  = FEMB_configure.get<uint32_t>("pls_dac_val");
-  const auto start_frame_mode_sel = FEMB_configure.get<uint32_t>("start_frame_mode_sel");
-  const auto start_frame_swap     = FEMB_configure.get<uint32_t>("start_frame_swap");
-  const auto power_off_femb       = FEMB_configure.get<bool>("turn_off_femb");
+  const auto start_frame_mode_sel  = FEMB_configure.get<uint32_t>("start_frame_mode_sel");
+  const auto start_frame_swap      = FEMB_configure.get<uint32_t>("start_frame_swap");
+  const auto power_off_femb        = FEMB_configure.get<bool>("turn_off_femb");
   const auto BNL_enable_test_cap   = FEMB_configure.get<uint32_t>("BNL_enable_test_cap");
   const auto BNLbaselineHigh       = FEMB_configure.get<uint32_t>("BNLbaselineHigh");
   const auto BNLgain               = FEMB_configure.get<std::vector<uint32_t> >("BNLgain");
@@ -1301,8 +1301,10 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto BNL_sdacsw2   = FEMB_configure.get<uint32_t>("BNL_sdacsw2");
   const auto FEMB_channel_map = FEMB_configure.get<uint8_t>("FEMB_channel_map");
   const auto use_old_femb_config = FEMB_configure.get<bool>("use_old_femb_config");
-  const auto chnl_mapping_mode = FEMB_configure.get<bool>("chnl_mapping_mode");
-  const auto test_chnl_number  = FEMB_configure.get<uint32_t>("test_chnl_number");
+  const auto chnl_mapping_mode   = FEMB_configure.get<bool>("chnl_mapping_mode");
+  const auto fisrt_chnl_number   = FEMB_configure.get<uint32_t>("test_chnl_number"); // This should be the first chnnel number in testing chnl map
+  const auto last_chnl_number    = FEMB_configure.get<uint32_t>("test_chnl_lst_number"); // This should be the last chnnel number in testing chnl map
+  const auto tst_pls_gap         = FEMB_configure.get<uint32_t>("tst_pls_gap");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -1422,42 +1424,43 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   //*    1          *       iFEMB         *      FEMB Number (1-4)                                                               *
   //*    2          *     configuration   *      0 - config. 1, 1 - config. 2, any other number = config. 3                      *
   //*    3          *   use_chnl_map_test *      going test channel mapping by setting a pulse in a given channel                *
-  //*    4          *       chnl_no       *      Channel number for channel mapping test (0-127)                                 *        
-  //*    5          *       pls_cs        *      set to 0 always                                                                 *
-  //*    6          *       dac_sel       *      set to 1 always                                                                 *
-  //*    7          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
-  //*    8          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
-  //*    9          *       fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
-  //*    10         *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
-  //*    11         *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             * 
-  //*    12         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
-  //*    13         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
-  //*    14         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
-  //*    15         *       snc           *      Sets the baseline value                                                         *
-  //*    16         *       sg0           *      First argument in setting the gain                                              *
-  //*    17         *       sg1           *      Second argument in setting the gain                                             *
-  //*    18         *       st0           *      First argument in setting the shaping time                                      *
-  //*    19         *       st1           *      second argument in setting the shaping time                                     *
-  //*    20         *       smn           *      Enable output monitor                                                           *
-  //*    21         *       sdf           *      Buffer control                                                                  *
-  //*    22         *       slk0          *      Set to 0 in shanshan scripts                                                    *
-  //*    23         *       stb1          *      Set monitoring (always set to 0)                                                *
-  //*    24         *       stb           *      Set monitoring (always set to 0)                                                *
-  //*    25         *       s16           *      Enable high filter                                                              *
-  //*    26         *       slk1          *      Set to 0 always in shanshan scripts                                             *
-  //*    27         *       sdc           *      Output coupling                                                                 *
-  //*    28         *       swdac1        *      Set to 1 when FPGA pulsar is being used (otherwise 0)                           *
-  //*    29         *       swdac2        *      Set to 1 when ASIC pulsar is being used (otherwise 0)                           *
-  //*    30         *       dac           *      DAC setting when using ASIC pulsar                                              *
-  //*    31         *       fecfg_loadflg *      Always set to 0 in shanshan scripts                                             * 
+  //*    4          *       chnl_fst      *      Starting Channel number for group of channels to to receive pulse               *
+  //*    5          *       chnl_lst      *      Lasting Channel number for group of channels to to receive pulse                *        
+  //*    6          *       pls_cs        *      set to 0 always                                                                 *
+  //*    7          *       dac_sel       *      set to 1 always                                                                 *
+  //*    8          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
+  //*    9          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
+  //*    10          *      fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
+  //*    11         *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
+  //*    12         *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             * 
+  //*    13         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    14         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    15         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
+  //*    16         *       snc           *      Sets the baseline value                                                         *
+  //*    17         *       sg0           *      First argument in setting the gain                                              *
+  //*    18         *       sg1           *      Second argument in setting the gain                                             *
+  //*    19         *       st0           *      First argument in setting the shaping time                                      *
+  //*    20         *       st1           *      second argument in setting the shaping time                                     *
+  //*    21         *       smn           *      Enable output monitor                                                           *
+  //*    22         *       sdf           *      Buffer control                                                                  *
+  //*    23         *       slk0          *      Set to 0 in shanshan scripts                                                    *
+  //*    24         *       stb1          *      Set monitoring (always set to 0)                                                *
+  //*    25         *       stb           *      Set monitoring (always set to 0)                                                *
+  //*    26         *       s16           *      Enable high filter                                                              *
+  //*    27         *       slk1          *      Set to 0 always in shanshan scripts                                             *
+  //*    28         *       sdc           *      Output coupling                                                                 *
+  //*    29         *       swdac1        *      Set to 1 when FPGA pulsar is being used (otherwise 0)                           *
+  //*    30         *       swdac2        *      Set to 1 when ASIC pulsar is being used (otherwise 0)                           *
+  //*    31         *       dac           *      DAC setting when using ASIC pulsar                                              *
+  //*    32         *       fecfg_loadflg *      Always set to 0 in shanshan scripts                                             * 
   //******************************************************************************************************************************   
   
   if(!use_old_femb_config){
   
      if (chnl_mapping_mode){
-         if (signed(test_chnl_number)<0 || signed(test_chnl_number)>127){
+         if (fisrt_chnl_number > last_chnl_number){
 	     cet::exception excpt(identification);
-	     excpt << "In FEMB " << iFEMB << " Channel number " << test_chnl_number << " Provided for channel map test is not acceptable";
+             excpt << "In FEMB " << iFEMB << " when checking channel mapping, last channel number should be greater than or equl to first channel                            number.";
 	     throw excpt;
 	 }
 	 
@@ -1477,8 +1480,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 	// SET pls_cs=0 && dac_sel=0 -> current board reader has pulse_cs = 1 && dac_sel = 1
 	// SET swdac1=1 & swdac2=0 -> current board reader has swdac1=0 && swdac2=0
 	 
-	 wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 0, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
-                         BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+	 wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 0, 0, 0, 0, 0, tst_pls_gap, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1],                                   BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
 		         0, BNL_output_coupl, 1, 0, 0, false);
 			 
 	 wib->Write_Missing_FEMB_Regs(0,iFEMB);
@@ -1488,12 +1490,11 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   
      else if (pls_mode == 1){
          if (chnl_mapping_mode){
-             wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0],                              BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                             BNL_enable_high_filt,0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+             wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, fisrt_chnl_number, last_chnl_number, 1, 1, 0, 1, 0, tst_pls_gap, 10, 0, 0,                                    1, BNLbaselineHigh, BNLgain[0],BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0,                                          BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 0, 1, pls_dac_val, false);
 	 }
 	 
 	 else{
-	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
-                             BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 0, 1, 0, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1],                                   BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
 		             0, BNL_output_coupl, 0, 1, pls_dac_val, false);
 	 }
      }
@@ -1512,11 +1513,11 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 	 // SET swdac1=1 & swdac2=0 & dac=0x0b000000 -> current board reader has swdac1=1 && swdac2=0 && dac = 0
 	 
 	 if (chnl_mapping_mode){
-	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                    BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, fisrt_chnl_number, last_chnl_number, 1, 1, 1, 0, pls_dac_val, tst_pls_gap,                                    10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0,                                 BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
 	 }
 	 
 	 else{
-	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                                           BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                    BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 1, 0, pls_dac_val, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh,                                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1,                                                 BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
 	 }
 	 
 	 // ======================== End of testing shanshan suggestions ========================================================================
