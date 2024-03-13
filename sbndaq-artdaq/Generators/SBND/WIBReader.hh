@@ -51,6 +51,7 @@ namespace sbndaq
      void prepFEMB_MBB_Calib(int FEMB_NO);
      void prepFEMB_MBB_Calib(std::vector<bool> enable_FEMBs); 
      void Do_Err_Check(std::vector<bool> enable_FEMBs); // perform error checking for bad channels
+     void Change_TST_Pulse_Separation(int FEMB_NO, uint32_t pls_sep); // Change the separation between negative and positvie pulse
      bool use_semaphores;
      uint64_t semaphore_acquire_timeout_ms;
      bool calibration_mode;

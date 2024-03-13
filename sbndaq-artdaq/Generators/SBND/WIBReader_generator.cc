@@ -1303,6 +1303,8 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto last_chnl_number    = FEMB_configure.get<uint32_t>("test_chnl_lst_number"); // This should be the last chnnel number in testing chnl map
   const auto tst_pls_gap         = FEMB_configure.get<uint32_t>("tst_pls_gap");
   const auto mbb_clibration_mode = FEMB_configure.get<bool>("mbb_clibration_mode");
+  const auto change_tst_pulse_separation = FEMB_configure.get<bool>("change_tst_pulse_separation");
+  const auto tst_pls_separation = FEMB_configure.get<uint32_t>("tst_pls_separation");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -1495,6 +1497,10 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 0, 1, 0, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1],                                   BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
 		             0, BNL_output_coupl, 0, 1, pls_dac_val, false);
 	 }
+	 
+	 if(change_tst_pulse_separation){
+	    Change_TST_Pulse_Separation(iFEMB, tst_pls_separation);
+	 }
      }
   
      else if (pls_mode == 2){
@@ -1522,6 +1528,10 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 	    else{
 	        wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 1, 0, pls_dac_val, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh,                                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1,                                                 BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
 	    }
+	 }
+	 
+	 if(change_tst_pulse_separation){
+	    Change_TST_Pulse_Separation(iFEMB, tst_pls_separation);
 	 }
 	 
 	 // ======================== End of testing shanshan suggestions ========================================================================
@@ -1555,6 +1565,13 @@ void WIBReader::prepFEMB_MBB_Calib(std::vector<bool> enable_FEMBs){
 	 }
      }
      TLOG_INFO(identification) << "************* prepFEMB_MBB_Calib completed ****************" << TLOG_ENDL;
+}
+
+void WIBReader::Change_TST_Pulse_Separation(int FEMB_NO, uint32_t pls_sep){
+     const std::string identification = "WIBReader::Change_TST_PLS_Separation";
+     TLOG_INFO(identification) << "************* Now Starting prepFEMB_MBB_Calib for FEMB " << FEMB_NO << " ***************** "<< TLOG_ENDL;
+     wib->Change_TST_PLS_Separation(FEMB_NO,pls_sep);
+     TLOG_INFO(identification) << "************* Change_TST_Pulse_Separation completed ****************" << TLOG_ENDL;
 }
 
 void WIBReader::Do_Err_Check(std::vector<bool> enable_FEMBs){
