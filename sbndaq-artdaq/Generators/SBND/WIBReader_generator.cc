@@ -1012,6 +1012,228 @@ void WIBReader::FEMB_DECTECT_V2(int FEMB_NO, uint32_t FEMB_V, int Tries){
   TLOG_INFO(identification) << "************* FEMB_DECTECT_V2 completed ****************" << TLOG_ENDL;
 }
 
+void WIBReader::FEMB_DETECT_FOR_DAMAGED_FEMB(int FEMB_NO, uint32_t FEMB_V, int Tries){
+  // This function is a modified version of one of the funcitons available in Shanshan's python script
+  // to configure WIB/FEMB.
+  // The original function is in cls_config.py module inside the repository CE_LD with same name (git branch name is, Installation_Support)
+  const std::string identification = "WIBReader::FEMB_DETECT_FOR_DAMAGED_FEMB";
+  
+  TLOG_INFO(identification) << "************* Now Starting FEMB_DETECT_FOR_DAMAGED_FEMB  ****************" << TLOG_ENDL;
+   
+  //std::map<std::string,double> map = wib->WIB_STATUS();
+  for (int i=0; i<Tries; i++){
+    
+    /*if (i != 0){ 
+       map = wib->WIB_STATUS();
+       sleep(3);
+    }
+    
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_LINK")->second != 0xFF ){
+	if (i < (Tries-1)){
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " LINK is broken. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{ 
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " LINK is broken";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_EQ")->second != 0xF ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " EQ is broken. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " EQ is broken";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second < 0.001 ){
+        if (i < (Tries-1)){
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is lower than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	 cet::exception excpt(identification);
+	 excpt << "FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is lower than expected";
+	 throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second > 0.1 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is higher than expected";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second < 0.010 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " lower than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second > 0.2 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second < 0.050 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " lower than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second > 0.5 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second < 0.200 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " lower than expected";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second > 1.0 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second < 0.100 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " lower than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second > 1.0 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second < 0.100 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " lower than expected";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second > 1.5 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }*/
+    
+    wib->WriteFEMB(FEMB_NO, 0x0, 0x0);
+    wib->ReadFEMB(FEMB_NO, 0x102);
+    auto ver_value = wib->ReadFEMB(FEMB_NO, 0x101);
+    
+    if (ver_value > 0){
+        if ((ver_value&0xFFFF) != FEMB_V){
+	   if (i < (Tries-1)){
+	     TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FE version is " << ver_value << " which is different from default " << FEMB_V << TLOG_ENDL;
+	     continue;
+	   }
+	   
+	   else{
+	     cet::exception excpt(identification);
+	     excpt << "FEMB " << FEMB_NO << " FE version is " << ver_value << " which is different from default " << FEMB_V;
+	     throw excpt;
+	   }
+	}  
+    }
+    
+    else if (ver_value <= 0){
+      if (i < (Tries-1)){
+         TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " 12C is broken" << TLOG_ENDL;
+	 continue;
+      }
+      else{
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " 12C is broken";
+	throw excpt;
+      }
+    }
+    
+    break;
+  } // for loop
+  
+  TLOG_INFO(identification) << "************* FEMB_DETECT_FOR_DAMAGED_FEMB completed ****************" << TLOG_ENDL;
+}
+
 void WIBReader::FEMB_DETECT_ALL(std::vector<bool> &FEMB_NOs, uint32_t FEMB_V, int Tries){
   // This function is a modified version of one of the funcitons available in Shanshan's python script
   // to configure WIB/FEMB.
@@ -1305,6 +1527,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto mbb_clibration_mode = FEMB_configure.get<bool>("mbb_clibration_mode");
   const auto change_tst_pulse_separation = FEMB_configure.get<bool>("change_tst_pulse_separation");
   const auto tst_pls_separation = FEMB_configure.get<uint32_t>("tst_pls_separation");
+  const auto use_normal_check_procedure = FEMB_configure.get<bool>("use_normal_check_procedure");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -1403,7 +1626,10 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      FEMBHsLinkCheck(iFEMB, 30);
   }
   
-  if(!use_old_femb_config) FEMB_DECTECT_V2(iFEMB,expected_femb_fw_version,3);
+  if(!use_old_femb_config){ 
+     if (use_normal_check_procedure) FEMB_DECTECT_V2(iFEMB,expected_femb_fw_version,3);
+     else FEMB_DETECT_FOR_DAMAGED_FEMB(iFEMB,expected_femb_fw_version,3);
+  }
   
   std::vector<uint32_t> fe_config = {gain,shape,baselineHigh,leakHigh,leak10X,acCouple,buffer,extClk};
   
