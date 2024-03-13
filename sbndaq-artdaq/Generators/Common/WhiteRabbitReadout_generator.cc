@@ -26,6 +26,8 @@ sbndaq::WhiteRabbitReadout::WhiteRabbitReadout(fhicl::ParameterSet const & ps):
   fragmentId  = ps.get<uint32_t>("fragmentId");
   device      = ps.get<std::string>("device");
   channelMask = ps.get<uint32_t>("channelMask");
+  sends_no_fragments =ps.get<bool>("sends_no_fragments",true);
+
   char name[80];
   for (int i=0; i<N_CHANNELS; i++)
   {
@@ -336,6 +338,9 @@ bool sbndaq::WhiteRabbitReadout::getData()
 
 bool sbndaq::WhiteRabbitReadout::getNext_(artdaq::FragmentPtrs & frags)
 {
+  if(sends_no_fragments)
+    return true;
+
   FillFragment(frags,true);
 
   for (auto const& frag : frags) {
