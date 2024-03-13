@@ -1430,9 +1430,9 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   //*    7          *       dac_sel       *      set to 1 always                                                                 *
   //*    8          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
   //*    9          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
-  //*    10          *      fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
+  //*    10         *      fpgadac_v      *      DAC setting used when using FPGA pulsar                                         * 
   //*    11         *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
-  //*    12         *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             * 
+  //*    12         *       pls_dly       *      Shanshan keeps it 10 in his scirpts (useless to change)                         * 
   //*    13         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
   //*    14         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
   //*    15         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
@@ -1543,8 +1543,11 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 
 void WIBReader::setupFEMB_to_send_fake_data(int FEMB_NO, int fake_mode){
      const std::string identification = "WIBReader::setupFEMB_to_send_fake_data";
-     TLOG_INFO(identification) << "************* Now Starting setupFEMB_to_send_fake_data for FEMB " << FEMB_NO << " with fake data mode " <<  fake_mode << " ***************" << TLOG_ENDL;
-     //wib->WIB_PWR_FEMB(FEMB_NO);
+     TLOG_INFO(identification) << "************* Now Starting setupFEMB_to_send_fake_data for FEMB " << FEMB_NO << " with fake data mode " 
+                               <<  fake_mode << " ***************" << TLOG_ENDL;
+     TLOG_WARNING(identification) << "If you see an exception thrown when calling this function, First make sure FEMB " << FEMB_NO
+                                  << " is turned on and also it is recommended to first configure all FEMBs to normal data taking (noise) mode"
+				  << TLOG_ENDL;
      wib->ConfigFEMB_to_send_fake_data(FEMB_NO,fake_mode);
      TLOG_INFO(identification) << "************* setupFEMB_to_send_fake_data completed ****************" << TLOG_ENDL;
 }
