@@ -72,7 +72,6 @@ namespace sbndaq
              throw excpt;
        }
        TLOG_INFO(identification) << "Configuraton try  " << iTry << " failed. Trying again..." << TLOG_ENDL;
-       //sleep(10);
     } // for iRetry
 
     if(!success){
@@ -183,7 +182,6 @@ namespace sbndaq
 	  TLOG_INFO(identification) << "FEMB parameter is assigned" << TLOG_ENDL;
 	  if (!wib_fake_data) {
 	     setupFEMB(iFEMB,FEMB_config);
-	     //if(use_mbb_cmd) prepFEMB_MBB_Calib(iFEMB);
 	  }
 	  TLOG_INFO(identification) << "setup FEMB " << iFEMB << TLOG_ENDL;
        }
@@ -195,8 +193,7 @@ namespace sbndaq
    }
    
    TLOG_INFO(identification) << "FEMBs are configured." << TLOG_ENDL;
-   //TLOG_INFO(identification) << "About to issue WIB sync command once. " << TLOG_ENDL;
-   //IssueWIBSYNC();
+   
    if(do_err_chk){
       Do_Err_Check(enable_FEMBs);
    }
@@ -1305,6 +1302,7 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto fisrt_chnl_number   = FEMB_configure.get<uint32_t>("test_chnl_number"); // This should be the first chnnel number in testing chnl map
   const auto last_chnl_number    = FEMB_configure.get<uint32_t>("test_chnl_lst_number"); // This should be the last chnnel number in testing chnl map
   const auto tst_pls_gap         = FEMB_configure.get<uint32_t>("tst_pls_gap");
+  const auto mbb_clibration_mode = FEMB_configure.get<bool>("mbb_clibration_mode");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -1517,7 +1515,13 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
 	 }
 	 
 	 else{
-	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 1, 0, pls_dac_val, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh,                                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1,                                                 BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	     if (mbb_clibration_mode){
+	         wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 2, 1, 1, 0, pls_dac_val, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh,                                                 BNLgain[0], BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1,                                               BNL_mon_STB, BNL_enable_high_filt, 0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	    }
+	    
+	    else{
+	        wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 1, 0, pls_dac_val, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh,                                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1,                                                 BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	    }
 	 }
 	 
 	 // ======================== End of testing shanshan suggestions ========================================================================
