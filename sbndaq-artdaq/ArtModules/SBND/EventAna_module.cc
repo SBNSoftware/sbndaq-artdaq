@@ -112,6 +112,12 @@ public:
 	fhicl::Comment("also save the full timestamp in utc format"),
 	false
 	};
+    fhicl::Atom<bool> ChopUTCTime {
+      fhicl::Name("ChopUTCTime"),
+	fhicl::Comment("lots of text output if set to true"),
+	false
+	};
+
   fhicl::Atom<bool> include_crtsoft {
     fhicl::Name("include_crtsoft"),
   fhicl::Comment("save the crt software trigger metric variables"),
@@ -147,7 +153,7 @@ public:
 private:
 
 
-  bool choputctime=true;//only keep the utc time %1e13 to make it easier to hand scan 
+
   void analyze_caen_fragment(artdaq::Fragment & frag);
   void analyze_wr_fragment_dio(artdaq::Fragment & frag);
   void analyze_bern_fragment(artdaq::Fragment & frag);
@@ -330,7 +336,7 @@ private:
   std::string fcrtSoftTriggerModuleLabel;
   std::string fpmtSoftTriggerModuleLabel;
 
-
+  bool fChopUTCTime;
   // including ptb information on the tree
   bool unknown_or_error_word; // flag to indicate the event has
   int ts_word_count;
@@ -382,6 +388,7 @@ sbndaq::EventAna::EventAna(EventAna::Parameters const& pset): art::EDAnalyzer(ps
   fcrt_keepall = pset().crt_keepall();
   finclude_ptb = pset().include_ptb();
 
+  fChopUTCTime = pset().ChopUTCTime();
   finclude_crtsoft = pset().include_crtsoft();
   finclude_pmtsoft = pset().include_pmtsoft();
   fcrtSoftTriggerModuleLabel = pset().CRTInputModule();
@@ -1573,7 +1580,9 @@ void sbndaq::EventAna::analyze_ntb_fragment(artdaq::Fragment & frag)  {
 }//end of analyze ntb fragment
 
 uint64_t sbndaq::EventAna::chopTimeStamp(uint64_t time){
-  if (!choputctime) return time;
+  //only keep the utc time %1e13 to make it easier to hand scan choputctime)
+  if (! fChopUTCTime)
+    return time;
   else{ 
     uint64_t limit=1e13;
     return time%limit;
