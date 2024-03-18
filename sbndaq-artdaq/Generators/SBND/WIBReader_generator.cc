@@ -114,12 +114,15 @@ namespace sbndaq
    auto femb_fake_data_mode        = WIB_config.get<std::vector<uint8_t> >("WIB.femb_fake_data_mode");
    auto use_mbb_cmd                = WIB_config.get<bool>("WIB.use_mbb_cmd");
    auto do_err_chk                 = WIB_config.get<bool>("WIB.do_err_chk");
+   auto reset_wib_qsfp             = WIB_config.get<bool>("WIB.reset_wib_qsfp");
    
    const std::string identification = "SBNDWIBReader::setupWIB";
    
    TLOG_INFO(identification) << "************* Now Starting setupWIB  ****************" << TLOG_ENDL;
    
    wib = std::make_unique<WIB>(wib_address,wib_table,femb_table,true);
+   
+   if(reset_wib_qsfp) wib_qsfp_reset(); 
    
    if (use_old_wib_config){
        uint32_t wib_fw_version = wib->Read("FW_VERSION");
@@ -470,6 +473,22 @@ void WIBReader::IssueWIBSYNC()
 
   TLOG_INFO(identification) << "=================== End IssueWIBSYNC() ==========================" << TLOG_ENDL;
 
+}
+
+void WIBReader::wib_qsfp_reset()
+{
+  const std::string identification = "WIBReader::wib_qsfp_reset";
+  TLOG_INFO(identification) << "=================== Start wib_qsfp_reset() ==========================" << TLOG_ENDL;
+  wib->Write(0x14, 0xCF);
+  TLOG_INFO(identification) << "*********** WIB with IP " << wib->GetAddress() << " Register 0x14 value : " << wib->Read(0x14) << TLOG_ENDL;
+  sleep(1);
+  wib->Write(0x14, 0x100);
+  TLOG_INFO(identification) << "*********** WIB with IP " << wib->GetAddress() << " Register 0x14 value : " << wib->Read(0x14) << TLOG_ENDL;
+  sleep(1);
+  wib->Write(0x14, 0x000);
+  TLOG_INFO(identification) << "*********** WIB with IP " << wib->GetAddress() << " Register 0x14 value : " << wib->Read(0x14) << TLOG_ENDL;
+  sleep(1);
+  TLOG_INFO(identification) << "=================== End wib_qsfp_reset() ==========================" << TLOG_ENDL;
 }
 
 void WIBReader::FEMBHsLinkCheck(int FEMB_NO, int tries)
@@ -1015,6 +1034,232 @@ void WIBReader::FEMB_DECTECT_V2(int FEMB_NO, uint32_t FEMB_V, int Tries){
   TLOG_INFO(identification) << "************* FEMB_DECTECT_V2 completed ****************" << TLOG_ENDL;
 }
 
+//================================== CAll for damaged WIB ===============================================
+void WIBReader::FEMB_DETECT_FOR_DAMAGED_FEMB(int FEMB_NO, uint32_t FEMB_V, int Tries){
+  // This function is a modified version of one of the funcitons available in Shanshan's python script
+  // to configure WIB/FEMB.
+  // The original function is in cls_config.py module inside the repository CE_LD with same name (git branch name is, Installation_Support)
+  const std::string identification = "WIBReader::FEMB_DETECT_FOR_DAMAGED_FEMB";
+  
+  TLOG_INFO(identification) << "************* Now Starting FEMB_DETECT_FOR_DAMAGED_FEMB  ****************" << TLOG_ENDL;
+   
+  //std::map<std::string,double> map = wib->WIB_STATUS();
+  for (int i=0; i<Tries; i++){
+    
+    /*if (i != 0){ 
+       map = wib->WIB_STATUS();
+       sleep(3);
+    }
+    
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_LINK")->second != 0xFF ){
+	if (i < (Tries-1)){
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " LINK is broken. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{ 
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " LINK is broken";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_EQ")->second != 0xF ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " EQ is broken. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " EQ is broken";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second < 0.001 ){
+        if (i < (Tries-1)){
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is lower than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	 cet::exception excpt(identification);
+	 excpt << "FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is lower than expected";
+	 throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second > 0.1 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " BIAS current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_BIAS_I")->second << " A" << " is higher than expected";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second < 0.010 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " lower than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second > 0.2 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V39 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV39_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second < 0.050 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " lower than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second > 0.5 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V30 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV30_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second < 0.200 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " lower than expected";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second > 1.0 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " FM_V18 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_FMV18_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second < 0.100 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " lower than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second > 1.0 ){
+        if (i < (Tries-1)){ 
+	    TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	    continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " AM_V33 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV33_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second < 0.100 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " lower than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	  cet::exception excpt(identification);
+	  excpt << "FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " lower than expected";
+	  throw excpt;
+	}
+    }
+    
+    if (map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second > 1.5 ){
+        if (i < (Tries-1)){ 
+	   TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " higher than expected. Trying again." << TLOG_ENDL;
+	   continue;
+	}
+	else{
+	   cet::exception excpt(identification);
+	   excpt << "FEMB " << FEMB_NO << " AM_V28 current " << map.find("FEMB"+std::to_string(FEMB_NO)+"_AMV28_I")->second << " A" << " higher than expected";
+	   throw excpt;
+	}
+    }*/
+    
+    wib->WriteFEMB(FEMB_NO, 0x0, 0x0);
+    wib->ReadFEMB(FEMB_NO, 0x102);
+    auto ver_value = wib->ReadFEMB(FEMB_NO, 0x101);
+    
+    if (ver_value > 0){
+        if ((ver_value&0xFFFF) != FEMB_V){
+	   if (i < (Tries-1)){
+	     TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " FE version is " << ver_value << " which is different from default " << FEMB_V << TLOG_ENDL;
+	     continue;
+	   }
+	   
+	   else{
+	     cet::exception excpt(identification);
+	     excpt << "FEMB " << FEMB_NO << " FE version is " << ver_value << " which is different from default " << FEMB_V;
+	     throw excpt;
+	   }
+	}  
+    }
+    
+    else if (ver_value <= 0){
+      if (i < (Tries-1)){
+         TLOG_WARNING(identification) << "Try " << i+1 << " FEMB " << FEMB_NO << " 12C is broken" << TLOG_ENDL;
+	 continue;
+      }
+      else{
+        cet::exception excpt(identification);
+	excpt << "FEMB " << FEMB_NO << " 12C is broken";
+	throw excpt;
+      }
+    }
+    
+    break;
+  } // for loop
+  
+  TLOG_INFO(identification) << "************* FEMB_DETECT_FOR_DAMAGED_FEMB completed ****************" << TLOG_ENDL;
+}
+
+
+//================================== End of call for damaged WIB ========================================
+
 void WIBReader::FEMB_DETECT_ALL(std::vector<bool> &FEMB_NOs, uint32_t FEMB_V, int Tries){
   // This function is a modified version of one of the funcitons available in Shanshan's python script
   // to configure WIB/FEMB.
@@ -1302,7 +1547,14 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   const auto FEMB_channel_map = FEMB_configure.get<uint8_t>("FEMB_channel_map");
   const auto use_old_femb_config = FEMB_configure.get<bool>("use_old_femb_config");
   const auto chnl_mapping_mode = FEMB_configure.get<bool>("chnl_mapping_mode");
-  const auto test_chnl_number  = FEMB_configure.get<uint32_t>("test_chnl_number");
+  //const auto test_chnl_number  = FEMB_configure.get<uint32_t>("test_chnl_number"); // this should be used with early code (02/23/2024)
+  const auto fisrt_chnl_number  = FEMB_configure.get<uint32_t>("test_chnl_number");
+  const auto last_chnl_number  = FEMB_configure.get<uint32_t>("test_chnl_lst_number");
+  const auto change_tst_pulse_separation = FEMB_configure.get<bool>("change_tst_pulse_separation");
+  const auto tst_pls_separation = FEMB_configure.get<uint32_t>("tst_pls_separation");
+  const auto tst_pls_gap = FEMB_configure.get<uint32_t>("tst_pls_gap");
+  const auto mbb_clibration_mode = FEMB_configure.get<bool>("mbb_clibration_mode");
+  const auto use_normal_check_procedure = FEMB_configure.get<bool>("use_normal_check_procedure");
   
   if(signed(gain)>3 || signed(gain)<0){
      cet::exception excpt(identification);
@@ -1401,7 +1653,10 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      FEMBHsLinkCheck(iFEMB, 30);
   }
   
-  if(!use_old_femb_config) FEMB_DECTECT_V2(iFEMB,expected_femb_fw_version,3);
+  if(!use_old_femb_config){ 
+     if (use_normal_check_procedure) FEMB_DECTECT_V2(iFEMB,expected_femb_fw_version,3);
+     else FEMB_DETECT_FOR_DAMAGED_FEMB(iFEMB,expected_femb_fw_version,3);
+  }
   
   std::vector<uint32_t> fe_config = {gain,shape,baselineHigh,leakHigh,leak10X,acCouple,buffer,extClk};
   
@@ -1422,42 +1677,49 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
   //*    1          *       iFEMB         *      FEMB Number (1-4)                                                               *
   //*    2          *     configuration   *      0 - config. 1, 1 - config. 2, any other number = config. 3                      *
   //*    3          *   use_chnl_map_test *      going test channel mapping by setting a pulse in a given channel                *
-  //*    4          *       chnl_no       *      Channel number for channel mapping test (0-127)                                 *        
-  //*    5          *       pls_cs        *      set to 0 always                                                                 *
-  //*    6          *       dac_sel       *      set to 1 always                                                                 *
-  //*    7          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
-  //*    8          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
-  //*    9          *       fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
-  //*    10         *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
-  //*    11         *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             * 
-  //*    12         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
-  //*    13         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
-  //*    14         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
-  //*    15         *       snc           *      Sets the baseline value                                                         *
-  //*    16         *       sg0           *      First argument in setting the gain                                              *
-  //*    17         *       sg1           *      Second argument in setting the gain                                             *
-  //*    18         *       st0           *      First argument in setting the shaping time                                      *
-  //*    19         *       st1           *      second argument in setting the shaping time                                     *
-  //*    20         *       smn           *      Enable output monitor                                                           *
-  //*    21         *       sdf           *      Buffer control                                                                  *
-  //*    22         *       slk0          *      Set to 0 in shanshan scripts                                                    *
-  //*    23         *       stb1          *      Set monitoring (always set to 0)                                                *
-  //*    24         *       stb           *      Set monitoring (always set to 0)                                                *
-  //*    25         *       s16           *      Enable high filter                                                              *
-  //*    26         *       slk1          *      Set to 0 always in shanshan scripts                                             *
-  //*    27         *       sdc           *      Output coupling                                                                 *
-  //*    28         *       swdac1        *      Set to 1 when FPGA pulsar is being used (otherwise 0)                           *
-  //*    29         *       swdac2        *      Set to 1 when ASIC pulsar is being used (otherwise 0)                           *
-  //*    30         *       dac           *      DAC setting when using ASIC pulsar                                              *
-  //*    31         *       fecfg_loadflg *      Always set to 0 in shanshan scripts                                             * 
+  //*    4          *       chnl_fst      *      Starting Channel number for group of channels to to receive pulse               *
+  //*    5          *       chnl_lst      *      Lasting Channel number for group of channels to to receive pulse                *        
+  //*    6          *       pls_cs        *      set to 0 always                                                                 *
+  //*    7          *       dac_sel       *      set to 1 always                                                                 *
+  //*    8          *       fpgadac_en    *      set to 1 when using FPGA pulsar                                                 *
+  //*    9          *       asicdac_en    *      set to 1 when using internal ASIC pulsar                                        *
+  //*    10         *       fpgadac_v     *      DAC setting used when using FPGA pulsar                                         * 
+  //*    11         *       pls_gap       *      Shanshan keeps it always 500 in his scirpts                                     *
+  //*    12         *       pls_dly       *      Shanshan keeps it 10 in his scirpts                                             * 
+  //*    13         *       mon_cs        *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    14         *       data_cs       *      Shanshan keeps it 0 in his scirpts                                              *
+  //*    15         *       sts           *      Enable test capacitor (this should be 1 when using either ASIC or FPGA pulsar)  * 
+  //*    16         *       snc           *      Sets the baseline value                                                         *
+  //*    17         *       sg0           *      First argument in setting the gain                                              *
+  //*    18         *       sg1           *      Second argument in setting the gain                                             *
+  //*    19         *       st0           *      First argument in setting the shaping time                                      *
+  //*    20         *       st1           *      second argument in setting the shaping time                                     *
+  //*    21         *       smn           *      Enable output monitor                                                           *
+  //*    22         *       sdf           *      Buffer control                                                                  *
+  //*    23         *       slk0          *      Set to 0 in shanshan scripts                                                    *
+  //*    24         *       stb1          *      Set monitoring (always set to 0)                                                *
+  //*    25         *       stb           *      Set monitoring (always set to 0)                                                *
+  //*    26         *       s16           *      Enable high filter                                                              *
+  //*    27         *       slk1          *      Set to 0 always in shanshan scripts                                             *
+  //*    28         *       sdc           *      Output coupling                                                                 *
+  //*    29         *       swdac1        *      Set to 1 when FPGA pulsar is being used (otherwise 0)                           *
+  //*    30         *       swdac2        *      Set to 1 when ASIC pulsar is being used (otherwise 0)                           *
+  //*    31         *       dac           *      DAC setting when using ASIC pulsar                                              *
+  //*    32         *       fecfg_loadflg *      Always set to 0 in shanshan scripts                                             * 
   //******************************************************************************************************************************   
   
   if(!use_old_femb_config){
   
      if (chnl_mapping_mode){
-         if (signed(test_chnl_number)<0 || signed(test_chnl_number)>127){
+         /*if (signed(test_chnl_number)<0 || signed(test_chnl_number)>127){
 	     cet::exception excpt(identification);
 	     excpt << "In FEMB " << iFEMB << " Channel number " << test_chnl_number << " Provided for channel map test is not acceptable";
+	     throw excpt;
+	 }*/
+	 
+	 if (fisrt_chnl_number > last_chnl_number){
+	     cet::exception excpt(identification);
+             excpt << "In FEMB " << iFEMB << " when checking channel mapping last channel number should be greater that first channel number";
 	     throw excpt;
 	 }
 	 
@@ -1469,31 +1731,85 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      }
   
      if (pls_mode == 0){
-         wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+         /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
                          BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
-		         0, BNL_output_coupl, 0, 0, 0, false);
+		         0, BNL_output_coupl, 0, 0, 0, false);*/
+			 
+	 // ========================= Testing Shanshan suggesition ==============================================================================
+	 // SET pls_cs=0 && dac_sel=0 -> current board reader has pulse_cs = 1 && dac_sel = 1
+	 // SET swdac1=1 & swdac2=0 -> current board reader has swdac1=0 && swdac2=0
+	 
+	 /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 0, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+                         BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		         0, BNL_output_coupl, 1, 0, 0, false);*/
+			 
+	 wib->TST_CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 0, 0, 0, 0, 0, tst_pls_gap, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1],                                   BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		             0, BNL_output_coupl, 1, 0, 0, false);
+			 
+	 wib->Write_Missing_FEMB_Regs(0,iFEMB);
+	 
+	 // ======================== End of testing shanshan suggestions ========================================================================
      }
   
      else if (pls_mode == 1){
          if (chnl_mapping_mode){
-             wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0],                              BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                             BNL_enable_high_filt,0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+             /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0],                               BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                              BNL_enable_high_filt,0, BNL_output_coupl, 0, 1, pls_dac_val, false);*/
+	     
+	     wib->TST_CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, fisrt_chnl_number, last_chnl_number, 1, 1, 0, 1, 0, tst_pls_gap, 10, 0, 0,                                    1, BNLbaselineHigh, BNLgain[0],BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0,                                          BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+	     
 	 }
 	 
 	 else{
-	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
+	    /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 1, 0, 500, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
                              BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
-		             0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+		             0, BNL_output_coupl, 0, 1, pls_dac_val, false);*/
+			     
+	     wib->TST_CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 0, 1, 0, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1],                                   BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
+		                 0, BNL_output_coupl, 0, 1, pls_dac_val, false);
+			     
+	 }
+	 
+	 // A call to change the separatin between positve pulse and negative pulse from default setting
+	 
+	 if(change_tst_pulse_separation){
+	    Change_TST_Pulse_Separation(iFEMB, tst_pls_separation);
 	 }
      }
   
      else if (pls_mode == 2){
          if (chnl_mapping_mode){
-	     wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                   BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0, false);
+	     /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, test_chnl_number, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                    BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);*/
+	     
+	     wib->TST_CE_CHK_CFG(iFEMB, FEMB_channel_map, chnl_mapping_mode, fisrt_chnl_number, last_chnl_number, 1, 1, 1, 0, pls_dac_val, tst_pls_gap,                                    10, 0, 0, 1, BNLbaselineHigh, BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0,                               BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
 	 }
 	 
-	 else{
+	 /*else{
 	    wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                                           BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                   BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0, false);
+	 }*/
+	 
+	 // ========================= Testing Shanshan suggesition ==============================================================================
+	 
+	 // SET swdac1=1 & swdac2=0 & dac=0x0b000000 -> current board reader has swdac1=1 && swdac2=0 && dac = 0
+	 
+	 else{
+	    /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 1, 0, pls_dac_val, 500, 10, 0, 0, 1, BNLbaselineHigh,                                                            BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB,                                    BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);*/
+	    
+	    if (mbb_clibration_mode){
+	        wib->TST_CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 2, 1, 1, 0, pls_dac_val, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh,                                                 BNLgain[0], BNLgain[1], BNLshape[0], BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1,                                               BNL_mon_STB, BNL_enable_high_filt, 0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	    }
+	    
+	    else{
+	        wib->TST_CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 0, 1, 1, 1, 0, pls_dac_val, tst_pls_gap, 10, 0, 0, 1, BNLbaselineHigh,                                                 BNLgain[0], BNLgain[1],BNLshape[0],BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1,                                                 BNL_mon_STB, BNL_enable_high_filt,0, BNL_output_coupl, 1, 0, 0x0b000000, false);
+	    }
 	 }
+	 
+	 // A call to change the separatin between positve pulse and negative pulse from default setting
+	 
+	 if(change_tst_pulse_separation){
+	    Change_TST_Pulse_Separation(iFEMB, tst_pls_separation);
+	 }
+	 
+	 // ======================== End of testing shanshan suggestions ========================================================================
      }
   }
   
@@ -1526,6 +1842,13 @@ void WIBReader::prepFEMB_MBB_Calib(std::vector<bool> enable_FEMBs){
      TLOG_INFO(identification) << "************* prepFEMB_MBB_Calib completed ****************" << TLOG_ENDL;
 }
 
+void WIBReader::Change_TST_Pulse_Separation(int FEMB_NO, uint32_t pls_sep){
+     const std::string identification = "WIBReader::Change_TST_PLS_Separation";
+     TLOG_INFO(identification) << "************* Now Starting prepFEMB_MBB_Calib for FEMB " << FEMB_NO << " ***************** "<< TLOG_ENDL;
+     wib->Change_TST_PLS_Separation(FEMB_NO,pls_sep);
+     TLOG_INFO(identification) << "************* Change_TST_Pulse_Separation completed ****************" << TLOG_ENDL;
+}
+
 void WIBReader::Do_Err_Check(std::vector<bool> enable_FEMBs){
      const std::string identification = "WIBReader::Do_Err_Check";
      TLOG_INFO(identification) << "************* Now Starting Do_Err_Check" << " ***************** "<< TLOG_ENDL;
@@ -1533,25 +1856,62 @@ void WIBReader::Do_Err_Check(std::vector<bool> enable_FEMBs){
      sleep(0.1);
      wib->Config_FEMBs_to_ChnlMap_Mode(enable_FEMBs);
      sleep(0.1);
+
+     // Get expected value
+     unsigned int expected_value = 0xffff;
+     for (size_t i = 0; i<enable_FEMBs.size(); ++i){
+       if (enable_FEMBs[i]){
+	 for (unsigned short j = 0; j<4; ++j){
+	   expected_value = expected_value & ~(1 << (j + 4*i));
+	 }
+       }
+     }
+
      auto crate_no = (wib->Read(0xFF)&0xFF000000)>>28;
      auto wib_slot_no = ((wib->Read(0xFF))>>24)&0x7;
      auto val = wib->Read(43);
      int Itry = 1;
+
+     if (val == expected_value) {
+       TLOG_INFO(identification) << "************* Links are all good in WIB at crate " << 
+	 crate_no << " and slot " << wib_slot_no << " ***************** , so going back no normal data takin mode." << TLOG_ENDL;
+       wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+     }
+     else{
+       while(val != expected_value){
+	 TLOG_WARNING(identification) << "********** BAD LINKS FOUND in wib at crate " << 
+	   crate_no << " and slot " << wib_slot_no << " in attempt " << Itry << "." << TLOG_ENDL;
+	 TLOG_WARNING(identification) << "Expected value is "<<expected_value<<", the value we read is "<<val<<"."<< TLOG_ENDL;
+	 TLOG_WARNING(identification) << "Sending WIB resync command again." << TLOG_ENDL;
+	 IssueWIBSYNC();
+	 sleep(0.1);
+	 val = wib->Read(43);
+	 Itry++;
+	 if (val == expected_value){
+	   TLOG_WARNING(identification) << "**************** Links are back to normal in WIB at crate " << 
+	     crate_no << " and slot " << wib_slot_no << " in the attempt " << Itry << ". so going back to normal data taking mode." << TLOG_ENDL;
+	   wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
+	   break;
+	 }
+       }
+     }
+
+     /*
      if (crate_no == 3 && wib_slot_no == 3){
-        if (val == 0xf) {
+        if (val == 0) { // val == 0xf
 	    TLOG_INFO(identification) << "************* Links are all good in WIB at crate " << crate_no 
 	    << " and slot " << wib_slot_no << " ***************** , so going back no normal data takin mode." << TLOG_ENDL;
 	    wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
 	}
 	else{
-	   while(val != 0xf){
+	   while(val != 0){ // val != 0xf
 	     TLOG_WARNING(identification) << "********** BAD LINKS FOUND in wib at crate " << 
 	     crate_no << " and slot " << wib_slot_no << " in attempt " << Itry << ". Sending WIB resync command again." << TLOG_ENDL;
 	     IssueWIBSYNC();
 	     sleep(0.1);
 	     val = wib->Read(43);
 	     Itry++;
-	     if (val == 0xf){
+	     if (val == 0){ // val == 0xf
 	        TLOG_INFO(identification) << "**************** Links are back to normal in WIB at crate " << crate_no
 		<< " and slot " << wib_slot_no << " in the attempt " << Itry << ". so going back to normal data taking mode." << TLOG_ENDL;
 		wib->Config_FEMBs_to_NormalData_Mode(enable_FEMBs);
@@ -1635,7 +1995,7 @@ void WIBReader::Do_Err_Check(std::vector<bool> enable_FEMBs){
 	   }
 	}
      } // This is the bad link check for all other WIBs
-     
+     */     
      TLOG_INFO(identification) << "************* Do_Err_Check completed ****************" << TLOG_ENDL;
 }
 
