@@ -198,7 +198,7 @@ namespace sbndaq
    }
    
    TLOG_INFO(identification) << "FEMBs are configured." << TLOG_ENDL;
-   TLOG_INFO(identification) << "About to issue WIB sync command once. " << TLOG_ENDL;
+   //TLOG_INFO(identification) << "About to issue WIB sync command once. " << TLOG_ENDL;
    //IssueWIBSYNC();
    if(do_err_chk){
       Do_Err_Check(enable_FEMBs);
@@ -1733,8 +1733,8 @@ void WIBReader::setupFEMB(size_t iFEMB, fhicl::ParameterSet const& FEMB_configur
      if (pls_mode == 0){
          /*wib->CE_CHK_CFG(iFEMB, FEMB_channel_map, false, 0, 1, 1, 0, 0, 0, 500, 10, 0, 0, 0, BNLbaselineHigh, BNLgain[0], BNLgain[1], BNLshape[0],
                          BNLshape[1], BNL_enable_output_mon, BNL_buffter_ctrl, 0, BNL_mon_STB1, BNL_mon_STB, BNL_enable_high_filt,
-		         0, BNL_output_coupl, 0, 0, 0, false);*/
-			 
+		         0, BNL_output_coupl, 0, 0, 0, false);*/	 
+	 
 	 // ========================= Testing Shanshan suggesition ==============================================================================
 	 // SET pls_cs=0 && dac_sel=0 -> current board reader has pulse_cs = 1 && dac_sel = 1
 	 // SET swdac1=1 & swdac2=0 -> current board reader has swdac1=0 && swdac2=0
