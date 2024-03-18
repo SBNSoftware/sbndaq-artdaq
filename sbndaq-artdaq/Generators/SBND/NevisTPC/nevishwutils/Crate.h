@@ -29,7 +29,7 @@ namespace nevistpc{
     bool hasTrigger;
     
     void linkSetup();
-    void FEMtestfunction();
+    //    void FEMtestfunction();
     // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU stream with external triggers
     // It follows uboonedaq run2Stream but SN stream has been removed
     void runNUStream(fhicl::ParameterSet const& _p);

@@ -84,7 +84,8 @@ namespace nevistpc{
   TriggerModuleSPtr Crate::getTriggerModule(){
     return _trigger_module;
   }
-
+  /*
+This function is added to debug FEMs is software but hasnot tested yet
   void Crate::FEMtestfunction(){
     if(getNumberOfTPCFEMs() > 1){
     for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
@@ -92,7 +93,7 @@ namespace nevistpc{
 
     }}
   }
-
+*/
   void Crate::linkSetup(){
     
     // Reset link port receiver PLL for all FEMs except farthest left
