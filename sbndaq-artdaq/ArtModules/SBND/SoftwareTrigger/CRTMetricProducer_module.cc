@@ -63,6 +63,7 @@ private:
 
   //metric variables
   int hitsperplane[7];
+  std::vector<uint32_t> ts1s;
 
   //graphana metric
   int num_t1_resets;
@@ -134,13 +135,13 @@ void sbndaq::MetricProducer::produce(art::Event& evt)
       metricMan->sendMetric(
           "T1_resets_per_event",
           num_t1_resets,
-          "CRT T1 resets per event", 5, artdaq::MetricMode::LastPoint);
+          "CRT T1 resets per event", 11, artdaq::MetricMode::LastPoint);
 
       for (int i=0;i<7;++i){
         metricMan->sendMetric(
             std::string("CRT_hits_beam_plane_")+std::to_string(i),
             hitsperplane[i],
-            "CRT hits in beam window per plane per event", 5, artdaq::MetricMode::LastPoint);
+            "CRT hits in beam window per plane per event", 11, artdaq::MetricMode::LastPoint);
       }
 
       if (fVerbose) {
@@ -152,6 +153,7 @@ void sbndaq::MetricProducer::produce(art::Event& evt)
 
 
   for (int i=0;i<7;++i) {CRTMetricInfo->hitsperplane[i] = hitsperplane[i];}
+  for (uint i=0;i<ts1s.size();i++){CRTMetricInfo->ts1inbeam.push_back(ts1s.at(i));}
 
   if (fVerbose) {
     std::cout << "CRT hit count during beam spill ";
@@ -170,6 +172,10 @@ void sbndaq::MetricProducer::produce(art::Event& evt)
 
   // add to event
   evt.put(std::move(CRTMetricInfo));
+
+  //clear
+  ts1s.clear();
+  ts1s.shrink_to_fit();
 
 }
 
@@ -195,7 +201,17 @@ void sbndaq::MetricProducer::analyze_crt_fragment(artdaq::Fragment & frag)
     if (thisflag & 0x2 && !(thisflag & 0xC) ) {
       // check ts1 for beam window
       auto thistime=bevt->ts1;
-      if ((int)thistime>fBeamWindowStart && (int)thistime<fBeamWindowEnd) hitsperplane[plane]++;
+      if ((int)thistime>fBeamWindowStart && (int)thistime<fBeamWindowEnd) {
+	hitsperplane[plane]++;
+	ts1s.push_back(thistime);
+	if(metricMan != nullptr) {
+	  //send t1 to grafana
+	  metricMan->sendMetric(
+				"CRT_T1_in_beam",
+				(double)thistime,
+				"CRT T1 times for hits in beam", 15, artdaq::MetricMode::LastPoint);
+	}
+      }
       //CRTMetricInfo->hitsperplane[plane]++;
     }
   }
