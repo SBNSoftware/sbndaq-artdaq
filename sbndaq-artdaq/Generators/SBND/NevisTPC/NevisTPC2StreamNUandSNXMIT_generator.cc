@@ -204,6 +204,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::MonitorCrate() {
   if( next_monitor_cycle_time > std::chrono::steady_clock::now() ) return false;
 
   fCrate->getXMITModule()->readStatus();
+  //  fCrate->FEMtestfunction();
   TLOG(TSTATUS) << "Called " << __func__ ;
   // To do: add other board status checks. Follow uboonedaq/projects/sebs/configManager_CrateMonitor.cpp
   next_monitor_cycle_time = std::chrono::steady_clock::now() + std::chrono::seconds( fMonitorPeriod );

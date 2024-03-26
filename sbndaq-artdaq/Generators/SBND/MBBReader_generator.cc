@@ -128,7 +128,6 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   const auto ptc_03             = ps.get<uint32_t>("MBB.ptc_03");
   const auto ptc_04             = ps.get<uint32_t>("MBB.ptc_04");
   
-
   // connecting to mbb.
   TLOG_INFO(identification) << "Connecting to MBB at " << mbb_address << TLOG_ENDL;
   mbb = std::make_unique<MBB>( mbb_address, mbb_table );
@@ -579,6 +578,34 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
     throw excpt;
   }
 
+  sync_fembs  = ps.get<bool>("MBB.sync_fembs");
+  use_opt1 = ps.get<bool>("MBB.use_opt1");
+  use_opt2 = ps.get<bool>("MBB.use_opt2");
+  use_opt3 = ps.get<bool>("MBB.use_opt3");
+  mbb_pls_prd = ps.get<uint32_t>("MBB.mbb_pls_prd");
+  
+  if (sync_fembs){
+     TLOG_INFO(identification) << "******** Starting MBB calibration to test FEMB syncronization. ********" << TLOG_ENDL;
+     if (use_opt1){ 
+         TLOG_INFO(identification) << "Using option : 1 " << TLOG_ENDL;
+         SyncFEMBs(1,mbb_pls_prd);
+     }
+     else if(use_opt2){ 
+          TLOG_INFO(identification) << "Using option : 2 " << TLOG_ENDL;
+          SyncFEMBs(2,mbb_pls_prd);
+     }
+     else if(use_opt3){ 
+          TLOG_INFO(identification) << "Using option : 3 " << TLOG_ENDL;
+          SyncFEMBs(3,mbb_pls_prd);
+     }
+     else{
+        TLOG_WARNING(identification) << "You haven't selected any option to carry out MBB pulse calibration."
+	                             << " Please set true appropiate fcl parameter to carry out the MBB pulse calibration."
+				     << TLOG_ENDL;
+     }
+     TLOG_INFO(identification) << "******** Completed MBB calibration to test FEMB syncronization. ********" << TLOG_ENDL;
+  }
+  
   // synchronous femb stop, performed at CONFIGURE transition
   stop_femb_daq   = ps.get<uint32_t>("MBB.stop_femb_daq");
   if(stop_femb_daq > 1){
@@ -598,8 +625,6 @@ void MBBReader::setupMBB(fhicl::ParameterSet const& ps)
   else{
     TLOG_INFO(identification) << "Not running stop FEMB Daq right now." << TLOG_ENDL;
   }
-  
-  sync_fembs  = ps.get<bool>("MBB.sync_fembs");
 }
   
 
@@ -631,10 +656,17 @@ void MBBReader::start()
     TLOG_INFO(identification) << "Not running start FEMB Daq right now." << TLOG_ENDL;
   }
   
-  if (sync_fembs){
+  /*if (sync_fembs){
      TLOG_INFO(identification) << "Starting MBB calibration to test FEMB syncronization." << TLOG_ENDL;
-     SyncFEMBs();
-  }
+     if (use_opt1) SyncFEMBs(1,mbb_pls_prd);
+     else if(use_opt2) SyncFEMBs(2,mbb_pls_prd);
+     else if(use_opt3) SyncFEMBs(3,mbb_pls_prd);
+     else{
+        TLOG_WARNING(identification) << "You haven't selected any option to carry out MBB pulse calibration."
+	                             << " Please set true appropiate fcl parameter to carry out the MBB pulse calibration."
+				     << TLOG_ENDL;
+     }
+  }*/
 }
 
 // "stop" transition
@@ -657,12 +689,42 @@ bool MBBReader::getNext_(artdaq::FragmentPtrs& /*frags*/)
 }
 
 // Send Calibration pulse CMD via MBB to syncronize all FEMB data
-void MBBReader::SyncFEMBs()
+void MBBReader::SyncFEMBs(int option, uint32_t pls_prd)
 {
-  for (unsigned int i=0; i<100; i++){
-      mbb->NewCalibrationPulse();
-      sleep(0.01);    
+  const std::string identification = "MBBReader::SyncFEMBs";
+  TLOG_INFO(identification) << "************** Starting SyncFEMBs function. *****************" << TLOG_ENDL;
+  if (option == 1){ // Selectiong this option send a Calibration Pulse CMD via MBB
+     for (unsigned int i=0; i<100; i++){
+          mbb->NewCalibrationPulse();
+          usleep(1000);    
+     }
   }
+  
+  else if (option == 2){ // Selectiong this option send a Calibration Pulse CMD via MBB, using periodical MBB calibration source
+     TLOG_INFO(identification) << "Using option " << option << TLOG_ENDL;
+     if (mbb_pls_prd < 10000) TLOG_WARNING(identification) << "Warning: Pulse period, you provided is " 
+				   << int(pls_prd) << " , which is less than 10000."
+				   << ", Using a pulse period lower than 10000 may not work properly, So change that valuse to something" 
+				   << " larger that 10000 and restart the board reader." << TLOG_ENDL;
+     mbb->UseMBBPeriodicalCalibSrc(pls_prd);
+  }
+  
+  else if(option == 3){
+     TLOG_WARNING(identification) << "By selecting this opting, you are deciding to use an external pulse generator."
+                                  << "So please make sure that you have connected you'r external pulse generator to "
+				  << "the MBB LIMO (CALI), and select the pulse period appropiately using external source."
+				  << TLOG_ENDL;
+  }
+  
+  else{
+    cet::exception excpt(identification);
+    excpt << "You selected the option " << option
+          << " , which is not valid. Valid options are 1, 2 or 3. So please"
+	  << " reselect a valid option and restart the board reader";
+    throw excpt;
+  }
+  
+  TLOG_INFO(identification) << "************** Completed SyncFEMBs function. *****************" << TLOG_ENDL;
 }
 
 } // namespace
