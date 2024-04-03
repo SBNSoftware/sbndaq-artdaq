@@ -93,8 +93,8 @@ namespace sbndaq
     TLOG_INFO(identification) << "CRATE ADDRESS : " << std::hex << int(wib->Read("CRATE_ADDR")) << TLOG_ENDL;
     TLOG_INFO(identification) << "FIRMWARE TRACKER : " << std::hex << int(wib->Read(0x100)) << TLOG_ENDL;
 
-    wib->Write(0x0D, 0);
-    TLOG_INFO(identification) << "*********** WIB with IP " << wib->GetAddress() << " Register 0x0D value : " << wib->Read(0x0D) << TLOG_ENDL;
+//    wib->Write(0x0D, 0);
+//    TLOG_INFO(identification) << "*********** WIB with IP " << wib->GetAddress() << " Register 0x0D value : " << wib->Read(0x0D) << TLOG_ENDL;
 
     if(!calibration_mode) disconnectWIB_releaseSemaphores(); 
     TLOG_INFO(identification) << "WIBReader constructor completed";
@@ -127,8 +127,9 @@ namespace sbndaq
 
    // Setting register 0x0D to 1 to indicate board reader has started configuring WIB. 
    // This may be useful for other problem such as BNL diagnostic tool and DCS.
-   wib->Write(0x0D, 1);
-   TLOG_INFO(identification) << "*********** WIB with IP " << wib->GetAddress() << " Register 0x0D value : " << wib->Read(0x0D) << TLOG_ENDL;
+   // Disable for now
+//   wib->Write(0x0D, 1);
+//   TLOG_INFO(identification) << "*********** WIB with IP " << wib->GetAddress() << " Register 0x0D value : " << wib->Read(0x0D) << TLOG_ENDL;
    
    if(reset_wib_qsfp) wib_qsfp_reset(); 
    
