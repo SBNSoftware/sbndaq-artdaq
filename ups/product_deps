@@ -59,6 +59,12 @@ e26:prof:s120b:icbrus       e26:s120b:prof       e26:prof:s120b        -nq-    -
 e26:debug:s120b:icbrus      e26:s120b:debug      e26:debug:s120b       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  -               -         debug  e26:s120b:debug
 e26:prof:s120b:sbnd         e26:s120b:prof       e26:prof:s120b        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s120b  prof      prof   e26:s120b:prof
 e26:debug:s120b:sbnd        e26:s120b:debug      e26:debug:s120b       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s120b debug     debug  e26:s120b:debug
+e26:prof:s130               e26:s130:prof        e26:prof:s130         -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s130   prof      prof   e26:s130:prof
+e26:debug:s130              e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s130  debug     debug  e26:s130:debug
+e26:prof:s130:icbrus        e26:s130:prof        e26:prof:s130         -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   -               -         prof   e26:s130:prof
+e26:debug:s130:icbrus       e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  -               -         debug  e26:s130:debug
+e26:prof:s130:sbnd          e26:s130:prof        e26:prof:s130         -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s130   prof      prof   e26:s130:prof
+e26:debug:s130:sbnd         e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s130  debug     debug  e26:s130:debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")
