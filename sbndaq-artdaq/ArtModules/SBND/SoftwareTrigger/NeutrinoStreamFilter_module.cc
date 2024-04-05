@@ -55,6 +55,8 @@ private:
   // fhicl paramters
   std::string fCRTInputModuleName; //CRT Metrics Module Name
   std::string fPMTInputModuleName; //PMT Metrics Module Name
+  bool fUseCRT; //use CRT metrics
+  bool fUsePMT; //use PMT metrics
   int fNumCRTPlanes; //Total number of CRT planes expected (should be 7)
   std::vector<int> fExcludeCRTPlanes; //which CRT planes to allow to have hits in the beam window (window is defined by CRT metrics producer)
   int fNPMTHits; //number of PMT hits to be below
@@ -67,6 +69,8 @@ NeutrinoStreamFilter::NeutrinoStreamFilter(fhicl::ParameterSet const& pset)
   : EDFilter{pset},
   fCRTInputModuleName(pset.get<std::string>("CRTInputModule", "crttriggerproducer")),
   fPMTInputModuleName(pset.get<std::string>("PMTInputModule", "pmttriggerproducer")),
+  fUseCRT(pset.get<bool>("UseCRT", true)),
+  fUsePMT(pset.get<bool>("UsePMT", true)),
   fNumCRTPlanes(pset.get<int>("NumCRTPlanes", 7)),
   fExcludeCRTPlanes(pset.get<std::vector<int>>("ExcludeCRTPlanes", {2})),
   fNPMTHits(pset.get<int>("NPMTHits", 0)),
@@ -86,41 +90,44 @@ bool NeutrinoStreamFilter::filter(art::Event& e)
   // read crt metric information from event
   art::Handle< sbndaq::CRTmetric > crtHandle;
   e.getByLabel(fCRTInputModuleName, crtHandle);
-  if(!crtHandle.isValid()) {
-    TLOG(TLVL_ERROR) << "NeutrinoStreamFilter: could not find crt information from producer, check CRT input module name specified is correct.";
-    return false;
+  if (fUseCRT){
+    if(!crtHandle.isValid()) {
+      TLOG(TLVL_ERROR) << "NeutrinoStreamFilter: could not find crt information from producer, check CRT input module name specified is correct.";
+      return false;
+    }
+
+    if(sizeof(crtHandle->hitsperplane)/sizeof(crtHandle->hitsperplane[0]) != fNumCRTPlanes){
+      TLOG(TLVL_ERROR) << "NeutrinoStreamFilter: Number of CRT planes does not match! Check NumCRTPlanes in fcl.";
+      return false;
+    }
+
+    std::vector<int> hitsperplane;
+    for (int ip=0;ip<fNumCRTPlanes;++ip)  { hitsperplane.emplace_back(-1); }
+    for (int ip=0;ip<fNumCRTPlanes;++ip)  { hitsperplane[ip] = crtHandle->hitsperplane[ip]; }
+
+    for (int ip=0;ip<fNumCRTPlanes;++ip)  {
+      if (std::find(fExcludeCRTPlanes.begin(), fExcludeCRTPlanes.end(), ip) != fExcludeCRTPlanes.end()) continue;
+
+      if (hitsperplane[ip] !=0){ return false; }
+    }
+    //end CRT
   }
-
-  if(sizeof(crtHandle->hitsperplane)/sizeof(crtHandle->hitsperplane[0]) != fNumCRTPlanes){
-    TLOG(TLVL_ERROR) << "NeutrinoStreamFilter: Number of CRT planes does not match! Check NumCRTPlanes in fcl.";
-    return false;
-  }
-
-  std::vector<int> hitsperplane;
-  for (int ip=0;ip<fNumCRTPlanes;++ip)  { hitsperplane.emplace_back(-1); }
-  for (int ip=0;ip<fNumCRTPlanes;++ip)  { hitsperplane[ip] = crtHandle->hitsperplane[ip]; }
-
-  for (int ip=0;ip<fNumCRTPlanes;++ip)  {
-    if (std::find(fExcludeCRTPlanes.begin(), fExcludeCRTPlanes.end(), ip) != fExcludeCRTPlanes.end()) continue;
-
-    if (hitsperplane[ip] !=0){ return false; }
-  }
-  //end CRT
 
   // read pmt metric information from event
   art::Handle< sbnd::trigger::pmtSoftwareTrigger > pmtHandle;
   e.getByLabel(fPMTInputModuleName, pmtHandle);
-  if(!pmtHandle.isValid()) {
-    TLOG(TLVL_ERROR) << "NeutrinoStreamFilter: could not find pmt information from producer, check PMT input module name specified is correct.";
-    return false;
-  }
+  if (fUsePMT){
+    if(!pmtHandle.isValid()) {
+      TLOG(TLVL_ERROR) << "NeutrinoStreamFilter: could not find pmt information from producer, check PMT input module name specified is correct.";
+      return false;
+    }
 
-  int nAboveThreshold = -1;
+    int nAboveThreshold = -1;
 
-  nAboveThreshold = pmtHandle->nAboveThreshold;
+    nAboveThreshold = pmtHandle->nAboveThreshold;
 
-  if (nAboveThreshold > fNPMTHits){ return false; }
-  //end PMT
+    if (nAboveThreshold > fNPMTHits){ return false; }
+  } //end PMT
 
   if (fVerbose) {
     TLOG(TLVL_INFO) << "NeutrinoStreamFilter: Selected Event "<< fEvent;
