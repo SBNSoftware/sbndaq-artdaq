@@ -89,7 +89,7 @@ private:
   std::string              fSPECTDCModuleLabel;
   std::vector<std::string> fSPECTDCInstanceLabels;
   uint8_t    fSPECTDCTimingChannel; // 1 is bes, 2 is rwm, and 4 is ett 
-  uint32_t   fSPECTDCDelay; // in ns, time difference between tdc ftrig and caen ftrig 
+  int32_t   fSPECTDCDelay; // in ns, time difference between tdc ftrig and caen ftrig 
 
   std::vector<uint16_t> fFragIDs;
 
@@ -118,6 +118,7 @@ private:
   // pmt information
   std::map<int,int> map_fragid_index;
 
+  bool     getTDCTime(artdaq::Fragment & frag, uint64_t & tdcTime);
   void     getWaveforms(const artdaq::Fragment &frag, std::vector<std::vector<uint16_t>> &wvfm_v);
   uint32_t getStartTime(const artdaq::Fragment &frag);
   uint32_t getTriggerTime(const artdaq::Fragment &frag);
@@ -163,7 +164,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
   fSPECTDCModuleLabel    = p.get<std::string>("SPECTDCModuleLabel", "daq");
   fSPECTDCInstanceLabels = p.get<std::vector<std::string>>("SPECTDCInstanceLabels"); 
   fSPECTDCTimingChannel  = p.get<uint8_t>("SPECTDCTimingChannel", 4);
-  fSPECTDCDelay          = p.get<uint32_t>("SPECTDCDelay", 2133);
+  fSPECTDCDelay          = p.get<int32_t>("SPECTDCDelay", 2133);
 
   fFragIDs            = p.get<std::vector<uint16_t>>("FragIDs");
 
@@ -189,7 +190,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
   std::unique_ptr<sbnd::trigger::pmtSoftwareTrigger> pmtSoftwareTriggerMetrics = std::make_unique<sbnd::trigger::pmtSoftwareTrigger>();
 
   // the reference time stamp, usually the event trigger time
-  uint32_t refTimestamp=0; 
+  int32_t refTimestamp=0; 
   auto timing_type = fTimingType;
 
   // section to obtain global timing information 
@@ -207,6 +208,8 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     }
   }
   if (timing_type==1){
+    bool found_tdc_timing_ch = false;
+    uint64_t tdcTS = 0;
     for(const std::string &SPECTDCInstanceLabel : fSPECTDCInstanceLabels){
       art::Handle<std::vector<artdaq::Fragment>> tdcHandle;
       e.getByLabel(fSPECTDCModuleLabel, SPECTDCInstanceLabel, tdcHandle);
@@ -218,24 +221,18 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
         for(auto cont : *tdcHandle){
           artdaq::ContainerFragment contf(cont);
           if(contf.fragment_type() == sbndaq::detail::FragmentType::TDCTIMESTAMP){
-            for(unsigned i = 0; i < contf.block_count(); ++i){
-              const sbndaq::TDCTimestampFragment tdcFrag = sbndaq::TDCTimestampFragment(*contf[i].get());
-              const sbndaq::TDCTimestamp         *tdcTS  = tdcFrag.getTDCTimestamp();
-              if (tdcTS->vals.channel == fSPECTDCTimingChannel)
-                refTimestamp = tdcTS->timestamp_ns()%uint64_t(1e9) - fSPECTDCDelay;
-            }
+            for(unsigned i = 0; i < contf.block_count(); ++i)
+              found_tdc_timing_ch = getTDCTime(*contf[i].get(),tdcTS);
           }
         }
       }
-      else if((tdcHandle->front().type() == sbndaq::detail::FragmentType::TDCTIMESTAMP) && (refTimestamp==0)){
-        for(auto frag : *tdcHandle){
-          const sbndaq::TDCTimestampFragment tdcFrag = sbndaq::TDCTimestampFragment(frag);
-          const sbndaq::TDCTimestamp         *tdcTS  = tdcFrag.getTDCTimestamp();
-          if (tdcTS->vals.channel == fSPECTDCTimingChannel)
-            refTimestamp = uint32_t(tdcTS->timestamp_ns()%uint64_t(1e9)) - uint32_t(fSPECTDCDelay);
-        }
+      else if((tdcHandle->front().type() == sbndaq::detail::FragmentType::TDCTIMESTAMP) && (found_tdc_timing_ch==false)){
+        for(auto frag : *tdcHandle)       
+          getTDCTime(frag,tdcTS);     
       }
     }
+    refTimestamp = int32_t(tdcTS) - int32_t(fSPECTDCDelay);
+
     if (refTimestamp==0){
       std::cout << "No valid TDC timestamp found. Using PTB..." << std::endl;
       timing_type++;
@@ -260,7 +257,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
   // the index inside a container to find the "beam" fragment (closest to the event trigger time)
   size_t beam_frag_idx = 0;
   // to store the time difference between the beam fragment start time and event trigger time 
-  uint32_t beam_frag_dt = 1e9; 
+  int32_t beam_frag_dt = 1e9; 
 
   // loop over fragment handles
   for (const std::string &caen_name : fCAENInstanceLabels){
@@ -306,7 +303,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     }
   } // loop over handles
   
-  if (fVerbose==1) std::cout << "reference time stamp is " << refTimestamp << std::endl;
+  if (fVerbose==1) std::cout << "reference time stamp is " << refTimestamp << " ns" << std::endl;
   // if we're looking for the beam, make sure we found the beam trigger 
   // if (fUseBeamTrigger && !foundBeamTrigger) refTimestamp=0;
 
@@ -421,15 +418,15 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
             nAboveThreshold,
             "Num PMTs Above Software Trigger Threshold", 5, artdaq::MetricMode::LastPoint);
 
-        if (fVerbose==1) {
-          TLOG(TLVL_INFO) << "nPMTs Above Threshold: " << nAboveThreshold;
-        }
+        // if (fVerbose==1) {
+        //   TLOG(TLVL_INFO) << "nPMTs Above Threshold: " << nAboveThreshold;
+        // }
 
     }
   }  // if found beam trigger
   else{
     if (fVerbose==1) {
-      std::cout << "Beam and wvfms not found" << std::endl;
+      // std::cout << "Beam and wvfms not found" << std::endl;
       TLOG(TLVL_INFO) << "PMT Software Trigger Metric: Beam and wvfms not found";
 
     }
@@ -442,6 +439,27 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     pmtSoftwareTriggerMetrics->peaktime = -9999;
   }
   e.put(std::move(pmtSoftwareTriggerMetrics));
+}
+
+bool sbnd::trigger::pmtSoftwareTriggerProducer::getTDCTime(artdaq::Fragment & frag, uint64_t & tdcTime) {
+
+  bool found_timing_ch = false;
+  const auto tsfrag = sbndaq::TDCTimestampFragment(frag);
+  const auto ts = tsfrag.getTDCTimestamp();
+  if (ts->vals.channel == fSPECTDCTimingChannel){
+    found_timing_ch = true;
+    tdcTime = ts->timestamp_ns()%(uint64_t(1e9));
+    std::cout << "TDC CH "<< ts->vals.channel
+                          << " -> timestamp: " << tdcTime << " ns" 
+                          << ", name: "
+                          << ts->vals.name[0]
+                          << ts->vals.name[1]
+			                    << ts->vals.name[2]
+			                    << ts->vals.name[3]
+                          << ts->vals.name[4]
+                          << std::endl;
+  }
+  return found_timing_ch;
 }
 
 std::vector<uint32_t> sbnd::trigger::pmtSoftwareTriggerProducer::sumWvfms(const std::vector<uint32_t>& v1, const std::vector<uint16_t>& v2) {
@@ -540,6 +558,7 @@ uint32_t sbnd::trigger::pmtSoftwareTriggerProducer::getTriggerTime(const artdaq:
     trigger_ts = timestamp;
   }
   // if the time tag shift is not enabled in the caen configuration
+  // use the postpercent fcl parameter
   else if (timestamp==ttt){
     size_t nChannels = md->nChannels;
     uint32_t ev_size_quad_bytes = header.eventSize;
