@@ -1061,14 +1061,14 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
       sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
       retcode = CAEN_DGTZ_ReadRegister(fHandle,TRG_OUT_WIDTH_CH+(ch<<8),&readback);
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback, ch);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_0_1_Logic, fTriggerLogicValuePair_0_1);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_2_3_Logic, fTriggerLogicValuePair_2_3);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_4_5_Logic, fTriggerLogicValuePair_4_5);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_6_7_Logic, fTriggerLogicValuePair_6_7);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_8_9_Logic, fTriggerLogicValuePair_8_9);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_10_11_Logic, fTriggerLogicValuePair_10_11);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_12_13_Logic, fTriggerLogicValuePair_12_13);
-      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_14_15_Logic, fTriggerLogicValuePair_14_15);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_0_1_Logic, fTriggerLogicValuePair_0_1);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_2_3_Logic, fTriggerLogicValuePair_2_3);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_4_5_Logic, fTriggerLogicValuePair_4_5);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_6_7_Logic, fTriggerLogicValuePair_6_7);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_8_9_Logic, fTriggerLogicValuePair_8_9);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_10_11_Logic, fTriggerLogicValuePair_10_11);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_12_13_Logic, fTriggerLogicValuePair_12_13);
+      retcode = CAEN_DGTZ_WriteRegister(fHandle, Pair_14_15_Logic, fTriggerLogicValuePair_14_15);
       //pulse width only set in pairs, but doesn't hurt to do it for all channels I guess
       /* TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
 				   << " trigger pulse width to " << (int)(fCAEN.triggerPulseWidth) << TLOG_ENDL;

@@ -216,6 +216,15 @@ namespace sbndaq
     bool fUseTimeTagForTimeStamp;
     bool fUseTimeTagShiftForTimeStamp;
     uint32_t fTimeOffsetNanoSec;
+    //Jacob parameters for per-pair MON logics
+    uint32_t fTriggerLogicValuePair_0_1;
+    uint32_t fTriggerLogicValuePair_2_3;
+    uint32_t fTriggerLogicValuePair_4_5;
+    uint32_t fTriggerLogicValuePair_6_7;
+    uint32_t fTriggerLogicValuePair_8_9;
+    uint32_t fTriggerLogicValuePair_10_11;
+    uint32_t fTriggerLogicValuePair_12_13;
+    uint32_t fTriggerLogicValuePair_14_15;
 
     // Animesh & Aiwu add fhicl parameters - LVDS logic
     uint32_t fLVDSLogicValueG1;
