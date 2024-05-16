@@ -47,12 +47,12 @@ public:
     //--one atom for each parameter
     fhicl::Atom<art::InputTag> DataLabel {
       fhicl::Name("data_label"),
-      fhicl::Comment("Tag for the input data product")
-    };
+	fhicl::Comment("Tag for the input data product")
+	};
     fhicl::Atom<bool> Verbose {
       fhicl::Name("verbose"), 
-      fhicl::Comment("toggle for additional text output")
-    };
+	fhicl::Comment("toggle for additional text output")
+	};
   }; //--configuration
   using Parameters = art::EDAnalyzer::Table<Config>;
 
@@ -70,9 +70,9 @@ private:
   //--default values
   uint32_t nChannels;//    = 16;
   uint32_t Ttt_DownSamp;// =  4; 
- /* the trigger time resolution is 16ns when waveforms are sampled at
-                               * 500MHz sampling. The trigger timestamp is
-                               * sampled 4 times slower than input channels*/
+  /* the trigger time resolution is 16ns when waveforms are sampled at
+   * 500MHz sampling. The trigger timestamp is
+   * sampled 4 times slower than input channels*/
 
   TNtuple* nt_header;
   
@@ -107,7 +107,7 @@ sbndaq::CAENV1730Dump::CAENV1730Dump(CAENV1730Dump::Parameters const& pset): art
 void sbndaq::CAENV1730Dump::beginJob()
 {
   art::ServiceHandle<art::TFileService> tfs; 
-  nt_header       = tfs->make<TNtuple>("nt_header","CAENV1730 Header Ntuple","art_ev:caen_ev:caenv_ev_tts"); 
+  nt_header       = tfs->make<TNtuple>("nt_header","CAENV1730 Header Ntuple","art_ev:caen_ev:caenv_ev_tts:frag_timestamp"); 
   /************************************************************************************************/
   hEventCounter   = tfs->make<TH1F>("hEventCounter","Event Counter Histogram",10000,0,10000);
   hTriggerTimeTag = tfs->make<TH1F>("hTriggerTimeTag","Trigger Time Tag Histogram",10,2000000000,4500000000);
@@ -156,22 +156,22 @@ void sbndaq::CAENV1730Dump::analyze(const art::Event& evt)
     if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
       //Container fragment
       for (auto cont : *handle) {
-	artdaq::ContainerFragment contf(cont);
-	if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
-	  if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
-	  fWvfmsVec.resize(16*contf.block_count());
-	  for (size_t ii = 0; ii < contf.block_count(); ++ii)
-	  	analyze_caen_fragment(*contf[ii].get());
-	}
+artdaq::ContainerFragment contf(cont);
+if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
+  if (fverbose)   std::cout << "    Found " << contf.block_count() << " CAEN Fragments in container " << std::endl;
+  fWvfmsVec.resize(16*contf.block_count());
+  for (size_t ii = 0; ii < contf.block_count(); ++ii)
+  analyze_caen_fragment(*contf[ii].get());
+}
       }
     }
     else {
       //normal fragment
       if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
-	if (fverbose) std::cout << "   found normal caen fragments " << handle->size() << std::endl;
-	fWvfmsVec.resize(16*handle->size());
-	for (auto frag : *handle)
-	  analyze_caen_fragment(frag);
+if (fverbose) std::cout << "   found normal caen fragments " << handle->size() << std::endl;
+fWvfmsVec.resize(16*handle->size());
+for (auto frag : *handle)
+  analyze_caen_fragment(frag);
       }
     }
   } // loop over frag handles
@@ -197,12 +197,12 @@ void sbndaq::CAENV1730Dump::analyze_caen_fragment(artdaq::Fragment & frag)  {
     if (fverbose) std::cout << "\tFrom header, board id is "       << header.boardID       << "\n";
     if (fverbose) std::cout << "\tFrom fragment, fragment id is "  << fragID << "\n";
     if (fverbose) std::cout << "\tFrom fragment, sequence id is "  << seqID << "\n";
-    if (fverbose) std::cout <<  "\tFrom fragment, timestamp is  " << frag.timestamp() << std::endl;
+    if (fverbose) std::cout <<  "\tFrom fragment, timestamp is:::  " << frag.timestamp() << std::endl;
       
     uint32_t t0 = header.triggerTimeTag;
     hEventCounter->Fill(header.eventCounter);
     hTriggerTimeTag->Fill(t0);
-    nt_header->Fill(fEvent,header.eventCounter,t0);
+    nt_header->Fill(fEvent,header.eventCounter,t0,frag.timestamp());
     nChannels = md->nChannels;
     std::cout << "\tNumber of channels: " << nChannels << "\n";
     
@@ -249,4 +249,3 @@ void sbndaq::CAENV1730Dump::analyze_caen_fragment(artdaq::Fragment & frag)  {
 }
 
 DEFINE_ART_MODULE(sbndaq::CAENV1730Dump)
-

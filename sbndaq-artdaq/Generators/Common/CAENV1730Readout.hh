@@ -95,6 +95,15 @@ namespace sbndaq
       FP_IO_CONTROL      = 0x811C,
       FP_LVDS_CONTROL    = 0x81A0,
       READOUT_CONTROL    = 0xEF00,
+      //Jacob adding registers for per-CAEN pair trigger logic
+      Pair_0_1_Logic   = 0x1084,
+      Pair_2_3_Logic   = 0x1184,
+      Pair_4_5_Logic   = 0x1284,
+      Pair_6_7_Logic   = 0x1384,
+      Pair_8_9_Logic   = 0x1484,
+      Pair_10_11_Logic   = 0x1584,
+      Pair_12_13_Logic   = 0x1684,
+      Pair_14_15_Logic   = 0x1784,
       // Animesh & Aiwu add registers for the LVDS logic
       FP_LVDS_Logic_G1   = 0x1084,
       FP_LVDS_Logic_G2   = 0x1184,

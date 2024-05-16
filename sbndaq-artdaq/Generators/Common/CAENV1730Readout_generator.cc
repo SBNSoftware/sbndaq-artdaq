@@ -264,6 +264,25 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   fMaxEventsPerTransfer = ps.get<uint32_t>("maxEventsPerTransfer",1);
   TLOG(TINFO) <<"fMaxEventsPerTransfer=" << fMaxEventsPerTransfer;
 
+
+  //Jacob -- trigger logic for each pair
+  fTriggerLogicValuePair_0_1 = ps.get<uint32_t>("TriggerLogicValue_0_1"); // LVDS logic value for G1
+  TLOG(TINFO)<<"fTriggerLogicValuePair_0_1=" << fTriggerLogicValuePair_0_1;
+  fTriggerLogicValuePair_2_3 = ps.get<uint32_t>("TriggerLogicValue_2_3"); // LVDS logic value for G2
+  TLOG(TINFO)<<"fTriggerLogicValuePair_2_3=" << fTriggerLogicValuePair_2_3;
+  fTriggerLogicValuePair_4_5 = ps.get<uint32_t>("TriggerLogicValue_4_5"); // LVDS logic value for G3
+  TLOG(TINFO)<<"fTriggerLogicValuePair_4_5=" << fTriggerLogicValuePair_4_5;
+  fTriggerLogicValuePair_6_7 = ps.get<uint32_t>("TriggerLogicValue_6_7"); // LVDS logic value for G4
+  TLOG(TINFO)<<"fTriggerLogicValuePair_6_7=" << fTriggerLogicValuePair_6_7;
+  fTriggerLogicValuePair_8_9 = ps.get<uint32_t>("TriggerLogicValue_8_9"); // LVDS logic value for G5
+  TLOG(TINFO)<<"fTriggerLogicValuePair_8_9=" << fTriggerLogicValuePair_8_9;
+  fTriggerLogicValuePair_10_11 = ps.get<uint32_t>("TriggerLogicValue_10_11"); // LVDS logic value for G6
+  TLOG(TINFO)<<"fTriggerLogicValuePair_10_11=" << fTriggerLogicValuePair_10_11;
+  fTriggerLogicValuePair_12_13 = ps.get<uint32_t>("TriggerLogicValue_12_3"); // LVDS logic value for G7
+  TLOG(TINFO)<<"fTriggerLogicValuePair_12_13=" << fTriggerLogicValuePair_12_13;
+  fTriggerLogicValuePair_14_15 = ps.get<uint32_t>("TriggerLogicValue_14_15"); // LVDS logic value for G8
+  TLOG(TINFO)<<"fTriggerLogicValuePair_14_15=" << fTriggerLogicValuePair_14_15;
+
   //Animesh & Aiwu add - for LVDS logic settings
   fLVDSLogicValueG1 = ps.get<uint32_t>("LVDSLogicValueG1"); // LVDS logic value for G1
   TLOG(TINFO)<<"LVDSLogicValueG1=" << fLVDSLogicValueG1;
@@ -1042,7 +1061,14 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
       sbndaq::CAENDecoder::checkError(retcode,"SetChannelTriggerPulseWidth",fBoardID);
       retcode = CAEN_DGTZ_ReadRegister(fHandle,TRG_OUT_WIDTH_CH+(ch<<8),&readback);
       CheckReadback("SetChannelTriggerPulseWidth",fBoardID,fCAEN.triggerPulseWidth,readback, ch);
-
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_0_1_Logic, fTriggerLogicValuePair_0_1);
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_2_3_Logic, fTriggerLogicValuePair_2_3);
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_4_5_Logic, fTriggerLogicValuePair_4_5);
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_6_7_Logic, fTriggerLogicValuePair_6_7);
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_8_9_Logic, fTriggerLogicValuePair_8_9);
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_10_11_Logic, fTriggerLogicValuePair_10_11);
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_12_13_Logic, fTriggerLogicValuePair_12_13);
+      retcod = CAEN_DGTZ_WriteRegister(fHandle, Pair_14_15_Logic, fTriggerLogicValuePair_14_15);
       //pulse width only set in pairs, but doesn't hurt to do it for all channels I guess
       /* TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channels " << ch << "/" << ch+1 
 				   << " trigger pulse width to " << (int)(fCAEN.triggerPulseWidth) << TLOG_ENDL;
