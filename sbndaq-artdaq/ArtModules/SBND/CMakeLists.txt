@@ -8,6 +8,7 @@ cet_build_plugin( EventAna art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIS
 cet_build_plugin( CRTHitAna art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 cet_build_plugin( CRTSinglePEAna art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 cet_build_plugin( SBNDPMTV1730Ana art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+cet_build_plugin( SBNDGateFilter art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 
 include(ArtdaqCorePlugins)
 cet_build_plugin(SBND artdaq::fragmentNameHelper LIBRARIES REG ${BUILD_PLUGIN_FRAGNAMEHELPER_LIB_LIST})
