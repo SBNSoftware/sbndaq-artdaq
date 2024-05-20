@@ -307,7 +307,6 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
 							ntbmetadata_,                                                                                     
 							ntb_fragment_timestamp) );                                                                                   
  
-                                                                                                                                                           std::copy(CircularBufferNTB_.buffer.begin(),                                                                                                          
     std::copy(CircularBufferNTB_.buffer.begin(),                                                                                                          
 	      CircularBufferNTB_.buffer.begin()+(expected_size/sizeof(uint16_t)),                                                                         
 	      (uint16_t*)(frags.back()->dataBegin()));     
