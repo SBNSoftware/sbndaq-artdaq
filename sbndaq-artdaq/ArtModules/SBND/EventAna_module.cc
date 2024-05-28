@@ -341,10 +341,11 @@ private:
   bool unknown_or_error_word; // flag to indicate the event has
   int ts_word_count;
   int hlt_word_count;
-  uint64_t ptb_frag_ts;
+  std::vector<uint64_t> ptb_frag_ts;
   std::vector<uint64_t> llt_trigger;
   std::vector<uint64_t> llt_ts;
   std::vector<uint64_t> hlt_trigger;
+  std::vector<uint64_t> hlt_trigger_simplified;
   std::vector<uint64_t> hlt_ts;
   std::vector<uint16_t> crt_status;
   std::vector<uint16_t> beam_status;
@@ -538,9 +539,10 @@ void sbndaq::EventAna::beginJob()
     events->Branch("unknown_or_error_word", &unknown_or_error_word);
     events->Branch("ts_word_count", &ts_word_count);
     events->Branch("hlt_word_count", &hlt_word_count);
-    events->Branch("ptb_frag_ts", &ptb_frag_ts, "ptb_frag_ts/l");
+    events->Branch("ptb_frag_ts", &ptb_frag_ts);
     // Trigger words and TS
     events->Branch("hlt_trigger", &hlt_trigger);
+    events->Branch("hlt_trigger_simplified", &hlt_trigger_simplified);
     events->Branch("hlt_ts",      &hlt_ts);
     events->Branch("llt_trigger", &llt_trigger);
     events->Branch("llt_ts",      &llt_ts);
@@ -1424,7 +1426,8 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
 
 // Extract the PTB words/data from the artDAQ fragments
 void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
-  ptb_frag_ts = chopTimeStamp( frag.timestamp() );
+  //ptb_frag_ts = chopTimeStamp( frag.timestamp() );
+  ptb_frag_ts.emplace_back( chopTimeStamp( frag.timestamp() ) );
   // Construct PTB fragment overlay class giving us access to all the helpful decoder functions
   CTBFragment ptb_fragment(frag);
   
@@ -1478,18 +1481,30 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
                   << " Timestamp: "          << ptb_fragment.TimeStamp(i) << std::endl;
         break;
       case 0x1 : // LL Trigger
-        if (fverbose) std::cout << "LLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
-        llt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF ); // bit map of asserted LLTs
+        {
+	  if (fverbose) std::cout << "LLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
+        //llt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF ); // bit map of asserted LLTs
+	uint64_t llttrigger=ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF;
+	//llttrigger= log(llttrigger)/log(2); //convert it out of binary
+        llt_trigger.emplace_back(llttrigger); 
         llt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) ); // Timestamp of the word
         break;
+	}
       case 0x2 : // HL Trigger
-        if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
+        {
+	  if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
         if (fverbose) std::cout << "HLT ts: " << ptb_fragment.TimeStamp(i) << std::endl;
-        hlt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF );
+	uint64_t hlttrigger=ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF;
+	//hlttrigger= log(hlttrigger)/log(2); //convert it out of binary
+        hlt_trigger.emplace_back(hlttrigger); 
+				 //ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF );
+	hlt_trigger_simplified.emplace_back( log(1.*hlttrigger)/log(2.) );
         hlt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) );
-        ptb_frag_ts = chopTimeStamp( frag.timestamp() ); 
+        //ptb_frag_ts = chopTimeStamp( frag.timestamp() );
+	//ptb_frag_ts.emplace_back( chopTimeStamp( frag.timestamp() ) ); 
         hlt_word_count++;
         break;
+	}
       case 0x3 : // Channel Status
         // Each PTB input gets a bit map e.g. CRT has 14 inputs and is 14b
         // (1 is channel asserted 0 otherwise)
@@ -1517,10 +1532,11 @@ void sbndaq::EventAna::reset_ptb_variables() {
   unknown_or_error_word = false;
   ts_word_count = 0;
   hlt_word_count = 0;
-  ptb_frag_ts = 0;
+  ptb_frag_ts.clear();
   llt_trigger.clear();
   llt_ts.clear();
   hlt_trigger.clear();
+  hlt_trigger_simplified.clear();
   hlt_ts.clear();
   crt_status.clear();
   beam_status.clear();
