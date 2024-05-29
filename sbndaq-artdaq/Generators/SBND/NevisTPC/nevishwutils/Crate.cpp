@@ -84,7 +84,16 @@ namespace nevistpc{
   TriggerModuleSPtr Crate::getTriggerModule(){
     return _trigger_module;
   }
+  /*
+This function is added to debug FEMs is software but hasnot tested yet
+  void Crate::FEMtestfunction(){
+    if(getNumberOfTPCFEMs() > 1){
+    for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+      getTPCFEM(tpc_it)->readStatus();
 
+    }}
+  }
+*/
   void Crate::linkSetup(){
     
     // Reset link port receiver PLL for all FEMs except farthest left
@@ -152,7 +161,7 @@ namespace nevistpc{
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(100);
+      getTriggerModule()->setDeadtimeSize(100); //0x59); //100);
     }
     
     // Load xmit firmware
@@ -229,7 +238,7 @@ namespace nevistpc{
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(100);
+      getTriggerModule()->setDeadtimeSize(100);//0x59); //100);
     }
     
     // Load xmit firmware
@@ -303,7 +312,7 @@ namespace nevistpc{
     getControllerModule()->runOff(); // using Controller triggers
     //getControllerModule()->testOff(); // using CALIB triggers
     // To do: move instructions below to fcl
-    getControllerModule()->setFrameLength(0xffff & 20479);
+    getControllerModule()->setFrameLength(0xffff & 9119); //20799);
     getControllerModule()->setNUTrigPosition(0xa);
     
     // Load xmit firmware
@@ -377,10 +386,10 @@ namespace nevistpc{
       // Temp: from CALIB, to avoid leaving the function generator on all weekend
       getControllerModule()->testOff(); //v
       // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
-      getTriggerModule()->setDeadtimeSize(0x1);//v
+      getTriggerModule()->setDeadtimeSize(0x59);//0x59); //0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20479);
+      getTriggerModule()->setFrameLength(0xffff & 9119); // 9119);// 20799);// 9071); // 20799); //20479);// 20799);
       ///////////////////////
 
       getTriggerModule()->disableTriggers(false);
@@ -399,7 +408,10 @@ namespace nevistpc{
 	// To do: This function needs to be updated/overloaded to configure the zero suppression
 	getTPCFEM(tpc_it)->fem_setup(crateconfig);
 	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
+	getTPCFEM(tpc_it)->readStatus();
+
       }
+
     }
 
     // Setup tx mode registers (this is done twice for some reason...)
@@ -466,10 +478,10 @@ namespace nevistpc{
       getTriggerModule()->runOnSyncOff(); //v
       getControllerModule()->testOff(); //v
       // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
-      getTriggerModule()->setDeadtimeSize(0x1);//v
+      getTriggerModule()->setDeadtimeSize(0x59);//0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 20479);
+      getTriggerModule()->setFrameLength(0xffff & 9119); // 20799);
       //getTriggerModule()->runOnSyncOn(); //v
       //usleep(5000);
       getTriggerModule()->disableTriggers(false);
@@ -487,6 +499,7 @@ namespace nevistpc{
       for( size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++ ){
 	usleep(10000);
 	getTPCFEM(tpc_it)->fem_setup(crateconfig);
+	getTPCFEM(tpc_it)->readStatus();
 	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
       }
     }

@@ -7,7 +7,6 @@
 // File:        EventAna_module.cc
 // Description: Prints out information about each event.
 ////////////////////////////////////////////////////////////////////////
-
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
 #include "art/Framework/Principal/Event.h"
@@ -112,6 +111,12 @@ public:
 	fhicl::Comment("also save the full timestamp in utc format"),
 	false
 	};
+    fhicl::Atom<bool> choputctime {
+      fhicl::Name("choputctime"),
+	fhicl::Comment("Output the UTC timestamps with the fronts chopped off, ie only include the last 12 digits (100s of seconds) to make some quick analysis simpilier "),
+	false
+	};
+
   fhicl::Atom<bool> include_crtsoft {
     fhicl::Name("include_crtsoft"),
   fhicl::Comment("save the crt software trigger metric variables"),
@@ -146,8 +151,6 @@ public:
 
 private:
 
-
-  bool choputctime=true;
   void analyze_caen_fragment(artdaq::Fragment & frag);
   void analyze_wr_fragment_dio(artdaq::Fragment & frag);
   void analyze_bern_fragment(artdaq::Fragment & frag);
@@ -181,6 +184,7 @@ private:
   std::vector<int> TTT_ns;
   std::vector<uint64_t>  caen_frag_ts;
   std::vector<uint64_t>  ntb_frag_ts;
+
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec_ch0;
@@ -308,7 +312,7 @@ private:
   std::vector<uint64_t> ftdc_ch3_utc;
   std::vector<uint64_t> ftdc_ch4_utc;
 
-  
+
   //information from fragment header
   std::vector<int>  sequence_id;
 
@@ -324,6 +328,8 @@ private:
   bool fverbose;
   bool finclude_ptb;
   bool finclude_ntb;
+
+  bool fchoputctime;
   bool finclude_crtsoft;
   bool finclude_pmtsoft;
   std::string fcrtSoftTriggerModuleLabel;
@@ -369,6 +375,7 @@ sbndaq::EventAna::EventAna(EventAna::Parameters const& pset): art::EDAnalyzer(ps
   finclude_wr = pset().include_wr();
   finclude_tdc = pset().include_tdc();
   finclude_ntb= pset().include_ntb();
+  fchoputctime= pset().choputctime();
   ftdc_utc = pset().tdc_utc();
   fWindow = pset().window_wr();
   if (fWindow<0 || fWindow>1000000000) {
@@ -406,6 +413,7 @@ void sbndaq::EventAna::beginJob()
     if (fcaen_keepwaveforms) {
       events->Branch("fTicksVec",&fTicksVec);
       //events->Branch("fWvfmsVec",&fWvfmsVec);
+      events->Branch("fWvfmsVec",&fWvfmsVec);//why had  I commented this out?
       events->Branch("fWvfmsVec_ch0",&fWvfmsVec_ch0);
       events->Branch("fWvfmsVec_ch1",&fWvfmsVec_ch1);
       events->Branch("fWvfmsVec_ch2",&fWvfmsVec_ch2);
@@ -465,7 +473,6 @@ void sbndaq::EventAna::beginJob()
   if (finclude_ntb){
         events->Branch("ntb_frag_ts",&ntb_frag_ts);
   }
-  
   if (finclude_berncrt) {
     events->Branch("flags",         &flags);
     events->Branch("coinc",         &coinc);
@@ -543,7 +550,6 @@ void sbndaq::EventAna::beginJob()
     events->Branch("auxpds_status", &auxpds_status);
     events->Branch("chan_stat_ts",  &chan_stat_ts);
   }
-
 
   if(finclude_crtsoft){
     events->Branch("crtSoftTrigger_hitsperplane", &_crtSoftTrigger_hitsperplane,"crtSoftTrigger_hitsperplane[7]/I");
@@ -823,7 +829,8 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
     if (evt.getByLabel(fpmtSoftTriggerModuleLabel, pmtSoftTriggerHandle)){
       const sbnd::trigger::pmtSoftwareTrigger &pmtSoftTriggerMetrics = (*pmtSoftTriggerHandle);
       _pmtSoftTrigger_foundBeamTrigger = pmtSoftTriggerMetrics.foundBeamTrigger;
-      _pmtSoftTrigger_tts = pmtSoftTriggerMetrics.triggerTimestamp;
+      //_pmtSoftTrigger_tts = pmtSoftTriggerMetrics.triggerTimestamp;//my version...
+      _pmtSoftTrigger_tts = pmtSoftTriggerMetrics.trig_ts;
       _pmtSoftTrigger_promptPE = pmtSoftTriggerMetrics.promptPE;
       _pmtSoftTrigger_prelimPE = pmtSoftTriggerMetrics.prelimPE;
       _pmtSoftTrigger_nAboveThreshold = pmtSoftTriggerMetrics.nAboveThreshold;
@@ -945,7 +952,6 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   if (fverbose) std::cout <<  "     timestamp is  " << frag.timestamp() << std::endl;
   if (fverbose) std::cout <<  "     seq ID is " << frag.sequenceID() << std::endl;
 
-  
   caen_frag_ts.push_back( chopTimeStamp(frag.timestamp()) );
 
   CAENV1730Fragment bb(frag);
@@ -1470,6 +1476,8 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
         if (fverbose) std::cout << "LLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
         llt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF ); // bit map of asserted LLTs
         llt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) ); // Timestamp of the word
+        llt_ts.emplace_back( ptb_fragment.TimeStamp(i) * 20 ); // Timestamp of the word
+
         break;
       case 0x2 : // HL Trigger
         if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
@@ -1500,6 +1508,7 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
   }
 }  // extract trigger fragments for the PTBc
 
+
 void sbndaq::EventAna::reset_ptb_variables() {
 
   // Initialize/reset the variables
@@ -1526,6 +1535,7 @@ void sbndaq::EventAna::analyze_tdc_fragment(artdaq::Fragment & frag)  {
   const auto ts = tsfrag.getTDCTimestamp();
 
   // each TDCTimstamp fragment has data from only one channel. The fragments are not always in time order
+
   if (ts->vals.channel==0)  ftdc_ch0.emplace_back(ts->nanoseconds());
   if (ts->vals.channel==1)  ftdc_ch1.emplace_back(ts->nanoseconds());
   if (ts->vals.channel==2)  ftdc_ch2.emplace_back(ts->nanoseconds());
@@ -1563,13 +1573,14 @@ void sbndaq::EventAna::analyze_tdc_fragment(artdaq::Fragment & frag)  {
   };
 
 }//end of analyze tdc timstamp fragment
+
 void sbndaq::EventAna::analyze_ntb_fragment(artdaq::Fragment & frag)  {
   ntb_frag_ts.push_back( chopTimeStamp( frag.timestamp() ) );
   //ntb_frag_ts=frag.timestamp;
 }//end of analyze ntb fragment
 
 uint64_t sbndaq::EventAna::chopTimeStamp(uint64_t time){
-  if (!choputctime) return time;
+  if (!fchoputctime) return time;
   else{ 
     uint64_t limit=1e13;
     return time%limit;

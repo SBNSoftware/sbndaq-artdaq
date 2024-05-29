@@ -6,7 +6,7 @@ PROJECT_NAME=sbndaq-artdaq
 PROJECT_SOURCE_GIT_PREFIX=${PROJECT_SOURCE_GIT_PREFIX:-'https://github.com/sbnsoftware'}
 PRODUCTS=${PRODUCTS:-'/cvmfs/fermilab.opensciencegrid.org/products/artdaq:/cvmfs/fermilab.opensciencegrid.org/products/larsoft'}
 
-ARTDAQ_VERSION=${ARTDAQ_VERSION:-"v3_12_06"}
+ARTDAQ_VERSION=${ARTDAQ_VERSION:-"v3_13_00"}
 
 #main script
 PRODUCTS=$(for d in $(echo $PRODUCTS | tr ":" " "); do [[ -d $d ]] && echo -n "$d:"; done)
@@ -48,10 +48,10 @@ IFS=':' read -r -a quals <<< "$qual_set"
 
 for onequal in "${quals[@]}"; do
   case ${onequal} in
-    e19|e20|c[0-9])
+    e19|e20|e26|e28|c[0-9])
       basequal=${onequal}
       ;;
-    s1[0-2][0-9]*)
+    s1[0-9][0-9]*)
       squal=${onequal}
       ;;
     py2|py3)
@@ -182,6 +182,7 @@ python3 ${src_dir}/${product_name}/for-jenkins/generate-manifest.py \
 cd ${products_dir} || exit 1
 
 [[ "${basequal}" == e20 ]] && wget https://github.com/SBNSoftware/sbndaq-build-dependencies/raw/main/zmq-4.3.1-sl7-x86_64-e20.tar.bz2 && tar xf zmq-4.3.1-sl7-x86_64-e20.tar.bz2
+[[ "${basequal}" == e26 ]] && wget https://github.com/SBNSoftware/sbndaq-build-dependencies/raw/main/zmq-4.3.1-sl7-x86_64-e26.tar.bz2 && tar xf zmq-4.3.1-sl7-x86_64-e26.tar.bz2
 ./pullProducts -l  ${products_dir} ${flvr} ${product_name}-current ${manifest_qual_set//:/-} ${build_type} 2>&1 |tee -a ${products_dir}/pullproducts.log
 
 unsetup_all

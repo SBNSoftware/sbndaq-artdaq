@@ -51,6 +51,7 @@ void sbndaq::NevisTPCNUXMIT::ConfigureStart() {
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
 }
 
+
 void sbndaq::NevisTPCNUXMIT::ConfigureStop() {
   MonitorCrate_thread_->stop();
 

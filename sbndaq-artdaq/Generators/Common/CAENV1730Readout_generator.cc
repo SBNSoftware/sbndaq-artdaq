@@ -65,7 +65,10 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
     TLOG(TLVL_ERROR) << "Terminating process";
     abort();
   }
-
+ 
+  // check current firmware/software versions
+  GetSWInfo();
+  
   retcode = CAEN_DGTZ_Reset(fHandle);
   sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
   
@@ -321,6 +324,9 @@ void sbndaq::CAENV1730Readout::loadConfiguration(fhicl::ParameterSet const& ps)
 
   fUseTimeTagForTimeStamp = ps.get<bool>("UseTimeTagForTimeStamp",true);
   TLOG(TINFO) <<"fUseTimeTagForTimeStamp=" << fUseTimeTagForTimeStamp;
+  
+  fUseTimeTagShiftForTimeStamp = ps.get<bool>("UseTimeTagShiftForTimeStamp",false);
+  TLOG(TINFO) <<"fUseTimeTagShiftForTimeStamp=" << fUseTimeTagShiftForTimeStamp;
 
   fTimeOffsetNanoSec = ps.get<uint32_t>("TimeOffsetNanoSec",0); //0ms by default
   TLOG(TINFO) <<"fTimeOffsetNanoSec=" << fTimeOffsetNanoSec;
@@ -1320,8 +1326,8 @@ void sbndaq::CAENV1730Readout::stop()
 // The two relevant fcl parameters are: "poll_hardware_status" (true/false) and "hardware_poll_interval_us" (period in us)
 bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
-  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch){
-
+  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  {
     std::ostringstream tempStream;
     tempStream << "CAENV1730.Card" << fBoardID
 		  << ".Channel" << ch << ".Temp"; 
@@ -1332,19 +1338,47 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     memfullStream << "CAENV1730.Card" << fBoardID
 		  << ".Channel" << ch << ".MemoryFull"; 
    
+    CAEN_DGTZ_ErrorCode retcod;
 
-    CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
-    TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
-                               << ": " << ch_temps[ch] << "  C"
-                               << TLOG_ENDL;
+    if ( fCAEN.temperatureCheckMask & ( 1 << ch ) ) // Channels temperature readout enabled?
+    {
+      retcod = CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
+      TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
+				 << ": " << ch_temps[ch] << "  C"
+				 << TLOG_ENDL;
+      
+      metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
+			    artdaq::MetricMode::Average);
 
-    metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
-			  artdaq::MetricMode::Average);
-
-    if( ch_temps[ch] > fCAEN.maxTemp ){ // V1730(S) shuts down at 70(85) celsius
-      TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
-                       << "Temperature above " << fCAEN.maxTemp << " degrees Celsius for channel " << ch
-		       << TLOG_ENDL;
+      //Need 3 requirements to shut down for high temperature: 
+      // 1. Can successfully read temperature: return code = 0 since S/N 164 can fail to read temperature during acquisition
+      // 2. Temperature < non_physical temperature, 200C since S/N 164 can produce non-physical temperature
+      // 3. Temperature > Requirement , 70C for V1730 and 85C for V1730S
+      if ( retcod == CAEN_DGTZ_Success && ch_temps[ch] < V1730_UNPHYSICAL_TEMPERATURE )
+      {  
+	if ( ch_temps[ch] > fCAEN.maxTemp ) 
+	{
+	   // V1730(S) shuts down at 70(85) celsius, give a warning ahead of that
+	   TLOG(TLVL_ERROR) << "SHUTTING DOWN CAENV1730 BoardID " << fBoardID << " : "
+			     << " Channel " << ch
+			     << " temperature " << ch_temps[ch]
+			     << " > " << fCAEN.maxTemp << " degrees Celsius."
+			     << " ReadTemperature Return Code = " << retcod
+			     << TLOG_ENDL;
+	}
+      }
+      else
+      {
+	    // Ignore unphysical temperatures/bad return codes from S/N 164.  CAEN advises not to read temperatures 
+	    //   while the readout is running, but we cannot do that.  Only one sensors on one 
+	    //   V1730 has ever malfunctioned.
+	    // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
+	    TLOG(TLVL_WARNING) << "CAENV1730 BoardID " << fBoardID << " : "
+			       << " Channel " << ch
+			       << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
+			       << " ReadTemperature Return Code = " << retcod
+			       << TLOG_ENDL;
+       }
     }
 
     ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
@@ -1552,6 +1586,18 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
 	- fTimeOffsetNanoSec;
     }
+    else if(fUseTimeTagShiftForTimeStamp){
+      fTTT = uint32_t{header->triggerTimeTag}; // 
+      // TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
+      fTTT_ns = (fTTT*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1 ns
+      
+      // Scheme borrowed from what Antoni developed for CRT.
+      // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
+      fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
+	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
+	- fTimeOffsetNanoSec;
+    }
     else{
       fTS = fTimeDiffPollEnd.total_nanoseconds() - fTimeOffsetNanoSec;;
     }
@@ -1729,6 +1775,23 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 	
 	ts_frag = (t_truetriggertime*8); //in 1ns ticks
       }
+      else if(fUseTimeTagShiftForTimeStamp){
+	const auto TTT = uint32_t {header->triggerTimeTag};
+	
+	using namespace boost::gregorian;
+	using namespace boost::posix_time;
+	
+	ptime t_now(second_clock::universal_time());
+	ptime time_t_epoch(date(1970,1,1));
+	time_duration diff = t_now - time_t_epoch;
+	uint32_t t_offset_s = diff.total_seconds();
+	uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+	uint64_t t_truetriggertime = t_offset_ticks + TTT;
+	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+
+	// TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
+	ts_frag = (t_truetriggertime*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1ns ticks
+      }
       else{
 	using namespace boost::gregorian;
 	using namespace boost::posix_time;
@@ -1817,9 +1880,6 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
  // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
 
-  //wes ... this shouldn't be called here!
-  //checkHWStatus_();
-
   TLOG(TGETNEXT) << "End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 
   start= std::chrono::steady_clock::now();
@@ -1851,6 +1911,55 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
     //throw(e);
   }
   
+}
+
+void sbndaq::CAENV1730Readout::GetSWInfo(){
+
+  int retcod=0;
+  CAEN_DGTZ_BoardInfo_t info;
+
+  // CAEV1730 S/N and firmware
+  retcod = CAEN_DGTZ_GetInfo(fHandle,&info);
+  if( retcod == CAEN_DGTZ_Success ){
+    TLOG(TLVL_INFO) << info.ModelName << " S/N: " << info.SerialNumber 
+                    << "\nFirmware ROC: " << info.ROC_FirmwareRel 
+                    << "\nFirmware AMC: " << info.AMC_FirmwareRel;
+  }
+
+  // CAEN software releases
+  char CommSWrel[30], VMESWrel[30], DGTZSWrel[30];
+  retcod = CAEN_DGTZ_SWRelease( DGTZSWrel );
+  retcod = CAENVME_SWRelease( VMESWrel );
+  retcod = CAENComm_SWRelease( CommSWrel );
+  TLOG(TLVL_INFO) << "Software releases"
+		  << "\ncaendigitizer: " << DGTZSWrel
+                  << "\ncaenvme: " << VMESWrel
+                  << "\ncaencomm: " << CommSWrel;
+  
+  // A3818 firmware / driver
+  short Device = 0;
+  int32_t BHandle;
+
+  if( CAENVME_Init2(cvA3818, &fCAEN.link, Device, &BHandle) == cvSuccess ) {
+  
+    char fwrev[100];
+    char drrev[100];
+    auto ret = CAENVME_BoardFWRelease(BHandle,fwrev);
+
+    std::ostringstream a3818Stream;
+    a3818Stream << "A3818 firmware: ";
+    if (!ret) a3818Stream << fwrev << "\n";
+    else a3818Stream << CAENVME_DecodeError(ret) << "\n";
+
+    ret = CAENVME_DriverRelease( BHandle, drrev );
+    a3818Stream << "A3818 driver: ";
+    if (!ret) a3818Stream << drrev;
+    else a3818Stream << CAENVME_DecodeError(ret);
+   
+    TLOG(TLVL_INFO) << a3818Stream.str();
+
+    CAENVME_End(BHandle);
+  }
 }
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::CAENV1730Readout)
