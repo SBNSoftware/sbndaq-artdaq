@@ -5,7 +5,7 @@ pmtmetricproducer: {
                
         CAENInstanceLabels: [ "CAENV1730", "ContainerCAENV1730" ]
         WindowLength: 0.5 #1.6     # beam window length after trigger time, default 1.6 us                                       
-     	WvfmPostPercent:  0.8      # this should be a decimal! % of the wvfm contained in the 10 us window.
+     	  WvfmPostPercent:  0.8      # this should be a decimal! % of the wvfm contained in the 10 us window.
                                    # having 1+9 -> 0.9. having 2+8 -> 0.8,
                                    # IMPORTANT! this variable will determine where 0 is in our timing reference frame!
                                    #
@@ -32,7 +32,7 @@ pmtmetricproducer: {
      	Verbose: 1 # 0: no printout, 1: printout for each event, 2: printout for each fragment, 3: printout for each channel
 
         # turn on/off various metric calculations 
-        CalculateBaseline:  false  # if true, will calculate baseline, if false, will use provided InputBaseline parameters below! 
+        CalculateBaseline:  true  # if true, will calculate baseline, if false, will use provided InputBaseline parameters below! 
         CountPMTs:          true   # if true, will count number of PMTS above threshold in the beam window
         CalculatePEMetrics: false  # if true, will calculate prompt/preliminary PE 
         FindFlashInfo:      true   # if true, will find flash time and flash peak PE by summming all wvfms and finding the peak
