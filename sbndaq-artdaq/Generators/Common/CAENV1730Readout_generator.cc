@@ -1365,6 +1365,9 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 			     << " > " << fCAEN.maxTemp << " degrees Celsius."
 			     << " ReadTemperature Return Code = " << retcod
 			     << TLOG_ENDL;
+
+	   //Lan: should return false here if temperature is too high
+	   return false;
 	}
       }
       else
@@ -1373,11 +1376,24 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 	    //   while the readout is running, but we cannot do that.  Only one sensors on one 
 	    //   V1730 has ever malfunctioned.
 	    // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
-	    TLOG(TLVL_WARNING) << "CAENV1730 BoardID " << fBoardID << " : "
+	    TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
 			       << " Channel " << ch
 			       << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
 			       << " ReadTemperature Return Code = " << retcod
 			       << TLOG_ENDL;
+
+            //Lan: dumb fix by closing down pmt08 for now 
+            if( fFragmentID == 40967){
+              TLOG(TLVL_ERROR) << "DETECTED PMT08! Most likely Comm error. Soft reset before shutting down." << TLOG_ENDL;
+              
+              retcod = CAEN_DGTZ_Reset(fHandle);
+              sbndaq::CAENDecoder::checkError(retcod,"SoftResetPMT08",fBoardID);
+  
+              sleep(2);
+              
+              return false;
+            }
+
        }
     }
 
