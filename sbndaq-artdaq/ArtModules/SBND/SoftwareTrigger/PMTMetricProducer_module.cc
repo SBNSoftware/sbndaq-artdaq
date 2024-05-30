@@ -77,11 +77,9 @@ private:
 
   // fhicl parameters
   art::Persistable is_persistable_;
-  // bool     fUseBeamTrigger;  // whether to use flash trigger or beam trigger 
   std::vector<std::string> fCAENInstanceLabels; // instance labels for the CAEN V1730 modules
   float    fWindowLength;    // in us, window length after trigger time, default 1.6 us
   float    fWvfmPostPercent; // post percent of wvfm, 9 us after wvfm = 0.9
-  uint16_t fWvfmNominalLength;      // in ticks, length of wvfm, default 5000 ticks
   
   uint8_t     fTimingType;  // 0 for rawheader, 1 for SPEC TDC, 2 for PTB, and 3 for the **TIMING** CAEN board
   uint32_t    fNTBDelay;    // in ns, delay between TDC and PPS
@@ -135,7 +133,7 @@ sbnd::trigger::pmtSoftwareTriggerProducer::pmtSoftwareTriggerProducer(fhicl::Par
   {
     this->reconfigure(p);
     // Call appropriate produces<>() functions here.
-    produces< sbnd::trigger::pmtSoftwareTrigger >("", is_persistable_);
+    produces< std::vector<sbnd::trigger::pmtSoftwareTrigger>>("", is_persistable_);
     // map from fragID to array index 0-7
     for (size_t i=0;i<fFragIDs.size();++i){
       map_fragid_index.insert(std::make_pair(fFragIDs[i],i));
@@ -150,36 +148,40 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::reconfigure(fhicl::ParameterSet 
 {
   // Initialize member data here
   is_persistable_     = p.get<bool>("is_persistable", true) ? art::Persistable::Yes : art::Persistable::No;
-  // fUseBeamTrigger     = p.get<bool>("UseBeamTrigger",false);
 
   fCAENInstanceLabels = p.get<std::vector<std::string>>("CAENInstanceLabels", {"CAENV1730", "ContainerCAENV1730"});
-  fWindowLength       = p.get<float>("WindowLength", 1.8);
-  fWvfmPostPercent    = p.get<float>("WvfmPostPercent", 0.9);
-  fWvfmNominalLength         = p.get<uint16_t>("WvfmNominalLength", 5000); // units of ticks
+  fWindowLength       = p.get<float>("WindowLength", 1.8); // in us, window after FTRIG to look at metrics
+  fWvfmPostPercent    = p.get<float>("WvfmPostPercent", 0.8); // trigger is 20% of the way into the wvfm 
 
+
+  // NTB (RawEventHeader) [0] -> SPEC TDC ETT [1] -> TIMING CAEN [2] -> PTB ETT [3]
   fTimingType         = p.get<uint8_t>("TimingType", 0);
   
   fNTBDelay           = p.get<uint32_t>("NTBDelay", 367392); // units of ns
 
   fSPECTDCModuleLabel    = p.get<std::string>("SPECTDCModuleLabel", "daq");
   fSPECTDCInstanceLabels = p.get<std::vector<std::string>>("SPECTDCInstanceLabels", {"TDCTIMESTAMP", "ContainerTDCTIMESTAMP" }); 
-  fSPECTDCTimingChannel  = p.get<uint8_t>("SPECTDCTimingChannel", 4);
-  fSPECTDCDelay          = p.get<int32_t>("SPECTDCDelay", 2133);
+  // 1 is bes, 2 is rwm, 3 is ftrig, 4 is ett 
+  fSPECTDCTimingChannel  = p.get<uint8_t>("SPECTDCTimingChannel", 2);
+  fSPECTDCDelay          = p.get<int32_t>("SPECTDCDelay", 140); // difference between caen ftrig and tdc ftrig in ns
 
   fFragIDs            = p.get<std::vector<uint16_t>>("FragIDs", {40960,40961,40962,40963,40964,40965,40966,40967});
 
+  // relevant for offline debugging only
   fVerbose            = p.get<uint8_t>("Verbose", 0);
 
-  fCalculateBaseline  = p.get<bool>("CalculateBaseline",true);
-  fCountPMTs          = p.get<bool>("CountPMTs",true);
+  // most likely these will all be off...
+  fCalculateBaseline  = p.get<bool>("CalculateBaseline",false);
+  fCountPMTs          = p.get<bool>("CountPMTs",false);
   fCalculatePEMetrics = p.get<bool>("CalculatePEMetrics",false);
-  fFindFlashInfo      = p.get<bool>("FindFlashInfo",false);
-
   fInputBaseline      = p.get<std::vector<float>>("InputBaseline",{15100,2.0});
-  fPromptWindow       = p.get<float>("PromptWindow", 0.1);
-  fPrelimWindow       = p.get<float>("PrelimWindow", 0.5);
-  fADCThreshold       = p.get<float>("ADCThreshold", 7960);
-  fADCtoPE            = p.get<float>("ADCtoPE", 8.0);
+
+  fFindFlashInfo      = p.get<bool>("FindFlashInfo",true);
+
+  fPromptWindow       = p.get<float>("PromptWindow", 0.1); // in us 
+  fPrelimWindow       = p.get<float>("PrelimWindow", 0.5); // in us
+  fADCThreshold       = p.get<float>("ADCThreshold", 14900);
+  fADCtoPE            = p.get<float>("ADCtoPE", 12.5);   // for gain of 5e6, conversion is about 12.5 
 }
 
 
@@ -187,7 +189,8 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
 {
   if (fVerbose==1) std::cout << "Processing Run: " << e.run() << ", Subrun: " <<  e.subRun() << ", Event: " << e.id().event() << std::endl;
   // object to store trigger metrics in
-  std::unique_ptr<sbnd::trigger::pmtSoftwareTrigger> pmtSoftwareTriggerMetrics = std::make_unique<sbnd::trigger::pmtSoftwareTrigger>();
+  std::unique_ptr<std::vector<sbnd::trigger::pmtSoftwareTrigger>> trig_metrics_v = std::make_unique<std::vector<sbnd::trigger::pmtSoftwareTrigger>>();
+  sbnd::trigger::pmtSoftwareTrigger trig_metrics;
 
   // the reference time stamp, usually the event trigger time
   int32_t refTimestamp=0; 
@@ -233,14 +236,14 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     }
     refTimestamp = int32_t(tdcTS) - int32_t(fSPECTDCDelay);
 
-    if (refTimestamp==0){
+    if (int32_t(tdcTS)==0){
       std::cout << "No valid TDC timestamp found. Using PTB..." << std::endl;
       timing_type++;
     }
   }
   if (timing_type>=2){
     std::cout << "PTB Timing Reference not implemented...No usable timing reference.\nProducing empty metrics." << std::endl;
-    e.put(std::move(pmtSoftwareTriggerMetrics));
+    e.put(std::move(trig_metrics_v));
     return;
   }
 
@@ -276,7 +279,6 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
 	      artdaq::ContainerFragment contf(cont);
         if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
           if (std::find(fFragIDs.begin(), fFragIDs.end(), contf[0].get()->fragmentID()) == fFragIDs.end()) continue;
-
           if (beam_frag_dt==1e9){
             for (size_t ii = 0; ii < contf.block_count(); ++ii){
               // find the absolute time difference between the fragment start time and the reference time stamp 
@@ -314,10 +316,10 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     // store whether (1) we're using the beam trigger and (2) if we found it.
     // if both conditions (1) and (2) are fulfilled, then it will be true. Otherwise, false.
     // if (fUseBeamTrigger && foundBeamTrigger) pmtSoftwareTriggerMetrics->foundBeamTrigger = true;
-    pmtSoftwareTriggerMetrics->foundBeamTrigger = false;
+    trig_metrics.foundBeamTrigger = false;
 
     // store timestamp of trigger (where the 0 is the reference time stamp, in ns)
-    pmtSoftwareTriggerMetrics->trig_ts = (float)beam_frag_dt;
+    trig_metrics.trig_ts = (float)beam_frag_dt;
     if (fVerbose==1) std::cout << "Saving flash timestamp: " << beam_frag_dt << " ns" << std::endl;
 
     float promptPE = 0;
@@ -326,13 +328,14 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     // to store flash metrics 
     float flash_promptPE = 0;
     float flash_prelimPE = 0;
-    float flash_peakPE = 0;
+    float flash_peakPE   = 0;
     float flash_peaktime = 0;
 
     int nAboveThreshold = 0;
 
     // create a vector to contain the sum of all the wvfms
-    std::vector<uint32_t> wvfm_sum(fWvfmNominalLength, 0);
+    auto wvfm_length = wvfms_v[0].size();
+    std::vector<uint32_t> wvfm_sum(wvfm_length, 0);
 
       int windowStartBin = (1.0 - fWvfmPostPercent)*wvfms_v[0].size(); 
       int windowEndBin = windowStartBin + int(fWindowLength*us_to_ticks);
@@ -383,60 +386,52 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       flash_prelimPE = (flash_baseline-(*std::min_element(wvfm_sum.begin()+prelimStart,wvfm_sum.begin()+windowStartBin)))/fADCtoPE;
       flash_promptPE = (flash_baseline-(*std::min_element(wvfm_sum.begin()+windowStartBin,wvfm_sum.begin()+promptEnd)))/fADCtoPE;
 
-      flash_peakPE   = (flash_baseline-(*std::min_element(wvfm_sum.begin()+windowStartBin,wvfm_sum.begin()+windowEndBin)))/fADCtoPE;
+      // flash_peakPE   = (flash_baseline-(*std::min_element(wvfm_sum.begin()+windowStartBin,wvfm_sum.begin()+windowEndBin)))/fADCtoPE;
+      // auto flash_peak_it = std::min_element(wvfm_sum.begin()+windowStartBin,wvfm_sum.begin()+windowEndBin);
+      flash_peakPE   = (flash_baseline-(*std::min_element(wvfm_sum.begin(),wvfm_sum.end())))/fADCtoPE;
+      auto flash_peak_it = std::min_element(wvfm_sum.begin(),wvfm_sum.end());
 
-      auto flash_peak_it = std::min_element(wvfm_sum.begin()+windowStartBin,wvfm_sum.begin()+windowEndBin);
       // get the peak time in reference to the reference time!!!  
-      flash_peaktime = ((std::distance(wvfm_sum.begin(), flash_peak_it))*ticks_to_us*1e3 + beam_frag_dt)*1e-3; // us
+      // flash_peaktime = ((std::distance(wvfm_sum.begin(), flash_peak_it))*ticks_to_us*1e3 + beam_frag_dt)*1e-3; // us
+      flash_peaktime = ((std::distance(wvfm_sum.begin(), flash_peak_it))*ticks_to_us); // us
     }
-    pmtSoftwareTriggerMetrics->nAboveThreshold = nAboveThreshold;
-    pmtSoftwareTriggerMetrics->promptPE = promptPE;
-    pmtSoftwareTriggerMetrics->prelimPE = prelimPE;
-    pmtSoftwareTriggerMetrics->peakPE = flash_peakPE;
-    pmtSoftwareTriggerMetrics->peaktime = flash_peaktime;
+    trig_metrics.nAboveThreshold = nAboveThreshold;
+    trig_metrics.promptPE = promptPE;
+    trig_metrics.prelimPE = prelimPE;
+    trig_metrics.peakPE = flash_peakPE;
+    trig_metrics.peaktime = flash_peaktime;
 
     if (fVerbose==1){
-      if (fCountPMTs)
-        std::cout << "nPMTs Above Threshold: " << nAboveThreshold << std::endl;
+      if (fCountPMTs) std::cout << "nPMTs Above Threshold: " << nAboveThreshold << std::endl;
       if (fCalculatePEMetrics){
         std::cout << "prelim pe: " << prelimPE << std::endl;
         std::cout << "prompt pe: " << promptPE << std::endl;
       }
-      if (fFindFlashInfo){
+      if (fFindFlashInfo && flash_peakPE>16){
         std::cout << "flash prelim pe: " << flash_prelimPE << std::endl;
         std::cout << "flash prompt pe: " << flash_promptPE << std::endl;
         std::cout << "flash peak pe: "   << flash_peakPE << std::endl;
         std::cout << "flash peak time: " << flash_peaktime << " us" << std::endl;
       }
     }
+    trig_metrics_v->push_back(trig_metrics);
     // clear variables to free memory
     wvfms_v.clear(); 
-
-    if(metricMan != nullptr) {
-        //send flag metrics
-        metricMan->sendMetric(
-            "PMT_SWTrig_nAboveThreshold",
-            nAboveThreshold,
-            "Num PMTs Above Software Trigger Threshold", 5, artdaq::MetricMode::LastPoint);
-    }
-  }  // if found beam trigger
+  }  // if found trigger
   else{
     if (fVerbose==1) {
-      // std::cout << "Beam and wvfms not found" << std::endl;
       TLOG(TLVL_INFO) << "PMT Software Trigger Metric: Beam and wvfms not found";
-
     }
-    pmtSoftwareTriggerMetrics->foundBeamTrigger = false;
-    pmtSoftwareTriggerMetrics->trig_ts = -9999;
-    pmtSoftwareTriggerMetrics->nAboveThreshold = -9999;
-    pmtSoftwareTriggerMetrics->promptPE = -9999;
-    pmtSoftwareTriggerMetrics->prelimPE = -9999;
-    pmtSoftwareTriggerMetrics->peakPE   = -9999;
-    pmtSoftwareTriggerMetrics->peaktime = -9999;
-  }
-  TLOG(TLVL_ERROR) << "end of pmtsoftware trigger";
 
-  e.put(std::move(pmtSoftwareTriggerMetrics));
+    trig_metrics.foundBeamTrigger = false;
+    trig_metrics.trig_ts = -9999;
+    trig_metrics.nAboveThreshold = -9999;
+    trig_metrics.promptPE = -9999;
+    trig_metrics.prelimPE = -9999;
+    trig_metrics.peakPE   = -9999;
+    trig_metrics.peaktime = -9999;
+  }
+  e.put(std::move(trig_metrics_v));
 }
 
 bool sbnd::trigger::pmtSoftwareTriggerProducer::getTDCTime(artdaq::Fragment & frag, uint64_t & tdcTime) {
