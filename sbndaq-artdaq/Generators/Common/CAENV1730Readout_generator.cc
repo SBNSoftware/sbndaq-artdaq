@@ -1359,7 +1359,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 	if ( ch_temps[ch] > fCAEN.maxTemp ) 
 	{
 	   // V1730(S) shuts down at 70(85) celsius, give a warning ahead of that
-	   TLOG(TLVL_ERROR) << "SHUTTING DOWN CAENV1730 BoardID " << fBoardID << " : "
+	   TLOG(TLVL_ERROR) << "SHUTTING DOWN CAENV1730 FragmentID " << fFragmentID << " : "
 			     << " Channel " << ch
 			     << " temperature " << ch_temps[ch]
 			     << " > " << fCAEN.maxTemp << " degrees Celsius."
@@ -1376,7 +1376,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 	    //   while the readout is running, but we cannot do that.  Only one sensors on one 
 	    //   V1730 has ever malfunctioned.
 	    // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
-	    TLOG(TLVL_ERROR) << "CAENV1730 BoardID " << fBoardID << " : "
+	    TLOG(TLVL_ERROR) << "CAENV1730 FragmentID " << fFragmentID << " : "
 			       << " Channel " << ch
 			       << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
 			       << " ReadTemperature Return Code = " << retcod
