@@ -1,7 +1,7 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
 parent sbndaq_artdaq
-defaultqual     e26:s120a
+defaultqual     e26:s120b
 
 
 # These optional lines define the installed directories where
@@ -19,20 +19,20 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_12_07
-sbndaq_artdaq_core    v1_09_01
+artdaq                v3_13_00
+sbndaq_artdaq_core    v1_10_01
 caencomm              v1_7_0
 caenvme               v4_0_1
 caendigitizer         v2_17_3b
 pqxx                  v7_7_4c
 epics                 v7_0_7b
-artdaq_epics_plugin   v1_05_06
+artdaq_epics_plugin   v1_06_00
 zmq                   v4_3_1
 jsoncpp               v1_9_5a
-wibtools              v1_09_01     -
+wibtools              v1_10_01     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
-cetmodules            v3_22_02     -       only_for_build
+cetmodules            v3_24_01     -       only_for_build
 smc_compiler          v6_6_0       -nq-    only_for_build
 end_product_list
 
@@ -53,6 +53,18 @@ e26:prof:s120a:icarus       e26:s120a:prof       e26:prof:s120a        -nq-    -
 e26:debug:s120a:icarus      e26:s120a:debug      e26:debug:s120a       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  -               -         debug  e26:s120a:debug
 e26:prof:s120a:sbnd         e26:s120a:prof       e26:prof:s120a        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s120a  prof      prof   e26:s120a:prof
 e26:debug:s120a:sbnd        e26:s120a:debug      e26:debug:s120a       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s120a debug     debug  e26:s120a:debug
+e26:prof:s120b              e26:s120b:prof       e26:prof:s120b        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s120b  prof      prof   e26:s120b:prof
+e26:debug:s120b             e26:s120b:debug      e26:debug:s120b       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s120b debug     debug  e26:s120b:debug
+e26:prof:s120b:icbrus       e26:s120b:prof       e26:prof:s120b        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   -               -         prof   e26:s120b:prof
+e26:debug:s120b:icbrus      e26:s120b:debug      e26:debug:s120b       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  -               -         debug  e26:s120b:debug
+e26:prof:s120b:sbnd         e26:s120b:prof       e26:prof:s120b        -nq-    -nq-     -nq-          e26:p3913:prof    e26    e26   e26:prof   e26:prof:s120b  prof      prof   e26:s120b:prof
+e26:debug:s120b:sbnd        e26:s120b:debug      e26:debug:s120b       -nq-    -nq-     -nq-          e26:p3913:debug   e26    e26   e26:debug  e26:debug:s120b debug     debug  e26:s120b:debug
+e26:prof:s130               e26:s130:prof        e26:prof:s130         -nq-    -nq-     -nq-          e26:p3915a:prof   e26    e26   e26:prof   e26:prof:s130   prof      prof   e26:s130:prof
+e26:debug:s130              e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3915a:debug  e26    e26   e26:debug  e26:debug:s130  debug     debug  e26:s130:debug
+e26:prof:s130:icbrus        e26:s130:prof        e26:prof:s130         -nq-    -nq-     -nq-          e26:p3915a:prof   e26    e26   e26:prof   -               -         prof   e26:s130:prof
+e26:debug:s130:icbrus       e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3915a:debug  e26    e26   e26:debug  -               -         debug  e26:s130:debug
+e26:prof:s130:sbnd          e26:s130:prof        e26:prof:s130         -nq-    -nq-     -nq-          e26:p3915a:prof   e26    e26   e26:prof   e26:prof:s130   prof      prof   e26:s130:prof
+e26:debug:s130:sbnd         e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3915a:debug  e26    e26   e26:debug  e26:debug:s130  debug     debug  e26:s130:debug
 end_qualifier_list
 
 envPrepend(FHICL_FILE_PATH, "${SBNDAQ_ARTDAQ_DIR}/fhicl")

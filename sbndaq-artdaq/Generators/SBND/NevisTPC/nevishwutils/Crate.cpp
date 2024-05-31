@@ -84,7 +84,16 @@ namespace nevistpc{
   TriggerModuleSPtr Crate::getTriggerModule(){
     return _trigger_module;
   }
+  /*
+This function is added to debug FEMs is software but hasnot tested yet
+  void Crate::FEMtestfunction(){
+    if(getNumberOfTPCFEMs() > 1){
+    for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+      getTPCFEM(tpc_it)->readStatus();
 
+    }}
+  }
+*/
   void Crate::linkSetup(){
     
     // Reset link port receiver PLL for all FEMs except farthest left
@@ -401,8 +410,9 @@ namespace nevistpc{
 	getTPCFEM(tpc_it)->fem_setup(crateconfig);
 	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
 	getTPCFEM(tpc_it)->readStatus();
-      
-}
+
+
+      }
     }
 
     // Setup tx mode registers (this is done twice for some reason...)
@@ -490,6 +500,7 @@ namespace nevistpc{
       for( size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++ ){
 	usleep(10000);
 	getTPCFEM(tpc_it)->fem_setup(crateconfig);
+	getTPCFEM(tpc_it)->readStatus();
 	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
 	getTPCFEM(tpc_it)->readStatus();
      
