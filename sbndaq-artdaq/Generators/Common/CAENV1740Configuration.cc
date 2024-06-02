@@ -1,17 +1,17 @@
 //
-//  CAENConfiguration.cc
+//  CAENV1740Configuration.cc
 //
-//  Class to read and contain SBND CAEN V1730SB configuration
+//  Class to read and contain SBND CAEN V1740B configuration 
 //   parameters
 //
 //
-#define TRACE_NAME "CAENConfiguration"
+#define TRACE_NAME "CAENV1740Configuration"
 #include "artdaq/DAQdata/Globals.hh"
 
-#include "CAENConfiguration.hh"
+#include "CAENV1740Configuration.hh"
 
 // Constructor
-sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
+sbndaq::CAENV1740Configuration::CAENV1740Configuration(fhicl::ParameterSet const & ps):
   link(0),
   nBoards(0),
   enableReadout(0),
@@ -34,9 +34,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   //ovthValue(0),
   triggerLogic(0),
   majorityLevel(0),
-  majorityCoincidenceWindow(0),
-  maxTemp(80),
-  temperatureCheckMask(0xFFFF)
+  majorityCoincidenceWindow(0)
 {
   link                 = ps.get<int>("link");
   enableReadout        = ps.get<int>("enableReadout");
@@ -62,8 +60,6 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   triggerLogic         = ps.get<int>("triggerLogic");  
   majorityLevel        = ps.get<int>("majorityLevel"); 
   majorityCoincidenceWindow = ps.get<int>("majorityCoincidenceWindow"); 
-  maxTemp              = ps.get<uint32_t>("maxTempCelsius",80);
-  temperatureCheckMask = ps.get<uint32_t>("temperatureCheckMask",0xFFFF);
 
   char tag[1024];
   channelEnableMask = 0;
@@ -99,12 +95,12 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
 }
 
 
-void sbndaq::CAENConfiguration::print(std::ostream& os) 
+void sbndaq::CAENV1740Configuration::print(std::ostream& os) 
 {
   os << *this;
 }
 
-std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
+std::ostream& operator<<(std::ostream& os, const sbndaq::CAENV1740Configuration& e)
 {
   os << "CAEN Configuration" << std::endl;
   os << "  Link                  " << e.link << std::endl;
@@ -125,7 +121,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.extTrgMode) << std::endl;
   os << "  SWTrgMode             " << e.swTrgMode << " " 
      << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.swTrgMode) << std::endl;
-  for ( int j=0; j<sbndaq::CAENConfiguration::MAX_CHANNELS; j++)
+  for ( int j=0; j<sbndaq::CAENV1740Configuration::MAX_CHANNELS; j++)
       os << "    Channel " << j << " Threshold " << e.triggerThresholds[j] << std::endl;
   os << "  AcqMode               " << e.acqMode << " " 
      << sbndaq::CAENDecoder::AcquisitionMode((CAEN_DGTZ_AcqMode_t)e.acqMode) << std::endl;
@@ -138,14 +134,12 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  TriggerLogic          " << e.triggerLogic << std::endl;
   os << "  MajorityLevel         " << e.majorityLevel << std::endl;
   os << "  MajorityCoincidenceWindow " << e.majorityCoincidenceWindow << std::endl;
-  os << "  MaxTempCelsius        " << e.maxTemp << std::endl;
-  os << "  TemperatureCheckMask  0x" << std::hex << e.temperatureCheckMask << std::dec << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )
   {
     os << "    ChannelEnableMask   0x" << std::hex << e.channelEnableMask << std::dec << std::endl;
-    for ( int j=0; j<sbndaq::CAENConfiguration::MAX_CHANNELS; j++)
+    for ( int j=0; j<sbndaq::CAENV1740Configuration::MAX_CHANNELS; j++)
     {
       if ( e.channelEnable[j] )
       {
