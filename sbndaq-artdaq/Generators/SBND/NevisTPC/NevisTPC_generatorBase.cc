@@ -51,7 +51,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 
   // intialize event counting                                                                                                       
   _subrun_event_0 = -1;
-  _this_event = -1;
+  _this_event = 1;// -1;
   
 
   // Build our buffer
@@ -283,7 +283,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   }
 
   // Sweet, now, let's actually fill stuff
-  _this_event = metadata_.EventNumber();
+  //  _this_event = metadata_.EventNumber();
+
+  TLOG(TLVL_DEBUG+13) << "TPC Event number from pseudo counter " << _this_event;
 
   // set the subrun event 0 if it has never been set before
   if (_subrun_event_0 == -1) {
@@ -313,7 +315,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 
   metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),fNChannels,fSamplesPerChannel,fUseCompression);
   frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
-                                                      metadata_.EventNumber(),          // Sequence ID
+                                                      _this_event, //metadata_.EventNumber(),          // Sequence ID
 						      fragment_id,                      // Fragment ID
                                                       detail::FragmentType::NevisTPC,   // Fragment Type
 						      metadata_,
@@ -340,6 +342,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     frags.emplace_back(std::move(endOfSubrunFrag));
   }
 
+  if (index==fragment_ids.size()-1){
+    _this_event++;
+  }
   ++events_seen_;
   return true;
 }

@@ -312,7 +312,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     getControllerModule()->runOff(); // using Controller triggers
     //getControllerModule()->testOff(); // using CALIB triggers
     // To do: move instructions below to fcl
-    getControllerModule()->setFrameLength(0xffff & 9119); //20799);
+    getControllerModule()->setFrameLength(0xffff & 15999); // for 3ms readout window
     getControllerModule()->setNUTrigPosition(0xa);
     
     // Load xmit firmware
@@ -386,10 +386,10 @@ This function is added to debug FEMs is software but hasnot tested yet
       // Temp: from CALIB, to avoid leaving the function generator on all weekend
       getControllerModule()->testOff(); //v
       // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
-      getTriggerModule()->setDeadtimeSize(0x59);//0x59); //0x1);//v
+      getTriggerModule()->setDeadtimeSize(0x9c); //0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 9119); // 9119);// 20799);// 9071); // 20799); //20479);// 20799);
+      getTriggerModule()->setFrameLength(0xffff & 15999); // 
       ///////////////////////
 
       getTriggerModule()->disableTriggers(false);
@@ -478,10 +478,10 @@ This function is added to debug FEMs is software but hasnot tested yet
       getTriggerModule()->runOnSyncOff(); //v
       getControllerModule()->testOff(); //v
       // To do: create two NevisTriggerModule_config.fcl, one for external, one for CALIB. Move instructions below to fcl
-      getTriggerModule()->setDeadtimeSize(0x59);//0x1);//v
+      getTriggerModule()->setDeadtimeSize(0x9c);//0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 9119); // 20799);
+      getTriggerModule()->setFrameLength(0xffff & 15999); // 20799);
       //getTriggerModule()->runOnSyncOn(); //v
       //usleep(5000);
       getTriggerModule()->disableTriggers(false);
