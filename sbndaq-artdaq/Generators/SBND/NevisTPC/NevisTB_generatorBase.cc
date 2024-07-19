@@ -302,7 +302,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
                                                
     ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
     frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,                                                                                    
-							_this_event, //ntbmetadata_.EventNumber(), //_this_event,       //Sequence ID                                
+							_this_event, //ntbmetadata_.EventNumber(), //_this_event,       //Sequence ID 
 							pseudo_ntbfragment,                                                                               
 							detail::FragmentType::NevisTB,   //Fragment Type
 							ntbmetadata_,                                                                                     
