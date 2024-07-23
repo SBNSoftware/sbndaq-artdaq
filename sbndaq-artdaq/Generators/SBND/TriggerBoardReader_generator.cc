@@ -204,6 +204,14 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
     has_TS = true ;
     timestamp = _last_timestamp ;
   }
+  //borrowed from the CAEN code
+  boost::posix_time::ptime fTimeServer = boost::posix_time::microsec_clock::universal_time();   //get the server time so we can use the second part
+  boost::posix_time::ptime fTimeEpoch = boost::posix_time::ptime(boost::gregorian::date(1970,1,1));   
+  boost::posix_time::time_duration fTimeDiffPoll= fTimeSever-fTimeEpoch;//current time since last epoch
+  uint64_t fMeanPollTime=fTimeDiffPoll.total_nanoseconds();//put it in ns
+  uint64_t fMeanPollTimeNS=fMeanPollTime%(1000000000);//take just the NS part 
+
+
 
   unsigned int word_counter = 0 ;
   unsigned int group_counter = 0 ;
@@ -400,7 +408,50 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
   }
 
+  long timestampPTB_ns= timestamp%(1000000000);//take just hte ns part of the timestamp from the PTB
+  artdaq::Fragment::timestamp_t timestampPTB = artdaq::Fragment::InvalidTimestamp ;
+  timestampPTB=timestamp;
+  // Scheme borrowed from what Antoni developed for CRT.                                                          
+  // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
+  
+  timestamp= fMeanPollTime - fMeanPollTimeNS + timestampPTB_ns
+    + (timestampPTB_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+    - (timestampPTB_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000;  
 
+
+  _frag_counter ++;
+  //stealing code from the caens
+  artdaq::Fragment::timestamp_t ts_now; //server time
+  {
+    using namespace boost::gregorian;
+    using namespace boost::posix_time;
+      
+    ptime t_now(microsec_clock::universal_time());
+    ptime time_t_epoch(date(1970,1,1));
+    time_duration diff = t_now - time_t_epoch;
+      
+    ts_now = diff.total_nanoseconds();
+  }
+
+  //timestamp=the timestamp from the fragment I think
+  if( timestamp>ts_now ){
+    TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Something funky is happening with the clocks/timing."
+		       << "ts_frag - ts_now = " << timestamp - ts_now << " ns! ts_frag= "<<timestamp<<"  ts_now= "<<ts_now
+		       << TLOG_ENDL;
+    _frag_counter_bad_ts ++;
+  }
+  else if( (ts_now-timestamp)>5e9 ){
+    TLOG(TLVL_ERROR) << "Fragment being packged more than 5 seconds after timestamp: "
+		     << "ts_now - ts_frag = " << ts_now-timestamp << " ns!"
+		     << TLOG_ENDL;
+  }
+  else if( (ts_now-timestamp)>1e9 ){
+    TLOG(TLVL_WARNING) << "Fragment being packged more than 1 second after timestamp: "
+		       << "ts_now - ts_frag = " << ts_now-timestamp << " ns!"
+		       << TLOG_ENDL;
+  }
+
+  //done
   fragptr -> resizeBytes( word_counter * word_bytes ) ;
   fragptr -> setUserType( detail::FragmentType::PTB ) ;
   fragptr -> setSequenceID( ev_counter_inc() ) ;

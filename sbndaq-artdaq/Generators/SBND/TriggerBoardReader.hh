@@ -105,6 +105,11 @@ namespace sbndaq {
     unsigned long _run_LLT_counter = 0;
     unsigned long _run_LLT_counters[32] = {0};
 
+
+    //timestamp tests
+    unsigned int _frag_counter=0;
+    unsigned int _frag_counter_bad_ts=0;
+
     // spill parameters
     const uint64_t _spill_width = 240000000 ;  //4.8 s
     artdaq::Fragment::timestamp_t _spill_start ;
