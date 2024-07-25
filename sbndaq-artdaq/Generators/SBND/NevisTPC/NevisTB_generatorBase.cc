@@ -40,7 +40,7 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   current_subrun_ = 0;
   events_seen_ = 0;
   _subrun_event_0 = -1;
-  _this_event = -1;
+  _this_event = 1; //-1;
   GPSinitialized = false;
   pseudo_ntbfragment = 1;  
 
@@ -251,8 +251,12 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     return false;                                                                                                                                       
   }  
   // Sweet, now, let's actually fill stuff                                                                                                              
-  _this_event = ntbmetadata_.EventNumber();                                                                                                             
-                                                                                                                                                        
+  //  _this_event = ntbmetadata_.EventNumber();                                                                                                             
+
+  TLOG(TLVL_DEBUG+14) << "NTB Event number from pseudo counter " << _this_event;
+  //  TLOG(TLVL_DEBUG+14) << "NTB Event number from header " << ntbmetadata_.EventNumber();
+                                                                                                            
+                                                                                                                                                    
   // set the subrun event 0 if it has never been set before                                                                                             
   if (_subrun_event_0 == -1) {                                                                                                                          
     _subrun_event_0 = _this_event;  
@@ -299,13 +303,14 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     //auto ns1 = ns_since_epoch1.count();
     //TLOG(TLVL_INFO) << "Current time in nanoseconds in ntb (when getting corrected time): " << ns1;
                                                
-    ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
+    //ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
+    ntbmetadata_ = NevisTBFragmentMetadata(_this_event,ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());
     frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,                                                                                    
-							ntbmetadata_.EventNumber(), //_this_event,       //Sequence ID                                      
+							_this_event, //ntbmetadata_.EventNumber(), //_this_event,       //Sequence ID                 
 							pseudo_ntbfragment,                                                                               
 							detail::FragmentType::NevisTB,   //Fragment Type
 							ntbmetadata_,                                                                                     
-							ntb_fragment_timestamp) );                                                                                   
+							ntb_fragment_timestamp) );                                                                      
  
     std::copy(CircularBufferNTB_.buffer.begin(),                                                                                                          
 	      CircularBufferNTB_.buffer.begin()+(expected_size/sizeof(uint16_t)),                                                                         
@@ -327,6 +332,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
       frags.emplace_back(std::move(endOfSubrunFrag));
     }
 
+    _this_event++;
     ++events_seen_;
 
     return true;                                                                                                                                          

@@ -161,7 +161,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(100); //0x59); //100);
+      getTriggerModule()->setDeadtimeSize(0x59); //0x59); //100);
     }
     
     // Load xmit firmware
