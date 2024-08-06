@@ -41,6 +41,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   fSamplesPerChannel = ps_.get<uint32_t>("SamplesPerChannel",9600);
   fNChannels         = ps_.get<uint32_t>("NChannels",64);
   fUseCompression    = ps_.get<bool>("UseCompression",false);
+  fTimeoutSec        = ps_.get<uint32_t>("TimeoutSec", 60);
    
   DMABufferSizeBytes_ = ps_.get<uint32_t>("DMABufferSize",1e6);	
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
@@ -143,7 +144,7 @@ bool sbndaq::NevisTPC_generatorBase::GetData(){
     n_words = GetFEMCrateData()/sizeof(uint16_t);
     auto current_time = std::chrono::steady_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-    if (elapsed_time > 60){ //60 second timeout for more ability to do low rate nonstandard trigger configurations
+    if (elapsed_time > fTimeoutSec){ //fcl configurable timeout (in seconds) for more ability to do low rate nonstandard trigger configurations
 
       char line[132];
       sprintf(line,"There is no data for 60 seconds"); //,current_event,header->getEventNum());                                                                 
