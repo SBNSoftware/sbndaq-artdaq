@@ -207,7 +207,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
   //borrowed from the CAEN code
   boost::posix_time::ptime fTimeServer = boost::posix_time::microsec_clock::universal_time();   //get the server time so we can use the second part
   boost::posix_time::ptime fTimeEpoch = boost::posix_time::ptime(boost::gregorian::date(1970,1,1));   
-  boost::posix_time::time_duration fTimeDiffPoll= fTimeSever-fTimeEpoch;//current time since last epoch
+  boost::posix_time::time_duration fTimeDiffPoll= fTimeServer-fTimeEpoch;//current time since last epoch
   uint64_t fMeanPollTime=fTimeDiffPoll.total_nanoseconds();//put it in ns
   uint64_t fMeanPollTimeNS=fMeanPollTime%(1000000000);//take just the NS part 
 
@@ -433,19 +433,24 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
     ts_now = diff.total_nanoseconds();
   }
 
+  TLOG(TLVL_DEBUG) <<"Hybrid timestamp: "<<timestamp<<"    PTB's timestamp: "<< timestampPTB<< TLOG_ENDL;
+
   //timestamp=the timestamp from the fragment I think
-  if( timestamp>ts_now ){
-    TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Something funky is happening with the clocks/timing."
-		       << "ts_frag - ts_now = " << timestamp - ts_now << " ns! ts_frag= "<<timestamp<<"  ts_now= "<<ts_now
-		       << TLOG_ENDL;
+  if( timestamp>(ts_now+1e6) ){
     _frag_counter_bad_ts ++;
+    TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Something funky is happening with the clocks/timing."
+		       << "hybrid ts_frag - ts_now_ntp = " << timestamp - ts_now << " ns! ts_frag= "<<timestamp<<"  ts_now= "<<ts_now
+		       <<"\n ptb_self_timestamp = "<<timestampPTB<<"  ptb_self_timestamp-hybrid_ts=  "<< timestampPTB-timestamp
+		       <<"\n"<< _frag_counter_bad_ts<<"/"<<_frag_counter<<" fragments have bad timestamps like this."
+		       << TLOG_ENDL;
+
   }
-  else if( (ts_now-timestamp)>5e9 ){
+  else if( ts_now>timestamp+5e9 ){
     TLOG(TLVL_ERROR) << "Fragment being packged more than 5 seconds after timestamp: "
-		     << "ts_now - ts_frag = " << ts_now-timestamp << " ns!"
+		     << "ts_now - ts_frag = " << (long long)ts_now-(long long)timestamp << " ns!"
 		     << TLOG_ENDL;
   }
-  else if( (ts_now-timestamp)>1e9 ){
+  else if( ts_now>timestamp+1e9 ){
     TLOG(TLVL_WARNING) << "Fragment being packged more than 1 second after timestamp: "
 		       << "ts_now - ts_frag = " << ts_now-timestamp << " ns!"
 		       << TLOG_ENDL;
