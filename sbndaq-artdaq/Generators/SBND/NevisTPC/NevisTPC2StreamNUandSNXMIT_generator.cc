@@ -131,6 +131,27 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
 }
 
+
+void sbndaq::NevisTPC2StreamNUandSNXMIT::runonsyncon() {
+  if( fCALIBFreq > 0 ){
+    fCrate->getTriggerModule()->runOnSyncOn();
+    TLOG(TLVL_INFO) << "called runonsyncon for CALIB trigger" << TLOG_ENDL;
+  }
+
+  if( fCALIBFreq < 0 and fControllerTriggerFreq < 0 ){
+    if(fCrate->hasTrigger){
+      fCrate->getTriggerModule()->runOnSyncOn();
+
+      TLOG(TLVL_INFO) << "called runonsyncon for EXT trigger" << TLOG_ENDL;
+    }}
+
+  if( fControllerTriggerFreq > 0 ){
+    fCrate->getControllerModule()->runOn();
+    TLOG(TLVL_INFO) << "called runonsyncon for Controller trigger" << TLOG_ENDL;
+  }
+}
+
+
 void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
   if( fCALIBFreq > 0 ){                                                                                         
     FireCALIB_thread_->start();
