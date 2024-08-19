@@ -239,9 +239,9 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
                                                                                                                                                         
   else if((uint)current_ntbframenum != ntbheader->getFrame()){                                                                                          
     char line[132];    
-    sprintf(line,"NTB framenum out of sync, tanking the run. Current: %d, Header :%d", current_ntbframenum,ntbheader->getFrame());                      
-    TRACE(TERROR,line);                                                                                                                                 
-    throw std::runtime_error(line);                                                                                                                     
+    sprintf(line,"NTB framenum out of sync, tanking the run. Current: %d, Header :%d", current_ntbframenum,ntbheader->getFrame());
+    TRACE(TERROR,line);
+    throw std::runtime_error(line);
     return false;                                                                                                                                       
   }                                                                                                                                                     
                                                                                                                                                         
@@ -251,16 +251,13 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     return false;                                                                                                                                       
   }  
   // Sweet, now, let's actually fill stuff                                                                                                              
-  //  _this_event = ntbmetadata_.EventNumber();                                                                                                             
+  //_this_event = ntbmetadata_.EventNumber();                                                                                                             
+          
+  TLOG(TLVL_DEBUG+13) << "NTB Event number from pseudo counter " << _this_event;                                                                                                                                              
 
-  TLOG(TLVL_DEBUG+14) << "NTB Event number from pseudo counter " << _this_event;
-  //  TLOG(TLVL_DEBUG+14) << "NTB Event number from header " << ntbmetadata_.EventNumber();
-                                                                                                            
-                                                                                                                                                    
-  // set the subrun event 0 if it has never been set before                                                                                             
-  if (_subrun_event_0 == -1) {                                                                                                                          
-    _subrun_event_0 = _this_event;  
-
+  // set the subrun event 0 if it has never been set before
+  if (_subrun_event_0 == -1) {
+    _subrun_event_0 = _this_event; 
   }
     long long tframe   = ntbheader->getFrame();                  //Get trigger time tagged by nevis clock
     long long tsamp    = ntbheader->get2MHzSampleNumber();       //
@@ -305,12 +302,12 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
                                                
     //ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
     ntbmetadata_ = NevisTBFragmentMetadata(_this_event,ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());
-    frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,                                                                                    
-							_this_event, //ntbmetadata_.EventNumber(), //_this_event,       //Sequence ID                 
-							pseudo_ntbfragment,                                                                               
+    frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
+							_this_event, //ntbmetadata_.EventNumber(), //_this_event,//Sequence ID 
+							pseudo_ntbfragment,
 							detail::FragmentType::NevisTB,   //Fragment Type
-							ntbmetadata_,                                                                                     
-							ntb_fragment_timestamp) );                                                                      
+							ntbmetadata_, 
+							ntb_fragment_timestamp) );
  
     std::copy(CircularBufferNTB_.buffer.begin(),                                                                                                          
 	      CircularBufferNTB_.buffer.begin()+(expected_size/sizeof(uint16_t)),                                                                         
@@ -331,7 +328,6 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
       *endOfSubrunFrag->dataBegin() = my_rank;
       frags.emplace_back(std::move(endOfSubrunFrag));
     }
-
     _this_event++;
     ++events_seen_;
 

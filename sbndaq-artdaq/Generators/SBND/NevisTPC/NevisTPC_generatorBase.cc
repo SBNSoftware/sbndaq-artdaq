@@ -51,7 +51,8 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 
   // intialize event counting                                                                                                       
   _subrun_event_0 = -1;
-  _this_event = -1; //1;
+  _this_event = 1; // -1;
+
   
 
   // Build our buffer
@@ -291,8 +292,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   }
 
   // Sweet, now, let's actually fill stuff
-   _this_event = metadata_.EventNumber();
-  TLOG(TLVL_DEBUG+13) << "TPC Event number: " << _this_event;
+  //hardware gives 1-based event counter for TPC
+  // _this_event = metadata_.EventNumber();
+   TLOG(TLVL_DEBUG+12) << "TPC Event number from pseudo counter " << _this_event;
 
   // set the subrun event 0 if it has never been set before
   if (_subrun_event_0 == -1) {
@@ -332,11 +334,10 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     return(false);
   }
 
-  metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),fNChannels,fSamplesPerChannel,fUseCompression);
-  //metadata_ = NevisTPCFragmentMetadata(_this_event,fNChannels,fSamplesPerChannel,fUseCompression);
+  metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),header->getFrameNum(),fNChannels,fSamplesPerChannel,fUseCompression);
   frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
-                                                      metadata_.EventNumber(),          // Sequence ID
-      						      fragment_id,                      // Fragment ID
+                                                      _this_event, //metadata_.EventNumber(),          // Sequence ID
+						      fragment_id,                      // Fragment ID
                                                       detail::FragmentType::NevisTPC,   // Fragment Type
 						      metadata_,
 						      unixtime_ns) );
@@ -345,7 +346,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 	    (uint16_t*)(frags.back()->dataBegin()));
   TRACE(TFILLFRAG,"Created fragment with sequenceID=%lu, fragmentID=%u, TimeStamp=%lu",
 	frags.back()->sequenceID(),frags.back()->fragmentID(),frags.back()->timestamp());
- 
+
   new_buffer_size = CircularBuffer_.Erase(expected_size/sizeof(uint16_t));
   //TRACE(TFILLFRAG,"Successfully erased %lu words. Buffer occupancy now %lu",
   //	expected_size/sizeof(uint16_t),new_buffer_size);
@@ -361,13 +362,10 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     *endOfSubrunFrag->dataBegin() = my_rank;
     frags.emplace_back(std::move(endOfSubrunFrag));
   }
-  //TLOG(TLVL_DEBUG+13) << "fragment IDs size:" << fragment_ids.size();
-  /*  TLOG(TLVL_DEBUG+13) << "FEM index: " << index;  
-
   if (index==fragment_ids.size()-1){
-    _this_event++;
-  }
-  */
+  _this_event++;
+   }
+
   ++events_seen_;
   return true;
 }
