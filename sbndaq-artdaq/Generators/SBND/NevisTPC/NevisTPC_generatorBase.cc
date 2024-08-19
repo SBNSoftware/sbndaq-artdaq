@@ -73,6 +73,7 @@ void sbndaq::NevisTPC_generatorBase::start(){
 
  // Magically start getdata thread
   GetData_thread_->start();
+  runonsyncon();
   startFireCalibTrig();
 
 }

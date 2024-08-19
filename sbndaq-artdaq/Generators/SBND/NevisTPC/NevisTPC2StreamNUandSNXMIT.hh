@@ -32,6 +32,7 @@ namespace sbndaq {
       ConfigureStart();
     }
     virtual ~NevisTPC2StreamNUandSNXMIT() {}
+    void runonsyncon() override;
     void startFireCalibTrig() override;
 
   private:

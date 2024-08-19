@@ -29,6 +29,7 @@ public:
 protected:
   bool getNext_(artdaq::FragmentPtrs &output) override;
   void start() override;
+  virtual void runonsyncon() {};
   virtual void startFireCalibTrig(){};
   void stop() override;
   void stopNoMutex() override;

@@ -206,7 +206,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     */
     
     getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+    //    getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -285,7 +285,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     */
     
     getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+    //    getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -347,7 +347,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     getControllerModule()->setupTXModeRegister();
     //getXMITModule()->configureSNStreamReader_SNRunOnSyncOnMode();
     
-    getControllerModule()->runOn(); // calls runOnSyncOn
+    //    getControllerModule()->runOn(); // calls runOnSyncOn
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -444,7 +444,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     */
     
     getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+    //    getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -522,7 +522,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     getControllerModule()->setupTXModeRegister();
 
     getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+    //    getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
