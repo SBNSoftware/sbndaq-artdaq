@@ -71,6 +71,7 @@ protected:
   uint32_t fSamplesPerChannel;
   uint32_t fNChannels;
   bool fUseCompression;
+  uint32_t fTimeoutSec;
 
   std::vector<artdaq::Fragment::fragment_id_t> fragment_ids;
   std::vector<uint64_t> FEMIDs_;

@@ -317,7 +317,11 @@ namespace nevistpc {
 
   }
 
-
+  void XMITReader::dmaStop( )
+  {
+    dmaAbort();
+    dmaClearRegister();
+  }
 
 
 }  // end of namespace nevistpc
