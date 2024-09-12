@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <thread>
 
+int numGates =0;
 
 sbndaq::TriggerBoardReader::TriggerBoardReader(fhicl::ParameterSet const & ps)
   :
@@ -188,6 +189,7 @@ bool sbndaq::TriggerBoardReader::getNext_(artdaq::FragmentPtrs & frags) {
 
 
 artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
+//sbndaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
   static ptb::content::word::word_t temp_word ;
 
@@ -207,8 +209,11 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
   unsigned int word_counter = 0 ;
   unsigned int group_counter = 0 ;
+  
 
   artdaq::Fragment* fragptr = artdaq::Fragment::FragmentBytes( initial_bytes ).release() ;
+  // artdaq::Fragment* artfragptr = artdaq::Fragment::FragmentBytes( initial_bytes ).release() ;
+  //sbndaq::CTBFragment * ctbfrag(artfragptr);
 
   for ( word_counter = 0 ; word_counter < n_words ; ) {
 
@@ -346,6 +351,10 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 
       const ptb::content::word::trigger_t * t = reinterpret_cast<const ptb::content::word::trigger_t *>( & temp_word  ) ;
 
+      if (t ->IsTrigger(30) ) {
+	numGates++;
+      }
+
       std::set<unsigned short> trigs = t -> Triggers(32) ;
       for ( auto it = trigs.begin(); it != trigs.end() ; ++it ) {
 	++ _metric_LLT_counters[*it] ;
@@ -373,7 +382,16 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
     else if ( temp_word.word_type == ptb::content::word::t_gt ) {
       ++ _metric_HLT_counter ;
 
-      const ptb::content::word::trigger_t * t = reinterpret_cast<const ptb::content::word::trigger_t *>( & temp_word  ) ;
+      
+
+      //const ptb::content::word::trigger_t * t = reinterpret_cast<const ptb::content::word::trigger_t *>( & temp_word  ) ;
+      ptb::content::word::trigger_t * t = reinterpret_cast<ptb::content::word::trigger_t *>( & temp_word  ) ;
+      
+      if (t -> IsTrigger(1)) { //if HLT is an HLT 1 
+	t -> setGateCounter(numGates);
+	std::cout <<"Number of Gates since last HLT 1" << t -> gate_counter << std::endl;
+	numGates=0;
+      }
 
       if ( t -> trigger_word & 0xEE )  // request at least a trigger not cosmic trigger nor random triggers
 	++ _metric_beam_trigger_counter ;    // count beam related HLT
@@ -405,6 +423,8 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
   fragptr -> setUserType( detail::FragmentType::PTB ) ;
   fragptr -> setSequenceID( ev_counter_inc() ) ;
   fragptr -> setFragmentID( fragment_id() ) ;
+  
+  //fragptr -> SetGateCount( numGates );
 
   fragptr -> setTimestamp( timestamp ) ;
   TLOG( 20, "TriggerBoardReader") << "fragment created with TS " << timestamp << " containing " << word_counter << " words" << std::endl ;
@@ -421,6 +441,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 int sbndaq::TriggerBoardReader::_FragmentGenerator() {
 
   int frag_counter = 0 ;
+  
 
   artdaq::Fragment* temp_ptr ;
 
