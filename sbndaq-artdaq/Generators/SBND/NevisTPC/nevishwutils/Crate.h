@@ -22,6 +22,7 @@ namespace nevistpc{
     NevisTPCFEMSPtr getTPCFEM(uint i);
     XMITModuleSPtr getXMITModule();
     XMITReaderSPtr getXMITReader();
+    //    NevisTBStreamReaderSPtr getNTBReader();
     XMITReaderSPtr getXMITReader(std::string name); // Two-stream overload
     TriggerModuleSPtr getTriggerModule();
     //    NevisTBStreamReaderSPtr getNevisTBStreamReader();

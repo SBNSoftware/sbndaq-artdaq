@@ -32,7 +32,9 @@ namespace sbndaq {
       ConfigureStart();
     }
     virtual ~NevisTPC2StreamNUandSNXMIT() {}
+    void runonsyncon() override;
     void startFireCalibTrig() override;
+
 
   private:
     void ConfigureStart() override;
@@ -45,6 +47,7 @@ namespace sbndaq {
     nevistpc::XMITReaderSPtr fSNXMITReader;
     nevistpc::CrateSPtr fCrate;
 
+    bool fhasTrig;
     uint32_t fChunkSize;  //!< Number of bytes to read at once in NU stream
     uint32_t fSNChunkSize;  //!< Number of bytes to read at once in SN stream
     std::string fGPSZMQPortNTB; //! Port used to connect NTB and TPC board readers. must be the same port defined in NTB fcl

@@ -22,6 +22,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fGPSTimeFreq           = ps_.get<double>("GPSTimeFrequency", -1);
   fGPSZMQPortNTB         = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
   fUseZMQ                = ps_.get<bool>("UseZMQ",false);
+  fhasTrig               = ps_.get<bool>("hasTrig",false);
 
   SNDMABuffer_.reset(new uint16_t[fSNChunkSize]);
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
@@ -131,6 +132,26 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
 }
 
+void sbndaq::NevisTPC2StreamNUandSNXMIT::runonsyncon() {
+  if( fCALIBFreq > 0 ){
+  fCrate->getTriggerModule()->runOnSyncOn();
+  TLOG(TLVL_INFO) << "called runonsyncon for CALIB trigger" << TLOG_ENDL;
+  }
+
+  if( fCALIBFreq < 0 and fControllerTriggerFreq < 0 ){
+    if(fCrate->hasTrigger){
+    fCrate->getTriggerModule()->enableTriggers();
+    fCrate->getTriggerModule()->runOnSyncOn();
+    
+    TLOG(TLVL_INFO) << "called runonsyncon for EXT trigger" << TLOG_ENDL;
+    }}
+
+ if( fControllerTriggerFreq > 0 ){
+  fCrate->getControllerModule()->runOn();
+  TLOG(TLVL_INFO) << "called runonsyncon for Controller trigger" << TLOG_ENDL;
+  }
+}
+
 void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
   if( fCALIBFreq > 0 ){                                                                                         
     FireCALIB_thread_->start();
@@ -142,8 +163,6 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
     TLOG(TLVL_INFO) << "Started FireController thread" << TLOG_ENDL;
   }
 
-  //  if( fControllerTriggerFreq < 0 and  ){
-
 }
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
@@ -152,7 +171,9 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
     WriteSNData_thread_->stop();
   }
   //  FireCALIB_thread_->stop();
+  if( fControllerTriggerFreq > 0 ){
   FireController_thread_->stop();
+}
   MonitorCrate_thread_->stop();
 
   if( fDumpBinary ){
@@ -165,6 +186,8 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
     }
   }
   delete[] SNBuffer_;
+  fNUXMITReader->dmaStop();
+
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;

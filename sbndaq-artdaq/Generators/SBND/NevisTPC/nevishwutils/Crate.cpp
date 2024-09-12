@@ -1,6 +1,7 @@
 #include "Crate.h"
 #include "trace.h"
 #define TRACE_NAME "Crate"
+#include "artdaq/DAQdata/Globals.hh"
 
 namespace nevistpc{
 
@@ -77,7 +78,7 @@ namespace nevistpc{
     else return NULL;
   }
 
-  //  NevisTBStreamReaderSPtr Crate::getNevisTBStreamReader(){
+  //  NevisTBStreamReaderSPtr Crate::getNTBReader(){
   //return _nevistb_reader;//("nevistb_reader");                                                                                          
   // }
   
@@ -157,12 +158,15 @@ This function is added to debug FEMs is software but hasnot tested yet
     getControllerModule()->testOn();
     getControllerModule()->runOff();
     getControllerModule()->testOff();
-    
+
+   usleep(5000);    
+
     if(hasTrigger){
       getTriggerModule()->runOnSyncOff();
       getTriggerModule()->disableTriggers(false);
-      getTriggerModule()->setDeadtimeSize(100); //0x59); //100);
-    }
+      getTriggerModule()->setDeadtimeSize(0x8F); //0x59); //100);
+      //      getTriggerModule()->setCalibDelay(0x10);    
+}
     
     // Load xmit firmware
     getXMITModule()->setMax3000Config();
@@ -175,7 +179,8 @@ This function is added to debug FEMs is software but hasnot tested yet
 	usleep(10000);
 	getTPCFEM(tpc_it)->fem_setup(crateconfig);
 	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
-      }
+	getTPCFEM(tpc_it)->readStatus();     
+ }
     }
 
     // Setup tx mode registers (this is done twice for some reason...)
@@ -185,9 +190,19 @@ This function is added to debug FEMs is software but hasnot tested yet
     if(hasTrigger)
       getTriggerModule()->configureTrigger( _p ); // To do: move it with the other trigger instructions above
 
+    for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+      TLOG(TLVL_INFO) << "before linksetup : ";
+      getTPCFEM(tpc_it)->readStatus();
+    }
+
     // set up link
     linkSetup();
     
+    for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+      TLOG(TLVL_INFO) << "after linksetup : ";
+      getTPCFEM(tpc_it)->readStatus();
+    }
+
     // Enable triggered stream & Disable continuous stream
     getXMITModule()->enableNUChanEvents(1);
     getXMITModule()->enableSNChanEvents(0);
@@ -204,9 +219,15 @@ This function is added to debug FEMs is software but hasnot tested yet
       
       }
     */
-    
-    getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+
+    //if(hasTrigger){    
+    //     getTriggerModule()->enableTriggers();
+    // getTriggerModule()->runOnSyncOn();
+     //  }
+    // usleep(5000); 
+    // usleep(5000);
+    //usleep(5000);
+    //usleep(5000);
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -285,7 +306,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     */
     
     getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+    //    getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -347,7 +368,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     getControllerModule()->setupTXModeRegister();
     //getXMITModule()->configureSNStreamReader_SNRunOnSyncOnMode();
     
-    getControllerModule()->runOn(); // calls runOnSyncOn
+    //    getControllerModule()->runOn(); // calls runOnSyncOn
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -389,8 +410,9 @@ This function is added to debug FEMs is software but hasnot tested yet
       getTriggerModule()->setDeadtimeSize(0x59);//0x59); //0x1);//v
       getTriggerModule()->setMask8(0x40 & 0xffff); // Just CALIB triggers
       getTriggerModule()->setCalibDelay(0x10);
-      getTriggerModule()->setFrameLength(0xffff & 9119); // 9119);// 20799);// 9071); // 20799); //20479);// 20799);
+      getTriggerModule()->setFrameLength(0xffff & 9151); // 9119);// 20799);// 9071); // 20799); //20479);// 20799);
       ///////////////////////
+
 
       getTriggerModule()->disableTriggers(false);
       // getTriggerModule()->setDeadtimeSize(100); using CALIB triggers
@@ -421,10 +443,21 @@ This function is added to debug FEMs is software but hasnot tested yet
     // Config trigger module
     if(hasTrigger)
       //getTriggerModule()->configureTrigger( _p ); // To do: move it with the other trigger instructions above // using CALIB triggers
+      for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+        TLOG(TLVL_INFO) << "before linksetup : "; 
+	getTPCFEM(tpc_it)->readStatus();
+      }
 
     // set up link
     linkSetup();
     
+    for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+      TLOG(TLVL_INFO) << "after linksetup : ";
+      getTPCFEM(tpc_it)->readStatus();
+    } 
+
+
+
     // Enable triggered stream & Disable continuous stream
     getXMITModule()->enableNUChanEvents(1);
     getXMITModule()->enableSNChanEvents(1);
@@ -444,7 +477,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     */
     
     getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+    //    getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
@@ -461,6 +494,12 @@ This function is added to debug FEMs is software but hasnot tested yet
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
     // Set up XMIT reader for the neutrino stream
     assert( getXMITReader() );
+    //    assert( getNTBReader() );
+    //if(hasTrigger){
+    //getNTBReader()->configureReader();
+    //getNTBReader()->initializePCIeCard();
+    //TLOG(TLVL_INFO) << "Configured NTB PCIe card";
+    // }
     getXMITReader()->configureReader();
     getXMITReader()->initializePCIeCard();
 
@@ -522,7 +561,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     getControllerModule()->setupTXModeRegister();
 
     getTriggerModule()->enableTriggers();
-    getTriggerModule()->runOnSyncOn();
+    //    getTriggerModule()->runOnSyncOn();
 
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }

@@ -2,6 +2,7 @@
 #include "FPGAFirmwareReader.h"
 #include "trace.h"
 #define TRACE_NAME "NevisTPCFEM"
+#include "artdaq/DAQdata/Globals.hh"
 
 namespace nevistpc {
 
@@ -182,6 +183,7 @@ namespace nevistpc {
 	}
 
 	void NevisTPCFEM::loadStatus(){
+	  TLOG(TLVL_INFO) << "LOAD STATUS";
 
 		//// Readout FEM Config Status
 
