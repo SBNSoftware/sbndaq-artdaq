@@ -35,12 +35,13 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   GPSZMQPortNTB_ = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
   framesize_ = ps_.get<uint32_t>("framesize", 20479);
   NevisClockFreq_ = ps_.get<uint32_t>("NevisClockFrequency", 15999907);
+  EventsPerSubrun_ = ps_.get<int32_t>("EventsPerSubrun",-1);
 
   DMABufferNTB_.reset(new uint16_t[DMABufferSizeBytesNTB_]);       
   current_subrun_ = 0;
   events_seen_ = 0;
   _subrun_event_0 = -1;
-  _this_event = 1; //-1;
+  _this_event = -1;
   GPSinitialized = false;
   pseudo_ntbfragment = 1;  
 
@@ -89,7 +90,7 @@ void sbndaq::NevisTB_generatorBase::stop(){
 }
 
 void sbndaq::NevisTB_generatorBase::stopNoMutex(){
-  stopAll();
+  //  stopAll();
 }
 
 size_t sbndaq::NevisTB_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
@@ -159,7 +160,7 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
 
         // Extract timestamp from the received message
         memcpy(&receivedNTPsecond, zmqTimestamp.data(), sizeof(receivedNTPsecond));
-        TLOG(TLVL_INFO) << "ZMQ Timestamp NTP second received:  " << receivedNTPsecond << TLOG_ENDL;
+        TLOG(TLVL_DEBUG) << "ZMQ Timestamp NTP second received:  " << receivedNTPsecond << TLOG_ENDL;
 
         while (std::getline(iss, token, ',')) { 
           numbers.push_back(std::stoi(token));
@@ -251,7 +252,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     return false;                                                                                                                                       
   }  
   // Sweet, now, let's actually fill stuff                                                                                                              
-  //_this_event = ntbmetadata_.EventNumber();                                                                                                             
+  _this_event = ntbmetadata_.EventNumber();                                                                                                             
           
   TLOG(TLVL_DEBUG+13) << "NTB Event number from pseudo counter " << _this_event;                                                                                                                                              
 
@@ -300,10 +301,10 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     //auto ns1 = ns_since_epoch1.count();
     //TLOG(TLVL_INFO) << "Current time in nanoseconds in ntb (when getting corrected time): " << ns1;
                                                
-    //ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
-    ntbmetadata_ = NevisTBFragmentMetadata(_this_event,ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());
+    ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
+    //ntbmetadata_ = NevisTBFragmentMetadata(_this_event,ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());
     frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
-							_this_event, //ntbmetadata_.EventNumber(), //_this_event,//Sequence ID 
+							ntbmetadata_.EventNumber(), //_this_event,//Sequence ID 
 							pseudo_ntbfragment,
 							detail::FragmentType::NevisTB,   //Fragment Type
 							ntbmetadata_, 
@@ -320,6 +321,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     // bump the subrun
     if(EventsPerSubrun_ > 0 && _subrun_event_0 != _this_event && _this_event % EventsPerSubrun_== 0) {
       TRACE(TFILLFRAG, "Bumping artdaq subrun number from %u to %u. Last subrun spans events %i to %i.", current_subrun_,current_subrun_ + 1, _subrun_event_0, _this_event); 
+      TLOG(TLVL_WARNING)<< "Bumping artdaq subrun number from" << current_subrun_<< " to "<<current_subrun_+1<<". Last subrun spans events "<<_subrun_event_0<<" to "<<_this_event<<".";
       _subrun_event_0 = _this_event;
       ++current_subrun_;
       artdaq::FragmentPtr endOfSubrunFrag(new artdaq::Fragment(static_cast<size_t>(ceil(sizeof(my_rank) / static_cast<double>(sizeof(artdaq::Fragment::value_type))))));
@@ -328,7 +330,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
       *endOfSubrunFrag->dataBegin() = my_rank;
       frags.emplace_back(std::move(endOfSubrunFrag));
     }
-    _this_event++;
+    //    _this_event++;
     ++events_seen_;
 
     return true;                                                                                                                                          

@@ -52,7 +52,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
 
   // intialize event counting                                                                                                       
   _subrun_event_0 = -1;
-  _this_event = 1; // -1;
+  _this_event = -1;
 
   
 
@@ -295,7 +295,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 
   // Sweet, now, let's actually fill stuff
   //hardware gives 1-based event counter for TPC
-  // _this_event = metadata_.EventNumber();
+  _this_event = metadata_.EventNumber();
    TLOG(TLVL_DEBUG+12) << "TPC Event number from pseudo counter " << _this_event;
 
   // set the subrun event 0 if it has never been set before
@@ -338,7 +338,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 
   metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),header->getFrameNum(),fNChannels,fSamplesPerChannel,fUseCompression);
   frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
-                                                      _this_event, //metadata_.EventNumber(),          // Sequence ID
+                                                      metadata_.EventNumber(),          // Sequence ID
 						      fragment_id,                      // Fragment ID
                                                       detail::FragmentType::NevisTPC,   // Fragment Type
 						      metadata_,
@@ -353,9 +353,10 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   //TRACE(TFILLFRAG,"Successfully erased %lu words. Buffer occupancy now %lu",
   //	expected_size/sizeof(uint16_t),new_buffer_size);
 
-  // bump the subrun
+  // bump the subrun //I don't know that this should really exist here, shouldn't all the subrun stuff get controlled by the event builder processes? -ANF 9/10/24
   if(EventsPerSubrun_ > 0 && _subrun_event_0 != _this_event && _this_event % EventsPerSubrun_== 0) {
     //TRACE(TFILLFRAG, "Bumping artdaq subrun number from %u to %u. Last subrun spans events %i to %i.", current_subrun_,current_subrun_ + 1, _subrun_event_0, _this_event); 
+    TLOG(TLVL_WARNING)<< "Bumping artdaq subrun number from" << current_subrun_<< " to "<<current_subrun_+1<<". Last subrun spans events "<<_subrun_event_0<<" to "<<_this_event<<".";   
     _subrun_event_0 = _this_event;
     ++current_subrun_;
     artdaq::FragmentPtr endOfSubrunFrag(new artdaq::Fragment(static_cast<size_t>(ceil(sizeof(my_rank) / static_cast<double>(sizeof(artdaq::Fragment::value_type))))));
@@ -364,9 +365,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     *endOfSubrunFrag->dataBegin() = my_rank;
     frags.emplace_back(std::move(endOfSubrunFrag));
   }
-  if (index==fragment_ids.size()-1){
-  _this_event++;
-   }
+  //  if (index==fragment_ids.size()-1){
+  // _this_event++;
+  //}
 
   ++events_seen_;
   return true;
