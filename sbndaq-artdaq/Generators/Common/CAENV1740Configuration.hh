@@ -1,6 +1,6 @@
 //
 //  CAENV1740Configuration.h   (based on CAENConfiguration.h)
-//  jcrespo: to do: generalize CAENConfiguration for both V1730 and V1740
+//  jcrespo: to do: generalize CAENConfiguration for both V1730 and V1740?
 //
 
 #ifndef _CAENV1740Configuration_h
@@ -18,6 +18,7 @@ class CAENV1740Configuration
   enum
   {
     MAX_BOARDS = 4,
+    MAX_GROUPS = 8,
     MAX_CHANNELS = 64
   };
 
@@ -33,29 +34,30 @@ class CAENV1740Configuration
     int  eventsPerInterrupt;
     int  irqWaitTime;
     bool allowTriggerOverlap;
-    int  dynamicRange;
+  //int  dynamicRange; // not available for V1740
     int  ioLevel;
     int  nChannels;
-    int  triggerPolarity;
-    uint16_t triggerThresholds[MAX_CHANNELS];
-    uint8_t   triggerPulseWidth;
+    int  nGroups;
+  // jcrespo: comment trigger parameters not planned for V1740
+  //int  triggerPolarity;
+  //uint16_t triggerThresholds[MAX_CHANNELS];
+  //uint8_t   triggerPulseWidth;
     int  extTrgMode;
     int  swTrgMode;
-    int  selfTrgMode;
+  //int  selfTrgMode;
     int  acqMode;
     int  debugLevel;
     int  runSyncMode;
     int  readoutMode;
-    int  analogMode;
+  //    int  analogMode;
     int  testPattern;
-    int  pedestal[MAX_CHANNELS];
-    int  channelEnable[MAX_CHANNELS];
-
-    uint32_t  channelEnableMask;
-  //  int  ovthValue;         
-    int  triggerLogic;  
-    int  majorityLevel; 
-    int  majorityCoincidenceWindow;
+    int  pedestal[MAX_GROUPS];
+    int  groupEnable[MAX_GROUPS];
+    uint32_t  groupEnableMask;
+    // int  ovthValue;         
+    // int  triggerLogic;  
+    // int  majorityLevel; 
+    // int  majorityCoincidenceWindow;
 
     void print(std::ostream & os = std::cout);
 };

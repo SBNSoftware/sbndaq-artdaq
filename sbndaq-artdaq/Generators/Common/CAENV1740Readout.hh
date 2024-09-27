@@ -82,7 +82,10 @@ namespace sbndaq
       EVENT_READY  = 0x0008,
       RUN_ENABLED  = 0x0004
     } ACQ_STATUS_MASK_t; // Mask for Acquisition Status register 0x8104
-    ///heheheheeheheheheh
+
+    // jcrespo: not checking values for variables below
+    // ||||||||||||||||||||||||||||||||||||||||||||||||
+    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     typedef enum {
       DYNAMIC_RANGE      = 0x8028,
       TRG_OUT_WIDTH      = 0x8070,
@@ -171,9 +174,10 @@ namespace sbndaq
       TSTART    = 10,
       TSTOP     = 11,
       TSTATUS   = 12,
-      TGETNEXT  = 13,
+      // jcrespo: re-order since TMAKEFRAG is less frequent than TGETNEXT
+      TGETNEXT  = 15,//= 13,
       TGETDATA  = 14,
-      TMAKEFRAG = 15,
+      TMAKEFRAG = 13,//=15,
       TTEMP     = 30
     };
 
@@ -244,6 +248,7 @@ namespace sbndaq
 
     //internals
     size_t   fNChannels;
+    size_t   fNGroups;
     uint32_t fBoardID;
     bool     fOK;
     bool     fail_GetNext;
@@ -256,8 +261,8 @@ namespace sbndaq
     uint32_t total_data_size;
     //uint32_t event_size;	
     uint32_t n_readout_windows;
-    uint32_t ch_temps[CAENV1740Configuration::MAX_CHANNELS];
-    uint32_t ch_status[CAENV1740Configuration::MAX_CHANNELS];
+    // uint32_t ch_temps[CAENV1740Configuration::MAX_CHANNELS];
+    uint32_t g_status[CAENV1740Configuration::MAX_GROUPS];
     
     //functions
     void GetSWInfo();
@@ -273,11 +278,11 @@ namespace sbndaq
     void ConfigureClkToTrgOut();
     // void RunADCCalibration(); // jcrespo: not available for V1740
     // void SetLockTempCalibration(bool onOff, uint32_t ch); // jcrespo: not available for V1740
-    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
-    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+    // CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value); // jcrespo: not used anymore
+    // CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value); // jcrespo: not used anymore
     // void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams); // jcrespo: not available for V1740
     // void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams); // jcrespo: not available for V1740
-    void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
+    void ReadGroupBusyStatus(int handle, uint32_t g, uint32_t& status);
 
     bool WaitForTrigger();
     bool GetData();

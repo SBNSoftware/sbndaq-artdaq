@@ -44,6 +44,7 @@ sbndaq::CAENV1740Readout::CAENV1740Readout(fhicl::ParameterSet const& ps) :
   fail_GetNext=false;
 
   fNChannels = fCAEN.nChannels;
+  fNGroups = fCAEN.nGroups;
   fBoardID = fCAEN.boardId;
 
   TLOG(TCONFIG) << ": Using BoardID=" << fBoardID << " with NChannels=" 
@@ -162,13 +163,13 @@ void sbndaq::CAENV1740Readout::configureInterrupts()
   if (eventNumber != eventNumberOut)
   {
     TLOG_WARNING("CAENV1740Readout")
-      << "Interrupt State was not setup properly, eventNumber write/read="
+      << "Interrupt EventNumber was not setup properly, eventNumber write/read="
       << uint32_t {eventNumber} <<"/"<< uint32_t {eventNumberOut};
   }
-  if (statusId != statusIdOut)
+  if (statusId != statusIdOut) // jcrespo: from CAENDigitizer manual: In the case of the optical link, the status_id is meaningless.
   {
     TLOG_WARNING("CAENV1740Readout")
-      << "Interrupt StatusID was not setup properly, eventNumber write/read="
+      << "Interrupt StatusID was not setup properly, statusID write/read="
       << uint32_t {statusId} <<"/"<< uint32_t {statusIdOut};
   }
   // Mode and InterruptLevel are only defined on VME, not CONET
@@ -422,80 +423,82 @@ void sbndaq::CAENV1740Readout::Configure()
 // }
 
 
-void CAENV1740Readout::ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status)
+void CAENV1740Readout::ReadGroupBusyStatus(int handle, uint32_t g, uint32_t& status)
 {
 
   status = 0xdeadbeef;
-  uint32_t SPIBusyAddr = 0x1088 + (ch<<8);
+  uint32_t SPIBusyAddr = 0x1088 + (g<<8);
 
   auto ret = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &status);
   
   if(ret!=CAEN_DGTZ_Success)
-    TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << ch;
+    TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << g;
      
 }
 
 
+// jcrespo: commented as it is not used anymore in this code
 // Following SPI code is from CAEN
-CAEN_DGTZ_ErrorCode CAENV1740Readout::ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value)
-{
-  uint32_t SPIBusy = 1;
-  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
-  uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
-  uint32_t addressingRegAddr  = 0x80B4;
-  uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
-  uint32_t val;
+// CAEN_DGTZ_ErrorCode CAENV1740Readout::ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value)
+// {
+//   uint32_t SPIBusy = 1;
+//   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+//   uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
+//   uint32_t addressingRegAddr  = 0x80B4;
+//   uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
+//   uint32_t val;
 
-  while(SPIBusy) 
-  {
-    if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
-    {
-      return CAEN_DGTZ_CommError;
-    }
+//   while(SPIBusy) 
+//   {
+//     if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
+//     {
+//       return CAEN_DGTZ_CommError;
+//     }
 
-    SPIBusy = (SPIBusy>>2)&0x1;
-    if (!SPIBusy) 
-    {
-      if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
+//     SPIBusy = (SPIBusy>>2)&0x1;
+//     if (!SPIBusy) 
+//     {
+//       if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
+//       { return CAEN_DGTZ_CommError;}
 
-      if((retcod = CAEN_DGTZ_ReadRegister(handle, valueRegAddr, &val)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
-    }
-    *value = (uint8_t)val;
-    usleep(1000);
-  }
-  return CAEN_DGTZ_Success;
-}
+//       if((retcod = CAEN_DGTZ_ReadRegister(handle, valueRegAddr, &val)) != CAEN_DGTZ_Success)
+//       { return CAEN_DGTZ_CommError;}
+//     }
+//     *value = (uint8_t)val;
+//     usleep(1000);
+//   }
+//   return CAEN_DGTZ_Success;
+// }
 
-CAEN_DGTZ_ErrorCode CAENV1740Readout::WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value)
-{
-  uint32_t SPIBusy = 1;
-  CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
+// jcrespo: commented as it is not used anymore in this code
+// CAEN_DGTZ_ErrorCode CAENV1740Readout::WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value)
+// {
+//   uint32_t SPIBusy = 1;
+//   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
     
-  uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
-  uint32_t addressingRegAddr  = 0x80B4;
-  uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
+//   uint32_t SPIBusyAddr        = 0x1088 + (ch<<8);
+//   uint32_t addressingRegAddr  = 0x80B4;
+//   uint32_t valueRegAddr       = 0x10B8 + (ch<<8);
 
-  while (SPIBusy) 
-  {
-    if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
-    {
-      return CAEN_DGTZ_CommError;
-    }
+//   while (SPIBusy) 
+//   {
+//     if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
+//     {
+//       return CAEN_DGTZ_CommError;
+//     }
 
-    SPIBusy = (SPIBusy>>2)&0x1;
-    if (!SPIBusy) 
-    {
-      if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
-      {  return CAEN_DGTZ_CommError;}
-      if((retcod = CAEN_DGTZ_WriteRegister(handle, valueRegAddr, (uint32_t)value)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
-    }
-    usleep(1000);
-  }
-  return CAEN_DGTZ_Success;
-}
+//     SPIBusy = (SPIBusy>>2)&0x1;
+//     if (!SPIBusy) 
+//     {
+//       if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
+//       {  return CAEN_DGTZ_CommError;}
+//       if((retcod = CAEN_DGTZ_WriteRegister(handle, valueRegAddr, (uint32_t)value)) != CAEN_DGTZ_Success)
+//       { return CAEN_DGTZ_CommError;}
+//     }
+//     usleep(1000);
+//   }
+//   return CAEN_DGTZ_Success;
+// }
 
 // jcrespo: comment-region as it is not available for V1740
 
@@ -734,6 +737,7 @@ void sbndaq::CAENV1740Readout::ConfigureClkToTrgOut()
   TLOG(TINFO) << "Front Panel IO Control address 0x811C, new value: 0x" << std::hex << data << std::dec;
 }
 
+// jcrespo: not changing anything below since it should be irrelevant for V1740 planned use
 void sbndaq::CAENV1740Readout::ConfigureLVDS()
 {
   CAEN_DGTZ_ErrorCode retcod = CAEN_DGTZ_Success;
@@ -900,12 +904,12 @@ void sbndaq::CAENV1740Readout::ConfigureRecordFormat()
   uint32_t readback;
 
   //channel masks for readout(?)
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetChannelEnableMask " << fCAEN.channelEnableMask << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SetChannelEnableMask(fHandle,fCAEN.channelEnableMask);
-  sbndaq::CAENDecoder::checkError(retcode,"SetChannelEnableMask",fBoardID);
-  retcode = CAEN_DGTZ_GetChannelEnableMask(fHandle,&readback);
-  sbndaq::CAENDecoder::checkError(retcode,"GetChannelEnableMask",fBoardID);
-  CheckReadback("CHANNEL_ENABLE_MASK", fBoardID, fCAEN.channelEnableMask, readback);
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetGroupEnableMask " << fCAEN.groupEnableMask << TLOG_ENDL;
+  retcode = CAEN_DGTZ_SetGroupEnableMask(fHandle,fCAEN.groupEnableMask);
+  sbndaq::CAENDecoder::checkError(retcode,"SetGroupEnableMask",fBoardID);
+  retcode = CAEN_DGTZ_GetGroupEnableMask(fHandle,&readback);
+  sbndaq::CAENDecoder::checkError(retcode,"GetGroupEnableMask",fBoardID);
+  CheckReadback("GROUP_ENABLE_MASK", fBoardID, fCAEN.groupEnableMask, readback);
 
   //record length
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetRecordLength " << fCAEN.recordLength << TLOG_ENDL;
@@ -1131,11 +1135,13 @@ void sbndaq::CAENV1740Readout::ConfigureReadout()
   sbndaq::CAENDecoder::checkError(retcode,"SetTestPattern",fBoardID);
 
   //Global Registers
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetDyanmicRange " << fCAEN.dynamicRange << TLOG_ENDL;
-  mask = (uint32_t)(fCAEN.dynamicRange);
-  addr = DYNAMIC_RANGE;
-  retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,mask);
-  sbndaq::CAENDecoder::checkError(retcode,"SetDynamicRange",fBoardID);
+
+  // jcrespo: comment-region as it is not available for V1740  
+  // TLOG_ARB(TCONFIG,TRACE_NAME) << "SetDyanmicRange " << fCAEN.dynamicRange << TLOG_ENDL;
+  // mask = (uint32_t)(fCAEN.dynamicRange);
+  // addr = DYNAMIC_RANGE;
+  // retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,mask);
+  // sbndaq::CAENDecoder::checkError(retcode,"SetDynamicRange",fBoardID);
 
   addr = ACQ_CONTROL;
   retcode = CAEN_DGTZ_WriteRegister(fHandle,addr,uint32_t{0x28});
@@ -1145,12 +1151,18 @@ void sbndaq::CAENV1740Readout::ConfigureReadout()
 
   TLOG(TCONFIG) << "CAEN_DGTZ_ReadRegister addr=" << std::hex << addr << ", returned value=" << std::bitset<32>(value) ; 
 
-  for(uint32_t ch=0; ch<fNChannels; ++ch){
-    TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channel " << ch << " DC offset to " << fCAEN.pedestal[ch] << TLOG_ENDL;
-    retcode = CAEN_DGTZ_SetChannelDCOffset(fHandle,ch,fCAEN.pedestal[ch]);
-    sbndaq::CAENDecoder::checkError(retcode,"SetChannelDCOffset",fBoardID);
-    retcode = CAEN_DGTZ_GetChannelDCOffset(fHandle,ch,&readback);
-    CheckReadback("SetChannelDCOffset",fBoardID,fCAEN.pedestal[ch],readback,ch);
+  // jcrespo: this work different from th V1730 for the V1740 due to the 8-ch groups
+  // jcrespo: for individual channel configuration see note below
+  /* Note from the CAENDigitizer Library manual: from AMC FPGA firmware release 0.10 on, it is possible to apply an 8-bit positive digital offset individually to
+     each channel inside a group of the x740 digitizer to finely correct the baseline mismatch. This function is not supported
+     bythe CAENdigitizer library, but the user can refer to the register’s documentation. */
+
+  for(uint32_t g=0; g<fNGroups; ++g){
+    TLOG_ARB(TCONFIG,TRACE_NAME) << "Set channel group " << g << " DC offset to " << fCAEN.pedestal[g] << TLOG_ENDL;
+    retcode = CAEN_DGTZ_SetGroupDCOffset(fHandle,g,fCAEN.pedestal[g]);
+    sbndaq::CAENDecoder::checkError(retcode,"SetGroupDCOffset",fBoardID);
+    retcode = CAEN_DGTZ_GetGroupDCOffset(fHandle,g,&readback);
+    CheckReadback("SetGroupDCOffset",fBoardID,fCAEN.pedestal[g],readback,g);
   }
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureReadout() done." << TLOG_ENDL;
@@ -1169,13 +1181,14 @@ void sbndaq::CAENV1740Readout::ConfigureAcquisition()
   retcode = CAEN_DGTZ_GetAcquisitionMode(fHandle,(CAEN_DGTZ_AcqMode_t*)&readback);
   CheckReadback("SetAcquisitionMode",fBoardID,fCAEN.acqMode,readback);
 
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "SetAnalogMonOutputMode " << (CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode) << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SetAnalogMonOutput(fHandle,(CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode));
-  sbndaq::CAENDecoder::checkError(retcode,"SetAnalogMonOutputMode",fBoardID);
+  // jcrespo: comment blocks below as it is not planned for V1740
+  // TLOG_ARB(TCONFIG,TRACE_NAME) << "SetAnalogMonOutputMode " << (CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode) << TLOG_ENDL;
+  // retcode = CAEN_DGTZ_SetAnalogMonOutput(fHandle,(CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode));
+  // sbndaq::CAENDecoder::checkError(retcode,"SetAnalogMonOutputMode",fBoardID);
   
-  // GetAnalogMonOutput function does not work for V1730s, use register access instead
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_MON_MODE_ADD,&readback);
-  CheckReadback("SetAnalogMonOutputMode",fBoardID,fCAEN.analogMode,readback);
+  // // GetAnalogMonOutput function does not work for V1730s, use register access instead
+  // retcode = CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_MON_MODE_ADD,&readback);
+  // CheckReadback("SetAnalogMonOutputMode",fBoardID,fCAEN.analogMode,readback);
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureAcquisition() done." << TLOG_ENDL;
 }
@@ -1267,14 +1280,13 @@ void sbndaq::CAENV1740Readout::start()
   uint32_t readBack;
   
   // Animesh Check trigger threshold here
-  
-  for(uint32_t ch=0; ch<fNChannels; ++ch)
-    {
-      retcod = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readBack);
-      TLOG(TINFO) << "Trigger threshold before run start for ch " << ch << " is " << readBack << TLOG_ENDL;    
-    }
-  
-  
+  // jcrespo: not planned for V1740   
+  // for(uint32_t ch=0; ch<fNChannels; ++ch)
+  //   {
+  //     retcod = CAEN_DGTZ_GetChannelTriggerThreshold(fHandle,ch,&readBack);
+  //     TLOG(TINFO) << "Trigger threshold before run start for ch " << ch << " is " << readBack << TLOG_ENDL;    
+  //   }
+    
   // Animesh end 
   
   //  uint32_t readBack;
@@ -1314,10 +1326,10 @@ void sbndaq::CAENV1740Readout::start()
   GetData_thread_->start();
   
   // Check the baseline values
-  for(uint32_t i_ch=0; i_ch<fNChannels; ++i_ch)
+  for(uint32_t i_g=0; i_g<fNGroups; ++i_g)
   {
-    retcod = CAEN_DGTZ_GetChannelDCOffset(fHandle,i_ch,&readBack);
-    TLOG(TINFO)<<"DC offset or baseline before run start for Ch " << i_ch << " is " << readBack << TLOG_ENDL;    
+    retcod = CAEN_DGTZ_GetGroupDCOffset(fHandle,i_g,&readBack);
+    TLOG(TINFO)<<"DC offset or baseline before run start for Group " << i_g << " is " << readBack << TLOG_ENDL;    
   }   
 
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
@@ -1346,7 +1358,7 @@ void sbndaq::CAENV1740Readout::stop()
 // The two relevant fcl parameters are: "poll_hardware_status" (true/false) and "hardware_poll_interval_us" (period in us)
 bool sbndaq::CAENV1740Readout::checkHWStatus_(){
 
-  for(size_t ch=0; ch<CAENV1740Configuration::MAX_CHANNELS; ++ch)
+  for(size_t g=0; g<CAENV1740Configuration::MAX_GROUPS; ++g)
   {
     // jcrespo: comment-region as it is not available for V1740
     /*
@@ -1356,10 +1368,10 @@ bool sbndaq::CAENV1740Readout::checkHWStatus_(){
     */
     std::ostringstream statStream;
     statStream << "CAENV1740.Card" << fBoardID
-		  << ".Channel" << ch << ".Status"; 
+		  << ".Channel" << g << ".Status"; 
     std::ostringstream memfullStream;
     memfullStream << "CAENV1740.Card" << fBoardID
-		  << ".Channel" << ch << ".MemoryFull"; 
+		  << ".Channel" << g << ".MemoryFull"; 
    
     CAEN_DGTZ_ErrorCode retcod;
 
@@ -1406,21 +1418,21 @@ bool sbndaq::CAENV1740Readout::checkHWStatus_(){
     //    }
     // }
 
-    ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
+    ReadGroupBusyStatus(fHandle,g,g_status[g]);
     TLOG_ARB(TTEMP,TRACE_NAME) << statStream.str()
 			       << std::hex
-                               << ": 0x" << ch_status[ch]
+                               << ": 0x" << g_status[g]
 			       << std::dec << TLOG_ENDL;
 
 
-    if(ch_status[ch]==0xdeadbeef){
-      TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << ch;
+    if(g_status[g]==0xdeadbeef){
+      TLOG(TLVL_WARNING) << "Failed reading busy status for group " << g;
     }
     else{
-      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 11,
+      metricMan->sendMetric(statStream.str(), int(g_status[g]), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
-      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 11,
+      metricMan->sendMetric(memfullStream.str(), int((g_status[g] & 0x1)), "", 11,
 			    artdaq::MetricMode::LastPoint);
 
       /*
@@ -1710,7 +1722,8 @@ bool sbndaq::CAENV1740Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   double min_fragment_create_time = 10000.0;
   struct timespec now;
   clock_gettime(CLOCK_REALTIME,&now);
-  const auto metadata = CAENV1740FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec,ch_temps);
+  // const auto metadata = CAENV1740FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec,ch_temps);
+  const auto metadata = CAENV1740FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec);
   const auto fragment_datasize_bytes = metadata.ExpectedDataSize();
   TLOG(TMAKEFRAG)<< "Created CAENV1740FragmentMetadata with expected data size of "
                  << fragment_datasize_bytes << " bytes.";
@@ -1735,6 +1748,8 @@ bool sbndaq::CAENV1740Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // for longer runs it can overflow (24 bit) --> play safe and don't use it as sequence id
     // build sequence id keeping track of overflows (avoids repeated seqIDs in the same run)
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
+    TLOG(TMAKEFRAG)<< "CAENV1740Fragment event counter " << readoutwindow_event_counter;
+
     uint64_t readoutwindow_sequence_id = uint64_t{readoutwindow_event_counter + fOverflowCounter*(max_rwcounter+1u)};
     fragment_uptr->setSequenceID(readoutwindow_sequence_id);
 
