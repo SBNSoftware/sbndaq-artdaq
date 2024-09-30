@@ -15,7 +15,7 @@ THISDIR=`dirname ${BASH_SOURCE[0]}`
 # use THISDIR to get path to DAQInterface stuff
 DAQINTERFACE_CONFIG_DIR=$THISDIR/../DAQInterfaceSetup
 
-# setup artdaq_daqinterface v3_12_06
+# setup artdaq_daqinterface v3_13_00
 if [[ -z $DAQINTERFACE_STANDARD_SOURCEFILE_SOURCED ]]; then
    source $DAQINTERFACE_CONFIG_DIR/setup_daq_interface_basic.sh
 fi
