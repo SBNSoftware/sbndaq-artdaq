@@ -42,8 +42,9 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   _subrun_event_0 = -1;
   _this_event = -1;
   GPSinitialized = false;
-  pseudo_ntbfragment = 1;  
-
+  pseudo_ntbfragment = 1;
+  uint32_t samples_per_frame = 2000000;
+  FramesPerSecond_ = samples_per_frame/framesize_;
   //set up zmq to listen for messages from TPC server
   _zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
   _zmqGPSSubscriber.connect(GPSZMQPortNTB_.c_str());
@@ -68,7 +69,6 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   auto GPStime_worker = share::WorkerThread::createWorkerThread(worker_GPStime_functor);                                                                
   GPStime_thread_.swap(GPStime_worker);
   TLOG(TLVL_INFO) << "GPStimeWorkerThread Initialized";
- 
 
 }
 
@@ -262,16 +262,27 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
 
     struct timespec unixtime;
     clock_gettime(CLOCK_REALTIME, &unixtime);
-    //long long framesize   = 20479; //this is extremely bad.
-    
-    long long t_trig   = 1e9*((ntbheader->getFrame()*(framesize_+1) + ntbheader->get2MHzSampleNumber()*8 + ntbheader->get16MHzRemainderNumber())/NevisClockFreq_);
+
+    //When the nevis clock rolls over (frames go back to 0) 
+    //treat the timestamp appropriately
+    uint32_t frame_diff = ntbheader->getFrame() - GPSframe;
+    uint32_t tolerance  = 16777216 - FramesPerSecond_ - 10; //16777216 = 2^24 is when the rollover happens. frame numbers are stored in 24 bits
+    uint32_t trig_frame = ntbheader->getFrame();
+
+    if(frame_diff > tolerance){  //looks like we rolled over
+
+      TLOG(TLVL_INFO) << "Last PPS time: " << GPSframe << " " << GPSsample << " " << GPSdiv ;
+      TLOG(TLVL_INFO) << "Trigger  time: " << ntbheader->getFrame() << " " << ntbheader->get2MHzSampleNumber() << " " << ntbheader->get16MHzRemainderNumber();
+      TLOG(TLVL_INFO) << "Rolling Over!!!!  Fixing timestamp. trigger frame is "<< trig_frame << " but will now be: "<< trig_frame+16777216<<" GPS frame is: " << GPSframe;
+      trig_frame += 16777216;
+
+    }
+
+    long long t_trig   = 1e9*((trig_frame*(framesize_+1) + ntbheader->get2MHzSampleNumber()*8 + ntbheader->get16MHzRemainderNumber())/NevisClockFreq_);
     long long t_pps    = 1e9*((GPSframe*(framesize_+1) + GPSsample*8 + GPSdiv)/NevisClockFreq_);
 
     long long pps_offset   = t_trig - t_pps;
-
-    //auto freq_offset       = 62.5*98*static_cast<int>(pps_offset/1000000000);
-    //int final_offset       = static_cast<int>(freq_offset+pps_offset); //62.5 ns/tick * 98 ticks constant offset per second * number of seconds since PPS
- 
+    
     //auto old_timestamp = unixtime.tv_sec*1000000000   + unixtime.tv_nsec;
     //auto new_timestamp = receivedNTPsecond*1000000000 + pps_offset + freq_offset;
     

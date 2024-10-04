@@ -117,6 +117,7 @@ namespace sbndaq
 
     uint32_t framesize_;
     double NevisClockFreq_;
+    uint32_t FramesPerSecond_;
 
     bool GetNTBData();
     share::WorkerThreadUPtr GetNTBData_thread_;
