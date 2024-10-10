@@ -41,6 +41,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   fSamplesPerChannel = ps_.get<uint32_t>("SamplesPerChannel",9600);
   fNChannels         = ps_.get<uint32_t>("NChannels",64);
   fUseCompression    = ps_.get<bool>("UseCompression",false);
+  fTimeoutSec        = ps_.get<uint32_t>("TimeoutSec", 60);
    
   DMABufferSizeBytes_ = ps_.get<uint32_t>("DMABufferSize",1e6);	
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
@@ -84,13 +85,16 @@ void sbndaq::NevisTPC_generatorBase::stopAll(){
 }
 
 void sbndaq::NevisTPC_generatorBase::stop(){
+  TLOG(TLVL_INFO)<<"stop() transition called";
   ConfigureStop();  
   stopAll();
+  TLOG(TLVL_INFO)<<"stop() transition finished";
 }
 
 void sbndaq::NevisTPC_generatorBase::stopNoMutex(){
   
-  stopAll();
+  //stopAll();
+  //Both stopNoMutex and stop are getting called, with stopNoMutex first. We need to ConfigureStop() before stopAll(), so will just wait for the stop() function to get called.
 }
 
 size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
@@ -140,10 +144,10 @@ bool sbndaq::NevisTPC_generatorBase::GetData(){
     n_words = GetFEMCrateData()/sizeof(uint16_t);
     auto current_time = std::chrono::steady_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-    if (elapsed_time > 5){
+    if (elapsed_time > fTimeoutSec){ //fcl configurable timeout (in seconds) for more ability to do low rate nonstandard trigger configurations
 
       char line[132];
-      sprintf(line,"There is no data for 5 seconds"); //,current_event,header->getEventNum());                                                                 
+      sprintf(line,"There is no data for 60 seconds"); //,current_event,header->getEventNum());                                                                 
       TRACE(TERROR,line);
       throw std::runtime_error(line);
 

@@ -149,7 +149,7 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
 
         struct timespec unixtime;
         clock_gettime(CLOCK_REALTIME, &unixtime);
-        TLOG(TLVL_INFO) << "NTP time GPS received by NTB " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
+        //TLOG(TLVL_INFO) << "NTP time GPS received by NTB " << unixtime.tv_sec << " , " << unixtime.tv_nsec << TLOG_ENDL;
 
         std::string message(static_cast<char*>(zmqMessage.data()), zmqMessage.size());
         // Remove the prefix and parse the three integers
@@ -168,7 +168,6 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
           GPSstamp nowGPSstamp(numbers[0], numbers[1], numbers[2]);
           setGPSstamp(nowGPSstamp); 
           //TLOG(TLVL_INFO)<< "Received new time stamp: " << numbers[0] << " " << numbers[1] << " " << numbers[2] ;           
-          //TLOG(TLVL_INFO)<< "Latency (ns): " << latency ;
           GPSinitialized = true;
           return true;
         }
@@ -259,39 +258,55 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     _subrun_event_0 = _this_event;  
 
   }
+    long long tframe   = ntbheader->getFrame();                  //Get trigger time tagged by nevis clock
+    long long tsamp    = ntbheader->get2MHzSampleNumber();       //
+    long long tdiv     = ntbheader->get16MHzRemainderNumber();   //
 
-    struct timespec unixtime;
-    clock_gettime(CLOCK_REALTIME, &unixtime);
-    //long long framesize   = 20479; //this is extremely bad.
-    
-    long long t_trig   = 1e9*((ntbheader->getFrame()*(framesize_+1) + ntbheader->get2MHzSampleNumber()*8 + ntbheader->get16MHzRemainderNumber())/NevisClockFreq_);
-    long long t_pps    = 1e9*((GPSframe*(framesize_+1) + GPSsample*8 + GPSdiv)/NevisClockFreq_);
+    long long t_trig = static_cast<long long>((static_cast<double>(tframe * (framesize_ + 1)   + tsamp * 8 + tdiv) / NevisClockFreq_) * 1000000000);
+    long long t_pps  = static_cast<long long>((static_cast<double>(GPSframe * (framesize_ + 1) + GPSsample * 8 + GPSdiv) / NevisClockFreq_) * 1000000000);
+    //long long t_trig   = 1000000000*(tframe*(framesize_+1) + tsamp*8 + tdiv)/NevisClockFreq_;   //Convert trigger time from nevis clock ticks to seconds
+    //long long t_pps    = (GPSframe*(framesize_+1) + GPSsample*8 + GPSdiv)*1.e9/NevisClockFreq_; //Convert last received pps time from nevis clock ticks to second
 
-    long long pps_offset   = t_trig - t_pps;
-
-    //auto freq_offset       = 62.5*98*static_cast<int>(pps_offset/1000000000);
-    //int final_offset       = static_cast<int>(freq_offset+pps_offset); //62.5 ns/tick * 98 ticks constant offset per second * number of seconds since PPS
- 
+    long long pps_offset   = t_trig - t_pps;                                                      //Compute time elapsed from last pps
     //auto old_timestamp = unixtime.tv_sec*1000000000   + unixtime.tv_nsec;
-    //auto new_timestamp = receivedNTPsecond*1000000000 + pps_offset + freq_offset;
-    
-    //TLOG(TLVL_INFO) << "Old timestamp: " << old_timestamp ;
-    //TLOG(TLVL_INFO) << "NEW timestamp: " << new_timestamp ;
- 
-    artdaq::Fragment::timestamp_t unixtime_ns = static_cast<artdaq::Fragment::timestamp_t>(receivedNTPsecond)*1000000000 + 
-    static_cast<artdaq::Fragment::timestamp_t>(pps_offset);                                                                                 
+    long long new_timestamp = receivedNTPsecond*1000000000 + pps_offset;                         
+                                                                                                 //Add time elapsed to known second when pps was received
+    artdaq::Fragment::timestamp_t ntb_fragment_timestamp = static_cast<artdaq::Fragment::timestamp_t>(receivedNTPsecond*1000000000 + pps_offset);   
 
+    if(new_timestamp < prev_timestamp && prev_timestamp-new_timestamp > 1000000000){     
+        TLOG(TLVL_WARN) << "NTB Timestamp warning: Current timestamp is more than 1s earlier than the previous one. This should not happen. current: " 
+                        << new_timestamp << " previous: " << prev_timestamp << " pps offset: " << pps_offset << " NTP second: " 
+                        << receivedNTPsecond << " tframe: " << tframe << " tsamp: " << tsamp << " tdiv: " << tdiv << " t_trig: " << t_trig << " GPSframe: " << GPSframe << " GPSsample: " << GPSsample << " GPSdiv: " << GPSdiv;
+    }
+
+    if(prev_timestamp > 0 && new_timestamp > prev_timestamp && new_timestamp-prev_timestamp > 20000000000){     
+        TLOG(TLVL_WARN) << "NTB Timestamp warning: Current timestamp is more than 20s later than previous one. current: " 
+                        << new_timestamp << " previous: " << prev_timestamp << " pps offset: " << pps_offset << " NTP second: " 
+                        << receivedNTPsecond << " t_pps: " << t_pps <<  " tframe: " << tframe << " tsamp: " << tsamp << " tdiv: " << tdiv << " t_trig: " << t_trig << " GPSframe: " << GPSframe << " GPSsample: " << GPSsample << " GPSdiv: " << GPSdiv;
+
+    }
+ 
+    prev_timestamp = new_timestamp;
     //TLOG(TLVL_INFO) << "Last PPS time: " << GPSframe << " " << GPSsample << " " << GPSdiv ;
-    //TLOG(TLVL_INFO) << "Trigger  time: " << ntbheader->getFrame() << " " << ntbheader->get2MHzSampleNumber() << " " << ntbheader->get16MHzRemainderNumber();
-                                                                                                                                                
+    //TLOG(TLVL_INFO) << "Trigger  time: " << tframe << " " << tsamp << " " << tdiv;
+    //TLOG(TLVL_INFO) << "Corrected timestamp: " << new_timestamp;
+    //TLOG(TLVL_INFO) << "Received NTP second: : " << receivedNTPsecond;
+    //TLOG(TLVL_INFO) << "PPS OFFSET: " << pps_offset;
+                     
+    //to compare to PMT timestamps
+    //auto now1 = std::chrono::high_resolution_clock::now();
+    //auto ns_since_epoch1 = std::chrono::time_point_cast<std::chrono::nanoseconds>(now1).time_since_epoch();
+    //auto ns1 = ns_since_epoch1.count();
+    //TLOG(TLVL_INFO) << "Current time in nanoseconds in ntb (when getting corrected time): " << ns1;
+                                               
     ntbmetadata_ = NevisTBFragmentMetadata(ntbheader->getTriggerNumber(),ntbheader->getFrame(), ntbheader->get2MHzSampleNumber());  
     frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,                                                                                    
-							ntbmetadata_.EventNumber(),       // Sequence ID                                                  
+							ntbmetadata_.EventNumber(), //_this_event,       //Sequence ID                                      
 							pseudo_ntbfragment,                                                                               
-							detail::FragmentType::NevisTB,   // Fragment Type                                                 
+							detail::FragmentType::NevisTB,   //Fragment Type
 							ntbmetadata_,                                                                                     
-							unixtime_ns) );                                                                                   
-                                                                                                                                                        
+							ntb_fragment_timestamp) );                                                                                   
+ 
     std::copy(CircularBufferNTB_.buffer.begin(),                                                                                                          
 	      CircularBufferNTB_.buffer.begin()+(expected_size/sizeof(uint16_t)),                                                                         
 	      (uint16_t*)(frags.back()->dataBegin()));     
