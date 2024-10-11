@@ -264,6 +264,11 @@ void sbndaq::CAENV1740Readout::loadConfiguration(fhicl::ParameterSet const& ps)
   // fWriteCalibration = ps.get<bool>("AdcCalibration");
   // TLOG(TINFO) <<"WriteCalibration=" << fWriteCalibration;
 
+  fDumpBinary = ps.get<bool>("DumpBinary", false);
+  TLOG(TINFO) <<"fDumpBinary" << fDumpBinary;
+  fDumpBinaryDir = ps.get<std::string>("DumpBinaryDir", ".");
+  TLOG(TINFO) <<"fDumpBinaryDir=" << fDumpBinaryDir;
+
   fGetNextFragmentBunchSize  = ps.get<uint32_t>("GetNextFragmentBunchSize");
   TLOG(TINFO) <<"fGetNextFragmentBunchSize=" << fGetNextFragmentBunchSize;
 
@@ -1332,6 +1337,18 @@ void sbndaq::CAENV1740Readout::start()
     TLOG(TINFO)<<"DC offset or baseline before run start for Group " << i_g << " is " << readBack << TLOG_ENDL;    
   }   
 
+  if( fDumpBinary ){
+    // Get timestamp for binary file name
+    time_t t = time(0);
+    struct tm ltm = *localtime( &t );
+    sprintf(binFileName, "%s/rawbin_V1740_%4i.%02i.%02i-%02i.%02i.%02i.dat",
+	    fDumpBinaryDir.c_str(),
+	    ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
+    
+    TLOG(TINFO) << "Opening raw binary file " << binFileName;
+    binFile.open( binFileName, std::ofstream::out | std::ofstream::binary ); // temp
+  }
+
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
 }
 
@@ -1351,6 +1368,12 @@ void sbndaq::CAENV1740Readout::stop()
   if(fBuffer != NULL){
     fBuffer.reset();
   }
+  
+  if( fDumpBinary ){
+    TLOG(TINFO) << "Closig raw binary file " << binFileName;
+    binFile.close(); // temp
+  }
+
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
@@ -1582,11 +1605,15 @@ bool sbndaq::CAENV1740Readout::readWindowDataBlocks() {
 
     const auto header = reinterpret_cast<CAENV1740EventHeader const *>(block->begin);
     
-    TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")"
-		   
+    //TLOG(TGETDATA) << "(FragID=" << fFragmentID << ")" 
+    // jcrespo: promote fragment message to TINFO
+    TLOG(TINFO) << "(FragID=" << fFragmentID << ")"
 		   << ": XA_EVENT_COUNTER=" << header->eventCounter
 		   << ", XA_EVENT_SIZE=" << header->eventSize
 		   << ", XA_TIME_TAG=" << header->triggerTimeTag;
+
+    // jcrespo: Dump binary here following NevisTPC2Stream
+    if( fDumpBinary ) binFile.write( (char*)block->begin, block->data_size );
 
     const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
     if(block->data_size != header_event_size ) {
@@ -1872,7 +1899,9 @@ bool sbndaq::CAENV1740Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // throw errors if gap > 1 or order is not correct
     auto readoutwindow_sequence_id_gap= readoutwindow_sequence_id - last_sent_seqid;
 
-    TLOG(TMAKEFRAG)<<"Created fragment " << fFragmentID << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
+    //TLOG(TMAKEFRAG)<<"Created fragment " << fFragmentID << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
+    // jcrespo: promote fragment message to TINFO
+    TLOG(TINFO)<<"Created fragment " << fFragmentID << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
                    << " triggerTimeTag " << header->triggerTimeTag << " ts=" << ts_frag;
     
     if( readoutwindow_sequence_id_gap > 1u ){

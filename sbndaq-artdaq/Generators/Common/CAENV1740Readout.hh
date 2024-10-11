@@ -24,6 +24,8 @@
 #include <unordered_map>
 #include <mutex>
 
+#include <fstream>
+
 namespace sbndaq
 {
 
@@ -309,7 +311,14 @@ namespace sbndaq
 
     CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address,
 					     uint32_t data, uint32_t bitmask); 
-    
+ 
+
+    // Binary dump
+    bool fDumpBinary; // Write binary file before the artdaq back-end
+    std::string fDumpBinaryDir; // Directory for binary file dump
+    std::ofstream binFile; // temp 
+    char binFileName[80]; // Name of binary dump file
+   
   };
 
 }
