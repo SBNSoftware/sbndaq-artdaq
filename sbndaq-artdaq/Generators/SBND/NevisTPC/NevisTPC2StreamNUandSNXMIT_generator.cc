@@ -152,19 +152,22 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
     WriteSNData_thread_->stop();
   }
   //  FireCALIB_thread_->stop();
-  FireController_thread_->stop();
+  if( fControllerTriggerFreq > 0 ){//only stop thread if it met conditions to get started
+    FireController_thread_->stop();
+  }
   MonitorCrate_thread_->stop();
 
   if( fDumpBinary ){
-    TLOG(TLVL_INFO)<< "Closig raw binary file " << binFileNameNU;
+    TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameNU;
     binFileNU.close(); // temp
 
     if( fSNReadout ){
-      TLOG(TLVL_INFO)<< "Closig raw binary file " << binFileNameSN;
+      TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameSN;
       binFileSN.close(); // temp
     }
   }
   delete[] SNBuffer_;
+  fNUXMITReader->dmaStop();
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
@@ -204,6 +207,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::MonitorCrate() {
   if( next_monitor_cycle_time > std::chrono::steady_clock::now() ) return false;
 
   fCrate->getXMITModule()->readStatus();
+  //  fCrate->FEMtestfunction();
   TLOG(TSTATUS) << "Called " << __func__ ;
   // To do: add other board status checks. Follow uboonedaq/projects/sebs/configManager_CrateMonitor.cpp
   next_monitor_cycle_time = std::chrono::steady_clock::now() + std::chrono::seconds( fMonitorPeriod );

@@ -32,7 +32,8 @@ namespace sbndaq
     zmq::context_t rec_context;
     zmq::socket_t _zmqGPSSubscriber;
     long long receivedNTPsecond;
-   
+    long long prev_timestamp;
+
     class GPSstamp {
     public:
     GPSstamp( uint32_t new_frame, uint16_t new_sample, uint16_t new_div ) 
@@ -131,9 +132,9 @@ namespace sbndaq
     bool desyncCrash;
     uint64_t pseudo_ntbfragment; 
 
-    uint32_t GPSframe;
-    uint16_t GPSsample;
-    uint16_t GPSdiv;
+    long long GPSframe;
+    long long GPSsample;
+    long long GPSdiv;
 
       };
 }
