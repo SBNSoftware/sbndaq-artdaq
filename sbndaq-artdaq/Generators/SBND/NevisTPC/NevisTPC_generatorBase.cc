@@ -233,7 +233,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     else if((uint)current_event != header->getEventNum())
     {
       char line[132];
-      sprintf(line,"FEM event num out of sync, tanking the run. Current: %d, header: %d",current_event,header->getEventNum());
+      //sprintf(line,"FEM event num out of sync, tanking the run. Current: %d, header: %d",current_event,header->getEventNum());
       TRACE(TERROR,line);
       throw std::runtime_error(line);
       return false;
@@ -244,7 +244,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     }
     else if((uint)current_framenum != header->getFrameNum()){
       char line[132];
-      sprintf(line,"FEM framenum out of sync, tanking the run. Current: %d, Header :%d", current_framenum,header->getFrameNum());
+      //sprintf(line,"FEM framenum out of sync, tanking the run. Current: %d, Header :%d", current_framenum,header->getFrameNum());
       TRACE(TERROR,line);
       throw std::runtime_error(line);
       return false;
@@ -264,7 +264,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 	header->getFrameNum());
   
   if(CircularBuffer_.buffer.size()*sizeof(uint16_t) < expected_plus_wiggle){
-    TRACE(TFILLFRAG,"Not enough data for expected size %lu. Return and try again.",expected_size);
+    //TRACE(TFILLFRAG,"Not enough data for expected size %lu. Return and try again.",expected_size);
     return false;
   }
 

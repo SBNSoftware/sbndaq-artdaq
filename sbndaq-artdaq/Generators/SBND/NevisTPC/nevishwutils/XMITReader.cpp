@@ -157,10 +157,10 @@ namespace nevistpc {
     
     if ( ( ( dma.pDMABuffer->Page->pPhysicalAddr >> 32 ) & 0xffffffff ) == 0 ) {
       u32Data = dma_detail::dma_tr12 + dma_detail::dma_3dw_rec;
-      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "DMA First address: " << u32Data;
+      TLOG(TLVL_DEBUG) << "XMITReader " << _stream_name << "DMA First address: " << u32Data;
     } else {
       u32Data = dma_detail::dma_tr12 + dma_detail::dma_4dw_rec;
-      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "DMA Second address: " << u32Data;
+      TLOG(TLVL_DEBUG) << "XMITReader " << _stream_name << "DMA Second address: " << u32Data;
     }
     
     nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, u32Data );
@@ -223,7 +223,7 @@ namespace nevistpc {
 
   std::streamsize XMITReader::readsome ( char* buffer, std::streamsize size )
   {
-    std::cout << "READSOME FUNCTION CALLED!!!!!!!!!!!!" << std::endl;
+    //std::cout << "READSOME FUNCTION CALLED!!!!!!!!!!!!" << std::endl;
     //    exit(0);
 
     static unsigned long int _loopNumber = 0;
