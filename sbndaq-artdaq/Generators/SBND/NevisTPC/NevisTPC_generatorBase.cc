@@ -147,7 +147,7 @@ bool sbndaq::NevisTPC_generatorBase::GetData(){
     if (elapsed_time > fTimeoutSec){ //fcl configurable timeout (in seconds) for more ability to do low rate nonstandard trigger configurations
 
       char line[132];
-      sprintf(line,"There is no data for 60 seconds"); //,current_event,header->getEventNum());                                                                 
+      sprintf(line,"There is no data for %d seconds", fTimeoutSec);                                                                 
       TRACE(TERROR,line);
       throw std::runtime_error(line);
 
@@ -188,7 +188,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 
   // Since we can no longer trust XMIT headers or footers...
   if( *(reinterpret_cast<uint32_t const*>(&CircularBuffer_.buffer[0])) == 0xffffffff ){
-    TRACE(TFILLFRAG,"FOUND AN XMIT HEADER");
+    //TRACE(TFILLFRAG,"FOUND AN XMIT HEADER");
     new_buffer_size = CircularBuffer_.Erase(2);
     TRACE(TFILLFRAG,"Successfully erased %d words. Buffer occupancy now %lu",2,new_buffer_size);
     current_event = -1;
@@ -200,15 +200,15 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   }
 
   if( *(reinterpret_cast<uint32_t const*>(&CircularBuffer_.buffer[0])) == 0xe0000000 ){
-    TRACE(TFILLFRAG,"FOUND AN XMIT TRAILER");
+    //TRACE(TFILLFRAG,"FOUND AN XMIT TRAILER");
     new_buffer_size = CircularBuffer_.Erase(2);
     //std::cout << "BAAAADA BING" << std::endl;
-    TRACE(TFILLFRAG,"Successfully erased %d words. Buffer occupancy now %lu",2,new_buffer_size);
+    //TRACE(TFILLFRAG,"Successfully erased %d words. Buffer occupancy now %lu",2,new_buffer_size);
     return true;
   }
 
   if(CircularBuffer_.buffer.size()*sizeof(uint16_t) < sizeof(NevisTPCHeader)){
-    TRACE(TFILLFRAG,"Not enough data for NevisTPCHeader. Return and try again.");
+    //TRACE(TFILLFRAG,"Not enough data for NevisTPCHeader. Return and try again.");
     return false;
   }  
  // Theoretically, we should have a header, but there may be a problem with the data. Sometimes we get a big discrepancy between the number of ADC words described in the header and the actual number of words and it causes the next header to be out of line. So let's check that the header is  lined up right. Otherwise, we'll just throw a fit and crash the run.
@@ -329,12 +329,13 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 	frags.back()->sequenceID(),frags.back()->fragmentID(),frags.back()->timestamp());
 
   new_buffer_size = CircularBuffer_.Erase(expected_size/sizeof(uint16_t));
-  TRACE(TFILLFRAG,"Successfully erased %lu words. Buffer occupancy now %lu",
-	expected_size/sizeof(uint16_t),new_buffer_size);
+  //TRACE(TFILLFRAG,"Successfully erased %lu words. Buffer occupancy now %lu",
+	//expected_size/sizeof(uint16_t),new_buffer_size);
 
   // bump the subrun
   if(EventsPerSubrun_ > 0 && _subrun_event_0 != _this_event && _this_event % EventsPerSubrun_== 0) {
-    TRACE(TFILLFRAG, "Bumping artdaq subrun number from %u to %u. Last subrun spans events %i to %i.", current_subrun_,current_subrun_ + 1, _subrun_event_0, _this_event); 
+    //TRACE(TFILLFRAG, "Bumping artdaq subrun number from %u to %u. Last subrun spans events %i to %i.", current_subrun_,current_subrun_ + 1, _subrun_event_0, _this_event); 
+    TLOG(TLVL_WARNING)<< "Bumping artdaq subrun number from" << current_subrun_<< " to "<<current_subrun_+1<<". Last subrun spans events "<<_subrun_event_0<<" to "<<_this_event<<".";
     _subrun_event_0 = _this_event;
     ++current_subrun_;
     artdaq::FragmentPtr endOfSubrunFrag(new artdaq::Fragment(static_cast<size_t>(ceil(sizeof(my_rank) / static_cast<double>(sizeof(artdaq::Fragment::value_type))))));
