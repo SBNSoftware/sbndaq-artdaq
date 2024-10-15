@@ -76,6 +76,7 @@ bool TDCChan::configure_drain_buffer() {
         ++drained_count;
       }
     }
-    utls::thread_sleep_ms(1);
+    //utls::thread_sleep_ms(1);
+    utls::thread_sleep_us(250);
   }
 }
