@@ -41,6 +41,7 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   fSamplesPerChannel = ps_.get<uint32_t>("SamplesPerChannel",9600);
   fNChannels         = ps_.get<uint32_t>("NChannels",64);
   fUseCompression    = ps_.get<bool>("UseCompression",false);
+  fTimeoutSec        = ps_.get<uint32_t>("TimeoutSec", 60);
    
   DMABufferSizeBytes_ = ps_.get<uint32_t>("DMABufferSize",1e6);	
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
@@ -49,9 +50,11 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   current_subrun_ = 0;
   events_seen_ = 0;
 
-  // intialize event counting                                                                                                       
+  // initialize event and frame counting                                                                                                       
   _subrun_event_0 = -1;
   _this_event = -1;
+  rollCounter = 0;
+  prevFrame = 0;
   
 
   // Build our buffer
@@ -73,6 +76,7 @@ void sbndaq::NevisTPC_generatorBase::start(){
 
  // Magically start getdata thread
   GetData_thread_->start();
+  runonsyncon();
   startFireCalibTrig();
 
 }
@@ -84,13 +88,16 @@ void sbndaq::NevisTPC_generatorBase::stopAll(){
 }
 
 void sbndaq::NevisTPC_generatorBase::stop(){
+  TLOG(TLVL_INFO)<<"stop() transition called";
   ConfigureStop();  
   stopAll();
+  TLOG(TLVL_INFO)<<"stop() transition finished";
 }
 
 void sbndaq::NevisTPC_generatorBase::stopNoMutex(){
   
-  stopAll();
+  //stopAll();
+  //Both stopNoMutex and stop are getting called, with stopNoMutex first. We need to ConfigureStop() before stopAll(), so will just wait for the stop() function to get called.
 }
 
 size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
@@ -140,10 +147,10 @@ bool sbndaq::NevisTPC_generatorBase::GetData(){
     n_words = GetFEMCrateData()/sizeof(uint16_t);
     auto current_time = std::chrono::steady_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-    if (elapsed_time > 5){
+    if (elapsed_time > fTimeoutSec){ //fcl configurable timeout (in seconds) for more ability to do low rate nonstandard trigger configurations
 
       char line[132];
-      sprintf(line,"There is no data for 5 seconds"); //,current_event,header->getEventNum());                                                                 
+      sprintf(line,"There is no data for 60 seconds"); //,current_event,header->getEventNum());                                                                 
       TRACE(TERROR,line);
       throw std::runtime_error(line);
 
@@ -176,6 +183,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 
   int wiggle_room = 5;	// How many words before and after ADC count to correctly identify ending of data packet
   size_t new_buffer_size=0;
+  // Define a set to track seen indices                                                                                             
+  //  static std::set<uint32_t> index_seen;
+
 
   // Check that we've got at least 32 bits of data
   if(CircularBuffer_.buffer.size()*sizeof(uint16_t) < sizeof(uint32_t)){
@@ -184,9 +194,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 
   // Since we can no longer trust XMIT headers or footers...
   if( *(reinterpret_cast<uint32_t const*>(&CircularBuffer_.buffer[0])) == 0xffffffff ){
-    TRACE(TFILLFRAG,"FOUND AN XMIT HEADER");
+    //TRACE(TFILLFRAG,"FOUND AN XMIT HEADER");
     new_buffer_size = CircularBuffer_.Erase(2);
-    TRACE(TFILLFRAG,"Successfully erased %d words. Buffer occupancy now %lu",2,new_buffer_size);
+     TRACE(TFILLFRAG,"Successfully erased %d words. Buffer occupancy now %lu",2,new_buffer_size);
     current_event = -1;
     current_framenum = -1;
   }
@@ -196,15 +206,15 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   }
 
   if( *(reinterpret_cast<uint32_t const*>(&CircularBuffer_.buffer[0])) == 0xe0000000 ){
-    TRACE(TFILLFRAG,"FOUND AN XMIT TRAILER");
+    //TRACE(TFILLFRAG,"FOUND AN XMIT TRAILER");
     new_buffer_size = CircularBuffer_.Erase(2);
     //std::cout << "BAAAADA BING" << std::endl;
-    TRACE(TFILLFRAG,"Successfully erased %d words. Buffer occupancy now %lu",2,new_buffer_size);
+    //    TRACE(TFILLFRAG,"Successfully erased %d words. Buffer occupancy now %lu",2,new_buffer_size);
     return true;
   }
 
   if(CircularBuffer_.buffer.size()*sizeof(uint16_t) < sizeof(NevisTPCHeader)){
-    TRACE(TFILLFRAG,"Not enough data for NevisTPCHeader. Return and try again.");
+    //TRACE(TFILLFRAG,"Not enough data for NevisTPCHeader. Return and try again.");
     return false;
   }  
  // Theoretically, we should have a header, but there may be a problem with the data. Sometimes we get a big discrepancy between the number of ADC words described in the header and the actual number of words and it causes the next header to be out of line. So let's check that the header is  lined up right. Otherwise, we'll just throw a fit and crash the run.
@@ -229,7 +239,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     else if((uint)current_event != header->getEventNum())
     {
       char line[132];
-      sprintf(line,"FEM event num out of sync, tanking the run. Current: %d, header: %d",current_event,header->getEventNum());
+      //sprintf(line,"FEM event num out of sync, tanking the run. Current: %d, header: %d",current_event,header->getEventNum());
       TRACE(TERROR,line);
       throw std::runtime_error(line);
       return false;
@@ -240,7 +250,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     }
     else if((uint)current_framenum != header->getFrameNum()){
       char line[132];
-      sprintf(line,"FEM framenum out of sync, tanking the run. Current: %d, Header :%d", current_framenum,header->getFrameNum());
+      //sprintf(line,"FEM framenum out of sync, tanking the run. Current: %d, Header :%d", current_framenum,header->getFrameNum());
       TRACE(TERROR,line);
       throw std::runtime_error(line);
       return false;
@@ -251,16 +261,20 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     expected_size += sizeof(uint16_t);
   }
 
+  int32_t frame = header->getFrameNum();
+
+  /*
   TRACE(TFILLFRAG,"TPC data with total expected size %lu,FEMID=%u,Slot=%u,ADCWordCount=%u,Event=%u,Frame=%u",
 	expected_size,
 	header->getFEMID(),
 	header->getSlot(),
 	header->getADCWordCount(),
-	header->getEventNum(),
+	//header->getEventNum(),
+	_this_event,
 	header->getFrameNum());
-  
+  */
   if(CircularBuffer_.buffer.size()*sizeof(uint16_t) < expected_plus_wiggle){
-    TRACE(TFILLFRAG,"Not enough data for expected size %lu. Return and try again.",expected_size);
+    //TRACE(TFILLFRAG,"Not enough data for expected size %lu. Return and try again.",expected_size);
     return false;
   }
 
@@ -283,7 +297,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   }
 
   // Sweet, now, let's actually fill stuff
+  //hardware gives 1-based event counter for TPC
   _this_event = metadata_.EventNumber();
+   TLOG(TLVL_DEBUG+12) << "TPC Event number from pseudo counter " << _this_event;
 
   // set the subrun event 0 if it has never been set before
   if (_subrun_event_0 == -1) {
@@ -300,6 +316,18 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 
   artdaq::Fragment::fragment_id_t fragment_id;
   uint32_t index = header->getSlot() - FEM_BASE_SLOT;
+  //  TLOG(TLVL_DEBUG+13) << "FEM index: " << index;
+
+
+  // Check if index is in the set                                                                                                   
+  /* if (index_seen.find(index) != index_seen.end()) {
+    index_seen.clear();
+    _this_event++;
+    TLOG(TLVL_DEBUG+13) << "incremented event: " << _this_event;
+  }
+  // Add index to the set                                                                                                           
+  index_seen.insert(index);
+  */
 
   if (( header->getSlot() >= FEM_BASE_SLOT ) && ( index < fragment_ids.size()))
   {
@@ -310,8 +338,21 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     TRACE(TERROR,"NevisTPC::FillFragment() : illegal FEM slot number");
     return(false);
   }
+  
+  // Check if frame has rolled over and correct
+  int32_t corrFrame;
+  if ( prevFrame > frame )
+  {
+    rollCounter +=1;
+    TLOG(TLVL_INFO) << "Trigger frames rolled over!!!! " << " this many times: " << rollCounter;
+    corrFrame = frame + rollCounter*16777216;
+  }
+  else{
+    corrFrame = frame;
+  }
+  prevFrame = frame;
 
-  metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),fNChannels,fSamplesPerChannel,fUseCompression);
+  metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),corrFrame,fNChannels,fSamplesPerChannel,fUseCompression, frame);
   frags.emplace_back( artdaq::Fragment::FragmentBytes(expected_size,
                                                       metadata_.EventNumber(),          // Sequence ID
 						      fragment_id,                      // Fragment ID
@@ -325,12 +366,13 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
 	frags.back()->sequenceID(),frags.back()->fragmentID(),frags.back()->timestamp());
 
   new_buffer_size = CircularBuffer_.Erase(expected_size/sizeof(uint16_t));
-  TRACE(TFILLFRAG,"Successfully erased %lu words. Buffer occupancy now %lu",
-	expected_size/sizeof(uint16_t),new_buffer_size);
+  //TRACE(TFILLFRAG,"Successfully erased %lu words. Buffer occupancy now %lu",
+  //	expected_size/sizeof(uint16_t),new_buffer_size);
 
-  // bump the subrun
+  // bump the subrun //I don't know that this should really exist here, shouldn't all the subrun stuff get controlled by the event builder processes? -ANF 9/10/24
   if(EventsPerSubrun_ > 0 && _subrun_event_0 != _this_event && _this_event % EventsPerSubrun_== 0) {
-    TRACE(TFILLFRAG, "Bumping artdaq subrun number from %u to %u. Last subrun spans events %i to %i.", current_subrun_,current_subrun_ + 1, _subrun_event_0, _this_event); 
+    //TRACE(TFILLFRAG, "Bumping artdaq subrun number from %u to %u. Last subrun spans events %i to %i.", current_subrun_,current_subrun_ + 1, _subrun_event_0, _this_event); 
+    TLOG(TLVL_WARNING)<< "Bumping artdaq subrun number from" << current_subrun_<< " to "<<current_subrun_+1<<". Last subrun spans events "<<_subrun_event_0<<" to "<<_this_event<<".";   
     _subrun_event_0 = _this_event;
     ++current_subrun_;
     artdaq::FragmentPtr endOfSubrunFrag(new artdaq::Fragment(static_cast<size_t>(ceil(sizeof(my_rank) / static_cast<double>(sizeof(artdaq::Fragment::value_type))))));
@@ -339,6 +381,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     *endOfSubrunFrag->dataBegin() = my_rank;
     frags.emplace_back(std::move(endOfSubrunFrag));
   }
+  //  if (index==fragment_ids.size()-1){
+  // _this_event++;
+  //}
 
   ++events_seen_;
   return true;
