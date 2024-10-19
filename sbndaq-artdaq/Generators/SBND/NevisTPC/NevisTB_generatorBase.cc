@@ -284,10 +284,11 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
 
       rollCounter+=1;
       TLOG(TLVL_INFO) << "Trigger frames rolled over!!!! " << " this many times: " << rollCounter;
-      corrFrame = tframe + rollCounter*16777216;
-      TLOG(TLVL_INFO) << " Corrected Frame:  " << corrFrame <<  " Uncorrected Frame: " << tframe;
-
     }
+
+    corrFrame = tframe + rollCounter*16777216;
+    TLOG(TLVL_INFO) << " Corrected Frame:  " << corrFrame <<  " Uncorrected Frame: " << tframe;
+
 
     if(frame_diff > tolerance){  //looks like we rolled over
 

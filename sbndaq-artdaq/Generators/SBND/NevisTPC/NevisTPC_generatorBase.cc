@@ -344,12 +344,10 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   if ( prevFrame > frame )
   {
     rollCounter +=1;
-    TLOG(TLVL_INFO) << "Trigger frames rolled over!!!! " << " this many times: " << rollCounter;
-    corrFrame = frame + rollCounter*16777216;
+    TLOG(TLVL_INFO) << "TPC boardreader: Trigger frames rolled over!!!! " << " this many times: " << rollCounter;
   }
-  else{
-    corrFrame = frame;
-  }
+
+  corrFrame = frame + rollCounter*16777216;
   prevFrame = frame;
 
   metadata_ = NevisTPCFragmentMetadata(header->getEventNum(),corrFrame,fNChannels,fSamplesPerChannel,fUseCompression, frame);
