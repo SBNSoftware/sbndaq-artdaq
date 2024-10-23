@@ -129,6 +129,7 @@ bool TDCChan::stop() {
 
 void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
   auto lag_ns = utls::elapsed_time_ns(timestamp_ns);
+  //lag_ns = host time - server time
 
   if (metricMan) {
     metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, lag_ns, lit::unit_nanoseconds, 11,
@@ -136,14 +137,19 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
   }
   if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
 
+  
   if (lag_ns <= utls::onesecond_ns) {
+    // Start of debugging
+    TLOG(TLVL_WARN) << "Lag ns = host time - sample time < 1 second. Lag ns = " << lag_ns << " ns.";
+    // End of debugging
+
     TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
                         << lag_ns << " ns.";
 
   } else {
 
     // Start of debugging
-    TLOG(TLVL_WARN) << "Lag ns > 1 second. Lag ns = " << lag_ns << " ns.";
+    TLOG(TLVL_WARN) << "Lag ns =host time - sample > 1 second. Lag ns = " << lag_ns << " ns.";
     // End of debugging
 
     TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
