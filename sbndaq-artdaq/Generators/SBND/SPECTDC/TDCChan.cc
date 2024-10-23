@@ -130,6 +130,7 @@ bool TDCChan::stop() {
 void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
   auto lag_ns = utls::elapsed_time_ns(timestamp_ns);
   //lag_ns = host time - server time
+  //do we alwasy expect host time > server time?  
 
   if (metricMan) {
     metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, lag_ns, lit::unit_nanoseconds, 11,
@@ -139,21 +140,23 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
 
   
   if (lag_ns <= utls::onesecond_ns) {
-    // Start of debugging
-    TLOG(TLVL_WARN) << "Lag ns = host time - sample time < 1 second. Lag ns = " << lag_ns << " ns.";
-    // End of debugging
 
-    TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
-                        << lag_ns << " ns.";
+    TLOG(TLVL_WARN) << "Wrong TDC sample time. Lag ns = host time - sample time < 1 second. Lag ns = " << lag_ns << " ns.";
+    //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
+    //                    << lag_ns << " ns.";
 
   } else {
+ 
+    if (lag_ns == 18446744073) {
+      TLOG(TLVL_WARN) << "Sample time is later than host time. Sample time > Host time!!";
+    }
+    else{
+      // Start of debugging
+      TLOG(TLVL_WARN) << "Wrong TDC sample time. Lag ns = host time - sample > 1 second. Lag ns = " << lag_ns << " ns.";
+      //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
+      //              << lag_ns / utls::onesecond_ns << " seconds.";
+    } 
 
-    // Start of debugging
-    TLOG(TLVL_WARN) << "Lag ns =host time - sample > 1 second. Lag ns = " << lag_ns << " ns.";
-    // End of debugging
-
-    TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
-                    << lag_ns / utls::onesecond_ns << " seconds.";
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 11,
                             MetricMode::Rate);
