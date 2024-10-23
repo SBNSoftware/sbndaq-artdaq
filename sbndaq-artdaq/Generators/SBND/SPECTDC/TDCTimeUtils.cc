@@ -14,14 +14,21 @@ using clk = std::chrono::system_clock;
 uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
   uint64_t host_time_ns =
       std::chrono::duration_cast<nanoseconds>(clk::time_point{clk::now()}.time_since_epoch()).count();
-  if (sample_time_ns > host_time_ns)
-    TLOG(TLVL_WARNING) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; sample_time-host_time="
+
+  if (sample_time_ns > host_time_ns){
+
+    //TLOG(TLVL_WARNING) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; sample_time-host_time="
+    //                   << sample_time_ns - host_time_ns << " ns.";
+
+    TLOG(TLVL_WARNING) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time="
                        << sample_time_ns - host_time_ns << " ns.";
+
+  }
 
   //if host_time_ns - sample_time_ns is negative then most likely give bogus number: 18446744073
   //expect host_time > server_time
   
-  return (double)host_time_ns - (double)sample_time_ns;
+  return host_time_ns - sample_time_ns;
 }
 
 uint64_t utls::hosttime() {
