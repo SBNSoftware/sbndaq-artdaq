@@ -56,6 +56,7 @@ void TDCChan::read() {
   auto gap = uint64_t{0};
   for (decltype(read_count) i = 0; i < read_count; i++) {
     auto ts = make_timestamp(id, name, tdcts_arr[i]);
+
     if (fmctdc.tai2utc) adjust_tai2utc(ts, fmctdc.tai2utc);
 
     if (fmctdc.monitor_timestamps) monitor_timestamp(ts.timestamp_ns());
