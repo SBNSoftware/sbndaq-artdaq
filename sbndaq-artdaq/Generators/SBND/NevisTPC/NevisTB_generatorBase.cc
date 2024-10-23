@@ -35,6 +35,7 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   GPSZMQPortNTB_ = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
   framesize_ = ps_.get<uint32_t>("framesize", 20479);
   NevisClockFreq_ = ps_.get<uint32_t>("NevisClockFrequency", 15999907);
+  EventsPerSubrun_ = ps_.get<int32_t>("EventsPerSubrun",-1);
 
   DMABufferNTB_.reset(new uint16_t[DMABufferSizeBytesNTB_]);       
   current_subrun_ = 0;
@@ -159,7 +160,7 @@ bool sbndaq::NevisTB_generatorBase::GPStime(){
 
         // Extract timestamp from the received message
         memcpy(&receivedNTPsecond, zmqTimestamp.data(), sizeof(receivedNTPsecond));
-        TLOG(TLVL_INFO) << "ZMQ Timestamp NTP second received:  " << receivedNTPsecond << TLOG_ENDL;
+        TLOG(TLVL_DEBUG) << "ZMQ Timestamp NTP second received:  " << receivedNTPsecond << TLOG_ENDL;
 
         while (std::getline(iss, token, ',')) { 
           numbers.push_back(std::stoi(token));
@@ -321,6 +322,7 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
       _subrun_event_0 = _this_event;
       ++current_subrun_;
       artdaq::FragmentPtr endOfSubrunFrag(new artdaq::Fragment(static_cast<size_t>(ceil(sizeof(my_rank) / static_cast<double>(sizeof(artdaq::Fragment::value_type))))));
+      TLOG(TLVL_WARNING)<< "Bumping artdaq subrun number from" << current_subrun_<< " to "<<current_subrun_+1<<". Last subrun spans events "<<_subrun_event_0<<" to "<<_this_event<<".";
       endOfSubrunFrag->setSystemType(artdaq::Fragment::EndOfSubrunFragmentType);
       endOfSubrunFrag->setSequenceID(_this_event);
       *endOfSubrunFrag->dataBegin() = my_rank;
