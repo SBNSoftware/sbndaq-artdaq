@@ -18,7 +18,10 @@ uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
     TLOG(TLVL_WARNING) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; sample_time-host_time="
                        << sample_time_ns - host_time_ns << " ns.";
 
-  return host_time_ns - sample_time_ns;
+  //if host_time_ns - sample_time_ns is negative then most likely give bogus number: 18446744073
+  //expect host_time > server_time
+  
+  return (double)host_time_ns - (double)sample_time_ns;
 }
 
 uint64_t utls::hosttime() {
