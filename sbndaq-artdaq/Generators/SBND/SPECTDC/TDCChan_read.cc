@@ -59,7 +59,7 @@ void TDCChan::read() {
 
     if (fmctdc.tai2utc) adjust_tai2utc(ts, fmctdc.tai2utc);
 
-    if (fmctdc.monitor_timestamps) monitor_timestamp(ts.timestamp_ns());
+    if (fmctdc.monitor_timestamps) monitor_timestamp(ts.timestamp_ns(), int{id});
     sample_info = as_string(ts);
 
     if (monitor_only) {

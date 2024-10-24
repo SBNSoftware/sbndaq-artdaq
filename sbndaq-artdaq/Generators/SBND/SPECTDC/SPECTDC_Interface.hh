@@ -64,7 +64,7 @@ constexpr auto as_microseconds = uint64_t{1'000};
 uint64_t hosttime();
 uint64_t hosttime_us();
 uint64_t hosttime_ns();
-uint64_t elapsed_time_ns(uint64_t);
+double elapsed_time_ns(uint64_t);
 void thread_sleep(uint64_t);
 void thread_sleep_us(uint64_t);
 void thread_sleep_ms(uint64_t);
@@ -112,7 +112,7 @@ class TDCChan : public Device {
   bool configure_drain_buffer();
   bool configure_channel_status();
   bool configure_channel_disable();
-  void monitor_timestamp(uint64_t) const;
+  void monitor_timestamp(uint64_t ts, int id) const;
 
  private:
   uint8_t id = 0;
