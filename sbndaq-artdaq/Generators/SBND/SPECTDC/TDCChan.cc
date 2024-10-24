@@ -129,17 +129,17 @@ bool TDCChan::stop() {
 
 void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
 
-  uint64_t lag_ns = utls::elapsed_time_ns(timestamp_ns);
   //lag_ns = host time - server time
   //do we alwasy expect host time > server time? 
+  uint64_t lag_ns = utls::elapsed_time_ns(timestamp_ns);
 
   if (metricMan) {
     metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, lag_ns, lit::unit_nanoseconds, 11,
                           MetricMode::Average);
   }
 
-  //move the return statement to the end so debug messages can show up
-  //if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
+  //what does this return statement do?? lag_ns can be meaningless
+  if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
 
   if (lag_ns <= utls::onesecond_ns) {
  
@@ -153,15 +153,13 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
     //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
     //              << lag_ns / utls::onesecond_ns << " seconds.";
 
-    TLOG(TLVL_WARN) << "Channel " << ch_id <<". Wrong TDC sample time. Lag ns = |host time - sample time| > 1 second. Lag ns = " << lag_ns << " ns. Bad if sample time > host time. Is there TimeUtils Warning before this??";
+    TLOG(TLVL_WARN) << "Channel " << ch_id <<". Wrong TDC sample time. Lag ns = |host time - sample time| > 1 second. Lag ns = " << lag_ns << " ns could be bogus. Bad if sample time > host time. Is there TimeUtils Warning before this??";
 
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 11,
                             MetricMode::Rate);
     }
   }
-
-  if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
 
 }
 
