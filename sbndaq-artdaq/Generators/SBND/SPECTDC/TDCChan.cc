@@ -129,7 +129,7 @@ bool TDCChan::stop() {
 
 void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
 
-  double lag_ns = utls::elapsed_time_ns(timestamp_ns);
+  uint64_t lag_ns = utls::elapsed_time_ns(timestamp_ns);
   //lag_ns = host time - server time
   //do we alwasy expect host time > server time? 
   //lag_ns > 0 then host time > server time
@@ -140,21 +140,21 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
                           MetricMode::Average);
   }
 
-  if (std::abs(lag_ns) < fmctdc.max_sample_time_lag_ns) return;
+  if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
 
   
-  if (std::abs(lag_ns) <= utls::onesecond_ns) {
+  if (lag_ns <= utls::onesecond_ns) {
  
     //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
     //                    << lag_ns << " ns.";
 
-    TLOG(TLVL_WARN) << "Channel " << ch_id << ". Wrong TDC sample time. Lag ns = host time - sample time < 1 second. Lag ns = " << lag_ns << " ns.";
+    TLOG(TLVL_WARN) << "Channel " << ch_id << ". Wrong TDC sample time. Lag ns = |host time - sample time| < 1 second. Lag ns = " << lag_ns << " ns.";
   } else {
  
     //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
     //              << lag_ns / utls::onesecond_ns << " seconds.";
 
-    TLOG(TLVL_WARN) << "Channel " << ch_id <<". Wrong TDC sample time. Lag ns = host time - sample > 1 second. Lag ns = " << lag_ns << " ns.";
+    TLOG(TLVL_WARN) << "Channel " << ch_id <<". Wrong TDC sample time. Lag ns = |host time - sample time| > 1 second. Lag ns = " << lag_ns << " ns.";
 
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 11,
