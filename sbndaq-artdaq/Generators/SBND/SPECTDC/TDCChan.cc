@@ -138,7 +138,8 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
                           MetricMode::Average);
   }
 
-  if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
+  //move the return statement to the end so debug messages can show up
+  //if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
 
   if (lag_ns <= utls::onesecond_ns) {
  
@@ -159,6 +160,9 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
                             MetricMode::Rate);
     }
   }
+
+  if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
+
 }
 
 void TDCChan::monitor() {
