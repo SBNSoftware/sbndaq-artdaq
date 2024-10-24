@@ -15,14 +15,21 @@ uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
   uint64_t host_time_ns =
       std::chrono::duration_cast<nanoseconds>(clk::time_point{clk::now()}.time_since_epoch()).count();
 
+  //pull window is +-10ms so what do I expect of host_time to server_time?
   if (sample_time_ns > host_time_ns){
 
     //TLOG(TLVL_WARNING) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; sample_time-host_time="
     //                   << sample_time_ns - host_time_ns << " ns.";
 
-    TLOG(TLVL_WARNING) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time="
+    TLOG(TLVL_WARNING) << "Sample time > host time; sample_time-host_time="
                        << sample_time_ns - host_time_ns << " ns.";
 
+  }else{
+    //debug warning of fragment is not too far back in the past?
+    if( (host_time_ns - sample_time_ns) > 1e7 ){
+    TLOG(TLVL_WARNING) << "Host time < sample time; host_time-sample_time="
+                       << host_time_ns - sample_time_ns << " ns.";
+	}
   }
 
   //if host_time_ns - sample_time_ns is negative then most likely give bogus number: 18446744073
