@@ -21,9 +21,8 @@ uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
     //TLOG(TLVL_WARNING) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; sample_time-host_time="
     //                   << sample_time_ns - host_time_ns << " ns.";
 
-    TLOG(TLVL_WARNING) << "!!! Sample time > host time; sample_time-host_time = "<< sample_time_ns - host_time_ns << " ns.";
-    TLOG(TLVL_WARNING) << "Sample time = " << sample_time_ns << " ns.";
-    TLOG(TLVL_WARNING) << "Host time = " << host_time_ns << " ns.";
+    TLOG(TLVL_WARNING) << "!!! Sample time > host time; sample_time-host_time = "<< sample_time_ns - host_time_ns << " ns. Sample time = " << sample_time_ns << " ns. Host time = " << host_time_ns << " ns.";
+
     return sample_time_ns - host_time_ns; 
   }
 

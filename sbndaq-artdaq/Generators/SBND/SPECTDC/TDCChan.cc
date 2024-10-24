@@ -145,16 +145,14 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
     //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
     //                    << lag_ns << " ns.";
 
-    TLOG(TLVL_WARN) << "Channel " << ch_id << ". Wrong TDC sample time. Lag ns = |host time - sample time| < 1 second. Lag ns = " << lag_ns << " ns.";
-    TLOG(TLVL_WARN) << "Bad if sample time > host time. Is there TimeUtils Warning before this??";
+    TLOG(TLVL_WARN) << "Channel " << ch_id << ". Wrong TDC sample time. Lag ns = |host time - sample time| < 1 second. Lag ns = " << lag_ns << " ns. Bad if sample time > host time. Is there TimeUtils Warning before this??";
 
   } else {
  
     //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
     //              << lag_ns / utls::onesecond_ns << " seconds.";
 
-    TLOG(TLVL_WARN) << "Channel " << ch_id <<". Wrong TDC sample time. Lag ns = |host time - sample time| > 1 second. Lag ns = " << lag_ns << " ns.";
-    TLOG(TLVL_WARN) << "Bad if sample time > host time. Is there TimeUtils Warning before this??";
+    TLOG(TLVL_WARN) << "Channel " << ch_id <<". Wrong TDC sample time. Lag ns = |host time - sample time| > 1 second. Lag ns = " << lag_ns << " ns. Bad if sample time > host time. Is there TimeUtils Warning before this??";
 
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 11,
