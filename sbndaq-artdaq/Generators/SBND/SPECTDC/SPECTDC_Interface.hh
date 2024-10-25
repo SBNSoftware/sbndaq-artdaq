@@ -139,6 +139,7 @@ class TDCChan : public Device {
   uint64_t missed_sample_count = 0;
   uint64_t sample_drop_count = 0;
   uint64_t last_seen_sample_seq = 0;
+  uint64_t last_seen_sample_ts = 0;
   bool inhibit = true;
   std::string metric_prefix;
   friend class TDCCard;
