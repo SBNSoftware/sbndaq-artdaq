@@ -129,8 +129,6 @@ bool TDCChan::stop() {
 
 void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
 
-  //lag_ns = host time - server time
-  //do we alwasy expect host time > server time? 
   uint64_t lag_ns = utls::elapsed_time_ns(timestamp_ns);
 
   if (metricMan) {
@@ -138,22 +136,15 @@ void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
                           MetricMode::Average);
   }
 
-  //what does this return statement do?? lag_ns can be meaningless
-  if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
+  if (lag_ns < utls::max_sample_time_lag_ns) return;
 
-  if (lag_ns <= utls::onesecond_ns) {
- 
-    //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
-    //                    << lag_ns << " ns.";
+  if (lag_ns < utls::onesecond_ns) {
 
-    TLOG(TLVL_WARN) << "Channel " << ch_id << ". Wrong TDC sample time. Lag ns = |host time - sample time| < 1 second. Lag ns = " << lag_ns << " ns. Bad if sample time > host time. Is there TimeUtils Warning before this??";
+    TLOG(TLVL_WARN) << "Channel " << ch_id << ". Wrong TDC sample time. Host time > sample time; host_time-sample_time = " << lag_ns / utls::as_milliseconds << " ms. NTP drift > 100 ms! Check White Rabbit and NTP synchronisation.";
 
   } else {
- 
-    //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
-    //              << lag_ns / utls::onesecond_ns << " seconds.";
 
-    TLOG(TLVL_WARN) << "Channel " << ch_id <<". Wrong TDC sample time. Lag ns = |host time - sample time| > 1 second. Lag ns = " << lag_ns << " ns could be bogus. Bad if sample time > host time. Is there TimeUtils Warning before this??";
+    TLOG(TLVL_ERROR) << "Channel " << ch_id << ". Wrong TDC sample time. Host time > sample time; host_time-sample_time = " << lag_ns / utls::as_seconds << " s. NTP drift >= 1 s! Check White Rabbit and NTP synchronisation.";
 
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 11,

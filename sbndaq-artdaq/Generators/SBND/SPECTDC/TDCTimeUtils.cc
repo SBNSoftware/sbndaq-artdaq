@@ -10,24 +10,31 @@ using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
 using clk = std::chrono::system_clock;
+using namespace sbndaq::SPECTDCInterface;
 
 uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
   uint64_t host_time_ns =
       std::chrono::duration_cast<nanoseconds>(clk::time_point{clk::now()}.time_since_epoch()).count();
-
-  //pull window is +-10ms so what do I expect of host_time to server_time?
+  
   if (sample_time_ns > host_time_ns){
 
-    //TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; sample_time-host_time="
-    //                   << sample_time_ns - host_time_ns << " ns.";
+    auto lag_ns = sample_time_ns - host_time_ns;  
 
-    TLOG(TLVL_WARN) << " !!! Sample time > host time; sample_time-host_time = "<< sample_time_ns - host_time_ns << " ns. Sample time = " << sample_time_ns << " ns. Host time = " << host_time_ns << " ns.";
+    if ( lag_ns < utls::max_sample_time_lag_ns) return 0;       
+ 
+    if ( lag_ns < utls::onesecond_ns ) {
 
-    //for debugging: just so not giving bogus number for monitoring timestamp
-    //return sample_time_ns - host_time_ns; 
+      TLOG(TLVL_WARNING) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time = "<< lag_ns - utls::as_seconds << " ms. NTP drift > 100 ms! Check White Rabbit and NTP synchronisation.";
+
+    } else {
+ 
+      TLOG(TLVL_ERROR) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time = "<< lag_ns / utls::as_seconds << " s. NTP drift >= 1s! Check White Rabbit and NTP synchronisation.";
+
+    }
+
+    return 0;
   }
-
-  //expect host_time > server_time, otherwise bogus number subtracting uint64_t to negative number
+  
   return host_time_ns - sample_time_ns;
 }
 

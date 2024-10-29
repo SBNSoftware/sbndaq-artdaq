@@ -96,9 +96,10 @@ void TDCChan::read() {
     auto ts_gap = uint64_t{0};
     ts_gap = ts.timestamp_ns() - last_seen_sample_ts; 
     last_seen_sample_ts = ts.timestamp_ns();
-    if (ts_gap < 5e3) {
-      TLOG(TLVL_WARNING) << "Detected a time gap < 5 us in the channel " << int{id}
-                         << "; ts gap = " << ts_gap/1e3 << " ns.";
+
+    if (ts_gap < utls::as_microseconds ) {
+      TLOG(TLVL_WARNING) << "Detected a time gap < 0.1 us in the channel " << int{id}
+                         << "; ts gap = " << ts_gap/utls::as_microseconds << " us.";
     }
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_ts_gap, uint64_t{ts_gap},
