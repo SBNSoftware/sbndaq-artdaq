@@ -68,7 +68,7 @@ sbnd::SBNDGateFilter::~SBNDGateFilter()
 {
 }
 
-/*std::vector<uint64_t> sbnd::SBNDGateFilter::GetAllHLTs(artdaq::ContainerFragment*  ptb_container_fragment){
+std::vector<uint64_t> sbnd::SBNDGateFilter::GetAllHLTs(artdaq::ContainerFragment*  ptb_container_fragment){
   std::vector<uint64_t> triggers;  
   
   for (size_t f=0; f<ptb_container_fragment->block_count(); ++f){//loop over container of fragments
@@ -107,7 +107,7 @@ std::vector<uint64_t> sbnd::SBNDGateFilter::GetHLT(sbndaq::CTBFragment ptb_fragm
 bool sbnd::SBNDGateFilter::ApplyGateFilter(std::vector<uint64_t> triggers)//artdaq::ContainerFragment*  ptb_container_fragment)//(T trigfrag)
 {
 
-  TLOG(TLVL_ERROR) << "ApllyGateFilter function start";
+  TLOG(TLVL_DEBUG) << "ApplyGateFilter function start";
   if(triggers.size()==0){
     TLOG(TLVL_WARNING) << "This event has no HLT fragments or none with trigger numbers then 20. It fails filter.";
     return false;
@@ -131,7 +131,7 @@ bool sbnd::SBNDGateFilter::ApplyGateFilter(std::vector<uint64_t> triggers)//artd
     }//end loop over excluded triggers
     
     if( hlttrigger==ftrigger_type || ftrigger_type==-1){
-      TLOG(TLVL_DEBUG) << "This Event has trigger type " << hlttrigger << "==" << ftrigger_type
+      TLOG(TLVL_INFO) << "This Event has trigger type " << hlttrigger << "==" << ftrigger_type
 		       << "  and passes filter.";
       passesFilter=true;
       if(fexcluded_triggers.size()==0) break;//no need to keep looking through the triggers if none are excluded
@@ -144,27 +144,28 @@ bool sbnd::SBNDGateFilter::ApplyGateFilter(std::vector<uint64_t> triggers)//artd
 
   if (passesFilter) return true;
   
-  TLOG(TLVL_DEBUG) << "This Event has trigger type { " << trigstring.c_str()  << "} ==" 
+  TLOG(TLVL_WARN) << "This Event has trigger type { " << trigstring.c_str()  << "} ==" 
 		   << ftrigger_type << " and fails filter.";
   return false;
 
 }
 
-*/
+
 
 bool sbnd::SBNDGateFilter::filter(art::Event & evt)
 {
-  TLOG(TLVL_ERROR) << "filter:l157";
+  TLOG_ENTEX(TLVL_DEBUG);// << "SBNDGateFilter::filter" 
+  TLOG(TLVL_DEBUG) << "filter:l157";
   art::EventNumber_t eventNumber = evt.event();
 
   // Look for fragments
   // HLT trigger words: 1-BNB Zero bias, 2-BNB+Light, 
   // 3-Offbeam Zero bias, 4-Offbeam+Light, 5-Crossing Muon
  
-  TLOG(TLVL_ERROR) << "filter:l163";
-  /*  art::InputTag itag(fInputLabel, fInputContainerInstance);
+  TLOG(TLVL_DEBUG) << "filter:l163";
+  art::InputTag itag(fInputLabel, fInputContainerInstance);
   auto cont_frags = evt.getHandle<artdaq::Fragments>(itag);
-  TLOG(TLVL_ERROR) << "filter: got some sort of fragments maybe";
+  TLOG(TLVL_DEBUG) << "filter: got some sort of fragments maybe";
 
   if(cont_frags) 
   {
@@ -176,6 +177,7 @@ bool sbnd::SBNDGateFilter::filter(art::Event & evt)
       artdaq::ContainerFragment* contf2=&contf;
       std::vector hlts=GetAllHLTs(&contf);
       filter_result = ApplyGateFilter(hlts);//&contf);//<artdaq::ContainerFragment>(contf);
+      TLOG(TLVL_DEBUG) << "filter:l179";
       return filter_result;
     }
   }
@@ -185,8 +187,8 @@ bool sbnd::SBNDGateFilter::filter(art::Event & evt)
     TLOG(TLVL_WARN) << "Run " << evt.run() << ", subrun " << evt.subRun() << ", event " << eventNumber << " has zero HLT word Fragments in module, not separating by beam type!";
   }
 
+  TLOG(TLVL_DEBUG) << "filter:l89";
   
-  */
   return false;
 }
 
