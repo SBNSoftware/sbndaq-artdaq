@@ -61,7 +61,7 @@ constexpr auto onesecond_ns = uint64_t{1'000'000'000};
 constexpr auto as_seconds = uint64_t{1'000'000'000};
 constexpr auto as_milliseconds = uint64_t{1'000'000};
 constexpr auto as_microseconds = uint64_t{1'000};
-constexpr auto max_sample_time_lag_ns = 10'000'000; 
+constexpr auto max_sample_time_lag_ns = 100'000'000; 
 uint64_t hosttime();
 uint64_t hosttime_us();
 uint64_t hosttime_ns();
