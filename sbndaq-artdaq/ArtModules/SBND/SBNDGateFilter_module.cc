@@ -131,7 +131,7 @@ bool sbnd::SBNDGateFilter::ApplyGateFilter(std::vector<uint64_t> triggers)//artd
     }//end loop over excluded triggers
     
     if( hlttrigger==ftrigger_type || ftrigger_type==-1){
-      TLOG(TLVL_INFO) << "This Event has trigger type " << hlttrigger << "==" << ftrigger_type
+      TLOG(TLVL_DEBUG) << "This Event has trigger type " << hlttrigger << "==" << ftrigger_type
 		       << "  and passes filter.";
       passesFilter=true;
       if(fexcluded_triggers.size()==0) break;//no need to keep looking through the triggers if none are excluded
@@ -144,7 +144,7 @@ bool sbnd::SBNDGateFilter::ApplyGateFilter(std::vector<uint64_t> triggers)//artd
 
   if (passesFilter) return true;
   
-  TLOG(TLVL_WARN) << "This Event has trigger type { " << trigstring.c_str()  << "} ==" 
+  TLOG(TLVL_DEBUG) << "This Event has trigger type { " << trigstring.c_str()  << "} ==" 
 		   << ftrigger_type << " and fails filter.";
   return false;
 
