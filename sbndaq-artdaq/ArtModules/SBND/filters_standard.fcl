@@ -1,0 +1,44 @@
+
+bnbzerobiasfilter: {
+  module_type: "SBNDGateFilter" 
+  raw_data_label: "daq" 
+  #BNB  #zerobias
+  trigger_type: 1 #zerobias
+}
+
+bnblightfilter: {
+  module_type: "SBNDGateFilter" 
+  raw_data_label: "daq" 
+  #BNB
+  trigger_type: 2 #light
+}
+
+offbeamzerobiasfilter: {
+  module_type: "SBNDGateFilter" 
+  raw_data_label: "daq" 
+  #OffBeamBNB
+  trigger_type: 3 #zerobias
+}
+
+
+offbeamlightfilter: {
+  module_type: "SBNDGateFilter" 
+  raw_data_label: "daq" 
+  #OffBeamBNB
+  trigger_type: 4 #light
+  #light
+}
+
+crossingmuonfilter: {
+  module_type: "SBNDGateFilter" 
+  raw_data_label: "daq" 
+  trigger_type: 5
+  #crossing muon... might need more of these for different subsets of crossing muon
+}
+
+randomtriggerfilter: {
+  module_type: "SBNDGateFilter" 
+  raw_data_label: "daq" 
+  trigger_type: 0
+  #random strobe trigger from the PTB itself
+}
