@@ -176,6 +176,8 @@ class TDCCard : public Device {
   unsigned int deviceid = 0;
   int polltime_ms = 50;
   bool blocking_reads = true;
+  uint64_t max_time_gap_ns = 160;
+
 
   // used internally
   uint64_t total_bytes_read = 0;
