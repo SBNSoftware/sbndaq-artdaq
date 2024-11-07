@@ -50,7 +50,7 @@ public:
 
 private:
   std::string fInputLabel, fInputContainerInstance, fInputNonContainerInstance;
-  int ftrigger_type;
+  std::vector<int> ftrigger_type;
   std::vector<uint64_t> fexcluded_triggers;
 };
 
@@ -59,7 +59,7 @@ sbnd::SBNDGateFilter::SBNDGateFilter(fhicl::ParameterSet const & pset)
     fInputLabel(pset.get<std::string>("InputLabel", "daq")),
     fInputContainerInstance(pset.get<std::string>("InputContainerInstance", "ContainerPTB")), 
     fInputNonContainerInstance(pset.get<std::string>("InputNonContainerInstance", "PTB")), 
-    ftrigger_type(pset.get<int>("trigger_type",-1)),
+    ftrigger_type(pset.get<std::vector<int>>("trigger_type",{-1})),
     fexcluded_triggers( pset.get< std::vector<uint64_t> >("excluded_triggers", {}))
 {
 }
@@ -108,35 +108,45 @@ bool sbnd::SBNDGateFilter::ApplyGateFilter(std::vector<uint64_t> triggers)//artd
 {
 
   TLOG(TLVL_DEBUG) << "ApplyGateFilter function start";
+
+  std::string trigTypeList="{";//create list of the selected trigger types
+  for (int trigger_type: ftrigger_type ){//get a string with the list of all the trigger types we're looking for 
+    trigTypeList+=trigger_type+",";
+  }
+  trigTypeList+="}";
+
+
+
   if(triggers.size()==0){
     TLOG(TLVL_WARNING) << "This event has no HLT fragments or none with trigger numbers then 20. It fails filter.";
     return false;
   }
 
   if(triggers.size()>1){
-    TLOG(TLVL_INFO) << "This event has "<<triggers.size()<<" HLTs in it. Filter will pass if any are trigger type == "<<ftrigger_type<<".";
+    TLOG(TLVL_INFO) << "This event has "<<triggers.size()<<" HLTs in it. Filter will pass if any are trigger type == "<<trigTypeList.c_str()<<".";
   }
 
   std::string trigstring="";
   bool passesFilter=false;
 
-  for(int hlttrigger: triggers){
+  for(int hlttrigger: triggers){//Loop over the HLTs found in the fragment
     if(fexcluded_triggers.size()>0){//Need to loop through all of the excluded trigger types to check for them for each present HLT 
-      for(  int excluded_trigger : fexcluded_triggers){
+      for(  int excluded_trigger : fexcluded_triggers){//loop over the list of triggers to exclude from the fcl
 	if (hlttrigger==excluded_trigger){
 	  TLOG(TLVL_DEBUG) << "This Event contains an excluded trigger type " << hlttrigger << "==" << excluded_trigger<< " so fails the filter.";
 	  return false;
 	}
       }
     }//end loop over excluded triggers
-    
-    if( hlttrigger==ftrigger_type || ftrigger_type==-1){
-      TLOG(TLVL_DEBUG) << "This Event has trigger type " << hlttrigger << "==" << ftrigger_type
-		       << "  and passes filter.";
-      passesFilter=true;
-      if(fexcluded_triggers.size()==0) break;//no need to keep looking through the triggers if none are excluded
+    for( int trigger_type: ftrigger_type){//loop over the list of triggers to include from the fcl
+      if( hlttrigger==trigger_type || trigger_type==-1){
+	TLOG(TLVL_DEBUG) << "This Event has trigger type " << hlttrigger << "==" << trigstring.c_str() //trigger_type
+			 << "  and passes filter.";
+	passesFilter=true;
+	if(fexcluded_triggers.size()==0) break;//no need to keep looking through the triggers if none are excluded
+      }
+      trigstring+= std::to_string(hlttrigger)+", ";
     }
-    trigstring+= std::to_string(hlttrigger)+", ";
   }//end loop hlts 
 
 
@@ -145,7 +155,7 @@ bool sbnd::SBNDGateFilter::ApplyGateFilter(std::vector<uint64_t> triggers)//artd
   if (passesFilter) return true;
   
   TLOG(TLVL_DEBUG) << "This Event has trigger type { " << trigstring.c_str()  << "} ==" 
-		   << ftrigger_type << " and fails filter.";
+		   << trigTypeList.c_str() << " and fails filter.";
   return false;
 
 }
