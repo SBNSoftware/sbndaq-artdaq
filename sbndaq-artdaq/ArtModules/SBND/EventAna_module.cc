@@ -7,7 +7,6 @@
 // File:        EventAna_module.cc
 // Description: Prints out information about each event.
 ////////////////////////////////////////////////////////////////////////
-
 #include "art/Framework/Core/EDAnalyzer.h"
 #include "art/Framework/Core/ModuleMacros.h"
 #include "art/Framework/Principal/Event.h"
@@ -98,6 +97,10 @@ public:
       fhicl::Name("include_ptb"),
       fhicl::Comment("look for ptb fragments")
     };
+    fhicl::Atom<bool> include_ntb {
+      fhicl::Name("include_ntb"),
+      fhicl::Comment("look for ntb fragments")
+    };
     fhicl::Atom<bool> include_tdc {
       fhicl::Name("include_tdc"),
 	fhicl::Comment("look for spec tdc fragments (only save the nanoseconds fraction) true/false"),
@@ -108,6 +111,12 @@ public:
 	fhicl::Comment("also save the full timestamp in utc format"),
 	false
 	};
+    fhicl::Atom<bool> choputctime {
+      fhicl::Name("choputctime"),
+	fhicl::Comment("Output the UTC timestamps with the fronts chopped off, ie only include the last 12 digits (100s of seconds) to make some quick analysis simpilier "),
+	false
+	};
+
   fhicl::Atom<bool> include_crtsoft {
     fhicl::Name("include_crtsoft"),
   fhicl::Comment("save the crt software trigger metric variables"),
@@ -146,10 +155,12 @@ private:
   void analyze_wr_fragment_dio(artdaq::Fragment & frag);
   void analyze_bern_fragment(artdaq::Fragment & frag);
   void analyze_tdc_fragment(artdaq::Fragment & frag);
+  void analyze_ntb_fragment(artdaq::Fragment & frag);
   // include ptb private classes
   void extract_triggers(artdaq::Fragment & frag);
   void reset_ptb_variables();
   void reset_caen_variables();
+  uint64_t chopTimeStamp(uint64_t time);
 
   //--default values
   uint32_t nChannels;//    = 16;
@@ -172,6 +183,8 @@ private:
   std::vector<int> TTT;  // will be set to value in CAEN fragement header
   std::vector<int> TTT_ns;
   std::vector<uint64_t>  caen_frag_ts;
+  std::vector<uint64_t>   ntb_frag_ts; //this is never a vector. if the ntb is in it it has to be pushing, but I don't want to fix it right now for reasons
+
   std::vector<uint64_t>  fTicksVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec;
   std::vector< std::vector<uint16_t> >  fWvfmsVec_ch0;
@@ -275,7 +288,8 @@ private:
   std::vector<uint64_t>  timestamp               ; //absolute timestamp
   std::vector<uint>  last_accepted_timestamp ; //timestamp of previous accepted hit
   std::vector<int>  lost_hits               ; //number of lost hits from the previous one
-
+  std::vector<uint64_t>  t1_timestamp_utc;//absolute timestamp of t1 reset. (picking just one feb)
+  
   // CRT metadata
   std::vector<int>  mac5; //last 8 bits of FEB mac5 address
   std::vector<uint>  run_start_time;
@@ -299,6 +313,7 @@ private:
   std::vector<uint64_t> ftdc_ch3_utc;
   std::vector<uint64_t> ftdc_ch4_utc;
 
+
   //information from fragment header
   std::vector<int>  sequence_id;
 
@@ -313,20 +328,23 @@ private:
   bool fcrt_keepall;
   bool fverbose;
   bool finclude_ptb;
+  bool finclude_ntb;
+
+  bool fchoputctime;
   bool finclude_crtsoft;
   bool finclude_pmtsoft;
   std::string fcrtSoftTriggerModuleLabel;
   std::string fpmtSoftTriggerModuleLabel;
 
-
   // including ptb information on the tree
   bool unknown_or_error_word; // flag to indicate the event has
   int ts_word_count;
   int hlt_word_count;
-  uint64_t ptb_frag_ts;
+  std::vector<uint64_t> ptb_frag_ts;
   std::vector<uint64_t> llt_trigger;
   std::vector<uint64_t> llt_ts;
   std::vector<uint64_t> hlt_trigger;
+  std::vector<uint64_t> hlt_trigger_simplified;
   std::vector<uint64_t> hlt_ts;
   std::vector<uint16_t> crt_status;
   std::vector<uint16_t> beam_status;
@@ -357,6 +375,8 @@ sbndaq::EventAna::EventAna(EventAna::Parameters const& pset): art::EDAnalyzer(ps
   fShift = pset().Shift();
   finclude_wr = pset().include_wr();
   finclude_tdc = pset().include_tdc();
+  finclude_ntb= pset().include_ntb();
+  fchoputctime= pset().choputctime();
   ftdc_utc = pset().tdc_utc();
   fWindow = pset().window_wr();
   if (fWindow<0 || fWindow>1000000000) {
@@ -393,7 +413,8 @@ void sbndaq::EventAna::beginJob()
     events->Branch("caen_frag_ts",&caen_frag_ts);
     if (fcaen_keepwaveforms) {
       events->Branch("fTicksVec",&fTicksVec);
-      events->Branch("fWvfmsVec",&fWvfmsVec);
+      //events->Branch("fWvfmsVec",&fWvfmsVec);
+      events->Branch("fWvfmsVec",&fWvfmsVec);//why had  I commented this out?
       events->Branch("fWvfmsVec_ch0",&fWvfmsVec_ch0);
       events->Branch("fWvfmsVec_ch1",&fWvfmsVec_ch1);
       events->Branch("fWvfmsVec_ch2",&fWvfmsVec_ch2);
@@ -450,6 +471,9 @@ void sbndaq::EventAna::beginJob()
       events->Branch("ftdc_ch4_utc",&ftdc_ch4_utc);
     }
   }
+  if (finclude_ntb){
+        events->Branch("ntb_frag_ts",&ntb_frag_ts);
+  }
   if (finclude_berncrt) {
     events->Branch("flags",         &flags);
     events->Branch("coinc",         &coinc);
@@ -492,6 +516,7 @@ void sbndaq::EventAna::beginJob()
     events->Branch("max_chan",        &max_chan);
     if (fcrt_keepall) {
       events->Branch("timestamp",     &timestamp);
+      events->Branch("t1_timestamp_utc",     &t1_timestamp_utc);
       events->Branch("lostcpu",       &lostcpu);
       events->Branch("lostfpga",      &lostfpga);
       events->Branch("feb_hit_number",&feb_hit_number);
@@ -513,9 +538,10 @@ void sbndaq::EventAna::beginJob()
     events->Branch("unknown_or_error_word", &unknown_or_error_word);
     events->Branch("ts_word_count", &ts_word_count);
     events->Branch("hlt_word_count", &hlt_word_count);
-    events->Branch("ptb_frag_ts", &ptb_frag_ts, "ptb_frag_ts/l");
+    events->Branch("ptb_frag_ts", &ptb_frag_ts);
     // Trigger words and TS
     events->Branch("hlt_trigger", &hlt_trigger);
+    events->Branch("hlt_trigger_simplified", &hlt_trigger_simplified);
     events->Branch("hlt_ts",      &hlt_ts);
     events->Branch("llt_trigger", &llt_trigger);
     events->Branch("llt_ts",      &llt_ts);
@@ -581,12 +607,12 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 
 
   feb_hit_number.clear()       ;   timestamp.clear()      ;    last_accepted_timestamp.clear();
-  lost_hits.clear()            ;   run_start_time.clear() ;    this_poll_start.clear()        ;   this_poll_end.clear();
+  lost_hits.clear()            ;   run_start_time.clear() ;    this_poll_start.clear()        ;   this_poll_end.clear(); t1_timestamp_utc.clear();
   last_poll_start.clear()      ;   last_poll_end.clear()  ;    system_clock_deviation.clear();    feb_hits_in_poll.clear();
   feb_hits_in_fragment.clear() ;   sequence_id.clear();
 
   /************************************************************************************************/
-
+  ntb_frag_ts.clear();
   // Reset PTB variables
   reset_ptb_variables();
 
@@ -755,7 +781,35 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
        }
      }
    } // if includes ptb
-
+   //********************************************************
+   //NEVIS TB timestamp
+ 
+   if (finclude_ntb) {
+     for (auto handle : fragmentHandles) {
+       if (!handle.isValid() || handle->size() == 0) continue;      
+       if (handle->front().type() == artdaq::Fragment::ContainerFragmentType) {
+	 //Container fragment
+	 for (auto cont : *handle) {
+	   artdaq::ContainerFragment contf(cont);
+	   if (contf.fragment_type()==sbndaq::detail::FragmentType::NevisTB){//NEVISTB) {
+	     if (fverbose) 	  std::cout << "    Found " << contf.block_count() << " NEVISTB Fragments in container " << std::endl;
+	     for (size_t ii = 0; ii < contf.block_count(); ++ii)
+	       analyze_ntb_fragment(*contf[ii].get());
+	   }
+	 }
+       }
+       else {
+	 //normal fragment
+	 if (handle->front().type()==sbndaq::detail::FragmentType::NevisTB){//NEVISTB) {
+	   for (auto frag : *handle)
+	     analyze_ntb_fragment(frag);
+	 }
+       }
+     } // loop over frag handles
+     /************************************************************************************************/
+    
+   } // if (include_ntb)
+  
    /************************************************************************************************/
    // Save Software Trigger Metrics
 
@@ -778,6 +832,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
     if (evt.getByLabel(fpmtSoftTriggerModuleLabel, pmtSoftTriggerHandle)){
       const sbnd::trigger::pmtSoftwareTrigger &pmtSoftTriggerMetrics = (*pmtSoftTriggerHandle);
       _pmtSoftTrigger_foundBeamTrigger = pmtSoftTriggerMetrics.foundBeamTrigger;
+      //_pmtSoftTrigger_tts = pmtSoftTriggerMetrics.triggerTimestamp;//my version...
       _pmtSoftTrigger_tts = pmtSoftTriggerMetrics.trig_ts;
       _pmtSoftTrigger_promptPE = pmtSoftTriggerMetrics.promptPE;
       _pmtSoftTrigger_prelimPE = pmtSoftTriggerMetrics.prelimPE;
@@ -900,7 +955,7 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   if (fverbose) std::cout <<  "     timestamp is  " << frag.timestamp() << std::endl;
   if (fverbose) std::cout <<  "     seq ID is " << frag.sequenceID() << std::endl;
 
-  caen_frag_ts.push_back(frag.timestamp());
+  caen_frag_ts.push_back( chopTimeStamp(frag.timestamp()) );
 
   CAENV1730Fragment bb(frag);
   auto const* md = bb.Metadata();
@@ -1269,7 +1324,9 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
       system_clock_deviation.push_back(    md->system_clock_deviation());
       feb_hits_in_poll.push_back(          md->hits_in_poll());
       feb_hits_in_fragment.push_back(      md->hits_in_fragment());
-      timestamp.push_back(                 bevt->timestamp);
+      timestamp.push_back( chopTimeStamp(  bevt->timestamp) ); 
+      if(bevt->flags==11) t1_timestamp_utc.push_back( chopTimeStamp(  bevt->timestamp) ); 
+      else t1_timestamp_utc.push_back( 0 ); 
       //event info
       lostcpu.push_back(                   bevt->lostcpu);
       lostfpga.push_back(                  bevt->lostfpga);
@@ -1367,7 +1424,8 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
 
 // Extract the PTB words/data from the artDAQ fragments
 void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
-
+  //ptb_frag_ts = chopTimeStamp( frag.timestamp() );
+  ptb_frag_ts.emplace_back( chopTimeStamp( frag.timestamp() ) );
   // Construct PTB fragment overlay class giving us access to all the helpful decoder functions
   CTBFragment ptb_fragment(frag);
   
@@ -1407,6 +1465,7 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
 
   // Loop through all the PTB words in the fragment, casting to
   // one of the 5 word types. The 3 Msb hold the word type
+
   for ( size_t i = 0; i < ptb_fragment.NWords(); i++ ) {
     if (fverbose) std::cout << "PTB Word type [" << ptb_fragment.Word(i)->word_type << "]" << std::endl;
     switch ( ptb_fragment.Word(i)->word_type ) {
@@ -1420,18 +1479,32 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
                   << " Timestamp: "          << ptb_fragment.TimeStamp(i) << std::endl;
         break;
       case 0x1 : // LL Trigger
-        if (fverbose) std::cout << "LLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
-        llt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF ); // bit map of asserted LLTs
+        {
+	  if (fverbose) std::cout << "LLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
+        //llt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF ); // bit map of asserted LLTs
+	uint64_t llttrigger=ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF;
+	//llttrigger= log(llttrigger)/log(2); //convert it out of binary
+        llt_trigger.emplace_back(llttrigger); 
+        llt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) ); // Timestamp of the word
         llt_ts.emplace_back( ptb_fragment.TimeStamp(i) * 20 ); // Timestamp of the word
+
         break;
+	}
       case 0x2 : // HL Trigger
-        if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
+        {
+	  if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
         if (fverbose) std::cout << "HLT ts: " << ptb_fragment.TimeStamp(i) << std::endl;
-        hlt_trigger.emplace_back( ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF );
-        hlt_ts.emplace_back( ptb_fragment.TimeStamp(i) * 20 );
-        ptb_frag_ts = frag.timestamp();
+	uint64_t hlttrigger=ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF;
+	//hlttrigger= log(hlttrigger)/log(2); //convert it out of binary
+        hlt_trigger.emplace_back(hlttrigger); 
+				 //ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF );
+	hlt_trigger_simplified.emplace_back( log(1.*hlttrigger)/log(2.) );
+        hlt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) );
+        //ptb_frag_ts = chopTimeStamp( frag.timestamp() );
+	//ptb_frag_ts.emplace_back( chopTimeStamp( frag.timestamp() ) ); 
         hlt_word_count++;
         break;
+	}
       case 0x3 : // Channel Status
         // Each PTB input gets a bit map e.g. CRT has 14 inputs and is 14b
         // (1 is channel asserted 0 otherwise)
@@ -1451,8 +1524,8 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
         std::cout << "Unknown PTB word type = " << ptb_fragment.Word(i)->word_type << std::endl;
     }
   }
+}  // extract trigger fragments for the PTBc
 
-}  // extract trigger fragments for the PTB
 
 void sbndaq::EventAna::reset_ptb_variables() {
 
@@ -1460,10 +1533,11 @@ void sbndaq::EventAna::reset_ptb_variables() {
   unknown_or_error_word = false;
   ts_word_count = 0;
   hlt_word_count = 0;
-  ptb_frag_ts = 0;
+  ptb_frag_ts.clear();
   llt_trigger.clear();
   llt_ts.clear();
   hlt_trigger.clear();
+  hlt_trigger_simplified.clear();
   hlt_ts.clear();
   crt_status.clear();
   beam_status.clear();
@@ -1486,13 +1560,12 @@ void sbndaq::EventAna::analyze_tdc_fragment(artdaq::Fragment & frag)  {
   if (ts->vals.channel==2)  ftdc_ch2.emplace_back(ts->nanoseconds());
   if (ts->vals.channel==3)  ftdc_ch3.emplace_back(ts->nanoseconds());
   if (ts->vals.channel==4)  ftdc_ch4.emplace_back(ts->nanoseconds());
-
   if(ftdc_utc){
-    if (ts->vals.channel==0)  ftdc_ch0_utc.emplace_back(ts->timestamp_ns());
-    if (ts->vals.channel==1)  ftdc_ch1_utc.emplace_back(ts->timestamp_ns());
-    if (ts->vals.channel==2)  ftdc_ch2_utc.emplace_back(ts->timestamp_ns());
-    if (ts->vals.channel==3)  ftdc_ch3_utc.emplace_back(ts->timestamp_ns());
-    if (ts->vals.channel==4)  ftdc_ch4_utc.emplace_back(ts->timestamp_ns());
+    if (ts->vals.channel==0)  ftdc_ch0_utc.emplace_back( chopTimeStamp( ts->timestamp_ns() ) );
+    if (ts->vals.channel==1)  ftdc_ch1_utc.emplace_back( chopTimeStamp( ts->timestamp_ns() ) );
+    if (ts->vals.channel==2)  ftdc_ch2_utc.emplace_back( chopTimeStamp( ts->timestamp_ns() ) );
+    if (ts->vals.channel==3)  ftdc_ch3_utc.emplace_back( chopTimeStamp( ts->timestamp_ns() ) );
+    if (ts->vals.channel==4)  ftdc_ch4_utc.emplace_back( chopTimeStamp( ts->timestamp_ns() ) );
   }
 
   if(fverbose){
@@ -1519,4 +1592,19 @@ void sbndaq::EventAna::analyze_tdc_fragment(artdaq::Fragment & frag)  {
   };
 
 }//end of analyze tdc timstamp fragment
+
+void sbndaq::EventAna::analyze_ntb_fragment(artdaq::Fragment & frag)  {
+  ntb_frag_ts.push_back( chopTimeStamp( frag.timestamp() ) );
+  //ntb_frag_ts=frag.timestamp;
+}//end of analyze ntb fragment
+
+uint64_t sbndaq::EventAna::chopTimeStamp(uint64_t time){
+  if (!fchoputctime) return time;
+  //only keep the utc time %1e13 to make it easier to hand scan choputctime)
+  else{ 
+    uint64_t limit=1e13;
+    return time%limit;
+  }
+}
+
 DEFINE_ART_MODULE(sbndaq::EventAna)
