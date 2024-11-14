@@ -378,7 +378,8 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   if ( prevFrames[slot] > frame )
   {
     rollCounters[slot] +=1;
-    TLOG(TLVL_INFO) << "TPC boardreader: Trigger frames rolled over this many times: " << rollCounters[slot] << "for FEM Slot: " << slot;
+    TLOG(TLVL_INFO) << "TPC boardreader: Trigger frames rolled over this many times: " << rollCounters[slot] << " for FEM Slot: " << slot ;
+    TLOG(TLVL_INFO) << "FEM Slot: " << slot << ", Prev Frame: " << prevFrames[slot] << ", Current Frame: " << frame;
   }
 
   corrFrame = frame + rollCounters[slot]*16777216;  //new frame is uncorrected frame + 2^24 * number_of_rollovers
