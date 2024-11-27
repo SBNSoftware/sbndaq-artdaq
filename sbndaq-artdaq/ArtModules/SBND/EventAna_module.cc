@@ -1493,17 +1493,20 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
       case 0x2 : // HL Trigger
         {
 	  if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
-        if (fverbose) std::cout << "HLT ts: " << ptb_fragment.TimeStamp(i) << std::endl;
-	uint64_t hlttrigger=ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF;
-	//hlttrigger= log(hlttrigger)/log(2); //convert it out of binary
-        hlt_trigger.emplace_back(hlttrigger); 
-				 //ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF );
-	hlt_trigger_simplified.emplace_back( log(1.*hlttrigger)/log(2.) );
-        hlt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) );
-        //ptb_frag_ts = chopTimeStamp( frag.timestamp() );
+	  if (fverbose) std::cout << "HLT ts: " << ptb_fragment.TimeStamp(i) << std::endl;
+	  uint64_t hlt_mask=ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF;
+	  hlt_trigger.emplace_back(hlttrigger_mask); 
+	  while (hlt_mask) {
+	    uint64_t hlttrigger = __builtin_ctzll(hlt_mask); // Find the least significant set bit
+	    if (fverbose) std::cout<<"hlt_mask: "<<hlt_mask<<", hlt_trigger:" <<hlttrigger<<", log(hlt_mask)/log(2.): "<<log(1.*hlt_mask)/log(2.)<<endl;
+	    hlt_mask &= (hlt_mask - 1); // Clear the least significant set bit
+	    hlt_trigger_simplified.emplace_back(hlttrigger); //log(1.*hlttrigger)/log(2.) );
+	    hlt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) );
+	  }
+	  //ptb_frag_ts = chopTimeStamp( frag.timestamp() );
 	//ptb_frag_ts.emplace_back( chopTimeStamp( frag.timestamp() ) ); 
-        hlt_word_count++;
-        break;
+	  hlt_word_count++;
+	  break;
 	}
       case 0x3 : // Channel Status
         // Each PTB input gets a bit map e.g. CRT has 14 inputs and is 14b
