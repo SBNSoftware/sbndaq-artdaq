@@ -15,6 +15,8 @@ cet_make_library(
     TDCTimeUtils.cc
     StringUtils.cc
     TAI2UTCAdjustment.cc
+    SPECTDCFragmentPreProcessor.cc
+    SPECTDCFragmentPreProcessor_utils.cc
   LIBRARIES
     ${LIBRARY_CORE_LIB_LIST}
     sbndaq-artdaq_fmctdclib
