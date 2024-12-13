@@ -1,6 +1,3 @@
-//-------------------------------------------------
-//---------------------------------------
-
 ////////////////////////////////////////////////////////////////////////
 // Class:       EventAna
 // Module Type: analyzer
@@ -36,6 +33,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <memory>
 #include <fstream>
 #include <iomanip>
 #include <vector>
@@ -346,6 +344,7 @@ private:
   std::vector<uint64_t> hlt_trigger;
   std::vector<uint64_t> hlt_trigger_simplified;
   std::vector<uint64_t> hlt_ts;
+  std::vector<uint64_t> hlt_gateCount;
   std::vector<uint16_t> crt_status;
   std::vector<uint16_t> beam_status;
   std::vector<uint16_t> mtca_status;
@@ -543,6 +542,7 @@ void sbndaq::EventAna::beginJob()
     events->Branch("hlt_trigger", &hlt_trigger);
     events->Branch("hlt_trigger_simplified", &hlt_trigger_simplified);
     events->Branch("hlt_ts",      &hlt_ts);
+    events->Branch("hlt_gateCount", &hlt_gateCount);
     events->Branch("llt_trigger", &llt_trigger);
     events->Branch("llt_ts",      &llt_ts);
     // Channel status words & TS
@@ -582,8 +582,9 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
 {
   fRun = evt.run();
   fEvent = evt.event();
-  if (fverbose)
-    std::cout << "\n\nRun " << fRun << " event " << fEvent << std::endl;
+  //if (fverbose)
+   
+ std::cout << "\n\nRun " << fRun << " event " << fEvent << std::endl;
 
   /************************************************************************************************/
   // need to clear tree variables at the beginning of the event
@@ -657,7 +658,7 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
       else {
 	//normal fragment
 	if (handle->front().type()==sbndaq::detail::FragmentType::CAENV1730) {
-	  if (fverbose) 	std::cout << "   found normal caen fragments " << handle->size() << std::endl;
+	  if (fverbose)	std::cout << "   found normal caen fragments " << handle->size() << std::endl;
 	  fWvfmsVec.resize(16*handle->size());
  	  for (auto frag : *handle)
 	    analyze_caen_fragment(frag);
@@ -690,9 +691,9 @@ void sbndaq::EventAna::analyze(const art::Event& evt)
       }
     } // loop over frag handles
 
-    if (fverbose) std::cout << " WR ch 0 " << fnstamps0 << " WR ch 1 " << fnstamps1 << " WR ch 2 " << fnstamps2 << " WR ch 3 " <<
+    if (fverbose){ std::cout << " WR ch 0 " << fnstamps0 << " WR ch 1 " << fnstamps1 << " WR ch 2 " << fnstamps2 << " WR ch 3 " <<
 		    fnstamps3 << " WR ch 4 " << fnstamps4 << std::endl;
-
+    }
   } // if (include_wr)
 
 
@@ -905,33 +906,36 @@ void sbndaq::EventAna::analyze_wr_fragment_dio(artdaq::Fragment & frag)  {
       int secdiff=0;
       if (fragdata.timeStamp[i].tv_sec>first_wr_ch1) secdiff=this_time_sec-first_wr_ch1;
       fWR_ch1.emplace_back((int)this_time_ns+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " PMT" <<
+      if (fverbose){ 	  std::cout << " Event " << fEvent << " PMT" <<
 			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
 			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
 			    " TTT " << std::setw(9) << caenTTT <<
 			    " TTT diff  " << std::setw(9)  << diff << std::endl;
+      }
     }
     if (fabs(diff)< 50000000 && fragdata.channel==2) 	{
       if (first_wr_ch2==0) first_wr_ch2=fragdata.timeStamp[i].tv_sec;
       int secdiff=0;
       if (fragdata.timeStamp[i].tv_sec>first_wr_ch2) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch2;
       fWR_ch2.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " RWM" <<
+      if (fverbose){ 	  std::cout << " Event " << fEvent << " RWM" <<
 			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
 			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
 			    " TTT " << std::setw(9) << caenTTT <<
 			    " TTT diff  " << std::setw(9)  << diff << std::endl;
+      }
     }
     if (fragdata.channel==0 ) 	{
       if (first_wr_ch0==0) first_wr_ch0=fragdata.timeStamp[i].tv_sec;
       int secdiff=0;
       if (fragdata.timeStamp[i].tv_sec>first_wr_ch0) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch0;
       fWR_ch0.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " PPS" <<
+      if (fverbose){ 	  std::cout << " Event " << fEvent << " PPS" <<
 			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
 			    " " << std::setw(9) << fragdata.timeStamp[i].tv_nsec <<
 			    " TTT " << std::setw(9) << caenTTT <<
 			    " TTT diff  " << std::setw(9)  << diff << std::endl;
+      }
     }
     // if (diff<(uint)fWindow && fragdata.channel==3 )
     if ( fabs(diff)<5000000 && fragdata.channel==3) 	 {
@@ -939,11 +943,12 @@ void sbndaq::EventAna::analyze_wr_fragment_dio(artdaq::Fragment & frag)  {
       int secdiff=0;
       if (fragdata.timeStamp[i].tv_sec>first_wr_ch3) secdiff=fragdata.timeStamp[i].tv_sec-first_wr_ch3;
       fWR_ch3.emplace_back((int)fragdata.timeStamp[i].tv_nsec+1e9*secdiff);
-      if (fverbose) 	  std::cout << " Event " << fEvent << " TRIG" <<
+      if (fverbose){ 	  std::cout << " Event " << fEvent << " TRIG" <<
 			    " Timestamp " << i << "  : " << std::setw(16) << fragdata.timeStamp[i].tv_sec <<
 			    " " << std::setw(10) << fragdata.timeStamp[i].tv_nsec <<
 			    " TTT " << std::setw(10) << caenTTT <<
 			    " TTT diff  " << std::setw(10)  << diff << std::endl;
+      }
     }
   }
   std::cout << " ----------------------- " << std::endl;
@@ -964,7 +969,7 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
 
   int fragId = static_cast<int>(frag.fragmentID());
   ffragID.push_back(fragId);
-  //
+  
   if (fverbose)      std::cout << "\tFrom CAEN header, event counter is "  << header.eventCounter   << "\n";
   if (fverbose)      std::cout << "\tFrom CAEN header, triggerTimeTag is " << header.triggerTimeTag << "\n";
   if (fverbose)       std::cout << "\tFrom CAEN header, board id is "       << header.boardID       << "\n";
@@ -982,11 +987,13 @@ void sbndaq::EventAna::analyze_caen_fragment(artdaq::Fragment & frag)  {
   hTriggerTimeTag->Fill((int)t0);
   nt_header->Fill(fEvent,header.eventCounter,t0);
   nChannels = md->nChannels;
-  if (fverbose)       std::cout << "\tNumber of channels: " << nChannels << "\n";
+  if (fverbose){      std::cout << "\tNumber of channels: " << nChannels << "\n";
+  }
 
   //--get the number of 32-bit words (quad_bytes) from the header
   uint32_t ev_size_quad_bytes = header.eventSize;
-  if (fverbose)       std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
+  if (fverbose){       std::cout << "Event size in quad bytes is: " << ev_size_quad_bytes << "\n";
+  }
   uint32_t evt_header_size_quad_bytes = sizeof(CAENV1730EventHeader)/sizeof(uint32_t);
   uint32_t data_size_double_bytes = 2*(ev_size_quad_bytes - evt_header_size_quad_bytes);
   uint32_t wfm_length = data_size_double_bytes/nChannels;
@@ -1392,6 +1399,8 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
     max_adc.push_back({max, bevt->adc[max_other_sipm_id]});
     max_chan.push_back(max_id);
 
+    
+    
     if (fverbose) {
       std::cout << "  mac5                "     <<    (int)(md->MAC5())                   << std::endl;
       std::cout << "  run_start_time      "     <<  md->run_start_time()              << std::endl;
@@ -1414,13 +1423,37 @@ void sbndaq::EventAna::analyze_bern_fragment(artdaq::Fragment & frag)  {
       std::cout << "  lost_hits              "  <<     bevt->lost_hits               << std::endl;
 
       for(int ch=0; ch<32; ch++)
-	std::cout << "channel " << ch << " has adc value " << bevt->adc[ch] << std::endl;
+      	std::cout << "channel " << ch << " has adc value " << bevt->adc[ch] << std::endl;
     }// if verbose
-
+    
 
   }// end loop over fragments
 
 }//analyze_bern_fragment
+
+
+void print_fragment_words(artdaq::Fragment& frag, size_t wordNum, size_t bitsPerWord ) {
+  
+  const __uint8_t* data_ptr = reinterpret_cast<const __uint8_t*>(frag.dataBegin());
+  size_t wordCount = frag.dataSizeBytes() / (bitsPerWord / 8);
+  for (size_t w = 0; w < wordCount; w++) {
+    // Check if the current word index matches the specified word index
+    if (w == wordNum) {
+        // Print the bits for the specified n-bit word
+      for (int i = (bitsPerWord-1); i >= 0; --i) {
+            // Calculate the byte index and bit index
+	size_t byteIndex = w * (bitsPerWord / 8) + (i / 8);
+	int bitIndex = (i % 8); // Get the correct bit position in the byte
+	// Print the bit
+	std::cout << static_cast<int>((data_ptr[byteIndex] >> bitIndex) & 1);
+	if (i % 8 == 0) {
+	  std::cout << " "; 
+	}
+      }
+      std::cout << std::endl; // New line after printing the word
+    }
+  }      
+}
 
 // Extract the PTB words/data from the artDAQ fragments
 void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
@@ -1428,10 +1461,10 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
   ptb_frag_ts.emplace_back( chopTimeStamp( frag.timestamp() ) );
   // Construct PTB fragment overlay class giving us access to all the helpful decoder functions
   CTBFragment ptb_fragment(frag);
-  
+
   if(fverbose){
-  std::cout << "PTB Fragment ID: " << frag.sequenceID() << " TS: " << frag.timestamp()
-            << " Containing " << ptb_fragment.NWords() << " words" << std::endl;
+    std::cout << "PTB Fragment ID: " << frag.sequenceID() << " TS: " << frag.timestamp()
+	      << " Containing " << ptb_fragment.NWords() << " words" << std::endl;
   }
 
   /*********************
@@ -1468,6 +1501,7 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
 
   for ( size_t i = 0; i < ptb_fragment.NWords(); i++ ) {
     if (fverbose) std::cout << "PTB Word type [" << ptb_fragment.Word(i)->word_type << "]" << std::endl;
+    //std::cout << "PTB Word type [" << ptb_fragment.Word(i)->word_type << "]" ;
     switch ( ptb_fragment.Word(i)->word_type ) {
       case 0x0 : // Feedback (errors) Word
         // Only get this word if something goes wrong at the firmware level requires expert knowledge
@@ -1487,18 +1521,17 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
         llt_trigger.emplace_back(llttrigger); 
         llt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) ); // Timestamp of the word
         llt_ts.emplace_back( ptb_fragment.TimeStamp(i) * 20 ); // Timestamp of the word
-
         break;
 	}
       case 0x2 : // HL Trigger
         {
-	  if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
-	  if (fverbose) std::cout << "HLT ts: " << ptb_fragment.TimeStamp(i) << std::endl;
+	  //if (fverbose) std::cout << "HLT Payload: " << ptb_fragment.Trigger(i)->trigger_word << std::endl;
+	  //if (fverbose) std::cout << "HLT ts: " << ptb_fragment.TimeStamp(i) << std::endl;
 	  uint64_t hlt_mask=ptb_fragment.Trigger(i)->trigger_word & 0x1FFFFFFFFFFFFFFF;
-	  hlt_trigger.emplace_back(hlttrigger_mask); 
+	  hlt_trigger.emplace_back(hlt_mask); 
 	  while (hlt_mask) {
 	    uint64_t hlttrigger = __builtin_ctzll(hlt_mask); // Find the least significant set bit
-	    if (fverbose) std::cout<<"hlt_mask: "<<hlt_mask<<", hlt_trigger:" <<hlttrigger<<", log(hlt_mask)/log(2.): "<<log(1.*hlt_mask)/log(2.)<<endl;
+	    if (fverbose) std::cout<<"hlt_mask: "<<hlt_mask<<", hlt_trigger:" <<hlttrigger<<", log(hlt_mask)/log(2.): "<<log(1.*hlt_mask)/log(2.)<<std::endl;
 	    hlt_mask &= (hlt_mask - 1); // Clear the least significant set bit
 	    hlt_trigger_simplified.emplace_back(hlttrigger); //log(1.*hlttrigger)/log(2.) );
 	    hlt_ts.emplace_back( chopTimeStamp( ptb_fragment.TimeStamp(i) * 20 ) );
@@ -1514,6 +1547,7 @@ void sbndaq::EventAna::extract_triggers(artdaq::Fragment & frag) {
         // TODO add MTCA and NIM channel status words
         auxpds_status.emplace_back( ptb_fragment.ChStatus(i)->pds & 0x3FF );
         crt_status.emplace_back( ptb_fragment.ChStatus(i)->crt & 0x3FFF );
+	//std::cout <<std::bitset<14>(ptb_fragment.ChStatus(i)->crt) << "                        CRT Timestamp: " <<  ptb_fragment.TimeStamp(i) << "  " <<std::bitset<64>( ptb_fragment.TimeStamp(i)) <<  std::endl;
         beam_status.emplace_back( ptb_fragment.ChStatus(i)->beam & 0x3 );
         chan_stat_ts.emplace_back( ptb_fragment.TimeStamp(i) * 20 );
         break;
@@ -1541,6 +1575,7 @@ void sbndaq::EventAna::reset_ptb_variables() {
   llt_ts.clear();
   hlt_trigger.clear();
   hlt_trigger_simplified.clear();
+  hlt_gateCount.clear();
   hlt_ts.clear();
   crt_status.clear();
   beam_status.clear();
@@ -1577,8 +1612,8 @@ void sbndaq::EventAna::analyze_tdc_fragment(artdaq::Fragment & frag)  {
     std::cout << "channel: " << ts->vals.channel << std::endl;
     std::cout << "name: " << ts->vals.name[0]
                           << ts->vals.name[1]
-			  << ts->vals.name[2]
-			  << ts->vals.name[3]
+    			  << ts->vals.name[2]
+    			  << ts->vals.name[3]
                           << ts->vals.name[4]
                           << ts->vals.name[5]
                           << ts->vals.name[6]
