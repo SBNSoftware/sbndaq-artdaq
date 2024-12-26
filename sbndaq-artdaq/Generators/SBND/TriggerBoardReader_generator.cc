@@ -31,11 +31,12 @@
 #include <unistd.h>
 #include <thread>
 
-int numGates =0;
+int numGates[5] ={0,0,0,0,0}; //Index is numGate for different HLT--> numGates[0] = HLT 1, numGates[1] = HLT 2, numGates[2] = HLT 3, numGates[3] = HLT 4, numGates[4] = HLT 6
 uint64_t prevHLT01TS =0;
 uint64_t prevHLT02TS =0;
 uint64_t prevHLT03TS =0;
 uint64_t prevHLT04TS =0;
+uint64_t prevHLT06TS =0;
 
 bool isVerbose;
 
@@ -403,10 +404,12 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       const ptb::content::word::trigger_t * t = reinterpret_cast<const ptb::content::word::trigger_t *>( & temp_word  ) ;
 
       if (t ->IsTrigger(30) ) {
-	numGates++;
-	if (isVerbose) TRACE(TLVL_INFO, "LLT 30 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates: %d ", t->timestamp, numGates); 
+	numGates[0]++;
+	numGates[1]++;
+	numGates[4]++;
+	if (isVerbose) TRACE(TLVL_INFO, "LLT 30 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates[0]: %d , numGates[1]: %d , numGates[4]: %d ", t->timestamp, numGates[0], numGates[1], numGates[4]); 
       }
-
+      
       std::set<unsigned short> trigs = t -> Triggers(32) ;
       for ( auto it = trigs.begin(); it != trigs.end() ; ++it ) {
 	++ _metric_LLT_counters[*it] ;
@@ -439,37 +442,51 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       //const ptb::content::word::trigger_t * t = reinterpret_cast<const ptb::content::word::trigger_t *>( & temp_word  ) ;
       ptb::content::word::trigger_t * t = reinterpret_cast<ptb::content::word::trigger_t *>( & temp_word  ) ;
       
-      //Setting the gate Counter
-      int HLTGateTrigger =1; //Might be an HLT 1 or 2 depending on what the config is
-      if (t -> IsTrigger(HLTGateTrigger)) { //if HLT is an HLT 1 
-	t -> setGateCounter(numGates);
-	numGates=0; //reset counter
+      // Incrementing gate counter for off-beam gates using HLT 27, which should be issued when there is an off-beam gate that has *not* been inhibited by the beam protection logic
+      if (t -> IsTrigger(27)){
+	numGates[2]++;
+	numGates[3]++;
+	if (isVerbose) TRACE(TLVL_INFO, "HLT 27 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates[2]: %d , numGates[3]: %d", t->timestamp, numGates[2], numGates[3]);
       }
-
 
       //Setting the previous HLT timestamp and adding it to the new HLT word
       if (t -> IsTrigger(1)){
+	t -> setGateCounter(numGates[0]);      //Setting the gate Counters for HLT 1
+	numGates[0]=0; //reset counter
 	temp_PTBBR_word.setPrevTimestamp(prevHLT01TS);
 	//std::cout << "Previous HLT 1 TS: " << prevHLT01TS << std::endl; 
 	prevHLT01TS = t->timestamp;
       }
 
       if (t -> IsTrigger(2)){
+	t -> setGateCounter(numGates[1]);      //Setting the gate Counters for HLT 2
+	numGates[1]=0; //reset counter
 	temp_PTBBR_word.setPrevTimestamp(prevHLT02TS);
 	//std::cout << "Previous HLT 2 TS: " << prevHLT02TS << std::endl; 
 	prevHLT02TS = t->timestamp;
       }
       
       if (t -> IsTrigger(3)){
+	t -> setGateCounter(numGates[2]);      //Setting the gate Counters for HLT 3
+	numGates[2]=0; //reset counter
 	temp_PTBBR_word.setPrevTimestamp(prevHLT03TS);
 	//std::cout << "Previous HLT 3 TS: " << prevHLT03TS << std::endl; 
 	prevHLT03TS = t->timestamp;
       }
       
       if (t -> IsTrigger(4)){
+	t -> setGateCounter(numGates[3]);
+	numGates[3]=0;
 	temp_PTBBR_word.setPrevTimestamp(prevHLT04TS);
 	//std::cout << "Previous HLT 4 TS: " << prevHLT04TS << std::endl; 
 	prevHLT04TS = t->timestamp;
+      }
+
+      if(t -> IsTrigger(6)){
+	t -> setGateCounter(numGates[4]);      //Setting the gate Counters for HLT 6
+	numGates[4]=0; //reset counter
+	temp_PTBBR_word.setPrevTimestamp(prevHLT06TS);
+	prevHLT06TS = t->timestamp;
       }
       
       //Adding the gate count to the HLT words

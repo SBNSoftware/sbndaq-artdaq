@@ -94,6 +94,7 @@ namespace icarus {
 
     //is the crate's data compressed? size_t for future-proofing
     size_t _compressionScheme;
+    size_t _AX818;
 
  };
 }

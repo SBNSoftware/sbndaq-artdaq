@@ -20,16 +20,16 @@ fcldir      -
 #
 product               version      optional
 artdaq                v3_13_02
-sbndaq_artdaq_core    v1_10_03
-caencomm              v1_7_0
-caenvme               v4_0_1
-caendigitizer         v2_17_3b
+sbndaq_artdaq_core    v1_10_04
+caenvme               v4_0_2
+caencomm              v1_7_0a
+caendigitizer         v2_17_3c
 pqxx                  v7_7_4c
 epics                 v7_0_7b
 artdaq_epics_plugin   v1_06_00
 zmq                   v4_3_1
 jsoncpp               v1_9_5a
-wibtools              v1_10_03     -
+wibtools              v1_10_04     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
 cetmodules            v3_24_01     -       only_for_build

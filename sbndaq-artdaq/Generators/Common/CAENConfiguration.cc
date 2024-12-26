@@ -1,7 +1,7 @@
 //
 //  CAENConfiguration.cc
 //
-//  Class to read and contain SBND CAEN V1730SB configuration
+//  Class to read and contain CAEN V1730SB configuration
 //   parameters
 //
 //
@@ -36,7 +36,8 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   majorityLevel(0),
   majorityCoincidenceWindow(0),
   maxTemp(80),
-  temperatureCheckMask(0xFFFF)
+  temperatureCheckMask(0xFFFF),
+  aX818(3)
 {
   link                 = ps.get<int>("link");
   enableReadout        = ps.get<int>("enableReadout");
@@ -62,8 +63,9 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps):
   triggerLogic         = ps.get<int>("triggerLogic");  
   majorityLevel        = ps.get<int>("majorityLevel"); 
   majorityCoincidenceWindow = ps.get<int>("majorityCoincidenceWindow"); 
-  maxTemp              = ps.get<uint32_t>("maxTempCelsius",80);
-  temperatureCheckMask = ps.get<uint32_t>("temperatureCheckMask",0xFFFF);
+  maxTemp              = ps.get<uint32_t>("maxTempCelsius", 80);
+  temperatureCheckMask = ps.get<uint32_t>("temperatureCheckMask", 0xFFFF);
+  aX818                = ps.get<size_t>("AX818", 3);
 
   char tag[1024];
   channelEnableMask = 0;
@@ -140,6 +142,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "  MajorityCoincidenceWindow " << e.majorityCoincidenceWindow << std::endl;
   os << "  MaxTempCelsius        " << e.maxTemp << std::endl;
   os << "  TemperatureCheckMask  0x" << std::hex << e.temperatureCheckMask << std::dec << std::endl;
+  os << "  AX818                 " << e.aX818 << std::endl;
   os << "  BoardId               " << e.boardId << 
       "  EnableReadout " << e.enableReadout << std::endl;
   if ( e.enableReadout )

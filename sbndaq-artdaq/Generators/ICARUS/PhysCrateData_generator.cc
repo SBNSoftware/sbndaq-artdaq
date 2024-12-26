@@ -29,7 +29,8 @@ icarus::PhysCrateData::PhysCrateData(fhicl::ParameterSet const & ps)
   _redisPort(ps.get<int>("redisPort",6379)),
   _issueStart(ps.get<bool>("issueStart",true)),
   _readTemps(ps.get<bool>("readTemps",true)),
-  _compressionScheme(ps.get<size_t>("CompressionScheme",0))
+  _compressionScheme(ps.get<size_t>("CompressionScheme",0)),
+  _AX818(ps.get<size_t>("AX818",3))
 {
   InitializeHardware();
   InitializeVeto();
@@ -107,16 +108,19 @@ void icarus::PhysCrateData::SetCompressionBits()
 // read the firmware versions
 void icarus::PhysCrateData::ReadFirmwareVersion()
 {
-  // A3818 firmware / driver
+  // AX818 firmware / driver
   for (const auto& link : pcieLinks_)
   {
     int32_t bdhandle;
-    CAENVME_Init2(cvA3818, &link, 0, &bdhandle);
+    if (_AX818 == 3)
+      CAENVME_Init2(cvA3818, &link, 0, &bdhandle);
+    if (_AX818 == 5)
+      CAENVME_Init2(cvA5818, &link, 0, &bdhandle);
     char firmwareRev[100];
     char driverRev  [100];
     CAENVME_BoardFWRelease(bdhandle, firmwareRev);
     CAENVME_DriverRelease (bdhandle, driverRev  );
-    TRACEN("PhysCrateData", TLVL_INFO, "A3818 on link %d firmware revision: %s\n                  driver revision: %s", link, firmwareRev, driverRev);
+    TRACEN("PhysCrateData", TLVL_INFO, "A%d818 on link %d firmware revision: %s\n                  driver revision: %s",int(_AX818), link, firmwareRev, driverRev);
     CAENVME_End(bdhandle);
   }
 

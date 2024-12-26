@@ -61,6 +61,8 @@ class CAENConfiguration
     uint32_t  maxTemp;
     uint32_t temperatureCheckMask; // 8 bit mask saying which ADCs to perforrm the temperature check
 
+    size_t aX818; // Are we using an A3818 card, an A5818 card, something else?
+
     void print(std::ostream & os = std::cout);
 };
 }

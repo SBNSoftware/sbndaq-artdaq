@@ -1936,27 +1936,41 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
                   << "\ncaenvme: " << VMESWrel
                   << "\ncaencomm: " << CommSWrel;
   
-  // A3818 firmware / driver
+  // AX818 firmware / driver
   short Device = 0;
   int32_t BHandle;
 
-  if( CAENVME_Init2(cvA3818, &fCAEN.link, Device, &BHandle) == cvSuccess ) {
+  CVBoardTypes cvAX818;
+  switch (fCAEN.aX818)
+  {
+    case 3:
+      cvAX818 = cvA3818;
+      break;
+    case 5:
+      cvAX818 = cvA5818;
+      break;
+    default:
+      TLOG(TLVL_ERROR) << "Do not know how to handle fCAEN.aX818 == " << fCAEN.aX818;
+      return;
+  }
+
+  if( CAENVME_Init2(cvAX818, &fCAEN.link, Device, &BHandle) == cvSuccess ) {
   
     char fwrev[100];
     char drrev[100];
     auto ret = CAENVME_BoardFWRelease(BHandle,fwrev);
 
-    std::ostringstream a3818Stream;
-    a3818Stream << "A3818 firmware: ";
-    if (!ret) a3818Stream << fwrev << "\n";
-    else a3818Stream << CAENVME_DecodeError(ret) << "\n";
+    std::ostringstream aX818Stream;
+    aX818Stream << "A" << fCAEN.aX818 << "818 firmware: ";
+    if (!ret) aX818Stream << fwrev << "\n";
+    else aX818Stream << CAENVME_DecodeError(ret) << "\n";
 
     ret = CAENVME_DriverRelease( BHandle, drrev );
-    a3818Stream << "A3818 driver: ";
-    if (!ret) a3818Stream << drrev;
-    else a3818Stream << CAENVME_DecodeError(ret);
+    aX818Stream << "A" << fCAEN.aX818 << "818 driver: ";
+    if (!ret) aX818Stream << drrev;
+    else aX818Stream << CAENVME_DecodeError(ret);
    
-    TLOG(TLVL_INFO) << a3818Stream.str();
+    TLOG(TLVL_INFO) << aX818Stream.str();
 
     CAENVME_End(BHandle);
   }
