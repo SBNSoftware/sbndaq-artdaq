@@ -249,7 +249,15 @@ void icarus::PhysCrateData::VetoOff(){
 
 void icarus::PhysCrateData::InitializeHardware(){
   physCr = std::make_unique<PhysCrate>();
-  physCr->initialize(pcieLinks_);
+  try
+  {
+    physCr->initialize(pcieLinks_, boardsPerLink_);
+  }
+  catch (const cet::exception& e)
+  {
+    TRACEN("PhysCrateData", TLVL_ERROR, "Error initializing creat %d: %s", CrateID_, e.what());
+    throw e;
+  }
   this->nBoards_ = (uint16_t)(physCr->NBoards());
   ForceReset();
   if(_compressionScheme != 0) SetCompressionBits(); // CompressionScheme is set up to mulitple compression schema, but currently there are only two
