@@ -255,7 +255,7 @@ void icarus::PhysCrateData::InitializeHardware(){
   }
   catch (const cet::exception& e)
   {
-    TRACEN("PhysCrateData", TLVL_ERROR, "Error initializing creat %d: %s", CrateID_, e.what());
+    TRACEN("PhysCrateData", TLVL_ERROR, "Error initializing crate %d: %s", CrateID_, e.what());
     throw e;
   }
   this->nBoards_ = (uint16_t)(physCr->NBoards());
