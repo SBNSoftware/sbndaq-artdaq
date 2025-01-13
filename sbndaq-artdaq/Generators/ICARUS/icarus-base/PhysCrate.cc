@@ -25,7 +25,7 @@ PhysCrate::~PhysCrate()
 #ifndef _simulate_
 // Initializes the crate detecting the boards
 void
-PhysCrate::initialize(std::vector<int> busVec) 
+PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsinCrateVec) 
 {
    TRACEN("PhysCrate.cc",TLVL_INFO, "PhysCrate::initialize(): Initializing crate.");
 
@@ -37,7 +37,7 @@ PhysCrate::initialize(std::vector<int> busVec)
     
     nBoards=0;
     nDev=0;
-    if(busVec.size()==0){
+    if(busVec.size()==0 || boardsinCrateVec.size()==0){
       int nBus=0;
       do {
         do {        
@@ -61,20 +61,25 @@ PhysCrate::initialize(std::vector<int> busVec)
     else{
       for(int nBus : busVec){
 
-	do {        
-	  TRACEN("PhysCrate.cc", TLVL_INFO, "trying bus=%d,dev=%d",nBus,nDev);
+	for(unsigned int nBoardInCrate = 0; nBoardInCrate < boardsinCrateVec; ++nBoardInCrate)
+	{        
+	  TRACEN("PhysCrate.cc", TLVL_INFO, "trying bus=%d,dev=%d",nBus,nBoardInCrate);
 	  
-	  boards[nBoards]=new A2795Board(nDev,nBus);
+	  boards[nBoards]=new A2795Board(nDev,nBoardInCrate);
           boardId = boards[nBoards]->boardId;
 	  nDev++;
 	  if (boardId>-1)
 	    { 
-	      TRACEN("PhysCrate.cc", TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nDev,nBoards,boardId);
+	      TRACEN("PhysCrate.cc", TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nBoardInCrate,nBoards,boardId);
 	      
 	      nBoards++;
 	    }
-	  //else break;
-	} while (nDev<kMaxBoardsonLink );
+	  else
+	  {
+              TRACEN("PhysCrate.cc",TLVL_ERROR, "PhysCrate::initialize(): Could not connect to board on link %d, node %d", nBus, nBoardInCrate);
+              throw cet::exception("PhysCrate") << "Could not connect to board " << nBoardInCrate << " on link " << nBus;
+	  }
+	}
 	nDev=0;
       }
     }
