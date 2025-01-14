@@ -59,9 +59,10 @@ PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsi
       
     }
     else{
+      int link = 0;
       for(int nBus : busVec){
 
-	for(unsigned int nBoardInCrate = 0; nBoardInCrate < boardsinCrateVec; ++nBoardInCrate)
+	for(unsigned int nBoardInCrate = 0; nBoardInCrate < boardsinCrateVec[link]; ++nBoardInCrate)
 	{        
 	  TRACEN("PhysCrate.cc", TLVL_INFO, "trying bus=%d,dev=%d",nBus,nBoardInCrate);
 	  
@@ -81,6 +82,7 @@ PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsi
 	  }
 	}
 	nDev=0;
+	++link;
       }
     }
 
