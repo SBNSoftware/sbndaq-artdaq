@@ -66,9 +66,8 @@ PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsi
 	{        
 	  TRACEN("PhysCrate.cc", TLVL_INFO, "trying bus=%d,dev=%d",nBus,nBoardInCrate);
 	  
-	  boards[nBoards]=new A2795Board(nDev,nBoardInCrate);
+	  boards[nBoards]=new A2795Board(nBoardInCrate,nBus);
           boardId = boards[nBoards]->boardId;
-	  nDev++;
 	  if (boardId>-1)
 	    { 
 	      TRACEN("PhysCrate.cc", TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nBoardInCrate,nBoards,boardId);
@@ -81,7 +80,6 @@ PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsi
               throw cet::exception("PhysCrate") << "Could not connect to board " << nBoardInCrate << " on link " << nBus;
 	  }
 	}
-	nDev=0;
 	++link;
       }
     }
