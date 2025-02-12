@@ -5,3 +5,5 @@ list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq-artdaq_Common_Utilities sbndaq_art
 cet_build_plugin(CRTMetricProducer art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 cet_build_plugin(PMTMetricProducer art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 cet_build_plugin(NeutrinoStreamFilter art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+cet_build_plugin(TPCMetricProducer art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
+
