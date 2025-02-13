@@ -40,6 +40,8 @@ namespace nevistpc{
     // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU stream with internal CALIB triggers
     // It follows partially https://github.com/NevisSBND/BoardTest/blob/master/bnlnevistest.c
     void runCalib(fhicl::ParameterSet const& _p);
+    //Erin: make a turn off command
+    void stopStream();
     
   private:
     ControllerModuleSPtr 			_ctrlr_module;

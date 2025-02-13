@@ -84,12 +84,16 @@ void sbndaq::NevisTB_generatorBase::stopAll(){
 
 
 void sbndaq::NevisTB_generatorBase::stop(){
+  TLOG(TLVL_INFO)<<"stop called";
   ConfigureNTBStop();
   stopAll();
+  TLOG(TLVL_INFO)<<"stop completed";
 }
 
 void sbndaq::NevisTB_generatorBase::stopNoMutex(){
-  stopAll();
+  TLOG(TLVL_INFO)<<"stop no mutex called";
+  stop();
+  TLOG(TLVL_INFO)<<"stop no mutex completed";
 }
 
 size_t sbndaq::NevisTB_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){

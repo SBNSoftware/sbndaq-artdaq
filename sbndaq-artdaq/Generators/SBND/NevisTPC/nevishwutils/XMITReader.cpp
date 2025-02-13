@@ -317,6 +317,14 @@ namespace nevistpc {
 
   }
 
+  void XMITReader::dmaStop( )
+  {
+      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": called " <<  __func__  <<"mango";
+      dmaAbort();
+      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": called " <<  __func__  <<"abort nectarine";
+      dmaClearRegister();
+  }
+
 
 
 

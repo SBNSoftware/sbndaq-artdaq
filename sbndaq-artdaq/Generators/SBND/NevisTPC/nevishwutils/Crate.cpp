@@ -527,6 +527,12 @@ This function is added to debug FEMs is software but hasnot tested yet
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
 
+  void Crate::stopStream() {
+
+    getTriggerModule()->runOff();
+
+  }
+
 } // end of namespace nevistpc
 
 

@@ -24,7 +24,7 @@ sbndaq::NevisTPC_generatorBase::NevisTPC_generatorBase(fhicl::ParameterSet const
 
 sbndaq::NevisTPC_generatorBase::~NevisTPC_generatorBase(){
 
-	stopAll();
+  //stopAll();
 }
 
 void sbndaq::NevisTPC_generatorBase::Initialize(){
@@ -79,18 +79,24 @@ void sbndaq::NevisTPC_generatorBase::start(){
 
 void sbndaq::NevisTPC_generatorBase::stopAll(){
   //FireCALIB_thread_->stop();
+    TLOG(TLVL_INFO)<<"stopAll called dates";
     GetData_thread_->stop();
- 
+    TLOG(TLVL_INFO)<<"stopAll called elderberry";
 }
 
 void sbndaq::NevisTPC_generatorBase::stop(){
+  TLOG(TLVL_INFO)<<"stop called apple";
   ConfigureStop();  
+  TLOG(TLVL_INFO)<<"stop called cranberry";
   stopAll();
+  //ConfigureStopTrigger();
+  TLOG(TLVL_INFO)<<"stop completed banana";
 }
 
 void sbndaq::NevisTPC_generatorBase::stopNoMutex(){
-  
-  stopAll();
+  TLOG(TLVL_INFO)<<"stop no mutex called";
+  //stop();
+  TLOG(TLVL_INFO)<<"stop no mutex completed";
 }
 
 size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, std::unique_ptr<uint16_t[]> const& dataptr){
@@ -140,13 +146,13 @@ bool sbndaq::NevisTPC_generatorBase::GetData(){
     n_words = GetFEMCrateData()/sizeof(uint16_t);
     auto current_time = std::chrono::steady_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
-    if (elapsed_time > 5){
+    if (elapsed_time > 60){
 
       char line[132];
-      sprintf(line,"There is no data for 5 seconds"); //,current_event,header->getEventNum());                                                                 
+      sprintf(line,"There is no data for 60 seconds"); //,current_event,header->getEventNum());                                                               
       TRACE(TERROR,line);
       throw std::runtime_error(line);
-
+      
       return false;
     }
     // Introduce a delay to avoid continuous checking                                                                                                          

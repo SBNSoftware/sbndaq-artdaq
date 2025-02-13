@@ -147,24 +147,50 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
 }
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
+  //Erin: make a turn off command
+  //TLOG(TLVL_INFO)<< "Stopping Crate";
+  //fCrate->stopStream(); //this is one is bad!
+
+  TLOG(TLVL_INFO)<<"Configure stop starting fruit"; 
   if( fSNReadout ){
     GetSNData_thread_->stop();
     WriteSNData_thread_->stop();
   }
+  TLOG(TLVL_INFO)<<"configurestop did SN things maybe grapes";
   //  FireCALIB_thread_->stop();
-  FireController_thread_->stop();
+  if( fControllerTriggerFreq > 0 ){
+    TLOG(TLVL_INFO)<<"the fire controller thread freq is greater then 0, stopping. kiwi";
+    FireController_thread_->stop();
+    TLOG(TLVL_INFO)<<"the fire controller thread stopped. kiwi";
+  }
+  TLOG(TLVL_INFO)<<"configurestop did FireController stop maybe honeydew"; 
   MonitorCrate_thread_->stop();
+  TLOG(TLVL_INFO)<<"configurestop did MonitorCrates stop stop maybe iceberg lettuce"; 
 
   if( fDumpBinary ){
-    TLOG(TLVL_INFO)<< "Closig raw binary file " << binFileNameNU;
+    TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameNU;
     binFileNU.close(); // temp
 
     if( fSNReadout ){
-      TLOG(TLVL_INFO)<< "Closig raw binary file " << binFileNameSN;
+      TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameSN;
       binFileSN.close(); // temp
     }
   }
   delete[] SNBuffer_;
+  TLOG(TLVL_INFO)<<"configurestop completed stop stop maybe jujube"; 
+
+  //Erin: abort XMIT
+  fNUXMITReader->dmaStop();
+  TLOG(TLVL_INFO)<<"configurestop abort xmit lemon"; 
+
+  TLOG(TLVL_INFO)<< "Successful " << __func__ ;
+  mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
+}
+
+void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStopTrigger() {
+  //Erin: make a turn off command
+  TLOG(TLVL_INFO)<< "Stopping Crate";
+  fCrate->stopStream(); 
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;

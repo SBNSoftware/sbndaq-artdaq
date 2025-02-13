@@ -37,6 +37,7 @@ namespace sbndaq {
   private:
     void ConfigureStart() override;
     void ConfigureStop() override;
+    void ConfigureStopTrigger() override; //Erin: added to stop the trigger
     
     size_t GetFEMCrateData() override;
 

@@ -38,6 +38,7 @@ protected:
   // These functions MUST be defined by the derived classes
   virtual void ConfigureStart() = 0; // called in start()
   virtual void ConfigureStop() = 0;  // called in stop()
+  virtual void ConfigureStopTrigger(){}; //Erin: added to stop the trigger
 
   // gets the data. Output is size of data filled. Input is FEM ID.
   virtual size_t GetFEMCrateData() = 0;
