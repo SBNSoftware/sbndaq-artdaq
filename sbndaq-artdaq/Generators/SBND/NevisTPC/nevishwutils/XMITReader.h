@@ -46,7 +46,11 @@ namespace nevistpc{
     void setupTXModeRegister();
 
     virtual std::streamsize readsome ( char* buffer, std::streamsize requestedSize );
+<<<<<<< HEAD
     virtual void dmaStop(); //Erin: atop the xmit
+=======
+    virtual void dmaStop(); //Erin: stop the xmit
+>>>>>>> origin/develop
     virtual ~XMITReader(){};
   private:
     bool dmaLockBuffer ( dma_buffer& dma );

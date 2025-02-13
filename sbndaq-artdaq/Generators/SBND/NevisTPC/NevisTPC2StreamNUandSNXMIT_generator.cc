@@ -131,6 +131,26 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
 }
 
+void sbndaq::NevisTPC2StreamNUandSNXMIT::runonsyncon() {
+  if( fCALIBFreq > 0 ){
+    fCrate->getTriggerModule()->runOnSyncOn();
+    TLOG(TLVL_INFO) << "called runonsyncon for CALIB trigger" << TLOG_ENDL;
+  }
+
+  if( fCALIBFreq < 0 and fControllerTriggerFreq < 0 ){
+    if(fCrate->hasTrigger){
+      fCrate->getTriggerModule()->enableTriggers();
+      fCrate->getTriggerModule()->runOnSyncOn();
+
+      TLOG(TLVL_INFO) << "called runonsyncon for EXT trigger" << TLOG_ENDL;
+    }}
+
+  if( fControllerTriggerFreq > 0 ){
+    fCrate->getControllerModule()->runOn();
+    TLOG(TLVL_INFO) << "called runonsyncon for Controller trigger" << TLOG_ENDL;
+  }
+}
+
 void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
   if( fCALIBFreq > 0 ){                                                                                         
     FireCALIB_thread_->start();
@@ -158,12 +178,18 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
   }
   TLOG(TLVL_INFO)<<"configurestop did SN things maybe grapes";
   //  FireCALIB_thread_->stop();
+<<<<<<< HEAD
   if( fControllerTriggerFreq > 0 ){
     TLOG(TLVL_INFO)<<"the fire controller thread freq is greater then 0, stopping. kiwi";
     FireController_thread_->stop();
     TLOG(TLVL_INFO)<<"the fire controller thread stopped. kiwi";
   }
   TLOG(TLVL_INFO)<<"configurestop did FireController stop maybe honeydew"; 
+=======
+  if( fControllerTriggerFreq > 0 ){//only stop thread if it met conditions to get started
+    FireController_thread_->stop();
+  }
+>>>>>>> origin/develop
   MonitorCrate_thread_->stop();
   TLOG(TLVL_INFO)<<"configurestop did MonitorCrates stop stop maybe iceberg lettuce"; 
 
@@ -177,6 +203,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
     }
   }
   delete[] SNBuffer_;
+<<<<<<< HEAD
   TLOG(TLVL_INFO)<<"configurestop completed stop stop maybe jujube"; 
 
   //Erin: abort XMIT
@@ -191,6 +218,9 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStopTrigger() {
   //Erin: make a turn off command
   TLOG(TLVL_INFO)<< "Stopping Crate";
   fCrate->stopStream(); 
+=======
+  fNUXMITReader->dmaStop();
+>>>>>>> origin/develop
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;

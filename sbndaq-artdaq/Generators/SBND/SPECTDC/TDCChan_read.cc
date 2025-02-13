@@ -56,9 +56,10 @@ void TDCChan::read() {
   auto gap = uint64_t{0};
   for (decltype(read_count) i = 0; i < read_count; i++) {
     auto ts = make_timestamp(id, name, tdcts_arr[i]);
+
     if (fmctdc.tai2utc) adjust_tai2utc(ts, fmctdc.tai2utc);
 
-    if (fmctdc.monitor_timestamps) monitor_timestamp(ts.timestamp_ns());
+    if (fmctdc.monitor_timestamps) monitor_timestamp(ts.timestamp_ns(), int{id});
     sample_info = as_string(ts);
 
     if (monitor_only) {
@@ -89,7 +90,21 @@ void TDCChan::read() {
                               MetricMode::Accumulate);
       }
     }
+
     last_seen_sample_seq = tdcts_arr[i].seq_id;
+
+    auto ts_gap = uint64_t{0};
+    ts_gap = ts.timestamp_ns() - last_seen_sample_ts; 
+    last_seen_sample_ts = ts.timestamp_ns();
+
+    if (ts_gap < fmctdc.max_time_gap_ns ) {
+      TLOG(TLVL_WARNING) << "Detected a time gap < " << fmctdc.max_time_gap_ns << " in the channel " << int{id}
+                         << "; ts gap = " << ts_gap << " us.";
+    }
+    if (metricMan) {
+      metricMan->sendMetric(metric_prefix + lit::tdc_ts_gap, uint64_t{ts_gap},
+                          lit::unit_sample_count, 11, MetricMode::LastPoint);
+    }
   }
 
   if (metricMan) {

@@ -10,14 +10,31 @@ using std::chrono::nanoseconds;
 using std::chrono::seconds;
 
 using clk = std::chrono::system_clock;
+using namespace sbndaq::SPECTDCInterface;
 
 uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
   uint64_t host_time_ns =
       std::chrono::duration_cast<nanoseconds>(clk::time_point{clk::now()}.time_since_epoch()).count();
-  if (sample_time_ns > host_time_ns)
-    TLOG(TLVL_WARNING) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; sample_time-host_time="
-                       << sample_time_ns - host_time_ns << " ns.";
+  
+  if (sample_time_ns > host_time_ns){
 
+    auto lag_ns = sample_time_ns - host_time_ns;  
+
+    if ( lag_ns < utls::max_sample_time_lag_ns) return 0;       
+ 
+    if ( lag_ns < utls::onesecond_ns ) {
+
+      TLOG(TLVL_WARNING) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time = "<< lag_ns - utls::as_seconds << " ms. NTP drift > 300 ms! Check White Rabbit and NTP synchronisation.";
+
+    } else {
+ 
+      TLOG(TLVL_ERROR) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time = "<< lag_ns / utls::as_seconds << " s. NTP drift >= 1s! Check White Rabbit and NTP synchronisation.";
+
+    }
+
+    return 0;
+  }
+  
   return host_time_ns - sample_time_ns;
 }
 

@@ -1,9 +1,9 @@
 //
-//  sbndaq-artdaq/Generators/Common/CAENV1730Readout.hh
+//  sbndaq-artdaq/Generators/SBND/CAENV1740Readout.hh
 //
 
-#ifndef sbndaq_artdaq_Generators_CAENV1730Readout_hh
-#define sbndaq_artdaq_Generators_CAENV1730Readout_hh
+#ifndef sbndaq_artdaq_Generators_CAENV1740Readout_hh
+#define sbndaq_artdaq_Generators_CAENV1740Readout_hh
 
 #include "messagefacility/MessageLogger/MessageLogger.h"
 #include "fhiclcpp/fwd.h"
@@ -12,27 +12,29 @@
 
 #include "CAENDigitizer.h"
 #include "CAENDigitizerType.h"
-#include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
+#include "sbndaq-artdaq-core/Overlays/SBND/CAENV1740Fragment.hh"
 
-#include "CAENConfiguration.hh"
+#include "CAENV1740Configuration.hh"
 
 //#include "CircularBuffer.hh"
-#include "PoolBuffer.hh"
-#include "workerThread.hh"
+#include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
+#include "sbndaq-artdaq/Generators/Common/workerThread.hh"
 
 #include <string>
 #include <unordered_map>
 #include <mutex>
 
+#include <fstream>
+
 namespace sbndaq
 {
 
-  class CAENV1730Readout : public artdaq::CommandableFragmentGenerator{
+  class CAENV1740Readout : public artdaq::CommandableFragmentGenerator{
 
   public:
 
-    explicit CAENV1730Readout(fhicl::ParameterSet const& ps);
-    virtual ~CAENV1730Readout();
+    explicit CAENV1740Readout(fhicl::ParameterSet const& ps);
+    virtual ~CAENV1740Readout();
 
     bool getNext_(artdaq::FragmentPtrs & output) override;
     bool checkHWStatus_() override;
@@ -60,7 +62,7 @@ namespace sbndaq
     } REGISTERS_t;
 
     //CAEN pieces
-    CAENConfiguration     fCAEN;	// initialized in the constructor
+    CAENV1740Configuration     fCAEN;	// initialized in the constructor
     int                   fHandle;
     CAEN_DGTZ_BoardInfo_t fBoardInfo;
     //char*                 fBuffer;
@@ -76,13 +78,16 @@ namespace sbndaq
     typedef enum {
       BOARD_READY  = 0x0100,
       PLL_STATUS   = 0x0080,
-      PLL_BYPASS   = 0x0040,
+      RESERVED     = 0x0040,// was PLL_BYPASS for V1730
       CLOCK_SOURCE = 0x0020,
       EVENT_FULL   = 0x0010,
       EVENT_READY  = 0x0008,
       RUN_ENABLED  = 0x0004
-    } ACQ_STATUS_MASK_t;
+    } ACQ_STATUS_MASK_t; // Mask for Acquisition Status register 0x8104
 
+    // jcrespo: not checking values for variables below
+    // ||||||||||||||||||||||||||||||||||||||||||||||||
+    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     typedef enum {
       DYNAMIC_RANGE      = 0x8028,
       TRG_OUT_WIDTH      = 0x8070,
@@ -97,13 +102,13 @@ namespace sbndaq
       READOUT_CONTROL    = 0xEF00,
       // Animesh & Aiwu add registers for the LVDS logic
       FP_LVDS_Logic_G1   = 0x1084,
-      FP_LVDS_Logic_G2   = 0x1284,
-      FP_LVDS_Logic_G3   = 0x1484,
-      FP_LVDS_Logic_G4   = 0x1684,
-      FP_LVDS_Logic_G5   = 0x1884,
-      FP_LVDS_Logic_G6   = 0x1A84,
-      FP_LVDS_Logic_G7   = 0x1C84,
-      FP_LVDS_Logic_G8   = 0x1E84,
+      FP_LVDS_Logic_G2   = 0x1184,
+      FP_LVDS_Logic_G3   = 0x1284,
+      FP_LVDS_Logic_G4   = 0x1384,
+      FP_LVDS_Logic_G5   = 0x1484,
+      FP_LVDS_Logic_G6   = 0x1584,
+      FP_LVDS_Logic_G7   = 0x1684,
+      FP_LVDS_Logic_G8   = 0x1784,
       // Animesh & Aiwu add end
       // Animesh & Aiwu add registers for the LVDS output width
       FP_LVDS_OutWidth_Ch1   = 0x1070,
@@ -171,16 +176,18 @@ namespace sbndaq
       TSTART    = 10,
       TSTOP     = 11,
       TSTATUS   = 12,
-      TGETNEXT  = 13,
+      // jcrespo: re-order since TMAKEFRAG is less frequent than TGETNEXT
+      TGETNEXT  = 15,//= 13,
       TGETDATA  = 14,
-      TMAKEFRAG = 15,
+      TMAKEFRAG = 13,//=15,
       TTEMP     = 30
     };
 
-    enum
-    {
-      V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
-    };
+    // jcrespo: comment-region as it is not available for V1740 
+    // enum
+    // {
+    //   V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
+    // };
 
     //fhicl parameters
     int fVerbosity;
@@ -191,15 +198,16 @@ namespace sbndaq
     uint32_t fGetNextFragmentBunchSize;
     uint32_t fMaxEventsPerTransfer;
     bool     fSWTrigger;
-    uint32_t fSelfTriggerMode;
-    uint32_t fSelfTriggerMask;
+    // uint32_t fSelfTriggerMode; // jcrespo: not planned for V1740
+    // uint32_t fSelfTriggerMask;
     uint32_t fModeLVDS;
     uint32_t fTrigOutDelay;
     uint32_t fTrigInLevel;
     bool     fCombineReadoutWindows;
-    bool     fCalibrateOnConfig;
-    bool     fLockTempCalibration;
-    bool     fWriteCalibration;
+    // jcrespo: comment-region as it is not available for V1740
+    // bool     fCalibrateOnConfig;
+    // bool     fLockTempCalibration;
+    // bool     fWriteCalibration;
     uint32_t fFragmentID;
     bool fOutputClk;
     bool fOutputClkPhase;
@@ -237,11 +245,12 @@ namespace sbndaq
     uint32_t fLVDSOutWidthC16;
     // Animesh & Aiwu add end
     //Animesh & Aiwu add - self trigger polarity
-    uint32_t fSelfTrigBit;
+    // uint32_t fSelfTrigBit; // jcrespo: not planned for V1740
     //Animesh & Aiwu add end
 
     //internals
     size_t   fNChannels;
+    size_t   fNGroups;
     uint32_t fBoardID;
     bool     fOK;
     bool     fail_GetNext;
@@ -254,8 +263,8 @@ namespace sbndaq
     uint32_t total_data_size;
     //uint32_t event_size;	
     uint32_t n_readout_windows;
-    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
-    uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
+    // uint32_t ch_temps[CAENV1740Configuration::MAX_CHANNELS];
+    uint32_t g_status[CAENV1740Configuration::MAX_GROUPS];
     
     //functions
     void GetSWInfo();
@@ -267,15 +276,15 @@ namespace sbndaq
     void ConfigureReadout();
     void ConfigureAcquisition();
     void ConfigureLVDS();
-    void ConfigureSelfTriggerMode();
+    // void ConfigureSelfTriggerMode(); // jcrespo: skip self-trigger configuration for V1740 as it is not planned
     void ConfigureClkToTrgOut();
-    void RunADCCalibration();
-    void SetLockTempCalibration(bool onOff, uint32_t ch);
-    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
-    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
-    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
+    // void RunADCCalibration(); // jcrespo: not available for V1740
+    // void SetLockTempCalibration(bool onOff, uint32_t ch); // jcrespo: not available for V1740
+    // CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value); // jcrespo: not used anymore
+    // CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value); // jcrespo: not used anymore
+    // void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams); // jcrespo: not available for V1740
+    // void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams); // jcrespo: not available for V1740
+    void ReadGroupBusyStatus(int handle, uint32_t g, uint32_t& status);
 
     bool WaitForTrigger();
     bool GetData();
@@ -302,7 +311,14 @@ namespace sbndaq
 
     CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address,
 					     uint32_t data, uint32_t bitmask); 
-    
+ 
+
+    // Binary dump
+    bool fDumpBinary; // Write binary file before the artdaq back-end
+    std::string fDumpBinaryDir; // Directory for binary file dump
+    std::ofstream binFile; // temp 
+    char binFileName[80]; // Name of binary dump file
+   
   };
 
 }

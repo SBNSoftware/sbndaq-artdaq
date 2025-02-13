@@ -61,6 +61,7 @@ constexpr auto onesecond_ns = uint64_t{1'000'000'000};
 constexpr auto as_seconds = uint64_t{1'000'000'000};
 constexpr auto as_milliseconds = uint64_t{1'000'000};
 constexpr auto as_microseconds = uint64_t{1'000};
+constexpr auto max_sample_time_lag_ns = 300'000'000; 
 uint64_t hosttime();
 uint64_t hosttime_us();
 uint64_t hosttime_ns();
@@ -112,7 +113,7 @@ class TDCChan : public Device {
   bool configure_drain_buffer();
   bool configure_channel_status();
   bool configure_channel_disable();
-  void monitor_timestamp(uint64_t) const;
+  void monitor_timestamp(uint64_t ts, int id) const;
 
  private:
   uint8_t id = 0;
@@ -139,6 +140,7 @@ class TDCChan : public Device {
   uint64_t missed_sample_count = 0;
   uint64_t sample_drop_count = 0;
   uint64_t last_seen_sample_seq = 0;
+  uint64_t last_seen_sample_ts = 0;
   bool inhibit = true;
   std::string metric_prefix;
   friend class TDCCard;
@@ -174,7 +176,8 @@ class TDCCard : public Device {
   unsigned int deviceid = 0;
   int polltime_ms = 50;
   bool blocking_reads = true;
-  uint64_t max_sample_time_lag_ns = 100'000'000;
+  uint64_t max_time_gap_ns = 160;
+
 
   // used internally
   uint64_t total_bytes_read = 0;

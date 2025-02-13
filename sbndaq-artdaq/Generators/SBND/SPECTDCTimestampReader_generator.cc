@@ -28,6 +28,8 @@ SPECTDCTimestampReader::SPECTDCTimestampReader(fhicl::ParameterSet const& ps)
       events_to_generate_{ps.get<decltype(events_to_generate_)>("events_to_generate", 0)},
       separate_data_thread_{ps.get<decltype(separate_data_thread_)>("separate_data_thread", 0)},
       separate_monitoring_thread_{ps.get<decltype(separate_monitoring_thread_)>("separate_monitoring_thread", 0)},
+      preprocessor_nodata_timeout_us_{ps.get<decltype(preprocessor_nodata_timeout_us_)>("preprocessor_nodata_timeout_us", 0)},
+      preprocessor_verbose_processing_{ps.get<decltype(preprocessor_verbose_processing_)>("preprocessor_verbose_processing",0)},
       next_hardware_poll_time_us_{0},
       next_status_report_time_us_{0} {}
 
@@ -67,6 +69,14 @@ void SPECTDCTimestampReader::start() {
   auto usec_delay_if_failed = uint64_t{sleep_on_no_data_us_ < 10'000 ? 10'000 : sleep_on_no_data_us_};
   auto max_stop_tries = uint64_t{2'000'000 / usec_delay_if_failed};
 
+  if(preprocessor_nodata_timeout_us_ >0){
+    preprocessor_ = std::make_unique<SPECTDCFragmentPreProcessor>(preprocessor_nodata_timeout_us_);
+    TLOG(TLVL_INFO) << "Enabled SPECTDCFragmentPreProcessor";
+    if(preprocessor_verbose_processing_) {
+      TLOG(TLVL_INFO) << "Enabled verbose processing for SPECTDCFragmentPreProcessor";
+    }
+  }
+  
   TLOG(TLVL_INFO) << "Starting getData() worker thread with usec_delay_if_failed=" << usec_delay_if_failed
                   << ", max_stop_tries=" << max_stop_tries << ".";
 
@@ -162,6 +172,14 @@ bool SPECTDCTimestampReader::getNext_(artdaq::FragmentPtrs& fragments) {
                             MetricMode::LastPoint);
       metricMan->sendMetric("PoolBuffer Low Watermark", buffer_->lowWaterMark(), "Samples", 11, MetricMode::LastPoint);
       next_status_report_time_us_ = utls::hosttime_us() + 5 * utls::onesecond_us;
+    }
+  }
+
+  if(preprocessor_) {
+    if(preprocessor_verbose_processing_) {
+      return sbndaq::runVerboseFragmentProcessing(*preprocessor_, fragments);
+    } else {
+      return preprocessor_->processFragments(fragments);
     }
   }
 

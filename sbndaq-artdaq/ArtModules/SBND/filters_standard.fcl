@@ -1,0 +1,65 @@
+#BEGIN_PROLOG
+bnbzerobiasfilter: {
+
+  module_type: SBNDGateFilter 
+
+  raw_data_label: "daq" 
+  #BNB  #zerobias
+  trigger_type: [1] #zerobias
+  #zerobias
+  excluded_triggers: [3, 4, 14, 15] 
+
+}
+bnblightfilter: {
+
+  module_type: SBNDGateFilter 
+
+  raw_data_label: "daq" 
+  #BNB
+  trigger_type: [2] #light
+  #light
+  excluded_triggers: [3, 4, 14, 15] 
+
+}
+offbeamzerobiasfilter: {
+
+  module_type: SBNDGateFilter 
+
+  raw_data_label: "daq" 
+  #OffBeamBNB
+  trigger_type: [3] #zerobias
+  #zerobias
+  excluded_triggers: [1, 2, 14, 15] 
+
+}
+offbeamlightfilter: {
+
+  module_type: SBNDGateFilter 
+
+  raw_data_label: "daq" 
+  #OffBeamBNB
+  trigger_type: [4] #light
+  #light
+  excluded_triggers: [1, 2, 14, 15] 
+
+}
+crossingmuonfilter: {
+
+  module_type: SBNDGateFilter 
+
+  raw_data_label: "daq" 
+
+  trigger_type: [14, 15] 
+  #crossing muon... might need more of these for different subsets of crossing muon
+  excluded_triggers: [1, 2, 3, 4] 
+
+}
+randomtriggerfilter: {
+
+  module_type: SBNDGateFilter 
+
+  raw_data_label: "daq" 
+
+  trigger_type: [0]
+
+}

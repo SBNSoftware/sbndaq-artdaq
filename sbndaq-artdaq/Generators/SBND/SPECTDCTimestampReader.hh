@@ -12,6 +12,7 @@
 #include "sbndaq-artdaq-core/Overlays/SBND/TDCTimestampFragment.hh"
 
 #include "SPECTDC/SPECTDC_Interface.hh"
+#include "SPECTDC/SPECTDCFragmentPreProcessor.hh"
 
 #include <atomic>
 #include <random>
@@ -49,6 +50,8 @@ class SPECTDCTimestampReader : public artdaq::CommandableFragmentGenerator {
   std::unique_ptr<PoolBuffer> buffer_;
   std::unique_ptr<SPECTDCInterface::SPECCard> hardware_;
   std::unique_ptr<share::WorkerThread> data_thread_;
+  std::unique_ptr<sbndaq::SPECTDCFragmentPreProcessor> preprocessor_;
+  
   TDCTimestampFragment::Metadata metadata_;
   bool configured_;
   uint64_t sleep_on_no_data_us_;
@@ -56,6 +59,8 @@ class SPECTDCTimestampReader : public artdaq::CommandableFragmentGenerator {
   uint64_t events_to_generate_;
   bool separate_data_thread_;
   bool separate_monitoring_thread_;
+  uint64_t preprocessor_nodata_timeout_us_;
+  bool preprocessor_verbose_processing_;
   uint64_t next_hardware_poll_time_us_;
   uint64_t next_status_report_time_us_;
   bool stop_requested_;

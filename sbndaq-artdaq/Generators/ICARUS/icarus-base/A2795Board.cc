@@ -27,7 +27,7 @@ A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr)
   
   TRACEN("A2795Board.cc",TLVL_DEBUG+1, "calling CAENComm_OpenDevice for boardNbr %d boardId %d",boardNbr,boardId);
   
-  ret=CAENComm_OpenDevice(CAENComm_OpticalLink, bus, nbr, 0, &bdhandle);
+  ret=CAENComm_OpenDevice2(CAENComm_OpticalLink, &bus, nbr, 0, &bdhandle);
   
   TRACEN("A2795Board.cc",TLVL_DEBUG+2, "CAENComm_OpenDevice returned status %d",ret);
   

@@ -32,7 +32,8 @@ namespace sbndaq
     zmq::context_t rec_context;
     zmq::socket_t _zmqGPSSubscriber;
     long long receivedNTPsecond;
-   
+    long long prev_timestamp;
+
     class GPSstamp {
     public:
     GPSstamp( uint32_t new_frame, uint16_t new_sample, uint16_t new_div ) 
@@ -117,6 +118,7 @@ namespace sbndaq
 
     uint32_t framesize_;
     double NevisClockFreq_;
+    uint32_t FramesPerSecond_;
 
     bool GetNTBData();
     share::WorkerThreadUPtr GetNTBData_thread_;
@@ -130,10 +132,11 @@ namespace sbndaq
     int current_ntbevent, current_ntbframenum; // for checking consistency between FEMs within a run
     bool desyncCrash;
     uint64_t pseudo_ntbfragment; 
-
-    uint32_t GPSframe;
-    uint16_t GPSsample;
-    uint16_t GPSdiv;
+    int rollCounter;
+    int prevFrame;
+    long long GPSframe;
+    long long GPSsample;
+    long long GPSdiv;
 
       };
 }

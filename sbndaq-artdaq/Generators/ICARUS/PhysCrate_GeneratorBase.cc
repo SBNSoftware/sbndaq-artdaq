@@ -53,6 +53,7 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   }
   
   pcieLinks_ = ps_.get< std::vector<int> >("pcieLinks",std::vector<int>());
+  boardsPerLink_ = ps_.get< std::vector<unsigned int> >("boardsPerLink",std::vector<unsigned int>());
 
   least_data_block_bytes_ = (size_t)SamplesPerChannel_*(size_t)ChannelsPerBoard_*2+12+32;
 

@@ -127,27 +127,31 @@ bool TDCChan::stop() {
   return true;
 }
 
-void TDCChan::monitor_timestamp(uint64_t timestamp_ns) const {
-  auto lag_ns = utls::elapsed_time_ns(timestamp_ns);
+void TDCChan::monitor_timestamp(uint64_t timestamp_ns, int ch_id) const {
+
+  uint64_t lag_ns = utls::elapsed_time_ns(timestamp_ns);
 
   if (metricMan) {
     metricMan->sendMetric(metric_prefix + lit::tdc_sample_time_lag, lag_ns, lit::unit_nanoseconds, 11,
                           MetricMode::Average);
   }
-  if (lag_ns < fmctdc.max_sample_time_lag_ns) return;
 
-  if (lag_ns <= utls::onesecond_ns) {
-    TLOG(TLVL_DEBUG_10) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing systems; host_time-sample_time="
-                        << lag_ns << " ns.";
+  if (lag_ns < utls::max_sample_time_lag_ns) return;
+
+  if (lag_ns < utls::onesecond_ns) {
+
+    TLOG(TLVL_WARN) << "Channel " << ch_id << ". Wrong TDC sample time. Host time > sample time; host_time-sample_time = " << lag_ns / utls::as_milliseconds << " ms. NTP drift > 300 ms! Check White Rabbit and NTP synchronisation.";
 
   } else {
-    TLOG(TLVL_WARN) << "Wrong TDC sample time, check the NTP and WhiteRabbit timing system; host_time-sample_time="
-                    << lag_ns / utls::onesecond_ns << " seconds.";
+
+    TLOG(TLVL_ERROR) << "Channel " << ch_id << ". Wrong TDC sample time. Host time > sample time; host_time-sample_time = " << lag_ns / utls::as_seconds << " s. NTP drift >= 1 s! Check White Rabbit and NTP synchronisation.";
+
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_laggy_samples, uint64_t{1}, lit::unit_samples_per_second, 11,
                             MetricMode::Rate);
     }
   }
+
 }
 
 void TDCChan::monitor() {

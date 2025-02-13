@@ -1,25 +1,14 @@
 pmtmetricproducer: {
         module_type: "PMTMetricProducer"               
-        CAENInstanceLabels: [ "CAENV1730", "ContainerCAENV1730" ]
-        WindowLength: 0.5 #1.6     # beam window length after trigger time, default 1.6 us                                       
-     	  WvfmPostPercent:  0.8      # this should be a decimal! % of the wvfm contained in the 10 us window.
-                                   # having 1+9 -> 0.9. having 2+8 -> 0.8,
-                                   # IMPORTANT! this variable will determine where 0 is in our timing reference frame!
-                                   #
+        CAENInstanceLabels: [ "ContainerCAENV1730" ]
 
         # event trigger timing configuruables 
         ## priority system 
-        ## NTB (RawEventHeader) [0] -> SPEC TDC ETT [1] -> TIMING CAEN [2] -> PTB ETT [3]
-        ## if the first one is not available, it will go to the next one
-        NTBDelay: 367392 # NTB - FTRIG, ns 
+        StreamType: 1 # default value, needs to be changed for different streams!
         TimingType: 0
 
         # SPEC TDC Beam configuration
-        SPECTDCTimingChannel: 2 # 1 is bes, 2 is rwm, 4 is ett 
-        SPECTDCDelay: 2133 # spec tdc ftrig ts - caen ftrig ts
-
-        # CAEN 1730 configuration
-        ## the timing caen is 40968, so skip it
-        FragIDs: [40960,40961,40962,40963,40964,40965,40966,40967]
-     	Verbose: 1 # 0: no printout, 1: printout for each event, 2: printout for each fragment, 3: printout for each channel
+        SPECTDCTimingChannel: 4 # 1 is bes, 2 is rwm, 4 is ett 
+        SPECTDCDelay: 140
+        NTBDelay: 365000
     }

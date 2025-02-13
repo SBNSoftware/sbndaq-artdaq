@@ -18,6 +18,7 @@ constexpr auto buffer_mode_circular = "circular";
 constexpr auto tdc_sample_time_lag = "Sample Time Lag";
 constexpr auto tdc_laggy_samples = "Laggy Samples";
 constexpr auto tdc_sequence_gap = "Sequence Gap";
+constexpr auto tdc_ts_gap = "Timestamp Gap";
 constexpr auto tdc_sample_rate = "Sample Rate";
 constexpr auto tdc_bytes_read = "Sample Bytes Read";
 constexpr auto tdc_read_count = "Sample Read Total";

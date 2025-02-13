@@ -18,6 +18,7 @@
 #include <boost/circular_buffer.hpp>
 #include <unistd.h>
 #include <vector>
+#include <map>
 
 namespace sbndaq {
 class NevisTPC_generatorBase : public artdaq::CommandableFragmentGenerator {
@@ -29,6 +30,7 @@ public:
 protected:
   bool getNext_(artdaq::FragmentPtrs &output) override;
   void start() override;
+  virtual void runonsyncon() {};
   virtual void startFireCalibTrig(){};
   void stop() override;
   void stopNoMutex() override;
@@ -72,6 +74,7 @@ protected:
   uint32_t fSamplesPerChannel;
   uint32_t fNChannels;
   bool fUseCompression;
+  uint32_t fTimeoutSec;
 
   std::vector<artdaq::Fragment::fragment_id_t> fragment_ids;
   std::vector<uint64_t> FEMIDs_;
@@ -80,6 +83,9 @@ protected:
 
   int32_t _this_event;
   int32_t _subrun_event_0;
+
+  std::map<uint32_t, uint32_t> rollCounters;
+  std::map<uint32_t, uint32_t> prevFrames;
 
   typedef struct CircularBuffer {
     boost::circular_buffer<uint16_t> buffer;
