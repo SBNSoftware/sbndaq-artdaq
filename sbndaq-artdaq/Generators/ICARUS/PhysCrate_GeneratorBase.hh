@@ -64,6 +64,7 @@ namespace icarus {
     statpack last_stat_pack_;
 
     std::vector<int> pcieLinks_;
+    std::vector<unsigned int> boardsPerLink_;
 
     size_t event_offset_;
     size_t packSize_zero_counter_;
