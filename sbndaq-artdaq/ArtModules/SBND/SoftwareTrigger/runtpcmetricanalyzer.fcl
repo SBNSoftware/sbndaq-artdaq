@@ -1,0 +1,32 @@
+#include "TPCmetricanalyzer.fcl"
+process_name: TPCMetricAnalyzer
+
+services: {
+}
+
+source: {
+  module_type: RootInput
+}
+
+outputs: {
+  out: {
+    module_type: RootOutput
+    fileName: "TPCmetricanalyzer.root"
+  }
+}
+
+physics: {
+  producers: {
+  }
+
+  filters: {
+  }
+
+  analyzers: { 
+    TPCmetricanalyzer: @local::TPCmetricanalyzer
+  }
+
+  reco: [TPCmetricanalyzer]
+
+  end_paths: [reco]
+}

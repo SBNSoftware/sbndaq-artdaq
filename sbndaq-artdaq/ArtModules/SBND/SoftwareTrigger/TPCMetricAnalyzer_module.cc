@@ -136,18 +136,29 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
   auto daq_handleNTB = evt.getHandle<artdaq::Fragments>(fTagNTB);
   std::cout << "here"<< std::endl;
 
-  if ( daq_handleTPC.isValid() ) {
+  if ( daq_handleTPC.isValid() and daq_handleNTB.isValid()  ) {
     std::cout << "********SIZE: "<< daq_handleTPC->size() << std::endl;
-  }
+    for (auto const &rawfragtpc: *daq_handleTPC) {
+      readTPC(rawfragtpc);
+    } 
+    std::cout << "********SIZE: "<< daq_handleNTB->size() << std::endl;
+    for (auto const &rawfragntb: *daq_handleNTB) {
+      readNTB(rawfragntb);
+    }
+
+ }
   //    for (auto const &rawfrag: *daq_handle) {
   else{
     std::cout << "Not valid handle" << std::endl;
   }
-  /*
+
+
   
+  /*
   std::vector<art::Handle<artdaq::Fragments>> fragmentHandles = evt.getMany<std::vector<artdaq::Fragment>>();
   
   // loop over fragments
+  //  for (auto &cont : *handle)
   for (auto handle : fragmentHandles) {
     if (!handle.isValid() || handle->size() == 0) continue;
     
@@ -174,10 +185,9 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
         }
       }
     }
-  }
+    } */
   
-  */
-  /*
+/*
   // === Perform Calculations ===
   // Check 1: Is NTB trigger number increasing by 1?
   int d_eventno = ntb_eventno - prev_eventno;

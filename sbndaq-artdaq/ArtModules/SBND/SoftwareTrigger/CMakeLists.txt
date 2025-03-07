@@ -6,4 +6,3 @@ cet_build_plugin(CRTMetricProducer art::module LIBRARIES REG ${BUILD_PLUGIN_CORE
 cet_build_plugin(PMTMetricProducer art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 cet_build_plugin(NeutrinoStreamFilter art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
 cet_build_plugin(TPCMetricAnalyzer art::module LIBRARIES REG ${BUILD_PLUGIN_CORE_LIB_LIST} )
-
