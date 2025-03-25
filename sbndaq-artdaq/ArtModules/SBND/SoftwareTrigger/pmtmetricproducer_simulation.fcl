@@ -1,0 +1,41 @@
+pmtmetricproducer: {
+       module_type: "PMTMetricProducer"
+        is_persistable: true
+        WindowTimeOffset: 0.1    # (uint) offset of trigger time in ticks (1 tick = 2 ns)
+                                 #    default 30 ticks - WAG for now
+        TrigWindowFrag:     1500      # max time difference for frag timestamp to be part of beam window
+                                 #  in ticks (1 tick=2 ns), default 100 ticks - WAG for now
+        WindowLength: 5 #1.6    # beam window length after trigger time, default 1.6 us
+        WvfmLength: 5120         # not used, changing this does nothing
+        ETrigFragID: 0 #9           # fragID of 1730 with event trigger in ch15
+        ETrigThresh: 9000        # adc threshold for event trigger
+        FragIDlist:  [0,1,2,3,4,5,6,7] #[9, 17] #, 17, 20, 21, 22, 23, 24, 25]  # should have 8 modules
+        # 120 entries in order of modules in frag ID list
+        Uncoated: [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,
+                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,
+                   0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,
+                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,
+                   0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,
+                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1,
+                   0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,
+                   0,0,0,1,1,0,0,0,0,0,0,0,0,1,1]   # 0 is Coated, 1 is Uncoated
+       TPC:      [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+                  0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
+                  0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+                  0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
+                  0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+                  0,1,0,1,0,1,0,1,0,1,0,1,0,1,1,
+                  0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,
+                  0,1,0,1,0,1,0,1,0,1,0,1,0,1,1]  #  TPC=0(1) is neg(pos) x and beam right(left)
+        Verbose: true
+        SaveHists: false
+        BaselineAlgo: "constant"
+        InputBaseline: 8000
+        InputBaselineSigma: 2
+        ADCThreshold: 7976 #7860 #7960
+        FindPulses: false
+        PEArea: 66.33
+    }
+      	
+
+

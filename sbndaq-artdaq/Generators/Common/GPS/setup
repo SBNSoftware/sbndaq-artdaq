@@ -1,0 +1,14 @@
+#source /grid/fermiapp/products/artdaq/setup
+
+setup epics v3_16_1c -q e14
+setup pqxx v5_0_1a -q e14:p2713b:prof
+
+#setup epics_css v3_3_10a
+#setup net_snmp v5_8_0 -q e14:prof
+
+#export MIBDIRS=$NET_SNMP_FQ_DIR/share/snmp/mibs:/home/nfs/sbnddcs/mib_common
+export EPICS_CA_ADDR_LIST="131.225.250.10"
+
+#setup postgresql v9_6_6a -q p2714b
+#setup epics_css_archiver v3_3_10a
+

@@ -1,0 +1,12 @@
+Configuration files for running artdaq in the Vertical Slice Test.
+
+To be ported to tests at DAB???
+
+Three directories:
+DAQInterface -- configuration files and scripts for running DAQInterface
+NOTE: Paths are currently hard-coded to lariat-daq04 -- we'll probably want to change things for DAB
+
+ArtdaqConfig -- fhicl configuration files for running artdaq
+  ConfigA is set to run Nevis Readout Electronics w/ 10 FEMB's
+  
+bin -- associated scripts to run the DAQ

@@ -1,0 +1,73 @@
+#!/bin/bash
+
+function load_trace() {
+  #export TRACE_MSGMAX=2048
+  export TRACE_NUMENTS=100000
+  export TRACE_SHOW=HxTnl
+  export TRACE_NAME=TRACE  
+  #rm -f /tmp/trace_buffer_$USER;
+}
+
+function run_testdriver(){
+  ls -al $(which readfhicl)
+  artdaqDriver -c /home/nfs/sbnd/local_product_installation/sbnddaq_readout/${sbnddaq_version}/fhicl/driver_test1.fcl
+}
+
+function debug_testdriver(){
+  ls -al $(which readfhicl)
+  gdb --args artdaqDriver -c /home/nfs/sbnd/local_product_installation/sbnddaq_readout/${sbnddaq_version}/fhicl/driver_test1.fcl
+}
+
+
+function info_testdriver(){
+  ls -al $(which readfhicl)
+  ldd $(which artdaqDriver)
+}
+
+
+function config_trace(){
+# tonMg 0-63
+
+#kill noise
+# toffM 0-63 -n SharedMemoryManager 
+# toffM 0-63 -n TraceLock
+# toffM 0-63 -n TraceLock
+# toffM 0-63 -n SharedMemoryEventReceiver
+# toffM 0-63 -n _SharedMemoryEventManager
+
+toffM 0-63 -n BoardReader_CommandableFragmentGenerator
+toffM 0-63 -n BoardReader_CommandableFragmentGenerato
+toffM 0-63 -n NevisTPCGenerator
+toffM 0-63 -n BoardReader_BoardReaderCore
+toffM 0-63 -n TraceLock
+toffM 0-63 -n SharedMemoryManager
+toffM 0-63 -n DataReceiverManager
+
+}
+
+function _complete_conftool(){
+  local current_string=${COMP_WORDS[COMP_CWORD]}
+  local complete_list=$(conftool.py |grep -v Usage |grep conftool |cut -d ' ' -f 3)
+
+  if [  ${COMP_WORDS[COMP_CWORD-1]} = "exportConfiguration" ];then
+    complete_list=$(conftool.py getListOfAvailableRunConfigurations)
+  elif [  ${COMP_WORDS[COMP_CWORD-1]} = "getListOfAvailableRunConfigurations" ];then
+    complete_list=$(conftool.py getListOfAvailableRunConfigurationPrefixes)
+  elif [  ${COMP_WORDS[COMP_CWORD-1]} = "importConfiguration" ];then
+    complete_list=$(conftool.py getListOfAvailableRunConfigurationPrefixes)
+  fi
+  
+  COMPREPLY=($(compgen -W '${complete_list[@]}' -- "$current_string"))
+  return 0
+}
+
+complete -F _complete_conftool conftool.py
+
+function select_configuration(){
+    printf "\n\nEnter the run configuration number from the list below\n"
+    select config in $(conftool.py getListOfAvailableRunConfigurations);do
+      select_configuration_retvalue=$config
+      return 0
+    done;
+}
+

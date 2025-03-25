@@ -1,0 +1,11 @@
+BEGIN_PROLOG
+
+CRTmetricproducer:
+{
+	is_persistable: true
+  	BeamWindowStart: 320000
+  	BeamWindowEnd: 350000
+  	Verbose: false
+}
+
+END_PROLOG

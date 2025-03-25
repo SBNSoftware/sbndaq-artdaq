@@ -1,0 +1,14 @@
+pmtmetricproducer: {
+        module_type: "PMTMetricProducer"               
+        CAENInstanceLabels: [ "ContainerCAENV1730" ]
+
+        # event trigger timing configuruables 
+        ## priority system 
+        StreamType: 1 # default value, needs to be changed for different streams!
+        TimingType: 0
+
+        # SPEC TDC Beam configuration
+        SPECTDCTimingChannel: 4 # 1 is bes, 2 is rwm, 4 is ett 
+        SPECTDCDelay: 140
+        NTBDelay: 365000
+    }

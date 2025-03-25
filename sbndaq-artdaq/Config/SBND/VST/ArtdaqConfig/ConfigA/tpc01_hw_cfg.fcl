@@ -1,0 +1,106 @@
+#include "metrics.fcl" 
+
+dma_buffer_size: 1000000
+
+daq: {
+fragment_receiver: {
+  generator: NevisTPCNUXMIT # Generator of the XMIT NU stream
+  fragment_type: NevisTPC
+  fragment_id: 0 
+  board_id: 0
+  
+  SamplesPerChannel: 7675
+
+  ChunkSize: @local::dma_buffer_size
+  MonitorPeriod: 12 # Period in seconds to read electronics status
+  DumpBinary: false # Write binary file before the artdaq back-end
+  DumpBinaryDir: "/daqdata/dropbox" # Directory for binary file dump
+
+  desyncCrash: false # Crash the whole daq when trigger/frame number is off between FEMs
+
+
+  # disable HW driver subrun
+  SubrunCheckPeriod: -1 # Period in microseconds to check if a new subrun is needed i
+  EventsPerSubrun: 200
+
+  ### Configuration of the Nevis Crate ###
+  ### For Nevis test stand ###
+# Configuration of the Nevis Crate at the LArIAT VST test stand (location specific)
+
+# Do not change block name
+nevis_crate : { 
+# Location of modules within crate
+ xmit_slot: 3 # Location of XMIT module
+ max_fem_slot: 5 #13 # Location of leftmost FEM module
+ trigger_slot: 16 # Location of Trigger Board
+# FPGA firmware
+ xmit_fpga: "/home/nfs/sbnd/jcrespo/sbnddaq3/srcs/sbnddaq-readout/sbnddaq-readout/Generators/NevisTPC/nevishwutils/fpga/readcontrol_110601_v3_play_header_hist_l1block_10_10_2017.rbf"
+ fem_fpga: "/home/nfs/sbnd/jcrespo/sbnddaq3/srcs/sbnddaq-readout/sbnddaq-readout/Generators/NevisTPC/nevishwutils/fpga/feb_fpga_lar1nd"
+# FEM settings
+#nu_compress: false
+nu_compress: true
+timesize: 2559 # Number of samples (minus one) for the 2 MHz clock
+}
+
+
+  ### Configuration of the ControllerModule ###
+# Configuration of the Nevis Controller Module
+
+# Do not change block name
+controller_module : { 
+ # Controller PCIe card settings
+ vendor_id : 0x1172 # Altera (Nevis PCIe card)
+ device_id : 0x4
+ bus : 0x3
+ device_name: neviscard_controller
+}
+
+  ### Configuration of the TriggerModule ###
+# Configuration of the Nevis Trigger Module
+
+# Do not change block name
+trigger_module : {
+# Example from MicroBooNE -- NEEDS TO BE EDITED --
+ deadtime : 0xfa
+ framesize : 20479 # Number of samples (minus one) for the 16 MHz clock 
+ g1delay : 0x10
+ g1end : 0x1
+ g1start : 0x1
+ g1width : 0x20
+ g2delay : 0x10
+ g2end : 0x20
+ g2start : 0x1
+ g2width : 0x20
+ prescale0 : 0
+ prescale1 : 0
+ prescale8 : 0
+ prescale9 : 0
+ timeinfo_directory : "/data/uboonedaq/metadata"
+ trigmask0 : 0
+ trigmask1 : 0
+ trigmask8 : 0x132
+}
+
+  ### Configuration of the XMITReader for the NU stream ###
+# Configuration of the XMITReader for the Nevis XMIT NU stream
+
+# The block name must match the name of the XMITReader instance of sbnddaq-readout/sbnddaq-readout/Generators/NevisTPCNUXMIT.hh
+nu_xmit_reader : { 
+ # NU stream PCIe card settings
+ vendor_id : 0x1172 # Altera (Nevis PCIe card)
+ device_id : 0x4
+ bus : 0x2
+ device_name: neviscard_nu
+ # DMA settings
+ dma_buffer_size : @local::dma_buffer_size
+ maxpoll : 3e8 # DMA timeout limit in microseconds   
+ profile_time : false
+}
+
+  destinations: {}
+  routing_table_config: {
+    use_routing_master: false 
+  }
+
+}
+}

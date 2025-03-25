@@ -1,0 +1,73 @@
+#include "metrics.fcl" 
+services: {
+  scheduler: {
+    errorOnFailureToPut: false 
+  }
+
+  NetMonTransportServiceInterface: {
+    service_provider: NetMonTransportService 
+    broadcast_sends: true 
+    nonblocking_sends: true 
+    destinations: {}
+  }
+}
+
+daq: {
+  aggregator: {
+    expected_events_per_bunch: 1 
+    print_event_store_stats: true 
+    event_queue_depth: 40 
+    event_queue_wait_time: 5 
+    every_sequence_id_should_be_present: true 
+    max_fragment_size_bytes: 100000000 
+    buffer_count: 40 
+    onmon_event_prescale: 1 
+    xmlrpc_client_list: "daqinterface-replace-this" # Will be set by DAQInterface
+    # Will be set by DAQInterface
+    subrun_size_MB: -1 
+    subrun_duration: -1 
+    subrun_event_count: 0 
+    is_data_logger: true 
+
+    auto_suppression_enabled: false 
+
+    routing_token_config: {
+      use_routing_master: false 
+    }
+    sources: {}
+  }
+}
+
+source: {
+  module_type: NetMonInput 
+}
+
+outputs: {
+  normalOutput: {
+    module_type: RootOutput 
+    #fileName: "/tmp/sbnddaq_r%06r_sr%02s_%to_%#.root" 
+    #fileName: "/daqdata/sbnd_r%06r_%#.root"
+    fileName:  "/daqdata/sbnd_r%06r_%06s_%#.root"
+    fileProperties: {
+      maxSubRuns: 1 
+      maxRuns: 1 
+    }
+    fastCloning: false 
+    compressionLevel: 3 
+  }
+ rootNetOutput: {
+
+  module_type: RootNetOutput 
+
+} 
+ 
+}
+
+physics: {
+  analyzers: {}
+  producers: {}
+  #e1: [ normalOutput ]
+  my_output_modules: [normalOutput, rootNetOutput] 
+
+}
+process_name: DAQDL 

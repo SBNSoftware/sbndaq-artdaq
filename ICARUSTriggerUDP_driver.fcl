@@ -1,0 +1,115 @@
+events_to_generate: 50
+run_number: 100
+
+
+services: {
+  ArtdaqSharedMemoryServiceInterface: {
+   service_provider: ArtdaqSharedMemoryService  
+ }
+
+  ArtdaqFragmentNamingServiceInterface: {service_provider: IcarusFragmentNamingService }
+}
+
+fragment_receiver: {
+
+   generator: ICARUSTriggerUDP
+
+   generator: ICARUSTriggerUDP
+   fragment_type: ICARUSTriggerUDP
+   max_fragment_size_bytes: 100
+   fragment_id: 0x4001
+   
+   board_id: 1
+
+   ### trigger communication pieces
+   config_port: 63001
+   #config_ip: "192.168.191.79" #for SPEXI
+   config_ip: "192.164.184.8"
+   #data_port: 6343
+   #data_ip: "192.168.191.79" #for SPEXI
+   data_port: 63000 
+   data_ip: "192.164.184.8"
+   #ip: "192.168.191.78" #for testing on WireShark
+
+   ### how many times to retry/wait for init
+   n_init_retries: 30
+   n_init_timeout: 10000 #ms
+
+}
+
+event_builder: {
+
+  expected_fragments_per_event: 1
+  max_fragment_size_bytes: 10000000
+  buffer_count: 20
+  use_art: true
+  print_event_store_stats: false
+  verbose: false
+  events_expected_in_SimpleQueueReader: @local::events_to_generate
+
+}
+
+physics:{
+
+  analyzers: {}
+  producers: {}
+  filters:   {}
+
+  outstream: [rootout ]
+  end_paths: [ ]
+
+}
+
+outputs:{
+
+  rootout:{
+    module_type: RootOutput
+   # fileName: "/scratch/speranza/crt_test_metadata_%to_%#.root"
+    fileName: "/scratch/speranza/crt_test_metadata.root"
+    compressionLevel: 0
+ 
+    #fileProperties:{
+
+    # maxEvents: 100
+	
+   # }
+
+
+  }
+
+}
+
+
+  out:{
+
+    module_type: RootOutput
+    filename: "/scratch/speranza/crt_test_driver_test_100evt%to_%#.root"
+
+    fileProperties:{
+    	
+	maxEvents: 10  
+    }
+
+ }
+
+source: {
+  module_type: ArtdaqInput
+  waiting_time: 2500000
+  resume_after_timeout: true
+}
+
+metrics:{
+
+#  graphite:{
+#    level: 5
+#    metricPluginType: "graphite" 
+#    reporting_interval: 1.0
+#    host: "sbn-daq02.fnal.gov" 
+#    port: 2003
+#    namespace: "artdaqDriver.BernCRTZMQ." 
+#  }
+
+}
+
+process_name: Driver
+

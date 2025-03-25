@@ -1,0 +1,156 @@
+//
+//  CAENV1740Configuration.cc
+//
+//  Class to read and contain SBND CAEN V1740B configuration 
+//   parameters
+//
+//
+#define TRACE_NAME "CAENV1740Configuration"
+#include "artdaq/DAQdata/Globals.hh"
+
+#include "CAENV1740Configuration.hh"
+
+// Constructor
+sbndaq::CAENV1740Configuration::CAENV1740Configuration(fhicl::ParameterSet const & ps):
+  link(0),
+  nBoards(0),
+  enableReadout(0),
+  boardId(0),
+  recordLength(0),
+  postPercent(0),
+  irqWaitTime(0),
+  allowTriggerOverlap(true),
+  // dynamicRange(0), // not available for V1740
+  ioLevel(0),
+  nChannels(0),
+  nGroups(0),
+  // triggerPolarity(0),
+  extTrgMode(0),
+  swTrgMode(0),
+  acqMode(0),
+  debugLevel(0),
+  runSyncMode(0),
+  // analogMode(0),
+  testPattern(0)//,
+  // ovthValue(0),
+  // triggerLogic(0),
+  // majorityLevel(0),
+  // majorityCoincidenceWindow(0)
+{
+  link                 = ps.get<int>("link");
+  enableReadout        = ps.get<int>("enableReadout");
+  boardId              = ps.get<int>("board_id");
+  recordLength         = ps.get<int>("recordLength");
+  runSyncMode          = ps.get<int>("runSyncMode");
+  allowTriggerOverlap  = ps.get<bool>("allowTriggerOverlap");
+  //dynamicRange         = ps.get<int>("dynamicRange"); // not available for V1740
+  ioLevel              = ps.get<int>("ioLevel");
+  nChannels            = ps.get<int>("nChannels");
+  nGroups              = ps.get<int>("nGroups");
+  extTrgMode           = ps.get<int>("extTrgMode");
+  swTrgMode            = ps.get<int>("swTrgMode");
+  acqMode              = ps.get<int>("acqMode");
+  // triggerPolarity      = ps.get<int>("triggerPolarity");
+  // triggerPulseWidth    = ps.get<uint8_t>("triggerPulseWidth");
+  debugLevel           = ps.get<int>("debugLevel");
+  postPercent          = ps.get<int>("postPercent");
+  irqWaitTime          = ps.get<int>("irqWaitTime");
+  readoutMode          = ps.get<int>("readoutMode");
+  // analogMode           = ps.get<int>("analogMode");
+  testPattern          = ps.get<int>("testPattern");
+  // ovthValue            = ps.get<int>("ovthValue");         
+  // triggerLogic         = ps.get<int>("triggerLogic");  
+  // majorityLevel        = ps.get<int>("majorityLevel"); 
+  // majorityCoincidenceWindow = ps.get<int>("majorityCoincidenceWindow"); 
+
+  char tag[1024];
+  groupEnableMask = 0;
+
+  // jcrespo: comment-region as it is not planned for V1740
+  // for ( int j=0; j<MAX_CHANNELS; j++){
+  //   sprintf(tag,"triggerThreshold%d", j);
+  //   triggerThresholds[j] = ps.get<uint16_t>(tag);
+  // }
+
+  if ( enableReadout ){
+    // jcrespo: modified for V1740 channel groups
+    for ( int j=0; j<MAX_GROUPS; j++){
+      sprintf(tag,"groupEnable%d", j);
+      groupEnable[j] = ps.get<bool>(tag);
+      if ( groupEnable[j] )
+      {
+	groupEnableMask |= ( 1 << j );
+	sprintf(tag,"groupPedestal%d", j);
+	pedestal[j] = ps.get<int>(tag);
+      }
+
+      /*
+      sprintf(tag,"channelSelfTrgMode%d", j);
+      channelSelfTrgMode[j] = ps.get<bool>(tag);
+      if ( channelSelfTrgMode[j] )
+      {
+	channelEnableMask |= ( 1 << j );
+	sprintf(tag,"channelPedestal%d", j);
+	pedestal[j] = ps.get<int>(tag);
+      }
+      */
+    }
+  }
+}
+
+
+void sbndaq::CAENV1740Configuration::print(std::ostream& os) 
+{
+  os << *this;
+}
+
+std::ostream& operator<<(std::ostream& os, const sbndaq::CAENV1740Configuration& e)
+{
+  os << "CAEN Configuration" << std::endl;
+  os << "  Link                  " << e.link << std::endl;
+  os << "  nBoards               " << e.nBoards << std::endl;
+  os << "  EnableReadout         " << e.enableReadout << std::endl;
+  os << "  RecordLength          " << e.recordLength << std::endl;
+  os << "  AllowTriggerOverlap   " << e.allowTriggerOverlap << std::endl;
+  // os << "  DynamicRange          " << e.dynamicRange << std::endl;
+  os << "  nChannels             " << e.nChannels << std::endl;
+  os << "  PostPercent           " << e.postPercent << "%" << std::endl;
+  os << "  IrqWaitTime           " << e.irqWaitTime << std::endl;
+  os << "  IOLevel (NIM or TTL)  " << e.ioLevel << " " 
+     << sbndaq::CAENDecoder::IOLevel((CAEN_DGTZ_IOLevel_t)e.ioLevel) << std::endl;
+  // os << "  TriggerPolarity       " << e.triggerPolarity << " " 
+  //   << sbndaq::CAENDecoder::TriggerPolarity((CAEN_DGTZ_TriggerPolarity_t)e.triggerPolarity) << std::endl;
+  //  os << "  TriggerPulseWidth     " << e.triggerPulseWidth << std::endl;
+  os << "  ExtTrgMode            " << e.extTrgMode << " " 
+     << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.extTrgMode) << std::endl;
+  os << "  SWTrgMode             " << e.swTrgMode << " " 
+     << sbndaq::CAENDecoder::TriggerMode((CAEN_DGTZ_TriggerMode_t)e.swTrgMode) << std::endl;
+  // jcrespo: not planned for V1740
+  //  for ( int j=0; j<sbndaq::CAENV1740Configuration::MAX_CHANNELS; j++)
+  //    os << "    Channel " << j << " Threshold " << e.triggerThresholds[j] << std::endl;
+  os << "  AcqMode               " << e.acqMode << " " 
+     << sbndaq::CAENDecoder::AcquisitionMode((CAEN_DGTZ_AcqMode_t)e.acqMode) << std::endl;
+  os << "  DebugLevel            " << e.debugLevel << std::endl;
+  os << "  ReadoutMode           " << e.readoutMode << " " 
+     << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.readoutMode) << std::endl;
+  //  os << "  AnalogMode            " << e.analogMode << std::endl;
+  os << "  TestPattern           " << e.testPattern << std::endl;
+  //os << "  OvthValue             " << e.ovthValue << std::endl;
+  //os << "  TriggerLogic          " << e.triggerLogic << std::endl;
+  //os << "  MajorityLevel         " << e.majorityLevel << std::endl;
+  //os << "  MajorityCoincidenceWindow " << e.majorityCoincidenceWindow << std::endl;
+  os << "  BoardId               " << e.boardId << 
+      "  EnableReadout " << e.enableReadout << std::endl;
+  if ( e.enableReadout )
+  {
+    os << "    GroupEnableMask   0x" << std::hex << e.groupEnableMask << std::dec << std::endl;
+    for ( int j=0; j<sbndaq::CAENV1740Configuration::MAX_GROUPS; j++)
+    {
+      if ( e.groupEnable[j] )
+      {
+	os << "    Group " << j << " Pedestal " << e.pedestal[j] << std::endl;
+      }
+    }
+  }
+  return(os);
+}

@@ -1,0 +1,72 @@
+services: {
+  scheduler: {
+    errorOnFailureToPut: false
+  }
+  NetMonTransportServiceInterface: {
+    service_provider: NetMonTransportService
+    broadcast_sends: true
+    nonblocking_sends: true
+	destinations: { }
+  }
+}
+
+daq: {
+  aggregator: {
+    expected_events_per_bunch: 1
+    print_event_store_stats: true
+    event_queue_depth: 40
+    event_queue_wait_time: 5
+	max_fragment_size_bytes: 16777216
+    buffer_count: 40
+    onmon_event_prescale: 1
+    is_data_logger: true
+
+    auto_suppression_enabled: false
+
+	routing_token_config: {
+		use_routing_master: false
+	}
+
+	sources: { }
+  }
+
+  metrics: {
+    aggFile: {
+      metricPluginType: "file"
+      level: 3
+      fileName: "/tmp/aggregator/agg_%UID%_metrics.log"
+      uniquify: true
+    }
+  }
+
+}
+
+source: {
+  module_type: NetMonInput
+}
+outputs: {
+  normalOutput: {
+    module_type: RootOutput
+    fileName: "/tmp/artdaqdemo_r%06r_sr%02s_%to_%#.root"
+    fileProperties: { maxSubRuns: 1 maxRuns: 1  }
+    fastCloning: false
+    compressionLevel: 3
+  }
+  rootNetOutput: {
+    module_type: RootNetOutput
+  }
+
+}
+physics: {
+  analyzers: {
+
+  }
+
+  producers: {
+
+   }
+
+  my_output_modules: [ normalOutput ]
+  my_mpi_output_modules: [rootNetOutput]
+}
+process_name: DAQDL

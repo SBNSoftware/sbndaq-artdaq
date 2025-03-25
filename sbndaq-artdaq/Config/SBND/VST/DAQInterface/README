@@ -1,0 +1,3 @@
+Set of configuration files for DAQInterface, and a Config/ directory
+containg DAQ process fhicl configurations (TEMP before switching to
+database solution for managing fhicl)

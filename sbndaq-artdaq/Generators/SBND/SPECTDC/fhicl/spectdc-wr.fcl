@@ -1,0 +1,53 @@
+data_buffer_depth_fragments:16384
+#data_buffer_depth_fragments:1024
+
+spec: {
+  deviceid:auto
+  fmctdc: {
+    timesync_source:wr
+    time_adjustment:{
+      make_adjustment:true
+      add_leap_seconds:37
+      next_leap_second_tai:1704067199 #31st December 2023
+    }
+    calibration_data:none
+    polltime_ms: 100
+    blocking_reads: true
+    monitor:{
+      temperature:true
+      timestamps:true
+    }
+    channels: [
+      { id : 0
+        name:ch0
+        enabled: true
+        time_offset_ps: 0
+        monitor_only: false
+        terminated: true },
+      { id : 1
+        name:ch1
+        enabled: true
+        time_offset_ps: 0
+        monitor_only: false
+        terminated: true },
+      { id : 2
+        name:ch2
+        enabled: true
+        time_offset_ps: 0
+        monitor_only: false
+        terminated: true },
+      { id : 3
+        name:ch3
+        enabled: true
+        time_offset_ps: 0
+        monitor_only: false
+        terminated: true },
+      { id : 4
+        name:ch4
+        enabled: true
+        time_offset_ps: 0
+        monitor_only: false
+        terminated: true }
+    ]
+  }
+}

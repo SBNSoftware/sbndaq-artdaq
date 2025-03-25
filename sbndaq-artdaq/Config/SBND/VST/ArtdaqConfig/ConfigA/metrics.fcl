@@ -1,0 +1,8 @@
+#include "templates/defaults.fcl"
+filemetric_t: {
+      metricPluginType @protect_error: "file"
+      level: 3
+      fileName: "/tmp/any_%UID%_metrics.log"
+      uniquify: true
+}
+

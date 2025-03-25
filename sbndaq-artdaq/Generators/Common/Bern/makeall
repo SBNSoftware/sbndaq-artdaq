@@ -1,0 +1,14 @@
+gcc -o febdrv febdrv.c -lzmq -std=gnu99  -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
+gcc -o febprogfw febprogfw.c -std=gnu99  -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
+gcc -o febmon febmon.c -lzmq -std=gnu99
+gcc -o febinfluxdb febinfluxdb.c -lzmq -std=gnu99 -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
+gcc -o febconf febconf.c -lzmq -std=gnu99
+gcc -o febctl febctl.c -lzmq -std=gnu99
+gcc -o febstore febstore.c -lzmq -std=gnu99
+gcc -o febmontrigs febmontrigs.c -lzmq -std=gnu99
+gcc -o febmongps febmongps.c -lzmq -std=gnu99
+gcc -o febmonrwm febmonrwm.c -lzmq -std=gnu99
+gcc -o confsetgain confsetgain.c -std=gnu99  -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
+gcc -o confsetbias confsetbias.c -std=gnu99  -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
+##gcc -o filter_pairs filter_pairs.c  -lzmq -std=gnu99  -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast
+

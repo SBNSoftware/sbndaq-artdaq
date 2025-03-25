@@ -1,0 +1,76 @@
+events_to_generate: 100
+run_number: 100
+
+fragment_receiver: {
+
+   generator: BernCRTZMQData
+   
+   fragment_type: BERNCRTZMQ
+   max_fragment_size_bytes: 1000000
+
+   board_id: 1
+
+   RunNumber: @local::run_number
+   SubrunTimeWindowSize: 1e8
+   SequenceTimeWindowSize: 1e8
+
+   nADCBits: 12
+   nChannels: 32
+   ReaderID: 0x1
+   
+   FEBIDs : [ 0x603712341e, 0x603712341a, 0x603712341b, 0x603712341c, 0x603712341d, 0x603712341f,
+              0x6037123434, 0x603712343d, 0x603712343c, 0x603712343a, 0x603712343b, 0x6037123439, 0x6037123438]
+  
+   MaxTimeDiffs : [ 1e8 ]
+
+   FEBDequeBufferCapacity: 10e3
+   FEBDTPBufferCapacity: 1024
+
+   zmq_data_pub_port: "tcp://localhost:5556"
+   zmq_data_receive_timeout_ms: 500
+   
+   MaxDTPSleep: 1e8
+
+}
+
+event_builder: {
+
+  expected_fragments_per_event: 1
+  max_fragment_size_bytes: 10000000
+  buffer_count: 20
+  use_art: true
+  print_event_store_stats: false
+  verbose: false
+  events_expected_in_SimpleQueueReader: @local::events_to_generate
+
+}
+
+physics:{
+
+  analyzers: {}
+  producers: {}
+  filters:   {}
+
+  outstream: [ rootout ]
+  end_paths: [ outstream ]
+
+}
+
+outputs:{
+
+  rootout:{
+    module_type: RootOutput
+    fileName: "/scratch/wketchum/v1730_driver_test.root"
+    compressionLevel: 0
+  }
+
+}
+
+source:{
+  module_type: IcarusDAQInput
+  waiting_time: 900
+  resume_after_timeout: true
+}
+
+process_name: Driver
+
