@@ -971,7 +971,7 @@ static void open_log_files() {
   FILE *fd_out;
   FILE *fd_err;
   
-  fd_out = freopen(out_log, "w", stdout);
+  fd_out = freopen(out_log, "a", stdout);
   fd_err = freopen(err_log, "a", stderr);
   setvbuf(fd_out, (char *)NULL, _IONBF, 1024);
   setvbuf(fd_err, (char *)NULL, _IOLBF, 1024);
