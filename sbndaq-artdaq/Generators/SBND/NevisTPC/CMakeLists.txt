@@ -13,7 +13,6 @@ SET_SOURCE_FILES_PROPERTIES(NevisTPC2StreamNUandSNXMIT_generator.cc PROPERTIES C
 SET_SOURCE_FILES_PROPERTIES(NevisTBStream_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCNUXMIT_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCCALIB_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
-
 cet_make_library(
   LIBRARY_NAME
     sbndaq-artdaq_NevisTPCGeneratorBase

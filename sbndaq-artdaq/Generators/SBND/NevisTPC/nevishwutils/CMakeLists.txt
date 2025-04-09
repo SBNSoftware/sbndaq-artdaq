@@ -5,9 +5,9 @@ list(APPEND COMMON_PROJECT_LIBS  $ENV{WINDRIVER_LIB})
 set(COMMON_PROJECT_LIBS ${COMMON_PROJECT_LIBS} PARENT_SCOPE)
 
 SET_SOURCE_FILES_PROPERTIES(NevisPCIeCard-generated.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
-SET_SOURCE_FILES_PROPERTIES(NevisPCIeCard.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
-SET_SOURCE_FILES_PROPERTIES(NevisReadoutPCIeCard.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
-SET_SOURCE_FILES_PROPERTIES(NevisControllerPCIeCard.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
+SET_SOURCE_FILES_PROPERTIES(NevisPCIeCard.cpp PROPERTIES COMPILE_FLAGS "-Wno-error=unused-function -Wno-error=unused-result -Wno-unused-result")
+SET_SOURCE_FILES_PROPERTIES(NevisReadoutPCIeCard.cpp PROPERTIES COMPILE_FLAGS "-Wno-error=unused-function -Wno-error=unused-result -Wno-unused-result")
+SET_SOURCE_FILES_PROPERTIES(NevisControllerPCIeCard.cpp PROPERTIES COMPILE_FLAGS "-Wno-error=unused-function -Wno-error=unused-result -Wno-unused-result")
 
 SET_SOURCE_FILES_PROPERTIES(ControllerModule.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(Crate.cpp PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
