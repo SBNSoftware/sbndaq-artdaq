@@ -17,7 +17,7 @@
 #include <sys/msg.h>
 #include <sys/types.h>
 #include "usbreadout.h"
-
+#include <tracemf.h>
 
 #define buf_size 1024
 #define MSG_BUF_SIZE 32
@@ -97,11 +97,18 @@ void find_mqs(){
 void mq_send(int msg, char data[]){
     int mq0;
     int mq1;
+    int mqwait=0;
     struct mymsg msgp;
     memset(msgp.mtext,0,MSG_BUF_SIZE);
     //MQ_size = 0;
     //    if(MQs[0][0]==0)
-    if(MQ_size == 0)  find_mqs();
+    //if(MQ_size == 0)  find_mqs();
+    while(MQ_size == 0){
+      find_mqs();
+      TRACE(TLVL_DEBUG, "Waiting for message queues: %d us",mqwait*10);
+      mqwait++;
+      usleep(10);
+    }
     while(1){
         try{
             signal(SIGALRM,handle);
@@ -130,8 +137,10 @@ void mq_send(int msg, char data[]){
             return;                             //success
         else
             break;                              //reraise other exceptions
-        printf("Killing MQ mq1\n");
-        system("ipcrm -Q mq1");                 //kill blocking mq
+        TRACE(TLVL_INFO,"Killing MQ mq1");
+	char ipcrm_cmd[20];
+	sprintf(ipcrm_cmd,"iprcm -Q %d",mq1);
+	system(ipcrm_cmd);
         find_mqs();                               //remove it from MQs
     }
 }
@@ -141,6 +150,7 @@ void mq_send(int msg, char data[]){
 void mq_send_str(int msg, char data[]){
     int mq0;
     int mq1;
+    int mqwait=0;
     // struct msgbuf msgp = (struct msgbuf*)malloc(sizeof(struct msgbuf) + 100);
     struct mymsg msgp;
     ////memset(msgp.mtext,0,MSG_BUF_SIZE);
@@ -148,7 +158,13 @@ void mq_send_str(int msg, char data[]){
     //MQ_size = 0;
     //if(MQs[0][0]==0)
 
-    if(MQ_size==0) find_mqs();
+    //if(MQ_size==0) find_mqs();
+    while(MQ_size == 0){
+      find_mqs();
+      TRACE(TLVL_DEBUG, "Waiting for message queues: %d us",mqwait*10);
+      mqwait++;
+      usleep(10);
+    }
 
     while(1){
         try{
@@ -173,8 +189,11 @@ void mq_send_str(int msg, char data[]){
             return;                             //success
         else
             break;                              //reraise other exceptions
-        printf("Killing MQ mq1\n");
-	system("ipcrm -Q mq1");                 //kill blocking mq
+
+        TRACE(TLVL_INFO,"Killing MQ mq1");
+	char ipcrm_cmd[20];
+	sprintf(ipcrm_cmd,"iprcm -Q %d",mq1);
+	system(ipcrm_cmd);
         find_mqs();                             //remove it from MQs
     }
 }
@@ -182,9 +201,9 @@ void mq_send_str(int msg, char data[]){
 
 //mq_send_usb $msg_id, $usb_num,$data;
 void mq_send_usb (int msg, int usb_num, unsigned char data[]){
-    //std::cout<<"inside mq_send_usb"<<std::endl;
     int mq0;
     int mq1;
+    int mqwait=0;
     struct mymsg1 msgp;
     // memset(msgp.mtext,0,4);
    // std::cout<<"memset"<<std::endl;
@@ -192,7 +211,13 @@ void mq_send_usb (int msg, int usb_num, unsigned char data[]){
     // struct msgbu* msgp = (struct msgbuf*)malloc(sizeof(struct msgbuf) + sizeof(data));
     //    MQ_size = 0;
     //if(MQs[0][0]==0)
-    if(MQ_size ==0 )    find_mqs();
+    //if(MQ_size ==0 )    find_mqs();
+    while(MQ_size == 0){
+      find_mqs();
+      TRACE(TLVL_DEBUG, "Waiting for message queues: %d us",mqwait*10);
+      mqwait++;
+      usleep(10);
+    }
     usb_num += Msg_Base;
     while(1){
         try{
@@ -237,8 +262,11 @@ void mq_send_usb (int msg, int usb_num, unsigned char data[]){
             return;                              //success
         else
             break;                               //raise other exceptions
-        printf("Killing MQ mq1\n");
-        system("ipcrm -Q mq1");                  //kill blocking mq
+
+        TRACE(TLVL_INFO,"Killing MQ mq1");
+	char ipcrm_cmd[20];
+	sprintf(ipcrm_cmd,"iprcm -Q %d",mq1);
+	system(ipcrm_cmd);
         find_mqs();                                //remove it from MQs
         
     }
