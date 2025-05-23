@@ -25,7 +25,7 @@ PhysCrate::~PhysCrate()
 #ifndef _simulate_
 // Initializes the crate detecting the boards
 void
-PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsinCrateVec) 
+PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsinCrateVec, unsigned int countdown) 
 {
    TRACEN("PhysCrate.cc",TLVL_INFO, "PhysCrate::initialize(): Initializing crate.");
 
@@ -69,14 +69,22 @@ PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> boardsi
 	  boards[nBoards]=new A2795Board(nBoardInCrate,nBus);
           boardId = boards[nBoards]->boardId;
 	  if (boardId>-1)
-	    { 
-	      TRACEN("PhysCrate.cc", TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nBoardInCrate,nBoards,boardId);
-	      
-	      nBoards++;
-	    }
+	  { 
+	    TRACEN("PhysCrate.cc", TLVL_INFO, "PhysCrate::initialize(): Created board (%d, %d, %d, %d)",nBus,nBoardInCrate,nBoards,boardId);  
+	    nBoards++;
+	  }
+	  else if (countdown != 0)
+	  {
+            // if the counter hasn't reached zero, try again.
+	    // the only members which have been set at this point are the boards and boardId,
+	    // and they will get reset on the next loop, so no cleanup should be necessary
+	    TRACEN("PhysCrate.cc",TLVL_INFO, "PhysCrate::initialize(): Could not connect to board on link %d, node %d. Try %d more time(s)...", nBus, nBoardInCrate, countdown);
+	    initialize(busVec, boardsinCrateVec, countdown - 1);
+	    return;
+	  }
 	  else
 	  {
-              TRACEN("PhysCrate.cc",TLVL_ERROR, "PhysCrate::initialize(): Could not connect to board on link %d, node %d", nBus, nBoardInCrate);
+              TRACEN("PhysCrate.cc",TLVL_ERROR, "PhysCrate::initialize(): Could not connect to board on link %d, node %d. Bail.", nBus, nBoardInCrate);
               throw cet::exception("PhysCrate") << "Could not connect to board " << nBoardInCrate << " on link " << nBus;
 	  }
 	}
