@@ -27,7 +27,8 @@ public:
     ~PhysCrate();
 
     void initialize( std::vector<int> busVec=std::vector<int>(),
-                     std::vector<unsigned int> boardsinCrateVec=std::vector<unsigned int>());
+                     std::vector<unsigned int> boardsinCrateVec=std::vector<unsigned int>(),
+                     unsigned int countdown = 4);
     void configure ( BoardConf conf );
     void configureTrig ( TrigConf conf );
     void waitData();
