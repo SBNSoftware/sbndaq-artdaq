@@ -27,7 +27,7 @@ using namespace sbndaq;
 
 sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   CommandableFragmentGenerator(ps),
-  fCAEN(ps),
+  fCAEN(ps)
 {
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "CAENV1730Readout()" << TLOG_ENDL;
@@ -232,12 +232,10 @@ void sbndaq::CAENV1730Readout::Configure()
   ConfigureRecordFormat();
   ConfigureTrigger();
 
-  if(fAcqMode==CAEN_DGTZ_SW_CONTROLLED){
-    TLOG_ARB(TCONFIG,TRACE_NAME) << "Stop Acquisition" << TLOG_ENDL;
-    retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
-    sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fBoardID);
-  }
-
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Stop Acquisition" << TLOG_ENDL;
+  retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
+  sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fBoardID);
+  
   ConfigureAcquisition();
   configureInterrupts();
 
@@ -1282,7 +1280,7 @@ bool sbndaq::CAENV1730Readout::GetData() {
 
   CAEN_DGTZ_ErrorCode retcod;
 
-  if(fSWTrigger) {
+  if(fCAEN.swTrigger) {
     usleep(fCAEN.getNextSleep);
     TLOG(TGETDATA) << "Sending SW trigger..." << TLOG_ENDL;
     retcod = CAEN_DGTZ_SendSWtrigger(fHandle);
