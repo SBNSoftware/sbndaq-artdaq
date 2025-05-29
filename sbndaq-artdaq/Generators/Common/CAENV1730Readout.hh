@@ -11,8 +11,9 @@
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
 #include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
 
-#include "sbndaq-artdaq/Generators/Common/CAENDigitizer.h"
-#include "sbndaq-artdaq/Generators/Common/CAENDigitizerType.h"
+#include "CAENDigitizer.h"
+#include "CAENDigitizerType.h"
+
 #include "sbndaq-artdaq/Generators/Common/CAENConfiguration.hh"
 #include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
 #include "sbndaq-artdaq/Generators/Common/workerThread.hh"
