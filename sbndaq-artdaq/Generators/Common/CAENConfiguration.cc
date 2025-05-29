@@ -106,7 +106,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps)
   // controls laggy GetNext metric sent to Grafana
   // currently: 0.005*20 = 0.1 s 
   // TODO: remove? rename?
-  getNextFragmentBunchSize  = ps.get<>("GetNextFragmentBunchSize");
+  getNextFragmentBunchSize = ps.get<uint32_t>("GetNextFragmentBunchSize");
 
   // sets the external trigger input mode via CAEN_DGTZ function
   // external trigger is tipically enabled for ACQ and TRG-OUT
@@ -116,7 +116,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps)
   // sets the software trigger mode via CAEN_DGZT function
   // software trigger is tipically disabled  
   // 0=DISABLED; 1=ACQ_ONLY; 2=TRGOUT_ONLY; 3=ACQ_AND_TRGOUT
-  swTrgMode  = ps.get<int>("swTrgMode");
+  swTrgMode = ps.get<int>("swTrgMode");
 
   // sets the self trigger mode for all channels in the bitmask
   // tipically disabled in favor of the external trigger 
@@ -133,7 +133,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps)
 
   // allows overlapping triggers (buffers are merged)
   // writes mask 0x0002 to register 0x8004 
-  allowTriggerOverlap  = ps.get<bool>("allowTriggerOverlap");
+  allowTriggerOverlap = ps.get<bool>("allowTriggerOverlap");
 
   // self trigger polarity bit for register 0x8000 (used by ICARUS)
   // bit[6]=1 (negative, under threshold) or 
