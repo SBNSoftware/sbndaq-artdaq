@@ -1,7 +1,11 @@
 #include "NevisTPCFEM.h"
 #include "FPGAFirmwareReader.h"
 #include "trace.h"
+#include <cmath>
+#include <stdlib.h>
+#include <random>
 #define TRACE_NAME "NevisTPCFEM"
+#define PI 3.14159265
 
 namespace nevistpc {
 
@@ -540,18 +544,51 @@ namespace nevistpc {
 	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << flag;
 	}
 
+  unsigned int fakewaveform_shaperfunction (std::string shape, unsigned int smpl, unsigned int chnl, int noise){
+    unsigned int t1 = 30; //(chnl%2 == 0)? 15 : 45; //2058 : 458;// 15 : 45; // 15 ADC for even channels, 45 ADC for odd channels 
+    unsigned int t2 = 10; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                  
+
+    unsigned int signall = 0;
+    unsigned int  bkgg = 0;
+    bkgg = t2 + noise;
+    if (shape == "uB") {//signals movtivated by physics of uB                                                                                                    
+      if (smpl>=2 && smpl<49){
+        int signal = std::round(600*std::sin(PI/48*(smpl-1)));
+        signall = t2 + signal + noise;
+        return (signall & 0xfff);
+      }
+      else{
+        return (bkgg & 0xfff); //baseline + noise ;                                                                                                              
+      }
+    }
+
+    if (shape == "square") {//490-512 square waves, channel dependent amplitudes                                                                                 
+      if (smpl>490 and smpl<512) return t2 + (chnl*5+t1);
+      else return t2 - (chnl*5 + t1);
+    }
+    return (bkgg & 0xfff); // Or use a fixed fallback value                                                                                                      
+
+  }
+
         void NevisTPCFEM::loadFEMFakeData(std::string const &pattern){
-	  unsigned int fake_data_array[65536];
+	  unsigned int fake_data_array[73216];
+	  std::default_random_engine generator;//construct random number generator and gaussian for random noise             
+	  std::normal_distribution<double> distribution(0.0,2.5);//noise centered at 0, std dev of 2.5                       
 
 	  // Create fake data pattern
 	  for( unsigned int channel = 0; channel < 64; channel++ ){
-	    for(unsigned int sample = 0; sample < 1024; sample++ ){
+	    for(unsigned int sample = 0; sample < 1144; sample++ ){
 	      // Fake data is the sum of channel number and sample index
 	      if( pattern == "channel+sample" ) fake_data_array[channel + sample*64]= (channel + sample) & 0xfff;
 	      // Fake data is the channel number
 	      else if( pattern == "channel" ) fake_data_array[channel + sample*64]= channel & 0xfff;
 	      // Fake data is the sample index number
 	      else if( pattern == "sample" ) fake_data_array[channel + sample*64]= sample & 0xfff;
+	      else if ( pattern == "signalLike" ) {
+		int noise = std::round(distribution(generator));
+                fake_data_array[channel + sample*64]= fakewaveform_shaperfunction("uB", sample & 0xfff, channel & 0xfff, noise & 0xfff);
+		//		mf::LogInfo("NevisTPCFEMs") << "SignalLike Fake data for channel : " << channel << "and sample : " << sample << "is : " << std::hex << (fake_data_array[channel + sample*64]);
+              }
 	      else{
 		TLOG(TLVL_ERROR) << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
 		fake_data_array[channel+sample*64]= 0 & 0xfff;
@@ -565,7 +602,7 @@ namespace nevistpc {
 	  // Store 4 12-bit ADC samples as 3 16-bit words
 	  // 64 channels * 1024 samples/channel * 12 bit/sample * 1 word/16 bit = 49152 words into FEM memory
 	  unsigned int address = 0;
-	  for( unsigned int sample = 0; sample < 1024; sample ++ ){
+	  for( unsigned int sample = 0; sample < 1144; sample ++ ){
 	    for( unsigned int channel=0; channel < 64; channel++ ){
 	      unsigned int packing_index = channel%4;
 	      unsigned int packed_word;
@@ -647,8 +684,10 @@ namespace nevistpc {
 	      //unsigned int i = (3 << 12) + 475; // 1: Bipolar (+) 475 ADC threshold // overflows memory
 	      setLoadThreshold( chan_it, i );
 	    } else { // Static baseline values and thresholds
-	      unsigned int threshold = (chan_it%2 == 0)? 500 : 2039; // 500 ADC for even channels, 2039 ADC for odd channels
-	      unsigned int baseline = (chan_it%2 == 0)? 767 : 2040; // 767 ADC for even channels,  2040 ADC for odd channels
+	      unsigned int threshold = 100; //(chan_it%2 == 0)? 500 : 2039; // 500 ADC for even channels, 2039 ADC for odd channels
+
+	      unsigned int baseline = 450; //(chan_it%2 == 0)? 767 : 2040; // 767 ADC for even channels,  2040 ADC for odd channels
+
 	      //unsigned int threshold = 2046; // Aggressive threshold for all channels
 	      //unsigned int baseline = 2047; // Aggressive threshold for all channels
 	      setLoadThreshold( chan_it, threshold );
