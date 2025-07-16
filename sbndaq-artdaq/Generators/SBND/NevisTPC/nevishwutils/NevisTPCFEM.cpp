@@ -544,31 +544,35 @@ namespace nevistpc {
 	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << flag;
 	}
 
+
   unsigned int fakewaveform_shaperfunction (std::string shape, unsigned int smpl, unsigned int chnl, int noise){
-    unsigned int t1 = 30; //(chnl%2 == 0)? 15 : 45; //2058 : 458;// 15 : 45; // 15 ADC for even channels, 45 ADC for odd channels 
-    unsigned int t2 = 10; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                  
+    unsigned int t1 = 450; //(chnl%2 == 0)? 15 : 45; //2058 : 458;// 15 : 45; // 15 ADC for even channels, 45 ADC for odd channels                                                 
+    unsigned int t2 = 10; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                                    
 
     unsigned int signall = 0;
     unsigned int  bkgg = 0;
-    bkgg = t2 + noise;
-    if (shape == "uB") {//signals movtivated by physics of uB                                                                                                    
-      if (smpl>=2 && smpl<49){
-        int signal = std::round(600*std::sin(PI/48*(smpl-1)));
-        signall = t2 + signal + noise;
-        return (signall & 0xfff);
-      }
-      else{
-        return (bkgg & 0xfff); //baseline + noise ;                                                                                                              
-      }
-    }
+    bkgg = t1 + noise;
+    if (shape == "uB") {//signals movtivated by physics of uB                                                                                                                      
+      if(chnl<4){
+	if (smpl>=2 && smpl<10){
+	  int signal = std::round(600*std::sin(PI/48*(smpl-1)));
+	  signall = t1 + signal + noise;
+	  return (signall & 0xfff);
+	}
+	else{
+	  return (bkgg & 0xfff); //baseline + noise ;                                                                                                                                
+	}
+      }}
 
-    if (shape == "square") {//490-512 square waves, channel dependent amplitudes                                                                                 
+    if (shape == "square") {//490-512 square waves, channel dependent amplitudes                                                                                                   
       if (smpl>490 and smpl<512) return t2 + (chnl*5+t1);
       else return t2 - (chnl*5 + t1);
     }
-    return (bkgg & 0xfff); // Or use a fixed fallback value                                                                                                      
+    return (bkgg & 0xfff); // Or use a fixed fallback value                                                                                                                        
 
   }
+
+
 
         void NevisTPCFEM::loadFEMFakeData(std::string const &pattern){
 	  unsigned int fake_data_array[73216];
