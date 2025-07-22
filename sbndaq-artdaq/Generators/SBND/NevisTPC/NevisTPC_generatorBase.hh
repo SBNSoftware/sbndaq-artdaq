@@ -27,6 +27,11 @@ public:
   explicit NevisTPC_generatorBase(fhicl::ParameterSet const &ps);
   virtual ~NevisTPC_generatorBase();
 
+
+private:
+  size_t dma_counter_ = 0;
+
+
 protected:
   bool getNext_(artdaq::FragmentPtrs &output) override;
   void start() override;

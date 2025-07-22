@@ -254,7 +254,8 @@ This function is added to debug FEMs is software but hasnot tested yet
 	// To do: This function needs to be updated/overloaded to configure the zero suppression
 	getTPCFEM(tpc_it)->fem_setup(crateconfig);
 	TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
-      }
+	getTPCFEM(tpc_it)->readStatus();     
+ }
     }
 
     // Setup tx mode registers (this is done twice for some reason...)

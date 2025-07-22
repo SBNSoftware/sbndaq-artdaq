@@ -1,11 +1,58 @@
 #include "NevisTPCFEM.h"
 #include "FPGAFirmwareReader.h"
-#include "trace.h"
+#include "tracemf.h"
 #include <cmath>
 #include <stdlib.h>
 #include <random>
+
 #define TRACE_NAME "NevisTPCFEM"
 #define PI 3.14159265
+
+#include <fstream>
+#include <sstream>
+#include <unordered_map>
+#include <string>
+#include <vector>
+#include <iostream>
+
+using ZSMap = std::unordered_map<std::string, std::unordered_map<std::string, unsigned int>>;
+
+/*
+ZSMap parseZSFile(const std::string& filename) {
+  std::ifstream infile(filename);
+  ZSMap zs_data;
+  std::string slot, key;
+  unsigned int value;
+
+  while (infile >> slot >> key >> value) {
+    zs_data[slot][key] = value;
+  }
+
+  return zs_data;
+}
+
+*/
+
+
+ZSMap parseZSFile(const std::string& filename) {
+  ZSMap zs_data;
+  std::ifstream infile(filename);
+  std::string full_key;
+  unsigned int value;
+
+  while (infile >> full_key >> value) {
+    // full_key should look like "slot3.ch0"
+    size_t dot_pos = full_key.find('.');
+    if (dot_pos != std::string::npos) {
+      std::string slot_key = full_key.substr(0, dot_pos);    // "slot3"
+      std::string chan_key = full_key.substr(dot_pos + 1);   // "ch0" or "ped0"
+      zs_data[slot_key][chan_key] = value;
+    }
+  }
+
+  return zs_data;
+}
+
 
 namespace nevistpc {
 
@@ -492,7 +539,7 @@ namespace nevistpc {
 	void NevisTPCFEM::setLoadThreshold(data_payload_t const &chan, data_payload_t const &size){
 	    controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::LOAD_THRESHOLD + chan, size));
     	usleep(10);
-    	TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << chan << ", " << size;
+         	TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " with " << chan << ", " << size;
 	}
 
 	void NevisTPCFEM::setLoadThresholdMean(data_payload_t const &size){
@@ -534,7 +581,7 @@ namespace nevistpc {
 	  usleep(1);
 	  controller()->send(ControlDataPacket(_slot_number, device::STRATIX_FPGA, stratix_fpga::WRITE_BASELINE, size));
 	  usleep(1);
-	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " for ch " << chan << " with " << size;
+	 	  TLOG(TLVL_INFO) << "NevisTPCFEM: called " <<  __func__ << " for ch " << chan << " with " << size;
 	}
 
 	void NevisTPCFEM::enableFEMFakeData(bool const &flag){
@@ -545,36 +592,60 @@ namespace nevistpc {
 	}
 
 
-  unsigned int fakewaveform_shaperfunction (std::string shape, unsigned int smpl, unsigned int chnl, int noise){
-    unsigned int t1 = 450; //(chnl%2 == 0)? 15 : 45; //2058 : 458;// 15 : 45; // 15 ADC for even channels, 45 ADC for odd channels                                                 
-    unsigned int t2 = 10; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                                    
+  unsigned int fakewaveform_shaperfunction (std::string shape, unsigned int smpl, unsigned int chnl, int noise,const std::vector<unsigned int>& threshold,const std::vector<unsigned int>& baseline){
+
+    //    unsigned int baseline = 750; //(chnl%2 == 0)? 15 : 45; //2058 : 458;// 15 : 45; // 15 ADC for even channels, 45 ADC for odd channels                                                 
+    //unsigned int threshold = 100; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                                    
+
+
 
     unsigned int signall = 0;
-    unsigned int  bkgg = 0;
-    bkgg = t1 + noise;
+    unsigned int  bkgg = 20;
+    //    bkgg = baseline + noise;
+    //    bkgg = ped_val + noise;
+
+
     if (shape == "uB") {//signals movtivated by physics of uB                                                                                                                      
       if(chnl<4){
+       	unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 750;
+       	unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 100;
 	if (smpl>=2 && smpl<10){
 	  int signal = std::round(600*std::sin(PI/48*(smpl-1)));
-	  signall = t1 + signal + noise;
+	  signall = ped_val + signal + noise;
+	  TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: "  <<  ped_val;
+          TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: "  <<  ch_val;
+
 	  return (signall & 0xfff);
 	}
 	else{
+	  bkgg = ped_val + noise;  
+	  TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: " <<  ped_val;
+          TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: " <<  ch_val;
 	  return (bkgg & 0xfff); //baseline + noise ;                                                                                                                                
+
 	}
       }}
-
-    if (shape == "square") {//490-512 square waves, channel dependent amplitudes                                                                                                   
-      if (smpl>490 and smpl<512) return t2 + (chnl*5+t1);
-      else return t2 - (chnl*5 + t1);
-    }
-    return (bkgg & 0xfff); // Or use a fixed fallback value                                                                                                                        
+    return (bkgg & 0xfff); 
 
   }
+  /*
+
+    if (shape == "square") {//490-512 square waves, channel dependent amplitudes                                                                    
+
+      unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 750;
+      unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 100;
+      if (smpl>490 and smpl<512) return ch_val+(chnl*5+ped_val);
+      else {
+return ch_val - (chnl*5 + ped_val);
+      }    
+    return (bkgg & 0xfff); // Or use a fixed fallback value                                                                                                                        
+    }
+  }
+  */
 
 
 
-        void NevisTPCFEM::loadFEMFakeData(std::string const &pattern){
+  void NevisTPCFEM::loadFEMFakeData(std::string const &pattern, const std::vector<unsigned int>& threshold, const std::vector<unsigned int>& baseline){
 	  unsigned int fake_data_array[73216];
 	  std::default_random_engine generator;//construct random number generator and gaussian for random noise             
 	  std::normal_distribution<double> distribution(0.0,2.5);//noise centered at 0, std dev of 2.5                       
@@ -590,9 +661,11 @@ namespace nevistpc {
 	      else if( pattern == "sample" ) fake_data_array[channel + sample*64]= sample & 0xfff;
 	      else if ( pattern == "signalLike" ) {
 		int noise = std::round(distribution(generator));
-                fake_data_array[channel + sample*64]= fakewaveform_shaperfunction("uB", sample & 0xfff, channel & 0xfff, noise & 0xfff);
-		//		mf::LogInfo("NevisTPCFEMs") << "SignalLike Fake data for channel : " << channel << "and sample : " << sample << "is : " << std::hex << (fake_data_array[channel + sample*64]);
-              }
+                fake_data_array[channel + sample*64]= fakewaveform_shaperfunction("uB", sample & 0xfff, channel & 0xfff, noise & 0xfff,threshold, baseline);
+		//    	mf::LogInfo("NevisTPCFEMs") << "SignalLike Fake data for channel : " << channel << "and sample : " << sample << "is : " << std::hex << (fake_data_array[channel + sample*64]);
+	    	TLOG(TLVL_INFO) << "SignalLike Fake data for channel : " << channel << "and sample : " << sample << "is : " <<  std::dec << (fake_data_array[channel + sample*64]);
+              
+}
 	      else{
 		TLOG(TLVL_ERROR) << "FEM fake data pattern" << pattern << " not recognized. Filling with zeroes.";
 		fake_data_array[channel+sample*64]= 0 & 0xfff;
@@ -628,6 +701,9 @@ namespace nevistpc {
 
 
 	void NevisTPCFEM::fem_setup(fhicl::ParameterSet const& crateConfig){
+	  std::vector<unsigned int> threshold;
+	  std::vector<unsigned int> baseline;
+
 	  TLOG(TLVL_INFO) << "FEM setup for slot " << (int)_slot_number;
 	  // Power On arria power supply
 	  powerOnArriaFPGA();
@@ -680,6 +756,8 @@ namespace nevistpc {
 	    TLOG(TLVL_INFO) << "NevisTPCFEM: Configuring static-baseline zero suppression for SN stream...";
 	  }
 
+	  
+	  /*
 	  // To do: set the threshold (and baseline values) in the fcl file (current values correspond to the WIB fake data pattern)
 	  for (unsigned int chan_it = 0; chan_it < 64; ++chan_it) {
 	    if( !static_baseline ){ // Dynamic baseline thresholds
@@ -690,14 +768,56 @@ namespace nevistpc {
 	    } else { // Static baseline values and thresholds
 	      unsigned int threshold = 100; //(chan_it%2 == 0)? 500 : 2039; // 500 ADC for even channels, 2039 ADC for odd channels
 
-	      unsigned int baseline = 450; //(chan_it%2 == 0)? 767 : 2040; // 767 ADC for even channels,  2040 ADC for odd channels
+	      unsigned int baseline = 750; //(chan_it%2 == 0)? 767 : 2040; // 767 ADC for even channels,  2040 ADC for odd channels
 
 	      //unsigned int threshold = 2046; // Aggressive threshold for all channels
 	      //unsigned int baseline = 2047; // Aggressive threshold for all channels
 	      setLoadThreshold( chan_it, threshold );
 	      setLoadBaseline( chan_it, baseline );
 	    }
-	  }
+	    }
+	  
+	  */
+
+	  //reading zsparameters from text file:
+	  fhicl::ParameterSet zsParams = crateConfig.get<fhicl::ParameterSet>("zero_suppression_params");                                                  
+	  std::string zs_filename = zsParams.get<std::string>("config_file");                                                                             
+          ZSMap zs_data = parseZSFile(zs_filename);                                                                                                        
+	  std::string slot_key = "slot" + std::to_string((int)_slot_number);                                                                               
+          if (zs_data.find(slot_key) == zs_data.end()) {                                                                                                    
+            TLOG(TLVL_INFO) << "Zero suppression configuration not found for " << slot_key;                                                                 
+          }                                                                                                                                                 
+                                                                                                                                                            
+	  //	  std::vector<unsigned int> threshold;                                                                                                              
+	  // std::vector<unsigned int> baseline;
+	  unsigned int n_channels = 64; 
+	  for (size_t chan_it = 0; chan_it < n_channels; chan_it++) {             
+	    
+	    
+	    std::string ch_key = "ch" + std::to_string(chan_it);                                                                                           
+	    std::string ped_key = "ped" + std::to_string(chan_it);                                                                                         
+	    // default values if not provided in file                                                                                                   
+ 
+            unsigned int ch_val= 100;                                                                                                                    
+            unsigned int ped_val = 650;                                                                                                                  
+            if (zs_data[slot_key].find(ch_key) != zs_data[slot_key].end())                                                                               
+	      {
+              ch_val = zs_data[slot_key][ch_key];                                                                                                        
+	      }
+            if (zs_data[slot_key].find(ped_key) != zs_data[slot_key].end())
+              {                                                                              
+              ped_val = zs_data[slot_key][ped_key];                                                                                                        
+	      }
+	    //	    TLOG(TLVL_INFO) << "Threshold for channel " << chan_it  << " is : " << ch_val << " and baseline is: " << ped_val ;
+	    threshold.push_back(ch_val);
+	    baseline.push_back(ped_val);
+	    //TLOG(TLVL_INFO) << " Threshold size " << threshold.size() ; 
+             setLoadThreshold( chan_it,  ch_val );                                                                                                          
+             setLoadBaseline( chan_it, ped_val );                                                                                                           
+	  } 
+
+	                                                          
+                                                                                           
 	  // To do: write the values on the fcl file
 	  if( !static_baseline ){ // Dynamic baseline estimation tolerances
 	    setLoadThresholdMean( crateConfig.get<int>( "load_threshold_mean", 0x1024 )); // large value since since the fake WIB data has no quiet region
@@ -712,7 +832,11 @@ namespace nevistpc {
 	  bool use_fake_data = crateConfig.get<bool>("fem_fake_data", false);
 	  enableFEMFakeData( use_fake_data );
 	  if( use_fake_data ){
-	    loadFEMFakeData( crateConfig.get<std::string>( "fem_fake_data_pattern", "channel" ) );
-	  }
+	    std::string pattern = crateConfig.get<std::string>("fem_fake_data_pattern", "signalLike");
+	    //	    std::string pattern = crateConfig.get<std::string>("fem_fake_data_pattern"); //, "channel");
+	    //loadFEMFakeData( crateConfig.get<std::string>( "fem_fake_data_pattern", "channel",threshold,baseline ) );
+	    //	    	    loadFEMFakeData( crateConfig.get<std::string>( pattern,threshold,baseline));
+	    loadFEMFakeData(pattern, threshold, baseline);
+ }
 	}
 }

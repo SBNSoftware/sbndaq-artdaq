@@ -172,13 +172,32 @@ bool sbndaq::NevisTPC_generatorBase::GetData(){
 
   auto start_time = std::chrono::steady_clock::now(); 
 
-  size_t n_words = GetFEMCrateData()/sizeof(uint16_t);
+   size_t n_words = GetFEMCrateData()/sizeof(uint16_t);
+ 
+   // size_t n_words;
+
   TRACE(TGETDATA,"GetFEMCrateData() return %lu words",n_words);
   //  if(n_words==0)
   //   return false;
 
   while (n_words == 0) {
     n_words = GetFEMCrateData()/sizeof(uint16_t);
+    /*
+    if (n_words > 0) {
+      ++dma_counter_;
+
+      TLOG(TLVL_INFO) << "Received."  << dma_counter_ << " DMAs";
+      //      TRACE(TGETDATA, "Received 1 DMA. Stopping GetData thread.");                                                                                                                                                           
+
+      if (dma_counter_ >= 1) {
+        TLOG(TLVL_INFO) << "Stopping get data thread after " <<  dma_counter_ << " ..... DMAs";
+	stop();
+	return false;  // This tells the thread to stop                                                                                                                                                                                
+      }
+      return true;
+    }
+
+    */
     auto current_time = std::chrono::steady_clock::now();
     auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(current_time - start_time).count();
     if (elapsed_time > fTimeoutSec){ //fcl configurable timeout (in seconds) for more ability to do low rate nonstandard trigger configurations
