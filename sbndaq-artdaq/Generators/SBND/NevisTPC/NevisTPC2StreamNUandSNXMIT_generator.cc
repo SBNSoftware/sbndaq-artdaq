@@ -8,6 +8,8 @@
 #include <ctime>
 #include <zmq.hpp>
 
+using artdaq::MetricMode;
+
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   TLOG(TLVL_INFO) << "ConfigureStart";
 
@@ -27,6 +29,8 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
   SNCircularBuffer_.Init();
   SNBuffer_ = new uint16_t[fSNChunkSize];
+  N_SNDMAs = 0;
+  N_SNWrites = 0;
   //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
 
   if(fUseZMQ){
@@ -328,6 +332,11 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   // uint16_t* SNBuffer_ = new uint16_t[fSNChunkSize];
 
   std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
+
+  if (bytesRead == fSNChunkSize){
+    ++N_SNDMAs;
+  }
+
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
 
@@ -336,6 +345,14 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
   //delete[] SNBuffer_;
   //memset(SNBuffer_, 0, fSNChunkSize*sizeof(uint16_t)); // avoid clearing?
+
+  if(metricMan != nullptr) {
+  //send SN metrics
+  metricMan->sendMetric(
+    "SN_DMA_Count",
+    N_SNDMAs,
+    "SN_dma_count", 11, artdaq::MetricMode::LastPoint);    
+  }
 
   return true;
 }
@@ -348,10 +365,20 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
   binFileSN.write((char*)SNBuffer_, fSNChunkSize );
 
+  ++N_SNWrites;
+
   binFileSN.flush();
 
   size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize);
   TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize << " . SN Buffer occupancy now " << new_buffer_size;
+  
+  if(metricMan != nullptr) {
+  //send SN metrics
+    metricMan->sendMetric(
+      "SN_WritetoDisk_Count",
+      N_SNWrites,
+     "SN_write_count", 11, artdaq::MetricMode::LastPoint);
+  }
 
   return true;
 }
