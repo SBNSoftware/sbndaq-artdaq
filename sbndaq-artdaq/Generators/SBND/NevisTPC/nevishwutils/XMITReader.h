@@ -27,14 +27,20 @@ namespace nevistpc{
     DWORD  r_cs_reg;
     size_t bufferSize;
     size_t readSize;
+    bool in_use = false; 
   };
   
   class XMITReader{
+  private:
+    dma_buffer* lastUsedBuffer_ = nullptr;
+
   public:
     enum class dma_completion_status: uint8_t {
       timeout = 0,
       complete
     };
+
+  dma_buffer* lastUsedBuffer() const { return lastUsedBuffer_; }
 
     explicit XMITReader ( std::string const& streamName, fhicl::ParameterSet const & ps );
 

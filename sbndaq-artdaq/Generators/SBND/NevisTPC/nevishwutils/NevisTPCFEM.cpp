@@ -595,10 +595,7 @@ namespace nevistpc {
   unsigned int fakewaveform_shaperfunction (std::string shape, unsigned int smpl, unsigned int chnl, int noise,const std::vector<unsigned int>& threshold,const std::vector<unsigned int>& baseline){
 
     //    unsigned int baseline = 750; //(chnl%2 == 0)? 15 : 45; //2058 : 458;// 15 : 45; // 15 ADC for even channels, 45 ADC for odd channels                                                 
-    //unsigned int threshold = 100; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                                    
-
-
-
+    //unsigned int threshold = 100; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                                  
     unsigned int signall = 0;
     unsigned int  bkgg = 20;
     //    bkgg = baseline + noise;
@@ -606,7 +603,7 @@ namespace nevistpc {
 
 
     if (shape == "uB") {//signals movtivated by physics of uB                                                                                                                      
-      if(chnl<4){
+      //      if(chnl<4){
        	unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 750;
        	unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 100;
 	if (smpl>=2 && smpl<10){
@@ -624,7 +621,7 @@ namespace nevistpc {
 	  return (bkgg & 0xfff); //baseline + noise ;                                                                                                                                
 
 	}
-      }}
+     }
     return (bkgg & 0xfff); 
 
   }

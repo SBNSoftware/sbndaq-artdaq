@@ -331,14 +331,41 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   // To be reviewed
   // uint16_t* SNBuffer_ = new uint16_t[fSNChunkSize];
 
-  std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
+  //  std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
+ 
+  std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(SNDMABuffer_.get()), fSNChunkSize);
+ if (bytesRead <=0) return false;
 
   if (bytesRead == fSNChunkSize){
     ++N_SNDMAs;
   }
 
   size_t n_words = bytesRead/sizeof(uint16_t);
-  size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
+  // Get the actual DMA buffer used during read
+  //dma_buffer* dma = fSNXMITReader->lastUsedBuffer();
+  /*
+  if (!dma) {
+    TLOG(TLVL_ERROR) << "ERROR: DMA buffer pointer from readsome() is null.";
+    return false;
+  }
+
+  if (!dma->in_use) {
+    TLOG(TLVL_ERROR) << "ERROR: DMA buffer not marked as in use after read.";
+    return false;
+  }
+  */
+  /*  //Create a temporary buffer to hold data right after readsome
+
+  std::vector<uint16_t> safeBuffer(n_words);
+  std::memcpy(safeBuffer.data(), SNDMABuffer_.get(), bytesRead);
+  */
+   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
+
+   //size_t new_buffer_size = SNCircularBuffer_.InsertDMA(n_words, reinterpret_cast<uint16_t*>(dma->pUserModeBuffer), dma);
+
+    //size_t new_buffer_size = SNCircularBuffer_.InsertSafe(n_words, safeBuffer.data());
+
+
 
   TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
 

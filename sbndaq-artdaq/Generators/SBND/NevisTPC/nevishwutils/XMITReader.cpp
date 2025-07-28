@@ -313,6 +313,10 @@ namespace nevistpc {
 
     _loopNumber++;
     //    exit(0);
+
+    lastUsedBuffer_ = &dma;
+    dma.in_use = true;
+
     return readSize;
 
   }

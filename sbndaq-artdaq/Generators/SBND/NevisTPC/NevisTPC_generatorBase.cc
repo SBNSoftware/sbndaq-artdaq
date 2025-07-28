@@ -150,6 +150,11 @@ size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Insert(size_t n_words, st
 	n_words,buffer.size(),buffer.capacity());  
   return buffer.size();
 }
+size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::InsertSafe( size_t n_words, const uint16_t* data) {
+  buffer.insert(buffer.end(), data, data + n_words);
+  return buffer.size();
+}
+
 
 size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
   

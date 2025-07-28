@@ -108,6 +108,7 @@ protected:
     }
 
     size_t Insert(size_t, std::unique_ptr<uint16_t[]> const &);
+    size_t InsertSafe(size_t n_words, const uint16_t* data);
     size_t Erase(size_t);
   } CircularBuffer_t;
 
