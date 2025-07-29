@@ -11,6 +11,8 @@
 #include "sbndaq-artdaq/Generators/Common/CAENConfiguration.hh"
 #include "sbndaq-artdaq/Generators/Common/CAENDecoder.hh"
 #include <iostream>
+#include <sstream>
+#include <string>
 
 // Constructor reads fhicl paramaters
 // NOTE: do not put defaults on REQUIRED parameters
@@ -259,6 +261,13 @@ void sbndaq::CAENConfiguration::print(std::ostream& os)
   os << *this;
 }
 
+std::string sbndaq::CAENConfiguration::to_string() const
+{
+  std::ostringstream os;
+  os << *this;
+  return os.str();
+}
+
 std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
 {
   os << "CAEN Configuration: " << std::endl;
@@ -312,7 +321,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "TriggerLogic          " << e.triggerLogic << std::endl;
   os << "ModeLVDS              " << e.modeLVDS << std::endl;
   os << "TrigInLevel           " << e.trigInLevel << std::endl;
-  os << "TriggerPulseWidth     " << e.triggerPulseWidth << std::endl;
+  os << "TriggerPulseWidth     " << int(e.triggerPulseWidth) << std::endl;
   os << "UseTimeTagForTimeStamp " << e.useTimeTagForTimeStamp << std::endl;
   os << "useTimeTagShiftForTimeStamp " << e.useTimeTagShiftForTimeStamp << std::endl;
   os << "TimeOffsetNanoSec     " << e.timeOffsetNanoSec << " ns" << std::endl;
@@ -320,7 +329,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "OutputClkPhase        " << e.outputClkPhase << std::endl;
   os << "MaxTempCelsius        " << e.maxTemp << "C" << std::endl;
   os << "TemperatureCheckMask 0x" << std::hex << e.temperatureCheckMask << std::dec << std::endl;
-  os << "InterruptEnable       " << e.interruptEnable << " " 
+  os << "InterruptEnable       " << int(e.interruptEnable) << " " 
                                  << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.interruptEnable)
                                  << std::endl;
   os << "InterruptEventNumber  " << e.interruptEventNumber << std::endl;

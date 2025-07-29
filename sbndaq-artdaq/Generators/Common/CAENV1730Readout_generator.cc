@@ -33,7 +33,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   TLOG_ARB(TCONFIG,TRACE_NAME) << "CAENV1730Readout()" << TLOG_ENDL;
 
   // print-out all configuration parameters
-  TLOG(TINFO) << fCAEN;
+  TLOG(TINFO) << fCAEN.to_string();
   
   last_rcvd_rwcounter=0x0;
   last_sent_seqid=0x1;

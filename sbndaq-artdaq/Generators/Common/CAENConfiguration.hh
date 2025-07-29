@@ -8,6 +8,8 @@
 #include "fhiclcpp/ParameterSet.h"
 #include <iostream>
 #include <trace.h>
+#include <string>
+#include <sstream>
 
 namespace sbndaq
 {
@@ -28,6 +30,7 @@ namespace sbndaq
     
     /// Prints all configuration variables
     void print(std::ostream &os = std::cout);
+    std::string to_string() const;
 
     int link;                      ///> optical link number
     uint32_t fragmentId;           ///> fragment id
@@ -86,17 +89,5 @@ namespace sbndaq
 
 /// Define << operator for easy streaming
 std::ostream &operator<<(std::ostream &os, const sbndaq::CAENConfiguration &e);
-
-namespace
-{
-  template <>
-  inline TraceStreamer &TraceStreamer::
-  operator<<(const sbndaq::CAENConfiguration &r)
-  {
-    std::ostringstream s;
-    s << r;
-    return *this;
-  }
-}
 
 #endif
