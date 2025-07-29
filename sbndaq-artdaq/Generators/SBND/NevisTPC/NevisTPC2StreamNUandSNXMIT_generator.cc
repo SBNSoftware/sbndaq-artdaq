@@ -173,7 +173,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
   if( fSNReadout ){
     GetSNData_thread_->stop();
-    WriteSNData_thread_->stop();
+     WriteSNData_thread_->stop();
   }
   //  FireCALIB_thread_->stop();
   if( fControllerTriggerFreq > 0 ){//only stop thread if it met conditions to get started
@@ -301,19 +301,10 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
 
-  // Just for tests
-  // Taken from NevisTPCFile_generator and adapted to use an XMITReader
-  // To be reviewed
-  // uint16_t* buffer = new uint16_t[fChunkSize];
-  TLOG(TGETDATA) << "Going to call Readsome function";
-  //std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(buffer), fChunkSize);
   std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(&DMABuffer_[0]), fChunkSize);
   //unsigned wordsRead = bytesRead * sizeof(char) / sizeof(uint16_t);
   TLOG(TGETDATA) << "Number of bytes read:" << int(bytesRead) ;
 
-  //std::copy(buffer, buffer + wordsRead, &DMABuffer_[0]);
-
-  //if( fDumpBinary ) binFileNU.write( (char*)buffer, fChunkSize );
   if( fDumpBinary ) binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
 
   binFileNU.flush();
@@ -326,14 +317,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   
   TLOG(TGETDATA)<< "GetSNData";
 
-  // Just for tests
-  // Taken from NevisTPCFile_generator and adapted to use an XMITReader
-  // To be reviewed
-  // uint16_t* SNBuffer_ = new uint16_t[fSNChunkSize];
-
-  //  std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
- 
-  std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(SNDMABuffer_.get()), fSNChunkSize);
+  std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
  if (bytesRead <=0) return false;
 
   if (bytesRead == fSNChunkSize){
@@ -341,37 +325,14 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   }
 
   size_t n_words = bytesRead/sizeof(uint16_t);
-  // Get the actual DMA buffer used during read
-  //dma_buffer* dma = fSNXMITReader->lastUsedBuffer();
-  /*
-  if (!dma) {
-    TLOG(TLVL_ERROR) << "ERROR: DMA buffer pointer from readsome() is null.";
-    return false;
-  }
+  size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
 
-  if (!dma->in_use) {
-    TLOG(TLVL_ERROR) << "ERROR: DMA buffer not marked as in use after read.";
-    return false;
-  }
-  */
-  /*  //Create a temporary buffer to hold data right after readsome
+   TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
 
-  std::vector<uint16_t> safeBuffer(n_words);
-  std::memcpy(safeBuffer.data(), SNDMABuffer_.get(), bytesRead);
-  */
-   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
+   total_words_inserted += n_words;
+   TLOG(TGETDATA) << "Inserted " << n_words << " words. Total inserted: " << total_words_inserted;
 
-   //size_t new_buffer_size = SNCircularBuffer_.InsertDMA(n_words, reinterpret_cast<uint16_t*>(dma->pUserModeBuffer), dma);
-
-    //size_t new_buffer_size = SNCircularBuffer_.InsertSafe(n_words, safeBuffer.data());
-
-
-
-  TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
-
-  //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
-  //delete[] SNBuffer_;
-  //memset(SNBuffer_, 0, fSNChunkSize*sizeof(uint16_t)); // avoid clearing?
+   TLOG(TGETDATA) << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer.size() ; 
 
   if(metricMan != nullptr) {
   //send SN metrics
@@ -386,19 +347,28 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
-  if( SNCircularBuffer_.buffer.size() < fSNChunkSize ) return false;
+  //Writing and erasing number of words to and from circular buffer --> to fix missing frames issue
+  if (SNCircularBuffer_.buffer.size() >= fSNChunkSize / sizeof(uint16_t)) {                                                                          
+    std::copy(SNCircularBuffer_.buffer.begin(),                                                                                                         
+	      SNCircularBuffer_.buffer.begin() + (fSNChunkSize / sizeof(uint16_t)),                                                                     
+	      SNBuffer_);                                                                                                                               
+                                                                                                                                                         
+    binFileSN.write(reinterpret_cast<char*>(SNBuffer_), fSNChunkSize);                                                                                  
+    ++N_SNWrites;                                                                                                                                       
+    binFileSN.flush();                                                                                                                                  
+                                                                                                                                                         
+    size_t n_words_written = fSNChunkSize / sizeof(uint16_t);                                                                                             
+    total_words_written += n_words_written;                                                                                                               
+                                                                                                                                                         
+    TLOG(TFILLFRAG) << "Wrote " << n_words_written << " words (" << fSNChunkSize << " bytes) to binary file. "                                            
+		    << "Total written: " << total_words_written;                                                                                          
+                                                                                                                                                         
+                                                                                                                                                         
+size_t     new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize/sizeof(uint16_t));                                                                             
+                                                                                                                                                         
+    TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;                        
+  }    
 
-  std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + fSNChunkSize, SNBuffer_);
-
-  binFileSN.write((char*)SNBuffer_, fSNChunkSize );
-
-  ++N_SNWrites;
-
-  binFileSN.flush();
-
-  size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize);
-  TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize << " . SN Buffer occupancy now " << new_buffer_size;
-  
   if(metricMan != nullptr) {
   //send SN metrics
     metricMan->sendMetric(

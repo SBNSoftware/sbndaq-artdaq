@@ -86,6 +86,9 @@ namespace sbndaq {
     char binFileNameNU[80]; // Name of binary dump file for NU stream
     char binFileNameSN[80]; // Name of binary dump file for SN stream
 
+    size_t total_words_inserted = 0;
+    size_t total_words_written = 0;
+
     int N_SNDMAs;
     int N_SNWrites;
 

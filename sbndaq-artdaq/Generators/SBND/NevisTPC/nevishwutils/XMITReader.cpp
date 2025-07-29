@@ -237,9 +237,20 @@ namespace nevistpc {
       
     _dma1.readSize = ( size_t ) size;
     _dma2.readSize = ( size_t ) size;
+
+    //     TLOG(TLVL_INFO) << "loopnumber : " << _loopNumber; 
     
     dma_buffer& dma = ( ( _loopNumber % 2 ) == 0 ) ? _dma1 : _dma2;
   
+    
+    // Print which buffer is being used and its size
+    /* if (( _loopNumber % 2 ) == 0) {
+      TLOG(TLVL_INFO)  << "Using _dma1, size = " <<  _dma1.bufferSize ;
+    } else {
+      TLOG(TLVL_INFO) << "Using _dma2, size = " << _dma2.bufferSize ;
+      }*/
+    
+
     if ( _isFirstEverDMA ) {
 
       dmaInitializeOnFirstLoop();
