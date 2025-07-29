@@ -118,13 +118,12 @@ void sbndaq::CAENV1730Readout::configureInterrupts()
   CAEN_DGTZ_IRQMode_t mode ,modeOut ;
   CAEN_DGTZ_ErrorCode retcode;
 
-  uint8_t fInterruptEnable = 0;
   interruptLevel  = 1; // Fixed for CONET
   statusId        = 1;
-  eventNumber     = 1;
+  eventNumber     = fCAEN.interruptEventNumber;
   mode            = CAEN_DGTZ_IRQ_MODE_RORA;
 
-  if(fInterruptEnable>0) // Enable interrupts
+  if(fCAEN.interruptEnable>0) // Enable interrupts
   {
     state           = CAEN_DGTZ_ENABLE;
   }

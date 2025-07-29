@@ -201,6 +201,14 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps)
   // needed to skip channels in one problematic board (S/N 164)
   temperatureCheckMask = ps.get<uint32_t>("temperatureCheckMask", 0xFFFF);
 
+  // Enables optical link interrupts
+  // interrupt mode always CAEN_DGTZ_IRQ_MODE_RORA
+  // 0=CAEN_DGTZ_DISABLE, 1=CAEN_DGTZ_ENABLE
+  interruptEnable = ps.get<uint8_t>("InterruptEnable");
+
+  // Number of events needed to generate interrupt
+  interruptEventNumber = ps.get<uint16_t>("InterruptEventNumber",1);
+
   // Timeout value waiting for an interrupt in ms
   // set via CAEN_DGTZ_IRQWait
   IRQTimeoutMS = ps.get<uint32_t>("IRQTimeoutMS",500);
@@ -312,6 +320,10 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "OutputClkPhase        " << e.outputClkPhase << std::endl;
   os << "MaxTempCelsius        " << e.maxTemp << "C" << std::endl;
   os << "TemperatureCheckMask 0x" << std::hex << e.temperatureCheckMask << std::dec << std::endl;
+  os << "InterruptEnable       " << e.interruptEnable << " " 
+                                 << sbndaq::CAENDecoder::EnaDisMode((CAEN_DGTZ_EnaDis_t)e.interruptEnable)
+                                 << std::endl;
+  os << "InterruptEventNumber  " << e.interruptEventNumber << std::endl;
   os << "IRQTimeoutMS          " << e.IRQTimeoutMS << " ms" << std::endl;
   os << "ChannelEnableMask   0x" << std::hex << e.channelEnableMask << std::dec << std::endl;
 

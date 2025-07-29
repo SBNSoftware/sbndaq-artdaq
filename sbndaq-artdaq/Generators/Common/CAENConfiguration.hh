@@ -71,6 +71,8 @@ namespace sbndaq
     bool outputClkPhase;               ///> output motherboard CLK PHASE to TRG-OUT
     uint32_t maxTemp;                  ///> max temperature before warnings are issued
     uint32_t temperatureCheckMask;     ///> 8 bit mask saying which ADCs to perform the temperature check
+    uint8_t interruptEnable;           ///> enable optical link interrupts
+    uint16_t interruptEventNumber;     ///> number of events needed to generate an interrupt
     uint32_t IRQTimeoutMS;             ///> timeout value waiting for an interrupt in ms
     int channelEnable[MAX_CHANNELS];           ///> sets channel enable mask
     uint32_t channelEnableMask;
