@@ -44,9 +44,6 @@ namespace sbndaq
     bool readSingleWindowDataBlock();
     bool readWindowDataBlocks();
 	
-    bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
-    void configureInterrupts();
-
     typedef enum 
     { 
       CONFIG_READ_ADDR     = 0x8000,
@@ -197,6 +194,7 @@ namespace sbndaq
     void GetSWInfo();
     void Configure();
 
+    void ConfigureInterrupts();
     void ConfigureRecordFormat();    
     void ConfigureDataBuffer();
     void ConfigureTrigger();
