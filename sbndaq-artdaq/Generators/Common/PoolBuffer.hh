@@ -36,7 +36,11 @@ class PoolBuffer {
 
   void verify_redzone(){
     if (!std::equal(redzone_bytes.begin(), redzone_bytes.end(),end - redzone_bytes.size())){
-      TLOG(TLVL_ERROR) << __func__<<  ": Redzone was overwritten; DataBlock.index="<< index;
+      TLOG(TLVL_ERROR) << __func__<<  ": Redzone was overwritten; DataBlock.index="<< index
+                       << ", size=" << size
+                       << ", data_size=" << data_size
+                       << ", end - begin=" << (end - begin)
+                       << ", redzone size=" << redzone_bytes.size();
       throw std::overflow_error("Redzone was overwritten; DataBlock.index="s + std::to_string(index));
     }
   }
