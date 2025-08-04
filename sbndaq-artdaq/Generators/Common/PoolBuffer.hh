@@ -339,7 +339,7 @@ inline std::size_t PoolBuffer::allocate(std::size_t block_size, std::size_t pool
 
   for (std::size_t i = 0; i<  _blockCount ;  i++) {
     _allDataBlocks.push_front(
-        std::make_shared<DataBlock>(buf + i * block_size, buf + (i + 1) * block_size, _blockSize, i, 0));
+        std::make_shared<DataBlock>(buf + i * block_size, buf + (i + 1) * block_size, _blockSize, 0, i));
     if (_enableRedzones != 0) {
       std::copy(redzone_bytes.begin(), redzone_bytes.end(),
                 _allDataBlocks.front()->begin + (block_size - redzone_bytes.size()));
