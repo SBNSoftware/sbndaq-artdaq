@@ -2,6 +2,8 @@
 list(APPEND LIBRARY_CORE_LIB_LIST sbndaq-artdaq_Common_Utilities sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND)
 list(APPEND BUILD_PLUGIN_CORE_LIB_LIST sbndaq-artdaq_Common_Utilities sbndaq_artdaq_core::sbndaq-artdaq-core_Overlays_SBND)
 
+add_compile_options(-Dx86_64)
+
 add_subdirectory(TriggerBoard)
 add_subdirectory(NevisTPC)
 add_subdirectory(SPECTDC)
