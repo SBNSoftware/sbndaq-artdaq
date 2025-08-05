@@ -1256,10 +1256,12 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 }
 
 bool sbndaq::CAENV1730Readout::GetData() {
+
   TLOG(TGETDATA)<< "Begin of GetData()";
 
   CAEN_DGTZ_ErrorCode retcod;
 
+  // if the software trigger is on, send one
   if(fCAEN.swTrigger) {
     usleep(fCAEN.getNextSleep);
     TLOG(TGETDATA) << "Sending SW trigger..." << TLOG_ENDL;
@@ -1268,8 +1270,6 @@ bool sbndaq::CAENV1730Readout::GetData() {
   }
 
   // read the data from the buffer of the card
-  // this_data_size is the size of the acq window
-
   return readWindowDataBlocks();
 
 }// CAENV1730Readout::GetData()
@@ -1278,13 +1278,12 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
   if(fail_GetNext) {
     TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-		     << "Not calling CAEN_DGTZ_ReadData due a previous critical error...";
+                     << "Not calling CAEN_DGTZ_ReadData due a previous critical error...";
     ::usleep(50000);
     return false;
   }
 
-  TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"    
-		 << "Begin.";
+  TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")" << "Begin.";
 
   // (re)-arm interrupt before waiting for one
   CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_RearmInterrupt(fHandle);
@@ -1325,6 +1324,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
 		 << "Start while loop read. " << read_data_size; 
+
   while(read_data_size!=0){
 
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
@@ -1335,77 +1335,87 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     //get a block of data from the PoolBuffer. Hopefully doesn't take very long.
     auto block =  fPoolBuffer.takeFreeBlock();
+
     if(!block) {
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-		       << "PoolBuffer is empty; last received trigger eventCounter=" <<last_rcvd_rwcounter;
+                       << "PoolBuffer is empty; last received trigger eventCounter=" <<last_rcvd_rwcounter;
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-		       << "PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
+                       << "PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
                        << "(FragID=" << fCAEN.fragmentId << ")"
-		       <<", activeBlockCount=" << fPoolBuffer.activeBlockCount();
+                       << ", activeBlockCount=" << fPoolBuffer.activeBlockCount();
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-		       << "Critical error; aborting boardreader process....";				
-
+                       << "Critical error; aborting boardreader process....";				
       fail_GetNext = true;
-
       std::this_thread::yield();
       return false;
     }
-    TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
-		   << "Got a free DataBlock from PoolBuffer";
 
+    TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
+                   << "Got a free DataBlock from PoolBuffer";
 
     //call ReadData
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
-		   << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
+                   << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
                    << ",&block.size="<<(void*)&(block->size) << ")";
 
     retcode = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                                 (char*)block->begin,&read_data_size);
 
-    if(read_data_size==0) { 
-      fPoolBuffer.returnFreeBlock(block);
-      break;
-    }
-
-    ++n_reads;
-    
-    block->verify_redzone();
-    block->data_size= read_data_size;
-
-    TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
-		   << "This read data size was " << read_data_size; 
-
-    //check to make sure no errors on readout.
-    if (retcode !=CAEN_DGTZ_Success) {
+    // 1) check to make sure no errors on readout
+    if (retcode != CAEN_DGTZ_Success) {
       TLOG(TLVL_ERROR) << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
       fPoolBuffer.returnFreeBlock(block);
       std::this_thread::yield();
       return false;
     }
 
+    // 2) check for no data 
+    if(read_data_size==0) { 
+      fPoolBuffer.returnFreeBlock(block);
+      break;
+    }
+    
+    // 3) check if data is within buffer boundaries
+    if(read_data_size > block->size){
+      LOG(TLVL_ERROR) << "CAENReadData tried to write " << read_data_size
+                      << " bytes into a " << block->size << "-byte buffer; dropping.";
+      fPoolBuffer.returnFreeBlock(block);
+      break;
+    }
+
+    TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
+		   << "This read data size was " << read_data_size; 
+    ++n_reads;
+
+    // 4) update data size in block and verify_redzone
+    block->data_size= read_data_size;
+    block->verify_redzone();
+
     fTimePollEnd = boost::posix_time::microsec_clock::universal_time();
+    
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
 		   << "CAEN_DGTZ_ReadData complete with returned data size " << block->data_size
                    << " retcod=" << int{retcode};
 
-
+    // now time to read off what we got in the header
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(block->begin);
     
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
-		   
 		   << ": PMT_EVENT_COUNTER=" << header->eventCounter
 		   << ", PMT_EVENT_SIZE=" << header->eventSize
 		   << ", PMT_TIME_TAG=" << header->triggerTimeTag;
 
     const size_t header_event_size = sizeof(uint32_t)* header->eventSize; 
+
+    // does the size reported in the header much the actual size?
     if(block->data_size != header_event_size ) {
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-		       <<"Wrong event size; returned="
-                       << block->data_size << ", header=" << header_event_size
-		       << ". PMT_EVENT_COUNTER=" << header->eventCounter
-		       << ", PMT_EVENT_SIZE=" << header->eventSize
-		       << ", PMT_TIME_TAG=" << header->triggerTimeTag 
-		       << ". DROPPING THIS FRAGMENT.";
+                       << " Wrong event size; returned=" << block->data_size 
+                       << ", header=" << header_event_size
+                       << ". PMT_EVENT_COUNTER=" << header->eventCounter
+                       << ", PMT_EVENT_SIZE=" << header->eventSize
+                       << ", PMT_TIME_TAG=" << header->triggerTimeTag 
+                       << ". DROPPING THIS FRAGMENT.";
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
@@ -1422,29 +1432,31 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     fTTT_ns = -1;
 
     if(fCAEN.useTimeTagForTimeStamp){
-      fTTT = uint32_t{header->triggerTimeTag}; // 
-      fTTT_ns = fTTT*8;
-      
+
+      fTTT = uint32_t{header->triggerTimeTag}; 
+      fTTT_ns = fTTT*8;      
+
       // Scheme borrowed from what Antoni developed for CRT.
       // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
       fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
-	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
-	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
-	- fCAEN.timeOffsetNanoSec;
-    }
-    else if(fCAEN.useTimeTagShiftForTimeStamp){
+          + (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+          - (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
+          - fCAEN.timeOffsetNanoSec;
+
+    } else if(fCAEN.useTimeTagShiftForTimeStamp){
+
       fTTT = uint32_t{header->triggerTimeTag}; // 
       // TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
       fTTT_ns = (fTTT*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1 ns
-      
+
       // Scheme borrowed from what Antoni developed for CRT.
       // See https://sbn-docdb.fnal.gov/cgi-bin/private/DisplayMeeting?sessionid=7783
       fTS = fMeanPollTime - fMeanPollTimeNS + fTTT_ns
-	+ (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
-	- (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
-	- fCAEN.timeOffsetNanoSec;
-    }
-    else{
+          + (fTTT_ns - (long)fMeanPollTimeNS < -500000000) * 1000000000
+          - (fTTT_ns - (long)fMeanPollTimeNS >  500000000) * 1000000000
+          - fCAEN.timeOffsetNanoSec;
+
+    } else{
       fTS = fTimeDiffPollEnd.total_nanoseconds() - fCAEN.timeOffsetNanoSec;
     }
 
@@ -1467,7 +1479,6 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
 		   << "TIMESTAMP " << fCAEN.fragmentId 
 		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
-
 
     //check trigger event counter gaps: this is a 24-bit counter in the CAEN board
     //if the run is long, it can overflow --> do not throw errors in that case
