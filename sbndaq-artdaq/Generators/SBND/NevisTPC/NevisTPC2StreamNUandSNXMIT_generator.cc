@@ -340,12 +340,15 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
 
-  TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
+    TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
+
+   total_words_inserted += n_words;
+   TLOG(TGETDATA) << "Inserted " << n_words << " words. Total inserted: " << total_words_inserted;
 
   //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
   //delete[] SNBuffer_;
   //memset(SNBuffer_, 0, fSNChunkSize*sizeof(uint16_t)); // avoid clearing?
-
+TLOG(TGETDATA) << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer.size() ; 
   if(metricMan != nullptr) {
   //send SN metrics
   metricMan->sendMetric(
@@ -359,18 +362,27 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
-  if( SNCircularBuffer_.buffer.size() < fSNChunkSize ) return false;
-
-  std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + fSNChunkSize, SNBuffer_);
-
-  binFileSN.write((char*)SNBuffer_, fSNChunkSize );
-
-  ++N_SNWrites;
-
-  binFileSN.flush();
-
-  size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize);
-  TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize << " . SN Buffer occupancy now " << new_buffer_size;
+  //Writing and erasing number of words to and from circular buffer --> to fix missing frames issue
+  if (SNCircularBuffer_.buffer.size() >= fSNChunkSize / sizeof(uint16_t)) {                                                                          
+    std::copy(SNCircularBuffer_.buffer.begin(),                                                                                                         
+	      SNCircularBuffer_.buffer.begin() + (fSNChunkSize / sizeof(uint16_t)),                                                                     
+	      SNBuffer_);                                                                                                                               
+                                                                                                                                                         
+    binFileSN.write(reinterpret_cast<char*>(SNBuffer_), fSNChunkSize);                                                                                  
+    ++N_SNWrites;                                                                                                                                       
+    binFileSN.flush();                                                                                                                                  
+                                                                                                                                                         
+    size_t n_words_written = fSNChunkSize / sizeof(uint16_t);                                                                                             
+    total_words_written += n_words_written;                                                                                                               
+                                                                                                                                                         
+    TLOG(TFILLFRAG) << "Wrote " << n_words_written << " words (" << fSNChunkSize << " bytes) to binary file. "                                            
+		    << "Total written: " << total_words_written;                                                                                          
+                                                                                                                                                         
+                                                                                                                                                         
+    size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize/sizeof(uint16_t));                                                                                                                                                                                                                           
+    TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;                        
+  }    
+  
   
   if(metricMan != nullptr) {
   //send SN metrics

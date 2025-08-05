@@ -85,6 +85,9 @@ namespace sbndaq {
     std::ofstream binFileSN; // temp 
     char binFileNameNU[80]; // Name of binary dump file for NU stream
     char binFileNameSN[80]; // Name of binary dump file for SN stream
+    
+    size_t total_words_insterted = 0;
+    size_t total_words_written = 0;    
 
     int N_SNDMAs;
     int N_SNWrites;
