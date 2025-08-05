@@ -1377,8 +1377,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     
     // 3) check if data is within buffer boundaries
     if(read_data_size > block->size){
-      LOG(TLVL_ERROR) << "CAENReadData tried to write " << read_data_size
-                      << " bytes into a " << block->size << "-byte buffer; dropping.";
+      TLOG(TLVL_ERROR) << "CAENReadData() tried to write " << read_data_size
+                       << " bytes into a " << block->size << "-byte buffer; dropping.";
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
