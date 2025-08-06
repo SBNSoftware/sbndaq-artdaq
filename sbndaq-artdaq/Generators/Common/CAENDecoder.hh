@@ -4,7 +4,6 @@
 
 #include <atomic>
 #include <type_traits>
-//#include "messagefacility/MessageLogger/MessageLogger.h"
 #include <map>
 #include <string>
 #include <initializer_list>
@@ -33,36 +32,37 @@ class CAENDecoder
 
   const static std::string CAENError(CAEN_DGTZ_ErrorCode err)
   {
-    static const std::map<CAEN_DGTZ_ErrorCode, std::string> errors{{CAEN_DGTZ_Success, "CAEN_DGTZ_Success" },
-            { CAEN_DGTZ_CommError,                "CAEN_DGTZ_CommError" },
-            { CAEN_DGTZ_GenericError,             "CAEN_DGTZ_GenericError" },
-            { CAEN_DGTZ_InvalidParam,             "CAEN_DGTZ_InvalidParam" },
-            { CAEN_DGTZ_InvalidLinkType,          "CAEN_DGTZ_InvalidLinkType" },
-	    { CAEN_DGTZ_InvalidHandle,            "CAEN_DGTZ_InvalidHandle" },
-            { CAEN_DGTZ_MaxDevicesError,          "CAEN_DGTZ_MaxDevicesError" },
-            { CAEN_DGTZ_BadBoardType,             "CAEN_DGTZ_BadBoardType" },
-            { CAEN_DGTZ_BadInterruptLev,          "CAEN_DGTZ_BadInterruptLev" },
-            { CAEN_DGTZ_BadEventNumber,           "CAEN_DGTZ_BadEventNumber" },
-            { CAEN_DGTZ_ReadDeviceRegisterFail,   "CAEN_DGTZ_ReadDeviceRegisterFail" },
-            { CAEN_DGTZ_WriteDeviceRegisterFail,  "CAEN_DGTZ_WriteDeviceRegisterFail" },
-            { CAEN_DGTZ_InvalidChannelNumber,     "CAEN_DGTZ_InvalidChannelNumber" },
-            { CAEN_DGTZ_ChannelBusy,              "CAEN_DGTZ_ChannelBusy" },
-            { CAEN_DGTZ_FPIOModeInvalid,          "CAEN_DGTZ_FPIOModeInvalid" },
-            { CAEN_DGTZ_WrongAcqMode,             "CAEN_DGTZ_WrongAcqMode" },
-            { CAEN_DGTZ_FunctionNotAllowed,       "CAEN_DGTZ_FunctionNotAllowed" },
-            { CAEN_DGTZ_Timeout,                  "CAEN_DGTZ_Timeout" },
-            { CAEN_DGTZ_InvalidBuffer,            "CAEN_DGTZ_InvalidBuffer" },
-            { CAEN_DGTZ_EventNotFound,            "CAEN_DGTZ_EventNotFound" },
-            { CAEN_DGTZ_InvalidEvent,             "CAEN_DGTZ_InvalidEvent" },
-            { CAEN_DGTZ_OutOfMemory,              "CAEN_DGTZ_OutOfMemory" },
-            { CAEN_DGTZ_CalibrationError,         "CAEN_DGTZ_CalibrationError" },
-            { CAEN_DGTZ_DigitizerNotFound,        "CAEN_DGTZ_DigitizerNotFound" },
-            { CAEN_DGTZ_DigitizerAlreadyOpen,     "CAEN_DGTZ_DigitizerAlreadyOpen" },
-            { CAEN_DGTZ_DigitizerNotReady,        "CAEN_DGTZ_DigitizerNotReady" },
-            { CAEN_DGTZ_InterruptNotConfigured,   "CAEN_DGTZ_InterruptNotConfigured" },
-            { CAEN_DGTZ_DigitizerMemoryCorrupted, "CAEN_DGTZ_DigitizerMemoryCorrupted" },
-            { CAEN_DGTZ_DPPFirmwareNotSupported,  "CAEN_DGTZ_DPPFirmwareNotSupported" },
-            { CAEN_DGTZ_NotYetImplemented,        "CAEN_DGTZ_NotYetImplemented" }};
+    static const std::map<CAEN_DGTZ_ErrorCode, std::string> errors{
+      { CAEN_DGTZ_Success, "CAEN_DGTZ_Success" },
+      { CAEN_DGTZ_CommError,                "CAEN_DGTZ_CommError" },
+      { CAEN_DGTZ_GenericError,             "CAEN_DGTZ_GenericError" },
+      { CAEN_DGTZ_InvalidParam,             "CAEN_DGTZ_InvalidParam" },
+      { CAEN_DGTZ_InvalidLinkType,          "CAEN_DGTZ_InvalidLinkType" },
+      { CAEN_DGTZ_InvalidHandle,            "CAEN_DGTZ_InvalidHandle" },
+      { CAEN_DGTZ_MaxDevicesError,          "CAEN_DGTZ_MaxDevicesError" },
+      { CAEN_DGTZ_BadBoardType,             "CAEN_DGTZ_BadBoardType" },
+      { CAEN_DGTZ_BadInterruptLev,          "CAEN_DGTZ_BadInterruptLev" },
+      { CAEN_DGTZ_BadEventNumber,           "CAEN_DGTZ_BadEventNumber" },
+      { CAEN_DGTZ_ReadDeviceRegisterFail,   "CAEN_DGTZ_ReadDeviceRegisterFail" },
+      { CAEN_DGTZ_WriteDeviceRegisterFail,  "CAEN_DGTZ_WriteDeviceRegisterFail" },
+      { CAEN_DGTZ_InvalidChannelNumber,     "CAEN_DGTZ_InvalidChannelNumber" },
+      { CAEN_DGTZ_ChannelBusy,              "CAEN_DGTZ_ChannelBusy" },
+      { CAEN_DGTZ_FPIOModeInvalid,          "CAEN_DGTZ_FPIOModeInvalid" },
+      { CAEN_DGTZ_WrongAcqMode,             "CAEN_DGTZ_WrongAcqMode" },
+      { CAEN_DGTZ_FunctionNotAllowed,       "CAEN_DGTZ_FunctionNotAllowed" },
+      { CAEN_DGTZ_Timeout,                  "CAEN_DGTZ_Timeout" },
+      { CAEN_DGTZ_InvalidBuffer,            "CAEN_DGTZ_InvalidBuffer" },
+      { CAEN_DGTZ_EventNotFound,            "CAEN_DGTZ_EventNotFound" },
+      { CAEN_DGTZ_InvalidEvent,             "CAEN_DGTZ_InvalidEvent" },
+      { CAEN_DGTZ_OutOfMemory,              "CAEN_DGTZ_OutOfMemory" },
+      { CAEN_DGTZ_CalibrationError,         "CAEN_DGTZ_CalibrationError" },
+      { CAEN_DGTZ_DigitizerNotFound,        "CAEN_DGTZ_DigitizerNotFound" },
+      { CAEN_DGTZ_DigitizerAlreadyOpen,     "CAEN_DGTZ_DigitizerAlreadyOpen" },
+      { CAEN_DGTZ_DigitizerNotReady,        "CAEN_DGTZ_DigitizerNotReady" },
+      { CAEN_DGTZ_InterruptNotConfigured,   "CAEN_DGTZ_InterruptNotConfigured" },
+      { CAEN_DGTZ_DigitizerMemoryCorrupted, "CAEN_DGTZ_DigitizerMemoryCorrupted" },
+      { CAEN_DGTZ_DPPFirmwareNotSupported,  "CAEN_DGTZ_DPPFirmwareNotSupported" },
+      { CAEN_DGTZ_NotYetImplemented,        "CAEN_DGTZ_NotYetImplemented" }};
     auto it = errors.find (err);
     if (it == errors.end ()) return "CAEN_Unknown_error";
     return it->second;
@@ -72,11 +72,11 @@ class CAENDecoder
   const static std::string AnalogMonOutput(CAEN_DGTZ_AnalogMonitorOutputMode_t mode)
   {
     static const std::map<CAEN_DGTZ_AnalogMonitorOutputMode_t, std::string> table{
-       { CAEN_DGTZ_AM_TRIGGER_MAJORITY, "CAEN_DGTZ_AM_TRIGGER_MAJORITY" },
-       { CAEN_DGTZ_AM_TEST, "CAEN_DGTZ_AM_TEST" },
-       { CAEN_DGTZ_AM_ANALOG_INSPECTION, "CAEN_DGTZ_AM_ANALOG_INSPECTION" },
-       { CAEN_DGTZ_AM_BUFFER_OCCUPANCY, "CAEN_DGTZ_AM_BUFFER_OCCUPANCY" },
-       { CAEN_DGTZ_AM_VOLTAGE_LEVEL, "CAEN_DGTZ_AM_VOLTAGE_LEVEL" }};
+      { CAEN_DGTZ_AM_TRIGGER_MAJORITY, "CAEN_DGTZ_AM_TRIGGER_MAJORITY" },
+      { CAEN_DGTZ_AM_TEST, "CAEN_DGTZ_AM_TEST" },
+      { CAEN_DGTZ_AM_ANALOG_INSPECTION, "CAEN_DGTZ_AM_ANALOG_INSPECTION" },
+      { CAEN_DGTZ_AM_BUFFER_OCCUPANCY, "CAEN_DGTZ_AM_BUFFER_OCCUPANCY" },
+      { CAEN_DGTZ_AM_VOLTAGE_LEVEL, "CAEN_DGTZ_AM_VOLTAGE_LEVEL" }};
     auto it = table.find (mode);
     if (it == table.end ()) return "CAEN_Unknown";
     return it->second;
@@ -85,9 +85,9 @@ class CAENDecoder
   const static std::string ZeroSuppressionMode(CAEN_DGTZ_ZS_Mode_t mode)
   {
     static const std::map<CAEN_DGTZ_ZS_Mode_t, std::string> table{{CAEN_DGTZ_ZS_NO, "CAEN_DGTZ_ZS_NO" },
-       { CAEN_DGTZ_ZS_NO,  "CAEN_DGTZ_ZS_INT" },
-       { CAEN_DGTZ_ZS_INT, "CAEN_DGTZ_ZS_ZLE" },
-       { CAEN_DGTZ_ZS_AMP, "CAEN_DGTZ_ZS_AMP" }};
+      { CAEN_DGTZ_ZS_NO,  "CAEN_DGTZ_ZS_INT" },
+      { CAEN_DGTZ_ZS_INT, "CAEN_DGTZ_ZS_ZLE" },
+      { CAEN_DGTZ_ZS_AMP, "CAEN_DGTZ_ZS_AMP" }};
     auto it = table.find (mode);
     if (it == table.end ()) return "CAEN_Unknown";
     return it->second;
@@ -97,8 +97,8 @@ class CAENDecoder
   const static std::string AcquisitionMode(CAEN_DGTZ_AcqMode_t mode)
   {
     static const std::map<CAEN_DGTZ_AcqMode_t, std::string> table{
-       { CAEN_DGTZ_SW_CONTROLLED, "CAEN_DGTZ_SW_CONTROLLED" },
-       { CAEN_DGTZ_S_IN_CONTROLLED, "CAEN_DGTZ_S_IN_CONTROLLED" }};
+      { CAEN_DGTZ_SW_CONTROLLED, "CAEN_DGTZ_SW_CONTROLLED" },
+      { CAEN_DGTZ_S_IN_CONTROLLED, "CAEN_DGTZ_S_IN_CONTROLLED" }};
     auto it = table.find (mode);
     if (it == table.end ()) return "CAEN_Unknown";
     return it->second;
@@ -107,10 +107,10 @@ class CAENDecoder
   const static std::string OutputSignalMode(CAEN_DGTZ_OutputSignalMode_t mode)
   {
     static const std::map<CAEN_DGTZ_OutputSignalMode_t, std::string> table{
-        { CAEN_DGTZ_TRIGGER, "CAEN_DGTZ_TRIGGER" },
-	{ CAEN_DGTZ_FASTTRG_ALL, "CAEN_DGTZ_FASTTRG_ALL" },
-	{ CAEN_DGTZ_FASTTRG_ACCEPTED, "CAEN_DGTZ_FASTTRG_ACCEPTED" },
-        { CAEN_DGTZ_BUSY, "CAEN_DGTZ_BUSY" }};
+      { CAEN_DGTZ_TRIGGER, "CAEN_DGTZ_TRIGGER" },
+      { CAEN_DGTZ_FASTTRG_ALL, "CAEN_DGTZ_FASTTRG_ALL" },
+      { CAEN_DGTZ_FASTTRG_ACCEPTED, "CAEN_DGTZ_FASTTRG_ACCEPTED" },
+      { CAEN_DGTZ_BUSY, "CAEN_DGTZ_BUSY" }};
     auto it = table.find (mode);
     if (it == table.end ()) return "CAEN_Unknown";
     return it->second;
@@ -119,11 +119,11 @@ class CAENDecoder
   const static std::string RunSynchronizationMode(CAEN_DGTZ_RunSyncMode_t mode)
   {
     static const std::map<CAEN_DGTZ_RunSyncMode_t, std::string> table{
-        { CAEN_DGTZ_RUN_SYNC_Disabled, "CAEN_DGTZ_RUN_SYNC_Disabled" },
-	{ CAEN_DGTZ_RUN_SYNC_TrgOutTrgInDaisyChain, "CAEN_DGTZ_RUN_SYNC_TrgOutTrgInDaisyChain" },
-	{ CAEN_DGTZ_RUN_SYNC_TrgOutSinDaisyChain, "CAEN_DGTZ_RUN_SYNC_TrgOutSinDaisyChain" },
-	{ CAEN_DGTZ_RUN_SYNC_SinFanout, "CAEN_DGTZ_RUN_SYNC_SinFanout" },
-       { CAEN_DGTZ_RUN_SYNC_GpioGpioDaisyChain, "CAEN_DGTZ_RUN_SYNC_GpioGpioDaisyChain" }};
+      { CAEN_DGTZ_RUN_SYNC_Disabled, "CAEN_DGTZ_RUN_SYNC_Disabled" },
+      { CAEN_DGTZ_RUN_SYNC_TrgOutTrgInDaisyChain, "CAEN_DGTZ_RUN_SYNC_TrgOutTrgInDaisyChain" },
+      { CAEN_DGTZ_RUN_SYNC_TrgOutSinDaisyChain, "CAEN_DGTZ_RUN_SYNC_TrgOutSinDaisyChain" },
+      { CAEN_DGTZ_RUN_SYNC_SinFanout, "CAEN_DGTZ_RUN_SYNC_SinFanout" },
+      { CAEN_DGTZ_RUN_SYNC_GpioGpioDaisyChain, "CAEN_DGTZ_RUN_SYNC_GpioGpioDaisyChain" }};
     auto it = table.find (mode);
     if (it == table.end ()) return "CAEN_Unknown";
     return it->second;
@@ -164,8 +164,8 @@ class CAENDecoder
   const static std::string IRQMode(CAEN_DGTZ_IRQMode_t mode)
   {
     static const std::map<CAEN_DGTZ_IRQMode_t, std::string> table{
-       { CAEN_DGTZ_IRQ_MODE_ROAK, "CAEN_DGTZ_IRQ_MODE_ROAK" },
-       { CAEN_DGTZ_IRQ_MODE_RORA, "CAEN_DGTZ_IRQ_MODE_RORA" }};
+      { CAEN_DGTZ_IRQ_MODE_ROAK, "CAEN_DGTZ_IRQ_MODE_ROAK" },
+      { CAEN_DGTZ_IRQ_MODE_RORA, "CAEN_DGTZ_IRQ_MODE_RORA" }};
     auto it = table.find (mode);
     if (it == table.end ()) return "CAEN_Unknown";
     return it->second;
@@ -174,8 +174,8 @@ class CAENDecoder
   const static std::string IOLevel(CAEN_DGTZ_IOLevel_t mode)
   {
     static const std::map<CAEN_DGTZ_IOLevel_t, std::string> table{
-       { CAEN_DGTZ_IOLevel_NIM, "CAEN_DGTZ_IOLevel_NIM" },
-       { CAEN_DGTZ_IOLevel_TTL, "CAEN_DGTZ_IOLevel_TTL" }};
+      { CAEN_DGTZ_IOLevel_NIM, "CAEN_DGTZ_IOLevel_NIM" },
+      { CAEN_DGTZ_IOLevel_TTL, "CAEN_DGTZ_IOLevel_TTL" }};
     auto it = table.find (mode);
     if (it == table.end ()) return "CAEN_Unknown";
     return it->second;

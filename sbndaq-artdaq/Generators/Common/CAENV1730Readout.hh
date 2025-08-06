@@ -9,16 +9,14 @@
 #include "fhiclcpp/fwd.h"
 #include "artdaq-core/Data/Fragment.hh"
 #include "artdaq/Generators/CommandableFragmentGenerator.hh"
+#include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
 
 #include "CAENDigitizer.h"
 #include "CAENDigitizerType.h"
-#include "sbndaq-artdaq-core/Overlays/Common/CAENV1730Fragment.hh"
 
-#include "CAENConfiguration.hh"
-
-//#include "CircularBuffer.hh"
-#include "PoolBuffer.hh"
-#include "workerThread.hh"
+#include "sbndaq-artdaq/Generators/Common/CAENConfiguration.hh"
+#include "sbndaq-artdaq/Generators/Common/PoolBuffer.hh"
+#include "sbndaq-artdaq/Generators/Common/workerThread.hh"
 
 #include <string>
 #include <unordered_map>
@@ -46,11 +44,6 @@ namespace sbndaq
     bool readSingleWindowDataBlock();
     bool readWindowDataBlocks();
 	
-    bool readCombinedWindowFragments(artdaq::FragmentPtrs &);
-		
-    void loadConfiguration(fhicl::ParameterSet const& ps);
-    void configureInterrupts();
-
     typedef enum 
     { 
       CONFIG_READ_ADDR     = 0x8000,
@@ -66,8 +59,6 @@ namespace sbndaq
     //char*                 fBuffer;
     uint32_t              fBufferSize;
     //uint32_t              fCircularBufferSize;
-    CAEN_DGTZ_AcqMode_t   fAcqMode;	// initialized in the constructor
-
 
     typedef enum {
       TEST_PATTERN_S=3
@@ -181,65 +172,7 @@ namespace sbndaq
     {
       V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
     };
-
-    //fhicl parameters
-    int fVerbosity;
-    int fBoardChainNumber;
-    uint8_t  fInterruptEnable;
-    uint32_t fIRQTimeoutMS;
-    uint32_t fGetNextSleep;
-    uint32_t fGetNextFragmentBunchSize;
-    uint32_t fMaxEventsPerTransfer;
-    bool     fSWTrigger;
-    uint32_t fSelfTriggerMode;
-    uint32_t fSelfTriggerMask;
-    uint32_t fModeLVDS;
-    uint32_t fTrigOutDelay;
-    uint32_t fTrigInLevel;
-    bool     fCombineReadoutWindows;
-    bool     fCalibrateOnConfig;
-    bool     fLockTempCalibration;
-    bool     fWriteCalibration;
-    uint32_t fFragmentID;
-    bool fOutputClk;
-    bool fOutputClkPhase;
-
-    bool fUseTimeTagForTimeStamp;
-    bool fUseTimeTagShiftForTimeStamp;
-    uint32_t fTimeOffsetNanoSec;
-
-    // Animesh & Aiwu add fhicl parameters - LVDS logic
-    uint32_t fLVDSLogicValueG1;
-    uint32_t fLVDSLogicValueG2;
-    uint32_t fLVDSLogicValueG3;
-    uint32_t fLVDSLogicValueG4;
-    uint32_t fLVDSLogicValueG5;
-    uint32_t fLVDSLogicValueG6;
-    uint32_t fLVDSLogicValueG7;
-    uint32_t fLVDSLogicValueG8;
-    // Animesh & Aiwu add end
-    // Animesh & Aiwu add fhicl parameters - LVDS output pulse width
-    uint32_t fLVDSOutWidthC1;
-    uint32_t fLVDSOutWidthC2;
-    uint32_t fLVDSOutWidthC3;
-    uint32_t fLVDSOutWidthC4;
-    uint32_t fLVDSOutWidthC5;
-    uint32_t fLVDSOutWidthC6;
-    uint32_t fLVDSOutWidthC7;
-    uint32_t fLVDSOutWidthC8;
-    uint32_t fLVDSOutWidthC9;
-    uint32_t fLVDSOutWidthC10;
-    uint32_t fLVDSOutWidthC11;
-    uint32_t fLVDSOutWidthC12;
-    uint32_t fLVDSOutWidthC13;
-    uint32_t fLVDSOutWidthC14;
-    uint32_t fLVDSOutWidthC15;
-    uint32_t fLVDSOutWidthC16;
-    // Animesh & Aiwu add end
-    //Animesh & Aiwu add - self trigger polarity
-    uint32_t fSelfTrigBit;
-    //Animesh & Aiwu add end
-
+ 
     //internals
     size_t   fNChannels;
     uint32_t fBoardID;
@@ -261,6 +194,7 @@ namespace sbndaq
     void GetSWInfo();
     void Configure();
 
+    void ConfigureInterrupts();
     void ConfigureRecordFormat();    
     void ConfigureDataBuffer();
     void ConfigureTrigger();
@@ -281,7 +215,6 @@ namespace sbndaq
     bool GetData();
     share::WorkerThreadUPtr GetData_thread_;
     sbndaq::PoolBuffer fPoolBuffer; 		
-    size_t fCircularBufferSize;
     std::unique_ptr<uint16_t[]> fBuffer;
 
     std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;

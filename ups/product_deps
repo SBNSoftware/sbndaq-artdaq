@@ -1,7 +1,7 @@
 # The parent line must be the first non-comment line in the file
 # This line defines the product name and version
 parent sbndaq_artdaq
-defaultqual     e26:s131
+defaultqual     e28:s130
 
 
 # These optional lines define the installed directories where
@@ -19,8 +19,8 @@ fcldir      -
 
 #
 product               version      optional
-artdaq                v3_13_02
-sbndaq_artdaq_core    v1_10_06
+artdaq                v3_13_00
+sbndaq_artdaq_core    v1_10_08
 caenvme               v4_0_2
 caencomm              v1_7_0a
 caendigitizer         v2_17_3c
@@ -29,7 +29,7 @@ epics                 v7_0_7b
 artdaq_epics_plugin   v1_06_00
 zmq                   v4_3_1
 jsoncpp               v1_9_5a
-wibtools              v1_10_06     -
+wibtools              v1_10_08     -
 windriver             v12_06_00    -
 redis                 v5_0_5       -
 cetmodules            v3_24_01     -       only_for_build
@@ -65,6 +65,12 @@ e26:prof:s130:icbrus        e26:s130:prof        e26:prof:s130         -nq-    -
 e26:debug:s130:icbrus       e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3915a:debug  e26    e26   e26:debug  -               -         debug  e26:s130:debug
 e26:prof:s130:sbnd          e26:s130:prof        e26:prof:s130         -nq-    -nq-     -nq-          e26:p3915a:prof   e26    e26   e26:prof   e26:prof:s130   prof      prof   e26:s130:prof
 e26:debug:s130:sbnd         e26:s130:debug       e26:debug:s130        -nq-    -nq-     -nq-          e26:p3915a:debug  e26    e26   e26:debug  e26:debug:s130  debug     debug  e26:s130:debug
+e28:prof:s130               e28:s130:prof        e28:prof:s130         -nq-    -nq-     -nq-          e28:p3915a:prof   e28    e28   e28:prof   e28:prof:s130   prof      prof   e28:s130:prof
+e28:debug:s130              e28:s130:debug       e28:debug:s130        -nq-    -nq-     -nq-          e28:p3915a:debug  e28    e28   e28:debug  e28:debug:s130  debug     debug  e28:s130:debug
+e28:prof:s130:icbrus        e28:s130:prof        e28:prof:s130         -nq-    -nq-     -nq-          e28:p3915a:prof   e28    e28   e28:prof   -               -         prof   e28:s130:prof
+e28:debug:s130:icbrus       e28:s130:debug       e28:debug:s130        -nq-    -nq-     -nq-          e28:p3915a:debug  e28    e28   e28:debug  -               -         debug  e28:s130:debug
+e28:prof:s130:sbnd          e28:s130:prof        e28:prof:s130         -nq-    -nq-     -nq-          e28:p3915a:prof   e28    e28   e28:prof   e28:prof:s130   prof      prof   e28:s130:prof
+e28:debug:s130:sbnd         e28:s130:debug       e28:debug:s130        -nq-    -nq-     -nq-          e28:p3915a:debug  e28    e28   e28:debug  e28:debug:s130  debug     debug  e28:s130:debug
 e26:prof:s131               e26:s131:prof        e26:prof:s131         -nq-    -nq-     -nq-          e26:p3915a:prof   e26    e26   e26:prof   e26:prof:s131   prof      prof   e26:s131:prof
 e26:debug:s131              e26:s131:debug       e26:debug:s131        -nq-    -nq-     -nq-          e26:p3915a:debug  e26    e26   e26:debug  e26:debug:s131  debug     debug  e26:s131:debug
 e26:prof:s131:icbrus        e26:s131:prof        e26:prof:s131         -nq-    -nq-     -nq-          e26:p3915a:prof   e26    e26   e26:prof   -               -         prof   e26:s131:prof
