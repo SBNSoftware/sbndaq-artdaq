@@ -92,7 +92,6 @@ namespace sbndaq
     size_t   fNChannels; // number of channels
     uint32_t fBoardID;   // board ID
     int fHandle;         // access handle
-    bool fOK; // tracks initialization failure
     bool fail_GetNext; // tracks GetNext_ failure
 
     // PoolBuffer implementation
@@ -134,31 +133,30 @@ namespace sbndaq
     uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
     uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
 
-
-    typedef enum 
-    { 
-      CONFIG_READ_ADDR     = 0x8000,
-      CONFIG_SET_ADDR      = 0x8004,
-      CONFIG_CLEAR_ADDR    = 0x8008,
-      TRIGGER_OVERLAP_MASK = 0x0002
-    } REGISTERS_t;
-
     typedef enum {
       TEST_PATTERN_S=3
     } TEST_PATTERN_t;
     
     typedef enum {
+      BOARD_CONFIG_READ  = 0x8000, // board configuration register
+      BOARD_CONFIG_SET   = 0x8004,
+      BOARD_CONFIG_CLEAR = 0x8008,
+
+      FP_TRG_OUT_CONTROL = 0x8110, // front panel TRG-OUT control
+      FP_IO_CONTROL      = 0x811C, // front panel I/O control
+      FP_LVDS_CONTROL    = 0x81A0, // front panel LVDS control
+      ACQ_CONTROL        = 0x8100, // acquisition control register
+      READOUT_CONTROL    = 0xEF00, // readout control
+
+      GLB_TRG_MASK       = 0x810C, // global trigger mask
+      CH_ENABLE_MASK     = 0x8120, // channel enable mask
+
       DYNAMIC_RANGE      = 0x8028,
       TRG_OUT_WIDTH      = 0x8070,
       TRG_OUT_WIDTH_CH   = 0x1070,
       SLF_TRG_LG_CH      = 0x1084,
       SLF_TRG_LG_GLB     = 0x8084,
-      GLB_TRG_MASK       = 0x810C,
-      ACQ_CONTROL        = 0x8100,
-      FP_TRG_OUT_CONTROL = 0x8110,
-      FP_IO_CONTROL      = 0x811C,
-      FP_LVDS_CONTROL    = 0x81A0,
-      READOUT_CONTROL    = 0xEF00,
+    
       // Animesh & Aiwu add registers for the LVDS logic
       FP_LVDS_Logic_G1   = 0x1084,
       FP_LVDS_Logic_G2   = 0x1284,
@@ -212,6 +210,7 @@ namespace sbndaq
 
     typedef enum 
     {
+      TRIGGER_OVERLAP_MASK = 0x0002
       ENABLE_LVDS_TRIGGER  = 0x20000000,
       ENABLE_EXT_TRIGGER   = 0x40000000,
       ENABLE_NEW_LVDS      = 0x100,

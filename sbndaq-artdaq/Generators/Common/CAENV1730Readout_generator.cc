@@ -21,15 +21,16 @@
 
 using namespace sbndaq;
 
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
 // Constructor of the CAENV1730Readout.
 // All configuration parameters are loaded and stored in CAENConfiguration.
 // Connection is opened, board is reset and Configure() is called.
-
 sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   CommandableFragmentGenerator(ps),
   fCAEN(ps)
 {
-
   TLOG_ARB(TCONFIG,TRACE_NAME) << "CAENV1730Readout()" << TLOG_ENDL;
 
   // print-out all configuration parameters
@@ -45,55 +46,77 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   fNChannels = fCAEN.nChannels;
   fBoardID = fCAEN.boardId;
 
-  TLOG(TCONFIG) << ": Using BoardID=" << fBoardID << " with NChannels=" 
-		<< fNChannels;
+  TLOG(TCONFIG) << ": Using FragID=" << fCAEN.fragmentId 
+    << " BoardID=" << fBoardID 
+    << " with NChannels=" << fNChannels;
 
+  // opening the connection to the digitizer
   retcode = CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_OpticalLink, fCAEN.link, 
 				    fCAEN.boardChainNumber, 0, &fHandle);
 
-  fOK=true;
-
   if(retcode != CAEN_DGTZ_Success)
   {
-    sbndaq::CAENDecoder::checkError(retcode,"OpenDigitizer",fBoardID);
+    sbndaq::CAENDecoder::checkError(retcode,"OpenDigitizer",fCAEN.fragmentId);
 		CAEN_DGTZ_CloseDigitizer(fHandle);
     fHandle = -1;
-    fOK = false;
-    TLOG(TLVL_ERROR) << ": Fatal error configuring CAEN board at " << 
-      fCAEN.link << ", " << fCAEN.boardChainNumber;
-    TLOG(TLVL_ERROR) << "Terminating process";
+    TLOG(TLVL_ERROR) << "(fragID=" << fCAEN.fragmentId 
+      << ") Fatal error configuring CAEN board at link=" << fCAEN.link
+      << ", boardChainNumber=" << fCAEN.boardChainNumber 
+      << ". Terminating process...";
     abort();
   }
  
-  // check current firmware/software versions
+  // prints current firmware/software versions
+  // prints VME bridge firmware and driver 
   GetSWInfo();
   
+  // software reset signal: clears all registers and buffers
+  // should clear any running or busy state
   retcode = CAEN_DGTZ_Reset(fHandle);
-  sbndaq::CAENDecoder::checkError(retcode,"Reset",fBoardID);
+  sbndaq::CAENDecoder::checkError(retcode,"Reset",fCAEN.fragmentId);
   
+  // initiate board configuration
   sleep(1);
   Configure();
 
+  // after configuration is over, read and print registers
+  // this is a summary snapshot of the board config
   uint32_t data;
+
+  // board configuration register
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,BOARD_CONFIG_READ,&data);
+  TLOG(TLVL_INFO) << "BOARD_CONFIG_ADDR Reg:0x" << std::hex << BOARD_CONFIG_READ << 
+    "=0x" << data;
+  
+  // front panel TRG-OUT contol register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data);
   TLOG(TLVL_INFO) << "FP_TRG_OUT_CONTROL Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
     "=0x" << data;
 
+  // front panel I/O control register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL,&data);
   TLOG(TLVL_INFO) << "FP_IO_CONTROL Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
 
+  // front panel LVDS I/O control register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_LVDS_CONTROL,&data);
   TLOG(TLVL_INFO) << "FP_LVDS_CONTROL Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
     data << std::dec;
 
-  if(!fOK)
-  {
-    CAEN_DGTZ_CloseDigitizer(fHandle);
-    TLOG(TLVL_ERROR) << ": Fatal error configuring CAEN board at " << 
-      fCAEN.link << ", " << fCAEN.boardChainNumber;
-    TLOG(TLVL_ERROR) << "Terminating process";
-    abort();
-  }
+  // acquisition control register
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,ACQ_CONTROL,&data);
+  TLOG(TLVL_INFO) << "ACQ_CONTROL Reg:0x" << std::hex << ACQ_CONTROL << "=0x" << data;
+
+  // readout control register (interrupts)
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,READOUT_CONTROL,&data);
+  TLOG(TLVL_INFO) << "READOUT_CONTROL Reg:0x" << std::hex << READOUT_CONTROL << "=0x" << data;
+  
+  // global trigger mask
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,GLB_TRG_MASK,&data);
+  TLOG(TLVL_INFO) << "GLB_TRG_MASK Reg:0x" << std::hex << GLB_TRG_MASK << "=0x" << data;
+
+  // channel enable mask
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,CH_ENABLE_MASK,&data);
+  TLOG(TLVL_INFO) << "CH_ENABLE_MASK Reg:0x" << std::hex << CH_ENABLE_MASK << "=0x" << data;
 
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&CAENV1730Readout::GetData,this);
@@ -102,12 +125,14 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   GetData_thread_.swap(GetData_worker);
   TLOG_ARB(TCONFIG,TRACE_NAME) << "GetData worker thread setup." << TLOG_ENDL;
 
-  TLOG(TCONFIG) << "Configuration complete with OK=" << fOK << TLOG_ENDL;
-
+  TLOG(TCONFIG) << "Configuration complete!" << TLOG_ENDL;
 
   //epoch time
   fTimeEpoch = boost::posix_time::ptime(boost::gregorian::date(1970,1,1));
 }
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
 sbndaq::CAENV1730Readout::~CAENV1730Readout()
 {
@@ -119,6 +144,79 @@ sbndaq::CAENV1730Readout::~CAENV1730Readout()
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "~CAENV1730Readout() done." << TLOG_ENDL;
 }
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
+void sbndaq::CAENV1730Readout::Configure()
+{
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure()" << TLOG_ENDL;
+
+  CAEN_DGTZ_ErrorCode retcode;
+  uint32_t readback;
+
+  // Make sure DAQ run is off first
+  // This should be garantueed by the previous reset, but still
+  // Set software control acquistion, then stop
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set Acquisition Mode to SW" << TLOG_ENDL;
+  retcode = CAEN_DGTZ_SetAcquisitionMode(fHandle,CAEN_DGTZ_SW_CONTROLLED);
+  sbndaq::CAENDecoder::checkError(retcode,"SetAcquisitionMode",fCAEN.fragmentId);
+
+  retcode = CAEN_DGTZ_GetAcquisitionMode(fHandle,(CAEN_DGTZ_AcqMode_t *)&readback);
+  CheckReadback("SetAcquisitionMode",fCAEN.fragmentId,(uint32_t)CAEN_DGTZ_SW_CONTROLLED ,readback);
+
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Stop Acquisition" << TLOG_ENDL;
+  retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
+  sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fCAEN.fragmentId);
+
+  // reset again to clear acquisition mode
+  retcode = CAEN_DGTZ_Reset(fHandle);
+  sleep(2);
+
+  // Configuration is carried out in different functions
+  // - CAENDecoder::checkError is applied every time: if writing fails, exception is thrown
+  // - CheckReadback() is called when possible 
+
+  ConfigureReadout();
+  ConfigureRecordFormat();
+  ConfigureTrigger();
+
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Stop Acquisition" << TLOG_ENDL;
+  retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
+  sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fBoardID);
+  
+  ConfigureAcquisition();
+  ConfigureInterrupts();
+
+  if (fCAEN.calibrateOnConfig)     { RunADCCalibration();  }
+
+  // Does lock bit clear on V1730 reset?   If not, always call this routine
+  if (fCAEN.lockTempCalibration )  
+  { 
+    for ( uint32_t ch=0; ch<fNChannels; ch++)
+    {
+      SetLockTempCalibration(true,ch);
+    }
+  }
+
+  // Calibration added by Animesh
+  uint8_t fCalParams;
+  if (fCAEN.writeCalibration)  
+    { 
+      
+      for ( uint32_t ch=0; ch<fNChannels; ch++)
+	{
+	  TLOG(TINFO)<<"Chnumber is " <<ch<<TLOG_ENDL;
+	  Read_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
+	  //  Write_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
+	}
+      
+    }
+  
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure() done." << TLOG_ENDL;
+}
+
+
 
 void sbndaq::CAENV1730Readout::ConfigureInterrupts() 
 {
@@ -179,83 +277,7 @@ void sbndaq::CAENV1730Readout::ConfigureInterrupts()
   {
     TLOG_WARNING("CAENV1730Readout") << "Interrupt eventNumber was not setup properly, eventNumber write/read="
                                      << uint32_t{eventNumber} << "/" << uint32_t{eventNumberOut};
-  }
-
-  // Checking READOUT_CONTROL register after interrupts config
-  // this is the actual check to make sure they were configured correctly
-  // expected value is 0x18 or 0b11000
-  uint32_t addr = READOUT_CONTROL;
-  uint32_t value = 0;
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,addr,&value);
-  sbndaq::CAENDecoder::checkError(retcode,"READOUT_CONTROL",fBoardID);
-  TLOG(TINFO) << "Checking READOUT_CONTROL register addr=0x" << std::hex << addr 
-              << " returns value=0x" << std::hex << value 
-              << " (0b" << std::bitset<10>(value) << ")"; 
-              
-}
-
-void sbndaq::CAENV1730Readout::Configure()
-{
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure()" << TLOG_ENDL;
-
-  CAEN_DGTZ_ErrorCode retcode;
-  uint32_t readback;
-
-  //Make sure DAQ is off first
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Set Acquisition Mode to SW" << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SetAcquisitionMode(fHandle,CAEN_DGTZ_SW_CONTROLLED);
-  sbndaq::CAENDecoder::checkError(retcode,"SetAcquisitionMode",fBoardID);
-  retcode = CAEN_DGTZ_GetAcquisitionMode(fHandle,(CAEN_DGTZ_AcqMode_t *)&readback);
-  CheckReadback("SetAcquisitionMode", fBoardID,(uint32_t)CAEN_DGTZ_SW_CONTROLLED ,readback);
-
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Stop Acquisition" << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
-  sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fBoardID);
-
-  //get info, make sure board is in good communicative state
-  retcode = CAEN_DGTZ_GetInfo(fHandle,&fBoardInfo);
-  fOK = (retcode==CAEN_DGTZ_Success);
-
-  retcode = CAEN_DGTZ_Reset(fHandle);
-  sleep(2);
-
-  ConfigureReadout();
-  ConfigureRecordFormat();
-  ConfigureTrigger();
-
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Stop Acquisition" << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
-  sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fBoardID);
-  
-  ConfigureAcquisition();
-  ConfigureInterrupts();
-
-  if (fCAEN.calibrateOnConfig)     { RunADCCalibration();  }
-
-  // Does lock bit clear on V1730 reset?   If not, always call this routine
-  if (fCAEN.lockTempCalibration )  
-  { 
-    for ( uint32_t ch=0; ch<fNChannels; ch++)
-    {
-      SetLockTempCalibration(true,ch);
-    }
-  }
-
-  // Calibration added by Animesh
-  uint8_t fCalParams;
-  if (fCAEN.writeCalibration)  
-    { 
-      
-      for ( uint32_t ch=0; ch<fNChannels; ch++)
-	{
-	  TLOG(TINFO)<<"Chnumber is " <<ch<<TLOG_ENDL;
-	  Read_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
-	  //  Write_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
-	}
-      
-    }
-  
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "Configure() done." << TLOG_ENDL;
+  }              
 }
 
 void sbndaq::CAENV1730Readout::RunADCCalibration()
@@ -710,8 +732,8 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   //Animesh & Aiwu add ends
 
   //Animesh & Aiwu add - test self trigger polarity
-  retcod = CAEN_DGTZ_WriteRegister(fHandle, CONFIG_READ_ADDR, fCAEN.selfTrgBit);
-  retcod = CAEN_DGTZ_ReadRegister(fHandle, CONFIG_READ_ADDR, &readBack);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, BOARD_CONFIG_READ, fCAEN.selfTrgBit);
+  retcod = CAEN_DGTZ_ReadRegister(fHandle, BOARD_CONFIG_READ, &readBack);
   TLOG(TINFO) << "Address 0x8000, values inside: 0x" << std::hex << readBack << std::dec;
   //Animesh & Aiwu end
 }
@@ -898,11 +920,11 @@ void sbndaq::CAENV1730Readout::ConfigureTrigger()
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetTriggerOverlap" << fCAEN.allowTriggerOverlap << TLOG_ENDL;
   if ( fCAEN.allowTriggerOverlap )
   {
-    addr = CONFIG_SET_ADDR;
+    addr = BOARD_CONFIG_SET;
   }
   else
   {
-    addr = CONFIG_CLEAR_ADDR;
+    addr = BOARD_CONFIG_CLEAR;
   }
   retcode = CAEN_DGTZ_WriteRegister(fHandle, addr, TRIGGER_OVERLAP_MASK);
   sbndaq::CAENDecoder::checkError(retcode,"SetTriggerOverlap",fBoardID);
@@ -990,8 +1012,11 @@ void sbndaq::CAENV1730Readout::ConfigureAcquisition()
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureAcquisition() done." << TLOG_ENDL;
 }
 
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
 void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
-					      int boardID,
+					      int fragID,
 					      uint32_t wrote,
 					      uint32_t readback,
 					      int channelID)
@@ -1000,20 +1025,18 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
 
     std::stringstream channelLabel(" ");
     if (channelID >= 0)
-      channelLabel << " Ch/Grp " << channelID;
+      channelLabel << " Channel/Group " << channelID;
     
     std::stringstream text;
-    text << " " << label << 
-      " ReadBack error BoardId " << boardID << channelLabel.str() 
-	 << " wrote " << wrote << " read " << readback;
-    TLOG(TLVL_ERROR ) << "" << text.str();
+    text << " " << label << " ReadBack error fragID=" << fragID 
+      << channelLabel.str() << " wrote " << wrote << " read " << readback;
 
-    //sbndaq::CAENException e(CAEN_DGTZ_DigitizerNotReady,
-    //			     text.str(), boardId);
-    //throw(e);
+    TLOG(TLVL_ERROR ) << "" << text.str();
   }
-  
 }
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
 void sbndaq::CAENV1730Readout::start()
 {
