@@ -254,21 +254,6 @@ void sbndaq::CAENV1730Readout::RunADCCalibration()
   sbndaq::CAENDecoder::checkError(retcode,"Calibrate",fBoardID);
 }
 
-
-void CAENV1730Readout::ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status)
-{
-
-  status = 0xdeadbeef;
-  uint32_t SPIBusyAddr = 0x1088 + (ch<<8);
-
-  auto ret = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &status);
-  
-  if(ret!=CAEN_DGTZ_Success)
-    TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << ch;
-     
-}
-
-
 // Following SPI code is from CAEN
 CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value)
 {
@@ -1161,99 +1146,6 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
-// This function is called internally by the art framework and should not be called in the boardreader itself
-// The two relevant fcl parameters are: "poll_hardware_status" (true/false) and "hardware_poll_interval_us" (period in us)
-bool sbndaq::CAENV1730Readout::checkHWStatus_(){
-
-  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
-  {
-    std::ostringstream tempStream;
-    tempStream << "CAENV1730.Card" << fBoardID
-		  << ".Channel" << ch << ".Temp"; 
-    std::ostringstream statStream;
-    statStream << "CAENV1730.Card" << fBoardID
-		  << ".Channel" << ch << ".Status"; 
-    std::ostringstream memfullStream;
-    memfullStream << "CAENV1730.Card" << fBoardID
-		  << ".Channel" << ch << ".MemoryFull"; 
-   
-    CAEN_DGTZ_ErrorCode retcod;
-
-    if ( fCAEN.temperatureCheckMask & ( 1 << ch ) ) // Channels temperature readout enabled?
-    {
-      retcod = CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
-      TLOG_ARB(TTEMP,TRACE_NAME) << tempStream.str()
-				 << ": " << ch_temps[ch] << "  C"
-				 << TLOG_ENDL;
-      
-      metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11,
-			    artdaq::MetricMode::Average);
-
-      //Need 3 requirements to shut down for high temperature: 
-      // 1. Can successfully read temperature: return code = 0 since S/N 164 can fail to read temperature during acquisition
-      // 2. Temperature < non_physical temperature, 200C since S/N 164 can produce non-physical temperature
-      // 3. Temperature > Requirement , 70C for V1730 and 85C for V1730S
-      if ( retcod == CAEN_DGTZ_Success && ch_temps[ch] < V1730_UNPHYSICAL_TEMPERATURE )
-      {  
-	if ( ch_temps[ch] > fCAEN.maxTemp ) 
-	{
-	   // V1730(S) shuts down at 70(85) celsius, give a warning ahead of that
-	   TLOG(TLVL_ERROR) << "SHUTTING DOWN CAENV1730 BoardID " << fBoardID << " : "
-			     << " Channel " << ch
-			     << " temperature " << ch_temps[ch]
-			     << " > " << fCAEN.maxTemp << " degrees Celsius."
-			     << " ReadTemperature Return Code = " << retcod
-			     << TLOG_ENDL;
-	}
-      }
-      else
-      {
-	    // Ignore unphysical temperatures/bad return codes from S/N 164.  CAEN advises not to read temperatures 
-	    //   while the readout is running, but we cannot do that.  Only one sensors on one 
-	    //   V1730 has ever malfunctioned.
-	    // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
-	    TLOG(TLVL_WARNING) << "CAENV1730 BoardID " << fBoardID << " : "
-			       << " Channel " << ch
-			       << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
-			       << " ReadTemperature Return Code = " << retcod
-			       << TLOG_ENDL;
-       }
-    }
-
-    ReadChannelBusyStatus(fHandle,ch,ch_status[ch]);
-    TLOG_ARB(TTEMP,TRACE_NAME) << statStream.str()
-			       << std::hex
-                               << ": 0x" << ch_status[ch]
-			       << std::dec << TLOG_ENDL;
-
-
-    if(ch_status[ch]==0xdeadbeef){
-      TLOG(TLVL_WARNING) << "Failed reading busy status for channel " << ch;
-    }
-    else{
-      metricMan->sendMetric(statStream.str(), int(ch_status[ch]), "", 11,
-			    artdaq::MetricMode::LastPoint);
-
-      metricMan->sendMetric(memfullStream.str(), int((ch_status[ch] & 0x1)), "", 11,
-			    artdaq::MetricMode::LastPoint);
-
-      /*
-      metricMan->sendMetric("MemoryEmpty", int((ch_status[ch] & 0x2)>>1), "", 1,
-			    artdaq::MetricMode::LastPoint,tempStream.str());
-
-      metricMan->sendMetric("DACBusy", int((ch_status[ch] & 0x4)>>2), "", 1,
-			    artdaq::MetricMode::LastPoint,tempStream.str());
-
-      metricMan->sendMetric("ADCPowerDown", int((ch_status[ch] & 0x100)>>8), "", 1,
-			    artdaq::MetricMode::LastPoint,tempStream.str());
-      */
-    }
-
-
-  }
-
-  return true;
-}
 
 bool sbndaq::CAENV1730Readout::GetData() {
 
@@ -1770,6 +1662,112 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
   
 }
 
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
+// Checks the hardware status and sends corresponding metrics to Grafana
+// This function is called internally by the framework, no need to call it manually
+// Relevant fcl parameters are: 
+// - "poll_hardware_status" (true/false)
+// - "hardware_poll_interval_us" (interval in us)
+bool sbndaq::CAENV1730Readout::checkHWStatus_(){
+
+  // first, check the acqusition status register: CAEN_DGTZ_ACQ_STATUS_ADD
+  // this provides overall status of the board
+  uint32_t data;
+  auto ret = CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_ACQ_STATUS_ADD,&data);
+  if ( ret == CAEN_DGTZ_Success ){
+    // unpacking only "interesting" values
+    bool run  = data & 0x0004; // is running?
+    bool full = data & 0x0010; // is busy?
+    bool shut = data & 0x80000; // is shutting down? 
+
+    metricMan->sendMetric("Running", int(run), "", 11, artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("Busy", int(full), "", 11, artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("Shutdown", int(shut), "", 11, artdaq::MetricMode::LastPoint);
+
+  } else {
+    TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
+                       << "Failed reading CAEN_DGTZ_ACQ_STATUS_ADD register!";
+  } 
+
+  // second, check individual channel status
+  // this provides temperature reading + channel memory full
+  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  {
+    std::ostringstream tempStream; 
+    tempStream << "Channel" << ch << ".Temp"; 
+    
+    std::ostringstream memfullStream;
+    memfullStream << "Channel" << ch << ".MemoryFull"; 
+   
+    CAEN_DGTZ_ErrorCode retcod;
+
+    // temperature readout enabled for this channel?
+    if ( fCAEN.temperatureCheckMask & ( 1 << ch ) ) 
+    {
+      retcod = CAEN_DGTZ_ReadTemperature(fHandle, ch, &(ch_temps[ch]));
+      TLOG_ARB(TTEMP,TRACE_NAME) << "(fragID=" << fCAEN.fragmentId << ")"
+         << tempStream.str() << ": " 
+         << ch_temps[ch] << "  C"
+				 << TLOG_ENDL;
+      
+      metricMan->sendMetric(tempStream.str(), int(ch_temps[ch]), "C", 11, artdaq::MetricMode::Average);
+
+      // Need 2 requirements for measurement to be meaningfull 
+      // 1. Can successfully read temperature: return code = 0 since S/N 164 can fail to read temperature during acquisition
+      // 2. Temperature < non_physical temperature, 200C since S/N 164 can produce non-physical temperature
+      if ( retcod == CAEN_DGTZ_Success && ch_temps[ch] < V1730_UNPHYSICAL_TEMPERATURE )
+      {
+        // V1730(S) shuts down at 70(85) celsius, give a error ahead of that
+        // threshold temperature is set via fhicl parameter
+        if ( ch_temps[ch] > fCAEN.maxTemp ) {
+          TLOG(TLVL_ERROR) << "SHUTTING DOWN CAENV1730 fragID=" << fCAEN.fragmentId << " : "
+			     << " Channel " << ch
+			     << " temperature " << ch_temps[ch]
+			     << " > " << fCAEN.maxTemp << " degrees Celsius."
+			     << " ReadTemperature Return Code = " << retcod
+			     << TLOG_ENDL;
+          } 
+      } else {
+        // Ignore unphysical temperatures/bad return codes from S/N 164.
+        // CAEN advises not to read temperatures while the readout is running, but we cannot do that.
+        // Only one sensors on one V1730 has ever malfunctioned.
+        // S/N 164 sometimes returns a non-physical temperature, ignore it and move on
+        TLOG(TLVL_WARNING) << "CAENV1730 fragID=" << fCAEN.fragmentId << " : "
+			   << " Channel " << ch
+			   << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
+			   << " ReadTemperature Return Code = " << retcod
+			   << TLOG_ENDL;
+      }
+    }
+
+    // now check if channel memory is full
+    uint32_t CHANNEL_STATUS_ADD = 0x1088 + (ch<<8);
+    retcod = CAEN_DGTZ_ReadRegister(handle, CHANNEL_STATUS_ADD, &(ch_status[ch]));
+
+    if(retcod == CAEN_DGTZ_Success){
+      // unpack only memory full status
+      bool full = ch_status[ch] & 0x1;
+
+      TLOG_ARB(TTEMP,TRACE_NAME) << "(fragID=" << fCAEN.fragmentId << ")"
+         << memfullStream.str() << ": " 
+         << int(full) << TLOG_ENDL;
+
+      metricMan->sendMetric(memfullStream.str(), int(full), "", 11, artdaq::MetricMode::LastPoint);
+    } else {
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
+                         << "Failed reading CHANNEL_STATUS register for channel " << ch;
+    }
+  } //end channel loop
+  return true;
+}
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
+// this function queries software and board information
+// board S/N + firmware, CAEN libraries versions, VME bridge firmware/driver
 void sbndaq::CAENV1730Readout::GetSWInfo(){
 
   int retcod=0;
@@ -1832,5 +1830,8 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
     CAENVME_End(BHandle);
   }
 }
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
 DEFINE_ARTDAQ_COMMANDABLE_GENERATOR(sbndaq::CAENV1730Readout)

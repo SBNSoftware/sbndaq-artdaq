@@ -56,9 +56,7 @@ namespace sbndaq
     CAENConfiguration     fCAEN;	// initialized in the constructor
     int                   fHandle;
     CAEN_DGTZ_BoardInfo_t fBoardInfo;
-    //char*                 fBuffer;
     uint32_t              fBufferSize;
-    //uint32_t              fCircularBufferSize;
 
     typedef enum {
       TEST_PATTERN_S=3
@@ -209,7 +207,6 @@ namespace sbndaq
     CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
     void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
     void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
 
     bool WaitForTrigger();
     bool GetData();
