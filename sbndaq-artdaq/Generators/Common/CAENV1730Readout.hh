@@ -29,21 +29,112 @@ namespace sbndaq
 
   public:
 
+    // constructor: initialize and configure
     explicit CAENV1730Readout(fhicl::ParameterSet const& ps);
+    // destructor: freeing the buffer
     virtual ~CAENV1730Readout();
 
+    // getNext_ builds fragments from buffer
     bool getNext_(artdaq::FragmentPtrs & output) override;
+    // poll hardware status 
     bool checkHWStatus_() override;
+    // called at START transition
     void start() override;
+    // called at STOP transition
     void stop() override;
     void stopNoMutex() override { stop(); }
-    //void init();
 
   private:
+
+    // support function for getNext_ loop
     bool readSingleWindowFragments(artdaq::FragmentPtrs &);
-    bool readSingleWindowDataBlock();
+    // waits for interrupt, puts data into buffer
+    bool GetData();
+    // support function for GetData loop
     bool readWindowDataBlocks();
+
+    // support function for configuration
+    // called from constructor
+    void Configure();
+    void ConfigureInterrupts();
+    void ConfigureRecordFormat();    
+    void ConfigureDataBuffer();
+    void ConfigureTrigger();
+    void ConfigureReadout();
+    void ConfigureAcquisition();
+    void ConfigureLVDS();
+    void ConfigureSelfTriggerMode();
+    void ConfigureClkToTrgOut();
 	
+    // print board + CAEN software info
+    void GetSWInfo();
+
+    // run ADC self-calibration 
+    void RunADCCalibration();
+    // read channel ADC calibration parameters
+    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    // write channel ADC calibration parameters
+    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
+    // lock ADC temperature self-calibration
+    void SetLockTempCalibration(bool onOff, uint32_t ch);
+
+    // support function for register read/write operations
+    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
+    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+    CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address, uint32_t data, uint32_t bitmask); 
+
+    // check readback value from register
+    void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
+
+    //CAEN pieces
+    CAENConfiguration     fCAEN;	    // initialized in the constructor
+    CAEN_DGTZ_BoardInfo_t fBoardInfo; // board S/N, firmware relase
+    size_t   fNChannels; // number of channels
+    uint32_t fBoardID;   // board ID
+    int fHandle;         // access handle
+    bool fOK; // tracks initialization failure
+    bool fail_GetNext; // tracks GetNext_ failure
+
+    // PoolBuffer implementation
+    sbndaq::PoolBuffer fPoolBuffer;  		
+    std::unique_ptr<uint16_t[]> fBuffer; 
+    uint32_t fBufferSize;
+
+    // GetData worker thread
+    share::WorkerThreadUPtr GetData_thread_;
+
+    //internals in getting the data
+    boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
+    boost::posix_time::ptime fTimeEpoch;
+    boost::posix_time::time_duration fTimeDiffPollBegin, fTimeDiffPollEnd;
+
+    // map fragmen sequence ID to timestamp
+    std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
+    mutable std::mutex fTimestampMapMutex;
+
+    // fragment timestamping
+    artdaq::Fragment::timestamp_t fTS; 
+    uint64_t fMeanPollTime;
+    uint64_t fMeanPollTimeNS;
+    uint32_t fTTT;
+    long fTTT_ns;
+
+    // set to zero at the beginning
+    uint32_t fEvCounter; 
+    //count overflows of fEvCounter
+    uint32_t fOverflowCounter; 
+    // max event number internal to the V1730 board
+    const uint32_t max_rwcounter = 0xFFFFFF;  //24-bit
+
+    uint32_t last_rcvd_rwcounter;
+    uint32_t last_sent_seqid;
+    uint32_t last_sent_ts;
+
+    // hardware status check
+    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
+    uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
+
+
     typedef enum 
     { 
       CONFIG_READ_ADDR     = 0x8000,
@@ -52,26 +143,10 @@ namespace sbndaq
       TRIGGER_OVERLAP_MASK = 0x0002
     } REGISTERS_t;
 
-    //CAEN pieces
-    CAENConfiguration     fCAEN;	// initialized in the constructor
-    int                   fHandle;
-    CAEN_DGTZ_BoardInfo_t fBoardInfo;
-    uint32_t              fBufferSize;
-
     typedef enum {
       TEST_PATTERN_S=3
     } TEST_PATTERN_t;
     
-    typedef enum {
-      BOARD_READY  = 0x0100,
-      PLL_STATUS   = 0x0080,
-      PLL_BYPASS   = 0x0040,
-      CLOCK_SOURCE = 0x0020,
-      EVENT_FULL   = 0x0010,
-      EVENT_READY  = 0x0008,
-      RUN_ENABLED  = 0x0004
-    } ACQ_STATUS_MASK_t;
-
     typedef enum {
       DYNAMIC_RANGE      = 0x8028,
       TRG_OUT_WIDTH      = 0x8070,
@@ -170,71 +245,8 @@ namespace sbndaq
     {
       V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
     };
- 
-    //internals
-    size_t   fNChannels;
-    uint32_t fBoardID;
-    bool     fOK;
-    bool     fail_GetNext;
-    uint32_t fEvCounter; // set to zero at the beginning
-    uint32_t fOverflowCounter; //count overflows of fEvCounter
-    uint32_t last_rcvd_rwcounter;
-    uint32_t last_sent_seqid;
-    const uint32_t max_rwcounter = 0xFFFFFF; //24-bit
-    uint32_t last_sent_ts;
-    uint32_t total_data_size;
-    //uint32_t event_size;	
-    uint32_t n_readout_windows;
-    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
-    uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
-    
-    //functions
-    void GetSWInfo();
-    void Configure();
 
-    void ConfigureInterrupts();
-    void ConfigureRecordFormat();    
-    void ConfigureDataBuffer();
-    void ConfigureTrigger();
-    void ConfigureReadout();
-    void ConfigureAcquisition();
-    void ConfigureLVDS();
-    void ConfigureSelfTriggerMode();
-    void ConfigureClkToTrgOut();
-    void RunADCCalibration();
-    void SetLockTempCalibration(bool onOff, uint32_t ch);
-    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
-    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
-    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-
-    bool WaitForTrigger();
-    bool GetData();
-    share::WorkerThreadUPtr GetData_thread_;
-    sbndaq::PoolBuffer fPoolBuffer; 		
-    std::unique_ptr<uint16_t[]> fBuffer;
-
-    std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
-    mutable std::mutex fTimestampMapMutex;
-
-    //internals in getting the data
-    boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
-    boost::posix_time::ptime fTimeEpoch;
-    boost::posix_time::time_duration fTimeDiffPollBegin,fTimeDiffPollEnd;
-    
-    artdaq::Fragment::timestamp_t fTS;
-    uint64_t fMeanPollTime;
-    uint64_t fMeanPollTimeNS;
-    uint32_t fTTT;
-    long fTTT_ns;
-
-    void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
-
-    CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address,
-					     uint32_t data, uint32_t bitmask); 
-    
   };
-
 }
 
 #endif

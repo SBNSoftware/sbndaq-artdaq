@@ -109,6 +109,17 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   fTimeEpoch = boost::posix_time::ptime(boost::gregorian::date(1970,1,1));
 }
 
+sbndaq::CAENV1730Readout::~CAENV1730Readout()
+{
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "~CAENV1730Readout()" << TLOG_ENDL;
+
+  if(fBuffer != NULL){
+    fBuffer.reset();
+  }
+
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "~CAENV1730Readout() done." << TLOG_ENDL;
+}
+
 void sbndaq::CAENV1730Readout::ConfigureInterrupts() 
 {
   CAEN_DGTZ_EnaDis_t  state, stateOut;
@@ -224,7 +235,7 @@ void sbndaq::CAENV1730Readout::Configure()
   // Does lock bit clear on V1730 reset?   If not, always call this routine
   if (fCAEN.lockTempCalibration )  
   { 
-    for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+    for ( uint32_t ch=0; ch<fNChannels; ch++)
     {
       SetLockTempCalibration(true,ch);
     }
@@ -235,7 +246,7 @@ void sbndaq::CAENV1730Readout::Configure()
   if (fCAEN.writeCalibration)  
     { 
       
-      for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ch++)
+      for ( uint32_t ch=0; ch<fNChannels; ch++)
 	{
 	  TLOG(TINFO)<<"Chnumber is " <<ch<<TLOG_ENDL;
 	  Read_ADC_CalParams_V1730(fHandle, ch,&fCalParams);
@@ -738,17 +749,6 @@ void sbndaq::CAENV1730Readout::ConfigureRecordFormat()
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureRecordFormat() done." << TLOG_ENDL;
 }
 
-sbndaq::CAENV1730Readout::~CAENV1730Readout()
-{
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "~CAENV1730Readout()" << TLOG_ENDL;
-
-  if(fBuffer != NULL){
-    fBuffer.reset();
-  }
-
-  TLOG_ARB(TCONFIG,TRACE_NAME) << "~CAENV1730Readout() done." << TLOG_ENDL;
-}
-
 //Taken from wavedump
 //  handle : Digitizer handle
 //  address: register address
@@ -990,29 +990,29 @@ void sbndaq::CAENV1730Readout::ConfigureAcquisition()
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureAcquisition() done." << TLOG_ENDL;
 }
 
-bool sbndaq::CAENV1730Readout::WaitForTrigger()
+void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
+					      int boardID,
+					      uint32_t wrote,
+					      uint32_t readback,
+					      int channelID)
 {
+  if (wrote != readback){
 
-  TLOG_ARB(TSTATUS,TRACE_NAME) << "WaitForTrigger()" << TLOG_ENDL;
+    std::stringstream channelLabel(" ");
+    if (channelID >= 0)
+      channelLabel << " Ch/Grp " << channelID;
+    
+    std::stringstream text;
+    text << " " << label << 
+      " ReadBack error BoardId " << boardID << channelLabel.str() 
+	 << " wrote " << wrote << " read " << readback;
+    TLOG(TLVL_ERROR ) << "" << text.str();
 
-  CAEN_DGTZ_ErrorCode retcode;
-
-  uint32_t acqStatus;
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,
-				   CAEN_DGTZ_ACQ_STATUS_ADD,
-				   &acqStatus);
-  if(retcode!=CAEN_DGTZ_Success){
-    TLOG_WARNING("CAENV1730Readout")
-      << "Trying ReadRegister ACQUISITION_STATUS again." << TLOG_ENDL;
-    retcode = CAEN_DGTZ_ReadRegister(fHandle,
-				     CAEN_DGTZ_ACQ_STATUS_ADD,
-				     &acqStatus);
+    //sbndaq::CAENException e(CAEN_DGTZ_DigitizerNotReady,
+    //			     text.str(), boardId);
+    //throw(e);
   }
-  sbndaq::CAENDecoder::checkError(retcode,"ReadRegister ACQ_STATUS",fBoardID);
-
-  TLOG_ARB(TSTATUS,TRACE_NAME) << " Acq status = " << acqStatus << TLOG_ENDL;
-  return (acqStatus & ACQ_STATUS_MASK_t::EVENT_READY);
-
+  
 }
 
 void sbndaq::CAENV1730Readout::start()
@@ -1021,7 +1021,6 @@ void sbndaq::CAENV1730Readout::start()
   TLOG_INFO("CAENV1730Readout") << "start()" << TLOG_ENDL;
   
   ConfigureDataBuffer();
-  total_data_size = 0;
   last_sent_seqid = 0;
   
   if((CAEN_DGTZ_AcqMode_t)(fCAEN.acqMode)==CAEN_DGTZ_AcqMode_t::CAEN_DGTZ_SW_CONTROLLED)
@@ -1040,7 +1039,7 @@ void sbndaq::CAENV1730Readout::start()
 
   if (fCAEN.writeCalibration)  
     { 
-      for ( uint32_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+      for ( uint32_t ch=0; ch<fNChannels; ++ch)
         {
           retcod = WriteSPIRegister(fHandle, ch, 0xFE, 0x00);
           // TLOG(TINFO)<<"Write_ADC-CalParams_ch"<<ch<< ": Params[0]=" << CalParams[0]; 
@@ -1129,23 +1128,8 @@ void sbndaq::CAENV1730Readout::start()
   TLOG_ARB(TSTART,TRACE_NAME) << "start() done." << TLOG_ENDL;
 }
 
-void sbndaq::CAENV1730Readout::stop()
-{
-  TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
-
-  GetData_thread_->stop();
-
-  CAEN_DGTZ_ErrorCode retcode;
-  TLOG_ARB(TSTOP,TRACE_NAME) << "SWStopAcquisition" << TLOG_ENDL;
-  retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
-  sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fBoardID);
-
-  if(fBuffer != NULL){
-    fBuffer.reset();
-  }
-  TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
-}
-
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
 bool sbndaq::CAENV1730Readout::GetData() {
 
@@ -1402,6 +1386,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   return true;
 }
 
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
 // this is really the DAQ part where the server reads data from 
 // the card and stores them
@@ -1636,30 +1622,24 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   return true;
 }
 
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 
-void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
-					      int boardID,
-					      uint32_t wrote,
-					      uint32_t readback,
-					      int channelID)
+void sbndaq::CAENV1730Readout::stop()
 {
-  if (wrote != readback){
+  TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
 
-    std::stringstream channelLabel(" ");
-    if (channelID >= 0)
-      channelLabel << " Ch/Grp " << channelID;
-    
-    std::stringstream text;
-    text << " " << label << 
-      " ReadBack error BoardId " << boardID << channelLabel.str() 
-	 << " wrote " << wrote << " read " << readback;
-    TLOG(TLVL_ERROR ) << "" << text.str();
+  GetData_thread_->stop();
 
-    //sbndaq::CAENException e(CAEN_DGTZ_DigitizerNotReady,
-    //			     text.str(), boardId);
-    //throw(e);
+  CAEN_DGTZ_ErrorCode retcode;
+  TLOG_ARB(TSTOP,TRACE_NAME) << "SWStopAcquisition" << TLOG_ENDL;
+  retcode = CAEN_DGTZ_SWStopAcquisition(fHandle);
+  sbndaq::CAENDecoder::checkError(retcode,"SWStopAcquisition",fBoardID);
+
+  if(fBuffer != NULL){
+    fBuffer.reset();
   }
-  
+  TLOG_ARB(TSTOP,TRACE_NAME) << "stop() done." << TLOG_ENDL;
 }
 
 // ------------------------------------------------------------------------
@@ -1693,7 +1673,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
   // second, check individual channel status
   // this provides temperature reading + channel memory full
-  for(size_t ch=0; ch<CAENConfiguration::MAX_CHANNELS; ++ch)
+  for(size_t ch=0; ch<fNChannels; ++ch)
   {
     std::ostringstream tempStream; 
     tempStream << "Channel" << ch << ".Temp"; 
