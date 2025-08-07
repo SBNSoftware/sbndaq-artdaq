@@ -1744,7 +1744,7 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
 
     // now check if channel memory is full
     uint32_t CHANNEL_STATUS_ADD = 0x1088 + (ch<<8);
-    retcod = CAEN_DGTZ_ReadRegister(handle, CHANNEL_STATUS_ADD, &(ch_status[ch]));
+    retcod = CAEN_DGTZ_ReadRegister(fHandle, CHANNEL_STATUS_ADD, &(ch_status[ch]));
 
     if(retcod == CAEN_DGTZ_Success){
       // unpack only memory full status
