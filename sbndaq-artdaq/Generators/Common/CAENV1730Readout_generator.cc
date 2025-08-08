@@ -893,8 +893,11 @@ void sbndaq::CAENV1730Readout::start()
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 
-// this is really the DAQ part where the server reads data from 
+// This is really the DAQ part where the boardreader reads data from 
 // the card and stores in its internal pool buffer
+// - this is executed through the GetData worker thread
+// - at this stage, data is identified by the CAEN event number in the header
+// - timestamp map (key=CAEN event num) is used to later package the timestamp
 
 bool sbndaq::CAENV1730Readout::GetData()
 {
@@ -926,6 +929,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")" << "Begin.";
 
   // (re)-arm interrupt before waiting for one
+  // this is required for links through a5818 cards
   CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_RearmInterrupt(fHandle);
   if(retcode < 0){
     TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
@@ -965,8 +969,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
 		 << "Start while loop read. " << read_data_size; 
 
-  while(read_data_size!=0){
-
+  while(read_data_size!=0)
+  {
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
 		   << "Last read data size was " << read_data_size; 
 
@@ -1124,7 +1128,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     //if the run is long, it can overflow --> do not throw errors in that case
     auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
     if( readoutwindow_trigger_counter_gap > 1u && last_rcvd_rwcounter < max_rwcounter ){
-      TLOG (TLVL_DEBUG) << "(FragID=" << fCAEN.fragmentId << ")"
+      TLOG (TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
 			<< "Missing triggers; previous trigger eventCounter / gap  = " << last_rcvd_rwcounter << " / "
 			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
 			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
@@ -1153,24 +1157,41 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 
-bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments){
-  if(fail_GetNext) throw std::runtime_error("Critical error; stopping boardreader process...." ) ;
+// This is the part of the boardared that packages the fragments
+// - getNext_ is called internally by the artdaq framework
+// - available data in the pool buffers are packaged into fragments
+// - fragment timestamp is assigned through the timestamp map
+
+bool sbndaq::CAENV1730Readout::getNext_(artdaq::FragmentPtrs & fragments)
+{
+  if(fail_GetNext){
+    throw std::runtime_error("Critical error; stopping boardreader process...." );
+  }
   return readSingleWindowFragments(fragments);
 }
 
-bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & fragments){
+bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & fragments)
+{
   TLOG(TGETNEXT) << "Begin of readSingleWindowFragments()" ;
 
+  // this value would persist across function calls (static)
+  // but we update it manually at the end of each read cycle
   static auto start= std::chrono::steady_clock::now();
 
+  // measure the time delta between the end of previous fragment creation
+  // this tells how "laggy" getNext is in creating fragments
+  // threshold is configurable -> find a better name?
   std::chrono::duration<double> delta = std::chrono::steady_clock::now()-start;
+  if (delta.count() > 0.005*fCAEN.getNextFragmentBunchSize)
+  {
+    metricMan->sendMetric("Laggy getNext",1,"count",11,artdaq::MetricMode::Accumulate);
+    TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_seqid;
+  }
 
-  if (delta.count() >0.005*fCAEN.getNextFragmentBunchSize) {
-     metricMan->sendMetric("Laggy getNext",1,"count",11,artdaq::MetricMode::Accumulate);
-     TLOG (TLVL_DEBUG) << "Time spent outside of getNext_() " << delta.count()*1000 << " ms. Last seen fragment sequenceID=" << last_sent_seqid;
-   }
-
-  if(fPoolBuffer.activeBlockCount() == 0){
+  // check if there are any active blocks inside the pool buffer
+  // if not, wait a bit and retry
+  if(fPoolBuffer.activeBlockCount() == 0)
+  {
     TLOG(TGETNEXT) << "PoolBuffer has no data.  Laast last seen fragment sequenceID=" << last_sent_seqid
                    << "; Sleep for " << fCAEN.getNextSleep << " us and return.";
     ::usleep(fCAEN.getNextSleep);
@@ -1181,26 +1202,34 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
   double max_fragment_create_time = 0.0;
   double min_fragment_create_time = 10000.0;
   struct timespec now;
-  clock_gettime(CLOCK_REALTIME,&now);
+  clock_gettime(CLOCK_REALTIME,&now); // get current server time
+
+  // prepare V1730 fragment metadata structure
   const auto metadata = CAENV1730FragmentMetadata(fNChannels,fCAEN.recordLength,now.tv_sec,now.tv_nsec,ch_temps);
   const auto fragment_datasize_bytes = metadata.ExpectedDataSize();
   TLOG(TMAKEFRAG)<< "Created CAENV1730FragmentMetadata with expected data size of "
                  << fragment_datasize_bytes << " bytes.";
 
-  //auto fragment_count=fGetNextFragmentBunchSize;
-
   //just get anything that's there...
-  while(fPoolBuffer.activeBlockCount()){
-
+  while(fPoolBuffer.activeBlockCount())
+  {
     start= std::chrono::steady_clock::now();
+
+    // create an artdaq::Fragment buffer to receive the data
+    // set some identifiers as required 
     auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,fEvCounter,fCAEN.fragmentId,sbndaq::detail::FragmentType::CAENV1730,metadata);
 
-
+    // create a data range that points into the fragment
+    // now poolbuffer "knows" where it needs to write the payload
     using sbndaq::PoolBuffer;
     PoolBuffer::DataRange<decltype(artdaq::Fragment())> range{fragment_uptr->dataBegin(),fragment_uptr->dataEnd()};
 
+    // copy next block from the pool buffer into the fragment
+    // if it fails, no more usable data so break out of the loop
     if(!fPoolBuffer.read(range)) break;
 
+    // initial part of the fragmet is casted to the V1730 event header
+    // this is so we can read values off of it
     const auto header = reinterpret_cast<CAENV1730EventHeader const *>(fragment_uptr->dataBeginBytes());
    
     // get eventCounter, which is the key to get the correct timestamp from the map
@@ -1208,28 +1237,34 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // build sequence id keeping track of overflows (avoids repeated seqIDs in the same run)
     const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
     uint64_t readoutwindow_sequence_id = uint64_t{readoutwindow_event_counter + fOverflowCounter*(max_rwcounter+1u)};
+    
+    // sets this new event counter as sequence_id for the fragment
     fragment_uptr->setSequenceID(readoutwindow_sequence_id);
 
-    size_t ts_count;
+    // now look up the timestamp from the map
+    size_t ts_count=0;
     {
       std::lock_guard<std::mutex> lock(fTimestampMapMutex);
       ts_count = fTimestampMap.count(readoutwindow_event_counter);
     }
-    int ts_loop=0;
 
-    while(ts_loop<3 && ts_count==0){
+    // if no timestamp is found, retry 3 times -- sleeping in between 
+    int ts_loop=0;
+    while(ts_loop<3 && ts_count==0)
+    {
       TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
 			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
       ts_loop++;
       {
-	std::lock_guard<std::mutex> lock(fTimestampMapMutex);
-	ts_count = fTimestampMap.count(readoutwindow_event_counter);
+	      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
+	      ts_count = fTimestampMap.count(readoutwindow_event_counter);
       }
     }
 
-    //check where we are now in time
-    artdaq::Fragment::timestamp_t ts_frag,ts_now;
+    // check where we are now in time
+    // this is taking the current server clock
+    artdaq::Fragment::timestamp_t ts_frag, ts_now;
     {
       using namespace boost::gregorian;
       using namespace boost::posix_time;
@@ -1241,69 +1276,78 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
       ts_now = diff.total_nanoseconds();
     }
 
-    ts_count=0;
+    // if the map contains a timestamp entry
+    // fetch it and erase it from the map
+    if(ts_count>0)
     {
-      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
-      ts_count = fTimestampMap.count(readoutwindow_event_counter);
-    }
-
-    if(ts_count>0){
       std::lock_guard<std::mutex> lock(fTimestampMapMutex);      
       ts_frag = fTimestampMap.at(readoutwindow_event_counter);
       fTimestampMap.erase(readoutwindow_event_counter);
     }
-    else{
+    // if no timestamp is found (weird..)
+    // generate a new timestamp based on the current time
+    // use similar procedure to getData, just different "now"
+    // no "polling" correction being applied here
+    else
+    {
       TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
 		       << " Will generate new one now...";
 
-      if(fCAEN.useTimeTagForTimeStamp){
-	const auto TTT = uint32_t {header->triggerTimeTag};
+      if(fCAEN.useTimeTagForTimeStamp)
+      {
+	      const auto TTT = uint32_t {header->triggerTimeTag};
 	
-	using namespace boost::gregorian;
-	using namespace boost::posix_time;
+        using namespace boost::gregorian;
+        using namespace boost::posix_time;
 	
-	ptime t_now(second_clock::universal_time());
-	ptime time_t_epoch(date(1970,1,1));
-	time_duration diff = t_now - time_t_epoch;
-	uint32_t t_offset_s = diff.total_seconds();
-	uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
-	uint64_t t_truetriggertime = t_offset_ticks + TTT;
-	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
-	
-	ts_frag = (t_truetriggertime*8); //in 1ns ticks
-      }
-      else if(fCAEN.useTimeTagShiftForTimeStamp){
-	const auto TTT = uint32_t {header->triggerTimeTag};
-	
-	using namespace boost::gregorian;
-	using namespace boost::posix_time;
-	
-	ptime t_now(second_clock::universal_time());
-	ptime time_t_epoch(date(1970,1,1));
-	time_duration diff = t_now - time_t_epoch;
-	uint32_t t_offset_s = diff.total_seconds();
-	uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
-	uint64_t t_truetriggertime = t_offset_ticks + TTT;
-	TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+        ptime t_now(second_clock::universal_time());
+        ptime time_t_epoch(date(1970,1,1));
+        time_duration diff = t_now - time_t_epoch;
+        uint32_t t_offset_s = diff.total_seconds();
+        uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+        uint64_t t_truetriggertime = t_offset_ticks + TTT;
 
-	// TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
-	ts_frag = (t_truetriggertime*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1ns ticks
+        TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch" << TLOG_ENDL;
+        ts_frag = (t_truetriggertime*8); //in 1ns ticks
       }
-      else{
-	using namespace boost::gregorian;
-	using namespace boost::posix_time;
+      else if(fCAEN.useTimeTagShiftForTimeStamp)
+      {
+	      const auto TTT = uint32_t {header->triggerTimeTag};
 	
-	ptime t_now(microsec_clock::universal_time());
-	ptime time_t_epoch(date(1970,1,1));
-	time_duration diff = t_now - time_t_epoch;
+        using namespace boost::gregorian;
+        using namespace boost::posix_time;
 	
-	ts_frag = diff.total_nanoseconds() - fCAEN.timeOffsetNanoSec;
+        ptime t_now(second_clock::universal_time());
+        ptime time_t_epoch(date(1970,1,1));
+        time_duration diff = t_now - time_t_epoch;
+        uint32_t t_offset_s = diff.total_seconds();
+        uint64_t t_offset_ticks = diff.total_seconds()*125000000; //in 8ns ticks
+        uint64_t t_truetriggertime = t_offset_ticks + TTT;
+        TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "time offset = " << t_offset_ticks << " ns since the epoch"<< TLOG_ENDL;
+
+        // TTT is 8 ticks/ns, record length is 2 ticks/ns. See CAEN V1730 manuals for details
+        ts_frag = (t_truetriggertime*8.0) - (((double)fCAEN.recordLength * 2.0) * ((double)fCAEN.postPercent / 100.0)); //in 1ns ticks
+      }
+      else
+      {
+        using namespace boost::gregorian;
+        using namespace boost::posix_time;
+        
+        ptime t_now(microsec_clock::universal_time());
+        ptime time_t_epoch(date(1970,1,1));
+        time_duration diff = t_now - time_t_epoch;
+        
+        ts_frag = diff.total_nanoseconds() - fCAEN.timeOffsetNanoSec;
       }
     }
 
-    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "fragment timestamp in 1ns ticks = " << ts_frag << TLOG_ENDL;
+    TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Fragment timestamp in 1ns ticks = " << ts_frag << TLOG_ENDL;
     TLOG_ARB(TMAKEFRAG,TRACE_NAME) << "Difference to now in ns is = " << (ts_now - ts_frag) << TLOG_ENDL;
 
+    // assumng ts_frag was read from the timestamp map
+    // we can check ordering is correct and how much time it took
+    // note: ts_frag is a mix of server time + CAEN TTT
+    // bad values in TTT (board not getting PPS reset properly) might trigger a problem here
     if( ts_frag>ts_now )
       TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Causality problem!!"
 			 << "ts_frag - ts_now = " << ts_frag - ts_now << " ns!"
@@ -1319,39 +1363,42 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 			 << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 			 << TLOG_ENDL;
     }
+
     metricMan->sendMetric("FragmentCreationGapMax", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Maximum);
     metricMan->sendMetric("FragmentCreationGapAvg", (ts_now-ts_frag), "ns", 12, artdaq::MetricMode::Average);
 
-
+    // finally, set the timestamp to the fragment 
     fragment_uptr->setTimestamp( ts_frag );
 
     // check for possible gaps in the sequence IDs: compare current one with last sent
     // throw errors if gap > 1 or order is not correct
     auto readoutwindow_sequence_id_gap= readoutwindow_sequence_id - last_sent_seqid;
 
-    TLOG(TMAKEFRAG)<<"Created fragment " << fCAEN.fragmentId << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
-                   << " triggerTimeTag " << header->triggerTimeTag << " ts=" << ts_frag;
+    TLOG(TMAKEFRAG) << "Created fragment " << fCAEN.fragmentId << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
+                    << " triggerTimeTag " << header->triggerTimeTag << " ts=" << ts_frag;
     
-    if( readoutwindow_sequence_id_gap > 1u ){
+    // look for gaps in the sequence_id
+    if( readoutwindow_sequence_id_gap > 1u )
+    {
       if ( last_sent_seqid > 0 )
       {
-	TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / "
-                        << readoutwindow_sequence_id_gap;
-	metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
+	      TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / " << readoutwindow_sequence_id_gap;
+	      metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
       }
     }
 
+    // look for bad ordering
     if( readoutwindow_sequence_id < last_sent_seqid )
-      {
-	TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! "
-			 << readoutwindow_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
-      }
+    {
+	    TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! " << readoutwindow_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
+    }
     if( last_sent_ts > ts_frag)
-      {
-	TLOG(TLVL_ERROR) << "Timestamps out of order!! Last event later than current one."
-			 << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
-      }
+    {
+	    TLOG(TLVL_ERROR) << "Timestamps out of order!! Last event later than current one." << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
+    }
 
+    // finally push the fragments to the eventbuilders
+    // clear and them move in the fragments vector
     fragments.emplace_back(nullptr);
     std::swap(fragments.back(),fragment_uptr);
    
@@ -1362,25 +1409,28 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     last_sent_seqid = readoutwindow_sequence_id;
     last_sent_ts = ts_frag;
-    delta = std::chrono::steady_clock::now()-start;
 
+    // keep track of how much time it took
+    // also update min/max time of each loop call
+    delta = std::chrono::steady_clock::now()-start;
     min_fragment_create_time=std::min(delta.count(),min_fragment_create_time);
     max_fragment_create_time=std::max(delta.count(),max_fragment_create_time);
 
-    if (delta.count() >0.0005 ) {
+    if (delta.count() >0.0005) 
+    {
       metricMan->sendMetric("Laggy Fragments",1,"frags",11,artdaq::MetricMode::Maximum);
-      TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_seqid <<  " took " << delta.count()*1000 << " ms";
-//TRACE_CNTL("modeM", 0);
+      TLOG (TLVL_DEBUG+1) << "Creating a fragment with setSequenceID=" << last_sent_seqid << " took " << delta.count()*1000 << " ms";
     }
+
   }
 
-  metricMan->sendMetric("Fragment Create Time  Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
- // metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
+  metricMan->sendMetric("Fragment Create Time Max",max_fragment_create_time,"s",11,artdaq::MetricMode::Accumulate);
+  //metricMan->sendMetric("Fragment Create Time  Min" ,min_fragment_create_time,"s",1,artdaq::MetricMode::Accumulate);
 
   TLOG(TGETNEXT) << "End of readSingleWindowFragments(); returning " << fragments.size() << " fragments.";
 
+  // reset the start time
   start= std::chrono::steady_clock::now();
-
   return true;
 }
 
