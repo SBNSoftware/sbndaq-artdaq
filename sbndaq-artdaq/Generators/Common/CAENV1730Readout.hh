@@ -71,17 +71,12 @@ namespace sbndaq
 
     // run ADC self-calibration 
     void RunADCCalibration();
-    // read channel ADC calibration parameters
-    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    // write channel ADC calibration parameters
-    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
     // lock ADC temperature self-calibration
     void SetLockTempCalibration(bool onOff, uint32_t ch);
 
     // support function for register read/write operations
     CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
     CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
-    CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address, uint32_t data, uint32_t bitmask); 
 
     // check readback value from register
     void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
@@ -90,7 +85,6 @@ namespace sbndaq
     CAENConfiguration     fCAEN;	    // initialized in the constructor
     CAEN_DGTZ_BoardInfo_t fBoardInfo; // board S/N, firmware relase
     size_t   fNChannels; // number of channels
-    uint32_t fBoardID;   // board ID
     int fHandle;         // access handle
     bool fail_GetNext; // tracks GetNext_ failure
 
@@ -132,100 +126,42 @@ namespace sbndaq
     // hardware status check
     uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
     uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
-
-    typedef enum {
-      TEST_PATTERN_S=3
-    } TEST_PATTERN_t;
     
     typedef enum {
-      BOARD_CONFIG_READ  = 0x8000, // board configuration register
-      BOARD_CONFIG_SET   = 0x8004,
-      BOARD_CONFIG_CLEAR = 0x8008,
-
+      BOARD_CONFIG_READ  = 0x8000, // board configuration read register
+      BOARD_CONFIG_SET   = 0x8004, // board configuration set register
+      BOARD_CONFIG_CLEAR = 0x8008, // board configuration clear register
       FP_TRG_OUT_CONTROL = 0x8110, // front panel TRG-OUT control
       FP_IO_CONTROL      = 0x811C, // front panel I/O control
       FP_LVDS_CONTROL    = 0x81A0, // front panel LVDS control
       ACQ_CONTROL        = 0x8100, // acquisition control register
       READOUT_CONTROL    = 0xEF00, // readout control
-
       GLB_TRG_MASK       = 0x810C, // global trigger mask
       CH_ENABLE_MASK     = 0x8120, // channel enable mask
-
-      DYNAMIC_RANGE      = 0x8028,
-      TRG_OUT_WIDTH      = 0x8070,
-      TRG_OUT_WIDTH_CH   = 0x1070,
-      SLF_TRG_LG_CH      = 0x1084,
-      SLF_TRG_LG_GLB     = 0x8084,
-    
-      // Animesh & Aiwu add registers for the LVDS logic
-      FP_LVDS_Logic_G1   = 0x1084,
-      FP_LVDS_Logic_G2   = 0x1284,
-      FP_LVDS_Logic_G3   = 0x1484,
-      FP_LVDS_Logic_G4   = 0x1684,
-      FP_LVDS_Logic_G5   = 0x1884,
-      FP_LVDS_Logic_G6   = 0x1A84,
-      FP_LVDS_Logic_G7   = 0x1C84,
-      FP_LVDS_Logic_G8   = 0x1E84,
-      // Animesh & Aiwu add end
-      // Animesh & Aiwu add registers for the LVDS output width
-      FP_LVDS_OutWidth_Ch1   = 0x1070,
-      FP_LVDS_OutWidth_Ch2   = 0x1170,
-      FP_LVDS_OutWidth_Ch3   = 0x1270,
-      FP_LVDS_OutWidth_Ch4   = 0x1370,
-      FP_LVDS_OutWidth_Ch5   = 0x1470,
-      FP_LVDS_OutWidth_Ch6   = 0x1570,
-      FP_LVDS_OutWidth_Ch7   = 0x1670,
-      FP_LVDS_OutWidth_Ch8   = 0x1770,
-      FP_LVDS_OutWidth_Ch9   = 0x1870,
-      FP_LVDS_OutWidth_Ch10   = 0x1970,
-      FP_LVDS_OutWidth_Ch11   = 0x1A70,
-      FP_LVDS_OutWidth_Ch12   = 0x1B70,
-      FP_LVDS_OutWidth_Ch13   = 0x1C70,
-      FP_LVDS_OutWidth_Ch14   = 0x1D70,
-      FP_LVDS_OutWidth_Ch15   = 0x1E70,
-      FP_LVDS_OutWidth_Ch16   = 0x1F70,
-      // Animesh & Aiwu add - check DPP algorithm feature
-      DPP_Alo_Feature_Ch1 = 0x1080,
-      DPP_Alo_Feature_Ch2 = 0x1180,
-      Baseline_Ch1 = 0x1098,
-      Baseline_Ch2 = 0x1198,
-      Baseline_Ch3 = 0x1298,
-      Baseline_Ch4 = 0x1398,
-      Baseline_Ch5 = 0x1498,
-      Baseline_Ch6 = 0x1598,
-      Baseline_Ch7 = 0x1698,
-      Baseline_Ch8 = 0x1798,
-      Baseline_Ch9 = 0x1898,
-      Baseline_Ch10 = 0x1998,
-      Baseline_Ch11 = 0x1A98,
-      Baseline_Ch12 = 0x1B98,
-      Baseline_Ch13 = 0x1C98,
-      Baseline_Ch14 = 0x1D98,
-      Baseline_Ch15 = 0x1E98,
-      Baseline_Ch16 = 0x1F98,
-      // want to send a software trigger
-      // SWTriggerValue = 0x8108
-      // Animesh & Aiwu add end
+      DYNAMIC_RANGE      = 0x8028, // dynamic range control 
+      TRG_OUT_WIDTH_CH   = 0x1070, // channel n LVDS pulse width
+                                   // 0x1n70 for n=0,..,F
+      SLF_TRG_LG_CH      = 0x1084, // couple n self-trigger logic
+                                   // 0x1n84 for n=0,2,4,6,8,A,C,E
+      ANALOG_MON_MODE    = 0x8144, // analog monitor output mode
     } ADDRESS_t;
 
     typedef enum 
     {
-      TRIGGER_OVERLAP_MASK = 0x0002
-      ENABLE_LVDS_TRIGGER  = 0x20000000,
-      ENABLE_EXT_TRIGGER   = 0x40000000,
-      ENABLE_NEW_LVDS      = 0x100,
-      ENABLE_TRG_OUT       = 0xFF,
-      TRG_IN_LEVEL         = 0x400,
-      TRIGGER_LOGIC        = 0x1F00,
-      DISABLE_TRG_OUT_LEMO = 0x2,
-      LVDS_IO              = 0x3C,
-      LVDS_BUSY            = 0,
-      LVDS_TRIGGER         = 1,
-      LVDS_nBUSY_nVETO     = 2,
-      LVDS_LEGACY          = 3
+      TRIGGER_OVERLAP_MASK = 0x0002, // bitmask for trigger overlap
+      SLF_TRG_BIT_MASK     = 0x40,   // bitmask for self-trigger polarity
+      ENABLE_NEW_LVDS      = 0x100,  // bitmask to enable "new" LVDS features
+      TRG_IN_LEVEL         = 0x400,  // bitmask to configure TRG-IN as level/edge
+      DISABLE_TRG_OUT_LEMO = 0x2,    // bitmask to disable TRG-OUT LEMO output
+      LVDS_IO              = 0x3C,   // bitmask for LVDS I/O pins
+      LVDS_BUSY            = 0, // LVDS output is BUSY status
+      LVDS_TRIGGER         = 1, // LVDS output is TRIGGER (ICARUS mode)
+      LVDS_nBUSY_nVETO     = 2, // LVDS output is nBUSY/nVETO
+      LVDS_LEGACY          = 3  // legacy LVDS behavior
     } IO_MASK_t;
 
-    enum {
+    enum 
+    {
       TERROR    = TLVL_ERROR,
       TWARNING  = TLVL_WARNING,
       TINFO     = TLVL_INFO,
@@ -244,6 +180,10 @@ namespace sbndaq
     {
       V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
     };
+
+    typedef enum {
+      TEST_PATTERN_S=3
+    } TEST_PATTERN_t;
 
   };
 }

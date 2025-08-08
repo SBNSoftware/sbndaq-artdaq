@@ -164,7 +164,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps)
 
   // LVDS output mode flag
   // difference between ICARUS and SBND
-  // ICARUS=1, SBND=0
+  // ICARUS=1 (LVDS_TRIGGER), SBND=0
   modeLVDS = ps.get<uint32_t>("ModeLVDS"); 
 
   // Sets the TRIG-IN control
