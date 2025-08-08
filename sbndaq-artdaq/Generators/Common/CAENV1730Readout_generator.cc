@@ -440,7 +440,7 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
 
   // set/read registers for LVDS logic values setting
   // values are set in pairs (8 groups)
-  for (int gr = 0; gr < fNChannels/2; ++gr) 
+  for (size_t gr = 0; gr < 8; ++gr) 
   {
     // 0x1n84 with n = 0,2,4,6,..,E
     uint32_t regAddr = SLF_TRG_LG_CH + (gr * 0x200); 
@@ -451,13 +451,13 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     retcod = CAEN_DGTZ_WriteRegister(fHandle, regAddr, fCAEN.LVDSLogicValue[gr]);
     sbndaq::CAENDecoder::checkError(retcod, "WriteLVDSLogicValue", fCAEN.fragmentId);
     retcod = CAEN_DGTZ_ReadRegister(fHandle, regAddr, &readBack);
-    sbndaq::CAENDecoder::checkError(retcod,"ReadLVDSLogicValue", fCAEN.fragID);
+    sbndaq::CAENDecoder::checkError(retcod,"ReadLVDSLogicValue", fCAEN.fragmentId);
     CheckReadback("LVDSLogicValue", fCAEN.fragmentId, fCAEN.LVDSLogicValue[gr], readBack, gr);
   }
 
   // set/read registers for LVDS output width values setting
   // values are set per channel
-  for (int ch = 0; ch < fNChannels; ++ch) 
+  for (size_t ch = 0; ch < fNChannels; ++ch) 
   {
     // 0x1n70 with n = 0,1,2,3,..,F
     uint32_t regAddr = TRG_OUT_WIDTH_CH + (ch * 0x100); 
@@ -468,8 +468,8 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
     retcod = CAEN_DGTZ_WriteRegister(fHandle, regAddr, fCAEN.LVDSOutWidth[ch]);
     sbndaq::CAENDecoder::checkError(retcod, "WriteLVDSOutWidth", fCAEN.fragmentId);
     retcod = CAEN_DGTZ_ReadRegister(fHandle, regAddr, &readBack);
-    sbndaq::CAENDecoder::checkError(retcod,"ReadLVDSOutWidth", fCAEN.fragID);
-    CheckReadback("LVDSOutWidth", fCAEN.fragmentId, CAEN.LVDSOutWidth[ch], readBack, ch);
+    sbndaq::CAENDecoder::checkError(retcod,"ReadLVDSOutWidth", fCAEN.fragmentId);
+    CheckReadback("LVDSOutWidth", fCAEN.fragmentId, fCAEN.LVDSOutWidth[ch], readBack, ch);
   }
 
   // set self-trigger polarity
@@ -477,7 +477,7 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   uint32_t addr = (fCAEN.selfTrgBit)
     ? BOARD_CONFIG_SET    // writing a 1 to a bit sets that bit
     : BOARD_CONFIG_CLEAR; // writing a 1 to a bit clears that bit
-  retcode = CAEN_DGTZ_WriteRegister(fHandle, addr, SLF_TRG_BIT_MASK);
+  retcod = CAEN_DGTZ_WriteRegister(fHandle, addr, SLF_TRG_BIT_MASK);
   sbndaq::CAENDecoder::checkError(retcod, "WriteSelfTrigBit", fCAEN.fragmentId);
 }
 
@@ -524,7 +524,7 @@ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
   retcod = CAEN_DGTZ_SetChannelSelfTrigger(fHandle,
 					   (CAEN_DGTZ_TriggerMode_t)fCAEN.selfTrgMode,
 					   fCAEN.selfTrgMask);
-  sbndaq::CAENDecoder::checkError(retcod,"SetChannelSelfTriggerMode",fCAEN.fragmentID);
+  sbndaq::CAENDecoder::checkError(retcod,"SetChannelSelfTriggerMode",fCAEN.fragmentId);
   
   // GVS: the following configuration parameters are for SBND. 
   // fCAEN.modeLVDS must be 0
@@ -536,8 +536,8 @@ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
     for(uint32_t chn=0; chn<fNChannels; ++chn)
     {
       retcod = CAEN_DGTZ_GetChannelSelfTrigger(fHandle, chn, (CAEN_DGTZ_TriggerMode_t *)&readBack);
-      sbndaq::CAENDecoder::checkError(retcod,"GetChannelSelfTriggerMode",fCAEN.fragmentID);
-      CheckReadback("ChannelSelfTriggerMode", fCAEN.fragmentID, fCAEN.selfTrgMode, readBack, chn);
+      sbndaq::CAENDecoder::checkError(retcod,"GetChannelSelfTriggerMode",fCAEN.fragmentId);
+      CheckReadback("ChannelSelfTriggerMode", fCAEN.fragmentId, fCAEN.selfTrgMode, readBack, chn);
 
       // GVS: inserted triggerLogic for each PAIR of channels.
       if(chn%2==0)
@@ -550,11 +550,11 @@ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
         retcod = CAEN_DGTZ_WriteRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),
                  (fCAEN.triggerLogic & 0x3)/* + ((fCAEN.ovthValue & 0x1) <<2)*/);
 
-        sbndaq::CAENDecoder::checkError(retcod,"SelfTriggerPulseType",fCAEN.fragmentID);
+        sbndaq::CAENDecoder::checkError(retcod,"SelfTriggerPulseType",fCAEN.fragmentId);
         retcod = CAEN_DGTZ_ReadRegister(fHandle,SLF_TRG_LG_CH+(chn<<8),&aux2);
       
         TLOG_ARB(TCONFIG,TRACE_NAME) << "Self-trigger logic to channel " << chn << " new value " << std::hex << aux2 << std::dec;
-        CheckReadback("SelfTriggerPulseType", fCAEN.fragmentID, aux2, (fCAEN.triggerLogic & 0x3) /*+ ((fCAEN.ovthValue & 0x1) <<2)*/,chn);
+        CheckReadback("SelfTriggerPulseType", fCAEN.fragmentId, aux2, (fCAEN.triggerLogic & 0x3) /*+ ((fCAEN.ovthValue & 0x1) <<2)*/,chn);
       }
     }
   
@@ -573,18 +573,18 @@ void sbndaq::CAENV1730Readout::ConfigureSelfTriggerMode()
 				   
     retcod = CAEN_DGTZ_WriteRegister(fHandle,GLB_TRG_MASK, data);
 
-    sbndaq::CAENDecoder::checkError(retcod,"SetMajCoincWindow",fCAEN.fragmentID);
+    sbndaq::CAENDecoder::checkError(retcod,"SetMajCoincWindow",fCAEN.fragmentId);
     retcod = CAEN_DGTZ_ReadRegister(fHandle,GLB_TRG_MASK,&data2);
       
     TLOG_ARB(TCONFIG,TRACE_NAME) << "Global Trigger Mask address 0x810C, new value: 0x" << std::hex << data2 << std::dec;
-    CheckReadback("SetMajCoincWindow", fCAEN.fragmentID, data, data2);
+    CheckReadback("SetMajCoincWindow", fCAEN.fragmentId, data, data2);
   }
 }
 
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 
-oid sbndaq::CAENV1730Readout::ConfigureAcquisition()
+void sbndaq::CAENV1730Readout::ConfigureAcquisition()
 {
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureAcquisition()" << TLOG_ENDL;
 
