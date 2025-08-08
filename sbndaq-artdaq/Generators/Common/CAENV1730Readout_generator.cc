@@ -604,7 +604,7 @@ void sbndaq::CAENV1730Readout::ConfigureAcquisition()
   TLOG_ARB(TCONFIG,TRACE_NAME) << "SetAnalogMonOutputMode " << (CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode) << TLOG_ENDL;
   retcode = CAEN_DGTZ_SetAnalogMonOutput(fHandle,(CAEN_DGTZ_AnalogMonitorOutputMode_t)(fCAEN.analogMode));
   sbndaq::CAENDecoder::checkError(retcode,"SetAnalogMonOutputMode",fCAEN.fragmentId);
-  retcode = CAEN_DGTZ_ReadRegister(fHandle,ANALOG_MON_MOD,&readback);
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,ANALOG_MON_MODE,&readback);
   CheckReadback("SetAnalogMonOutputMode",fCAEN.fragmentId,fCAEN.analogMode,readback);
 
   TLOG_ARB(TCONFIG,TRACE_NAME) << "ConfigureAcquisition() done." << TLOG_ENDL;
