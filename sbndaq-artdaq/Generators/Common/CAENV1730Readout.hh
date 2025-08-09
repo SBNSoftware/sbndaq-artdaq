@@ -112,15 +112,18 @@ namespace sbndaq
     uint32_t fTTT;
     long fTTT_ns;
 
-    // set to zero at the beginning
-    uint32_t fEvCounter; 
-    //count overflows of fEvCounter
-    uint32_t fOverflowCounter; 
     // max event number internal to the V1730 board
-    const uint32_t max_rwcounter = 0xFFFFFF;  //24-bit
+    static constexpr uint32_t EVENT_COUNTER_MASK = 0xFFFFFFu; // 24-bit
+    // last event counter seen in GetData() thread
+    uint32_t last_rcv_event_counter;
 
-    uint32_t last_rcvd_rwcounter;
-    uint32_t last_sent_seqid;
+    // count overflows of V1730 event counter
+    uint32_t fOverflowCounter; 
+    // last fragment event counter sent
+    uint32_t last_sent_event_counter;
+    // last fragment sequence id sent
+    uint64_t last_sent_seqid;
+    // last fragment timestamps sent
     uint32_t last_sent_ts;
 
     // hardware status check

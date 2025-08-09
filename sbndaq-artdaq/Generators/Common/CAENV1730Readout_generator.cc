@@ -36,9 +36,6 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   // print-out all configuration parameters
   TLOG(TINFO) << fCAEN.to_string();
   
-  last_rcvd_rwcounter=0x0;
-  last_sent_seqid=0x1;
-  last_sent_ts=0;
   CAEN_DGTZ_ErrorCode retcode;
 
   fail_GetNext=false;
@@ -851,9 +848,11 @@ void sbndaq::CAENV1730Readout::start()
     sbndaq::CAENDecoder::checkError(retcode,"SWStartAcquisition",fCAEN.fragmentId);
   }
   
-  last_sent_seqid = 0;
-  fEvCounter=0;
   fOverflowCounter=0;
+  last_rcv_event_counter=0x0;
+  last_sent_event_counter=0x0;
+  last_sent_seqid =0x0;
+  last_sent_ts=0x0;
 
   // Manual calibration added by Animesh - DELETE?
   // "its origin and purpose is still a total mistery"
@@ -982,7 +981,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     if(!block) {
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-                       << "PoolBuffer is empty; last received trigger eventCounter=" <<last_rcvd_rwcounter;
+                       << "PoolBuffer is empty; last received trigger eventCounter=" << last_rcv_event_counter;
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
                        << "PoolBuffer status: freeBlockCount=" << fPoolBuffer.freeBlockCount()
                        << "(FragID=" << fCAEN.fragmentId << ")"
@@ -1124,16 +1123,22 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 		   << "TIMESTAMP " << fCAEN.fragmentId 
 		   << ": Timestamp for event " << header->eventCounter << " = " << fTS;
 
-    //check trigger event counter gaps: this is a 24-bit counter in the CAEN board
-    //if the run is long, it can overflow --> do not throw errors in that case
-    auto readoutwindow_trigger_counter_gap= uint32_t{header->eventCounter} - last_rcvd_rwcounter;
-    if( readoutwindow_trigger_counter_gap > 1u && last_rcvd_rwcounter < max_rwcounter ){
+    // check trigger event counter gaps: this is a 24-bit counter in the CAEN board
+    // compute gap: look only at first 24bits to handle possible overflows
+    uint32_t current_event_counter = uint32_t{header->eventCounter};
+    uint32_t gap  = (current_event_counter - last_rcv_event_counter) & EVENT_COUNTER_MASK;
+
+    if(gap > 1u)
+    {
       TLOG (TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
-			<< "Missing triggers; previous trigger eventCounter / gap  = " << last_rcvd_rwcounter << " / "
-			<< readoutwindow_trigger_counter_gap <<", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
-			<< ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
+        << " Missing triggers; current trigger eventCounter=" << current_event_counter
+        << ", previous trigger eventCounter / gap  = " << last_rcv_event_counter << " / " << gap 
+        << ", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
+        << ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() 
+        << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
     }    
-    last_rcvd_rwcounter = uint32_t{header->eventCounter};
+    // update
+    last_rcv_event_counter = current_event_counter;
     
     //return active block
     fPoolBuffer.returnActiveBlock(block);
@@ -1217,7 +1222,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
 
     // create an artdaq::Fragment buffer to receive the data
     // set some identifiers as required 
-    auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,fEvCounter,fCAEN.fragmentId,sbndaq::detail::FragmentType::CAENV1730,metadata);
+    auto fragment_uptr=artdaq::Fragment::FragmentBytes(fragment_datasize_bytes,last_sent_seqid,fCAEN.fragmentId,sbndaq::detail::FragmentType::CAENV1730,metadata);
 
     // create a data range that points into the fragment
     // now poolbuffer "knows" where it needs to write the payload
@@ -1234,31 +1239,42 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
    
     // get eventCounter, which is the key to get the correct timestamp from the map
     // for longer runs it can overflow (24 bit) --> play safe and don't use it as sequence id
+    uint32_t current_event_counter = uint32_t {header->eventCounter};
+
+    // detect overflow: 
+    // 1. current counter smaller than previous one
+    // 2. difference is large (larger then 0.9 overflow...)
+    if (current_event_counter < last_sent_event_counter && 
+       (last_sent_event_counter - current_event_counter) > (EVENT_COUNTER_MASK * 9 / 10)) 
+    {
+      ++fOverflowCounter;
+    }
+
     // build sequence id keeping track of overflows (avoids repeated seqIDs in the same run)
-    const auto readoutwindow_event_counter = uint32_t {header->eventCounter};
-    uint64_t readoutwindow_sequence_id = uint64_t{readoutwindow_event_counter + fOverflowCounter*(max_rwcounter+1u)};
+    // of course 64 bit can still overflow, but much more unlikely
+    uint64_t current_sequence_id = uint64_t{current_event_counter} + uint64_t{fOverflowCounter} * (uint64_t{EVENT_COUNTER_MASK} + 1u);
     
-    // sets this new event counter as sequence_id for the fragment
-    fragment_uptr->setSequenceID(readoutwindow_sequence_id);
+    // update the sequence_id for the fragment
+    fragment_uptr->setSequenceID(current_sequence_id);
 
     // now look up the timestamp from the map
     size_t ts_count=0;
     {
       std::lock_guard<std::mutex> lock(fTimestampMapMutex);
-      ts_count = fTimestampMap.count(readoutwindow_event_counter);
+      ts_count = fTimestampMap.count(current_event_counter);
     }
 
     // if no timestamp is found, retry 3 times -- sleeping in between 
     int ts_loop=0;
     while(ts_loop<3 && ts_count==0)
     {
-      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
 			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
       ts_loop++;
       {
 	      std::lock_guard<std::mutex> lock(fTimestampMapMutex);
-	      ts_count = fTimestampMap.count(readoutwindow_event_counter);
+	      ts_count = fTimestampMap.count(current_event_counter);
       }
     }
 
@@ -1281,8 +1297,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     if(ts_count>0)
     {
       std::lock_guard<std::mutex> lock(fTimestampMapMutex);      
-      ts_frag = fTimestampMap.at(readoutwindow_event_counter);
-      fTimestampMap.erase(readoutwindow_event_counter);
+      ts_frag = fTimestampMap.at(rcurrent_event_counter);
+      fTimestampMap.erase(current_event_counter);
     }
     // if no timestamp is found (weird..)
     // generate a new timestamp based on the current time
@@ -1290,7 +1306,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // no "polling" correction being applied here
     else
     {
-      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << readoutwindow_sequence_id << " EVCOUNTER " << readoutwindow_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
 		       << " Will generate new one now...";
 
       if(fCAEN.useTimeTagForTimeStamp)
@@ -1370,44 +1386,39 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // finally, set the timestamp to the fragment 
     fragment_uptr->setTimestamp( ts_frag );
 
-    // check for possible gaps in the sequence IDs: compare current one with last sent
-    // throw errors if gap > 1 or order is not correct
-    auto readoutwindow_sequence_id_gap= readoutwindow_sequence_id - last_sent_seqid;
-
-    TLOG(TMAKEFRAG) << "Created fragment " << fCAEN.fragmentId << " sequenceID " << readoutwindow_sequence_id << " for event " << readoutwindow_event_counter
+    TLOG(TMAKEFRAG) << "Created fragment " << fCAEN.fragmentId << " sequenceID " << current_sequence_id << " for event " << current_event_counter
                     << " triggerTimeTag " << header->triggerTimeTag << " ts=" << ts_frag;
     
+    // check for possible gaps in the sequence IDs: compare current one with last sent
+    // throw errors if gap > 1 or order is not correct
+    // no handling of possible 64 bit overflow -- FIX?
+    uint64_t sequence_id_gap = current_sequence_id - last_sent_seqid;
+
     // look for gaps in the sequence_id
-    if( readoutwindow_sequence_id_gap > 1u )
+    if( sequence_id_gap > 1u )
     {
-      if ( last_sent_seqid > 0 )
-      {
-	      TLOG (TLVL_DEBUG) << "Missing data; previous fragment sequenceID / gap  = " << last_sent_seqid << " / " << readoutwindow_sequence_id_gap;
-	      metricMan->sendMetric("Missing Fragments", uint64_t{readoutwindow_sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
-      }
+      TLOG (TLVL_WARNING) << "Missing data; current fragment sequenceID=" << current_sequence_id;
+         << ", previous fragment sequenceID / gap  = " << last_sent_seqid << " / " << sequence_id_gap;
+      metricMan->sendMetric("Missing Fragments", uint64_t{sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
     }
 
     // look for bad ordering
-    if( readoutwindow_sequence_id < last_sent_seqid )
+    if( current_sequence_id < last_sent_seqid )
     {
-	    TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! " << readoutwindow_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
+      TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! " << current_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
     }
     if( last_sent_ts > ts_frag)
     {
-	    TLOG(TLVL_ERROR) << "Timestamps out of order!! Last event later than current one." << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
+      TLOG(TLVL_ERROR) << "Timestamps out of order!! Last event later than current one." << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
     }
 
     // finally push the fragments to the eventbuilders
     // clear and them move in the fragments vector
     fragments.emplace_back(nullptr);
     std::swap(fragments.back(),fragment_uptr);
-   
-    // keep track of CAEN event counter overflows
-    // this is important to avoid repeating sequenceIDs
-    if( readoutwindow_event_counter == max_rwcounter ) fOverflowCounter++;
-    fEvCounter++;
-
-    last_sent_seqid = readoutwindow_sequence_id;
+ 
+    last_sent_event_counter = current_event_counter;
+    last_sent_seqid = current_sequence_id;
     last_sent_ts = ts_frag;
 
     // keep track of how much time it took
