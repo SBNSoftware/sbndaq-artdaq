@@ -1297,7 +1297,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     if(ts_count>0)
     {
       std::lock_guard<std::mutex> lock(fTimestampMapMutex);      
-      ts_frag = fTimestampMap.at(rcurrent_event_counter);
+      ts_frag = fTimestampMap.at(current_event_counter);
       fTimestampMap.erase(current_event_counter);
     }
     // if no timestamp is found (weird..)
@@ -1397,7 +1397,7 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // look for gaps in the sequence_id
     if( sequence_id_gap > 1u )
     {
-      TLOG (TLVL_WARNING) << "Missing data; current fragment sequenceID=" << current_sequence_id;
+      TLOG (TLVL_WARNING) << "Missing data; current fragment sequenceID=" << current_sequence_id
          << ", previous fragment sequenceID / gap  = " << last_sent_seqid << " / " << sequence_id_gap;
       metricMan->sendMetric("Missing Fragments", uint64_t{sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
     }
