@@ -80,38 +80,44 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 
   // board configuration register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,BOARD_CONFIG_READ,&data);
-  TLOG(TLVL_INFO) << "BOARD_CONFIG_ADDR Reg:0x" << std::hex << BOARD_CONFIG_READ << 
-    "=0x" << data;
+  TLOG(TLVL_INFO) << "Board configuration (BOARD_CONFIG_ADDR=0x" 
+	          << std::hex << static_cast<unsigned int>(BOARD_CONFIG_READ) << ") = 0x" << data;
   
-  // front panel TRG-OUT contol register
+  // front panel TRG-OUT control register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_TRG_OUT_CONTROL,&data);
-  TLOG(TLVL_INFO) << "FP_TRG_OUT_CONTROL Reg:0x" << std::hex << FP_TRG_OUT_CONTROL << 
-    "=0x" << data;
+  TLOG(TLVL_INFO) << "Front panel TRG-OUT control (FP_TRG_OUT_CONTROL=0x" 
+                  << std::hex << static_cast<unsigned int>(FP_TRG_OUT_CONTROL) << ") = 0x" << data;
 
   // front panel I/O control register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_IO_CONTROL,&data);
-  TLOG(TLVL_INFO) << "FP_IO_CONTROL Reg:0x" << std::hex << FP_IO_CONTROL << "=0x" << data;
+  TLOG(TLVL_INFO) << "Front panel I/O control (FP_IO_CONTROL=0x" 
+	          << std::hex << static_cast<unsigned int>(FP_IO_CONTROL) << ") = 0x" << data;
 
   // front panel LVDS I/O control register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,FP_LVDS_CONTROL,&data);
-  TLOG(TLVL_INFO) << "FP_LVDS_CONTROL Reg:0x" << std::hex << FP_LVDS_CONTROL << "=0x" << 
-    data << std::dec;
+  TLOG(TLVL_INFO) << "Front panel LVDS I/O control (FP_LVDS_CONTROL=0x" 
+	          << std::hex << static_cast<unsigned int>(FP_LVDS_CONTROL) << ") = 0x" << data;
 
   // acquisition control register
   retcode = CAEN_DGTZ_ReadRegister(fHandle,ACQ_CONTROL,&data);
-  TLOG(TLVL_INFO) << "ACQ_CONTROL Reg:0x" << std::hex << ACQ_CONTROL << "=0x" << data;
+  TLOG(TLVL_INFO) << "Acquisition control (ACQ_CONTROL=0x" 
+                  << std::hex << static_cast<unsigned int>(ACQ_CONTROL) << ") = 0x" << data;
 
   // readout control register (interrupts)
   retcode = CAEN_DGTZ_ReadRegister(fHandle,READOUT_CONTROL,&data);
-  TLOG(TLVL_INFO) << "READOUT_CONTROL Reg:0x" << std::hex << READOUT_CONTROL << "=0x" << data;
+  TLOG(TLVL_INFO) << "Readout interrupts control  (READOUT_CONTROL=0x" 
+                  << std::hex << static_cast<unsigned int>(READOUT_CONTROL) << ") = 0x" << data;
   
   // global trigger mask
   retcode = CAEN_DGTZ_ReadRegister(fHandle,GLB_TRG_MASK,&data);
-  TLOG(TLVL_INFO) << "GLB_TRG_MASK Reg:0x" << std::hex << GLB_TRG_MASK << "=0x" << data;
+  TLOG(TLVL_INFO) << "Global trigger mask (GLB_TRG_MASK=0x" 
+	  	  << std::hex << static_cast<unsigned int>(GLB_TRG_MASK) << ") = 0x" << data;
 
   // channel enable mask
   retcode = CAEN_DGTZ_ReadRegister(fHandle,CH_ENABLE_MASK,&data);
-  TLOG(TLVL_INFO) << "CH_ENABLE_MASK Reg:0x" << std::hex << CH_ENABLE_MASK << "=0x" << data;
+  TLOG(TLVL_INFO) << "Channel enable mask (CH_ENABLE_MASK=0x" 
+                  << std::hex << static_cast<unsigned int>(CH_ENABLE_MASK) << ") = 0x" << data
+                  << std::dec;
 
   // Set up worker getdata thread.
   share::ThreadFunctor functor = std::bind(&CAENV1730Readout::GetData,this);
@@ -120,7 +126,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   GetData_thread_.swap(GetData_worker);
   TLOG_ARB(TCONFIG,TRACE_NAME) << "GetData worker thread setup." << TLOG_ENDL;
 
-  TLOG(TCONFIG) << "Configuration complete!" << TLOG_ENDL;
+  TLOG(TLVL_INFO) << "Configuration complete!" << TLOG_ENDL;
 
   //epoch time
   fTimeEpoch = boost::posix_time::ptime(boost::gregorian::date(1970,1,1));
@@ -186,6 +192,7 @@ void sbndaq::CAENV1730Readout::Configure()
   // avoids recalibrating mid-run and causing baseline jumps
   if (fCAEN.lockTempCalibration )  
   { 
+    TLOG_ARB(TINFO,TRACE_NAME) << "Locking mid-run temperature calibration adjustements..." << TLOG_ENDL;
     for ( uint32_t ch=0; ch<fNChannels; ch++)
     {
       SetLockTempCalibration(true,ch);
@@ -390,7 +397,7 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
   // Construct mode mask: repeat chosen modeLVDS 4 times
   // FP_LVDS_CONTROL groups multiple LVDS pins into separate 4-bit fields
   data = fCAEN.modeLVDS | (fCAEN.modeLVDS << 4) | (fCAEN.modeLVDS << 8) | (fCAEN.modeLVDS << 12);
-  TLOG(TINFO) << "ModeLVDS: 0x" << std::hex << data << std::dec;
+  TLOG(TCONFIG) << "ModeLVDS: 0x" << std::hex << data << std::dec;
   
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_LVDS_CONTROL, data);
   sbndaq::CAENDecoder::checkError(retcod,"WriteLVDSOutputConfig",fCAEN.fragmentId);
@@ -428,7 +435,7 @@ void sbndaq::CAENV1730Readout::ConfigureLVDS()
 
   // finally write back to FP_IO_CONTROL the update value
   // this should be the final configuration for this register
-  TLOG(TINFO) << "FPOutputConfig: 0x" << std::hex << ioMode << std::dec;
+  TLOG(TCONFIG) << "FPOutputConfig: 0x" << std::hex << ioMode << std::dec;
   retcod = CAEN_DGTZ_WriteRegister(fHandle, FP_IO_CONTROL, ioMode);
   sbndaq::CAENDecoder::checkError(retcod,"WriteFPOutputConfig",fCAEN.fragmentId);
   retcod = CAEN_DGTZ_ReadRegister(fHandle, FP_IO_CONTROL, &readBack);
@@ -735,7 +742,7 @@ void sbndaq::CAENV1730Readout::SetLockTempCalibration(bool onOff, uint32_t ch)
 {
   CAEN_DGTZ_ErrorCode retcod;
   uint8_t lock, ctrl;
-  TLOG_ARB(TINFO,TRACE_NAME) << "Locking Temperature Calibration Adjustments, channel " << ch << TLOG_ENDL;
+  TLOG_ARB(TCONFIG,TRACE_NAME) << "Locking Temperature Calibration Adjustments, channel " << ch << TLOG_ENDL;
 
   // Following code comes from CAEN
   // enter engineering functions
