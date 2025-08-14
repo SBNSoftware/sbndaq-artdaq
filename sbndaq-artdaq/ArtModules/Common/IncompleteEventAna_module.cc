@@ -19,6 +19,7 @@
 
 #include <vector>
 #include <iostream>
+#include <sstream>
 #include <set>
 #include <iterator>
 #include <algorithm>
@@ -141,11 +142,15 @@ void sbndaq::IncompleteEventAna::analyze(const art::Event& evt)
     //maybe do a lookup table?
     */
 
+    // fill stream, then print
+    // avoids hitting rate limit
+    std::ostringstream oss; 
+
     for(auto id : fragIDDiffSet)
-      TLOG_WARNING("IncompleteEventAna") 
-      << "(Run,Ev)=(" << run << "," << event << "): "
-      << "Missing fragment id " << id;
-    
+      oss << "(Run,Ev)=(" << run << "," << event << "): "
+          << "Missing fragment id " << id << '\n';
+
+    TLOG_WARNING("IncompleteEventAna") << oss.str();
   }
 
 }
