@@ -936,14 +936,18 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
   // (re)-arm interrupt before waiting for one
   // this is required for links through a5818 cards
-  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_RearmInterrupt(fHandle);
-  if(retcode < 0){
-    TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
-                       << " RearmInterrupt() failed: " << retcode;
-  } 
+  // but causes stability issues for a3818 links...
+  if(fCAEN.aX818 == 5)
+  {
+    CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_RearmInterrupt(fHandle);
+    if(retcode < 0){
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                         << " RearmInterrupt() failed: " << retcode;
+    } 
+  }
 
   //wait for one event, then interrupt
-  retcode = CAEN_DGTZ_IRQWait(fHandle, fCAEN.IRQTimeoutMS);
+  CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_IRQWait(fHandle, fCAEN.IRQTimeoutMS);
 
   //if we have a timeout condition, return
   if (retcode == CAEN_DGTZ_Timeout) {
