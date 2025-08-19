@@ -89,9 +89,9 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   auto GetSNData_worker_functor = share::WorkerThreadFunctorUPtr( new share::WorkerThreadFunctor( GetSNData_functor, "GetSNDataWorkerThread" ) );
   auto GetSNData_worker = share::WorkerThread::createWorkerThread( GetSNData_worker_functor );
   GetSNData_thread_.swap(GetSNData_worker);
-  if( fSNReadout ){
-    GetSNData_thread_->start();
-    TLOG(TLVL_INFO) << "Started GetSNData thread" << TLOG_ENDL;
+   if( fSNReadout ){
+  GetSNData_thread_->start();
+  TLOG(TLVL_INFO) << "Started GetSNData thread" << TLOG_ENDL;
   }
 
   // Set up worker WriteSNData thread.
@@ -100,8 +100,8 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   auto WriteSNData_worker = share::WorkerThread::createWorkerThread( WriteSNData_worker_functor );
   WriteSNData_thread_.swap(WriteSNData_worker);
   if( fSNReadout ){
-    WriteSNData_thread_->start();
-    TLOG(TLVL_INFO) << "Started WriteSNData thread" << TLOG_ENDL;
+   WriteSNData_thread_->start();
+   TLOG(TLVL_INFO) << "Started WriteSNData thread" << TLOG_ENDL;
   }
 
   // Set up worker MonitorCrate thread.
@@ -307,11 +307,22 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
 
+  auto start = std::chrono::high_resolution_clock::now();
+
   std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(&DMABuffer_[0]), fChunkSize);
   //unsigned wordsRead = bytesRead * sizeof(char) / sizeof(uint16_t);
   TLOG(TGETDATA) << "Number of bytes read:" << int(bytesRead) ;
 
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> duration_us = end - start;
+
   if( fDumpBinary ) binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
+
+  auto end1 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> duration_us1 = end1 - end;
+
+  TLOG(TGETDATA) << "NU DMA read time (us): " << duration_us.count();
+  TLOG(TGETDATA) << "NU Write time (us): "  << duration_us1.count();
 
   binFileNU.flush();
   //delete[] buffer;
@@ -322,8 +333,13 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   
   TLOG(TGETDATA)<< "GetSNData";
+  auto start = std::chrono::high_resolution_clock::now();
 
   std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> duration_us = end - start;
+
+
  if (bytesRead <=0) return false;
 
   if (bytesRead == fSNChunkSize){
@@ -337,6 +353,12 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
    total_words_inserted += n_words;
    TLOG(TGETDATA) << "Inserted " << n_words << " words. Total inserted: " << total_words_inserted;
+
+   auto end1 = std::chrono::high_resolution_clock::now();
+   std::chrono::duration<double, std::micro> duration_us1 = end1 - end;
+   TLOG(TGETDATA) << "SN DMA read time (us): " << duration_us.count();
+   TLOG(TGETDATA) << "SN Buffer Write time (us): "  << duration_us1.count();
+
 
    TLOG(TGETDATA) << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer.size() ; 
 
@@ -352,6 +374,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 }
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
+  auto start = std::chrono::high_resolution_clock::now();
 
   //Writing and erasing number of words to and from circular buffer --> to fix missing frames issue
   if (SNCircularBuffer_.buffer.size() >= fSNChunkSize / sizeof(uint16_t)) {                                                                          
@@ -375,6 +398,13 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
         binFileSN.open(binFileNameSN, std::ofstream::out | std::ofstream::binary);
       }
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::micro> duration_us = end - start;
+    TLOG(TGETDATA) << "SN buffer to disk write time (us): " << duration_us.count();
+    //    TLOG(TGETDATA) << "SN Buffer Write time (us): "  << duration_us1.count();
+
+
 
     std::copy(SNCircularBuffer_.buffer.begin(),                                                                                                         
 	      SNCircularBuffer_.buffer.begin() + (fSNChunkSize / sizeof(uint16_t)),                                                                     

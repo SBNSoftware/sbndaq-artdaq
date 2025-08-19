@@ -593,38 +593,43 @@ namespace nevistpc {
 
 
   unsigned int fakewaveform_shaperfunction (std::string shape, unsigned int smpl, unsigned int chnl, int noise,const std::vector<unsigned int>& threshold,const std::vector<unsigned int>& baseline){
-
-    //    unsigned int baseline = 750; //(chnl%2 == 0)? 15 : 45; //2058 : 458;// 15 : 45; // 15 ADC for even channels, 45 ADC for odd channels                                                 
-    //unsigned int threshold = 100; //(chnl%2 == 0)? 2049 : 450; // 2049 ADC for even channels,  450 ADC for odd channels                                                                  
+                     
     unsigned int signall = 0;
     unsigned int  bkgg = 20;
     //    bkgg = baseline + noise;
     //    bkgg = ped_val + noise;
 
 
-    if (shape == "uB") {//signals movtivated by physics of uB                                                                                                                      
-      //      if(chnl<4){
-       	unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 750;
-       	unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 100;
+    if (shape == "uB") {//signals movtivated by physics of uB                                                                                                             
+      unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 450;
+      unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 10;
+      bkgg = ped_val + noise;                                                                                                                                            
+      if(chnl<4){
 	if (smpl>=2 && smpl<10){
 	  int signal = std::round(600*std::sin(PI/48*(smpl-1)));
 	  signall = ped_val + signal + noise;
 	  TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: "  <<  ped_val;
           TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: "  <<  ch_val;
-
 	  return (signall & 0xfff);
 	}
 	else{
-	  bkgg = ped_val + noise;  
+	  //bkgg = ped_val + noise;  
 	  TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: " <<  ped_val;
           TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: " <<  ch_val;
-	  return (bkgg & 0xfff); //baseline + noise ;                                                                                                                                
-
+	  return (bkgg & 0xfff); //baseline + noise ;                                                                                                       
 	}
-     }
-    return (bkgg & 0xfff); 
-
+      }
+      else {
+	return (bkgg & 0xfff); 
+      }
+    }
+    return (bkgg & 0xfff);
+    
   }
+      // }
+    // return (bkgg & 0xfff); 
+
+      //}
   /*
 
     if (shape == "square") {//490-512 square waves, channel dependent amplitudes                                                                    
