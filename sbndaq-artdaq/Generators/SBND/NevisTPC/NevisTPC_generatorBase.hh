@@ -27,11 +27,6 @@ public:
   explicit NevisTPC_generatorBase(fhicl::ParameterSet const &ps);
   virtual ~NevisTPC_generatorBase();
 
-
-private:
-  size_t dma_counter_ = 0;
-
-
 protected:
   bool getNext_(artdaq::FragmentPtrs &output) override;
   void start() override;
@@ -108,7 +103,6 @@ protected:
     }
 
     size_t Insert(size_t, std::unique_ptr<uint16_t[]> const &);
-    size_t InsertSafe(size_t n_words, const uint16_t* data);
     size_t Erase(size_t);
   } CircularBuffer_t;
 

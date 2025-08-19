@@ -33,9 +33,6 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   N_SNWrites = 0;
   //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
 
-  SNBinSubFileNum_ = -1;
-  SNDMATransferCnt_ = 0;
-
   if(fUseZMQ){
       _zmqGPSPublisher.bind(fGPSZMQPortNTB);} // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
       // Any port > 10000 can be used by artdaq (netstat -lpnu4 --> this will tell you the used ports)
@@ -43,17 +40,15 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
   if( fDumpBinary ){
     // Get timestamp for binary file name
-    //time_t t = time(0);
-    //struct tm ltm = *localtime( &t );
-    t = time(0);
-    ltm = *localtime( &t );
+    time_t t = time(0);
+    struct tm ltm = *localtime( &t );
     sprintf(binFileNameNU, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_NU.dat",
 	    fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
 	    ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
     
     TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameNU;
     binFileNU.open( binFileNameNU, std::ofstream::out | std::ofstream::binary ); // temp
-/*
+
     if( fSNReadout ){ 
       sprintf(binFileNameSN, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_SN.dat",
 	      fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
@@ -64,7 +59,6 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
       // to do: Send SN data to a dedicated Event Builder? Does it require its own BoardReader?
       // Otherwise use MicroBooNE example to make several files with the binary dump instead of a giant file
     }
-*/
   }
 
   // Create Crate object
@@ -179,7 +173,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::startFireCalibTrig() {
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
   if( fSNReadout ){
     GetSNData_thread_->stop();
-     WriteSNData_thread_->stop();
+    WriteSNData_thread_->stop();
   }
   //  FireCALIB_thread_->stop();
   if( fControllerTriggerFreq > 0 ){//only stop thread if it met conditions to get started
@@ -308,13 +302,22 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   TLOG(TGETDATA)<< "GetFEMCrateData";
 
   auto start = std::chrono::high_resolution_clock::now();
-
+  // Just for tests
+  // Taken from NevisTPCFile_generator and adapted to use an XMITReader
+  // To be reviewed
+  // uint16_t* buffer = new uint16_t[fChunkSize];
+  TLOG(TGETDATA) << "Going to call Readsome function";
+  //std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(buffer), fChunkSize);
   std::streamsize bytesRead = fNUXMITReader->readsome(reinterpret_cast<char*>(&DMABuffer_[0]), fChunkSize);
   //unsigned wordsRead = bytesRead * sizeof(char) / sizeof(uint16_t);
   TLOG(TGETDATA) << "Number of bytes read:" << int(bytesRead) ;
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::micro> duration_us = end - start;
+
+  //std::copy(buffer, buffer + wordsRead, &DMABuffer_[0]);
+
+  //if( fDumpBinary ) binFileNU.write( (char*)buffer, fChunkSize );
 
   if( fDumpBinary ) binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
 
@@ -335,6 +338,11 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   TLOG(TGETDATA)<< "GetSNData";
   auto start = std::chrono::high_resolution_clock::now();
 
+  // Just for tests
+  // Taken from NevisTPCFile_generator and adapted to use an XMITReader
+  // To be reviewed
+  // uint16_t* SNBuffer_ = new uint16_t[fSNChunkSize];
+
   std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::micro> duration_us = end - start;
@@ -349,11 +357,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
 
-   TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
+    TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
 
    total_words_inserted += n_words;
    TLOG(TGETDATA) << "Inserted " << n_words << " words. Total inserted: " << total_words_inserted;
-
    auto end1 = std::chrono::high_resolution_clock::now();
    std::chrono::duration<double, std::micro> duration_us1 = end1 - end;
    TLOG(TGETDATA) << "SN DMA read time (us): " << duration_us.count();
@@ -361,7 +368,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
 
    TLOG(TGETDATA) << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer.size() ; 
-
+  //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
+  //delete[] SNBuffer_;
+  //memset(SNBuffer_, 0, fSNChunkSize*sizeof(uint16_t)); // avoid clearing?
+TLOG(TGETDATA) << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer.size() ; 
   if(metricMan != nullptr) {
   //send SN metrics
   metricMan->sendMetric(
@@ -405,16 +415,12 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
     //    TLOG(TGETDATA) << "SN Buffer Write time (us): "  << duration_us1.count();
 
 
-
     std::copy(SNCircularBuffer_.buffer.begin(),                                                                                                         
 	      SNCircularBuffer_.buffer.begin() + (fSNChunkSize / sizeof(uint16_t)),                                                                     
 	      SNBuffer_);                                                                                                                               
                                                                                                                                                          
     binFileSN.write(reinterpret_cast<char*>(SNBuffer_), fSNChunkSize);                                                                                  
     ++N_SNWrites;                                                                                                                                       
-
-    ++SNDMATransferCnt_;
-
     binFileSN.flush();                                                                                                                                  
                                                                                                                                                          
     size_t n_words_written = fSNChunkSize / sizeof(uint16_t);                                                                                             
@@ -424,11 +430,11 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 		    << "Total written: " << total_words_written;                                                                                          
                                                                                                                                                          
                                                                                                                                                          
-size_t     new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize/sizeof(uint16_t));                                                                             
-                                                                                                                                                         
+    size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize/sizeof(uint16_t));                                                                                                                                                                                                                           
     TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;                        
   }    
-
+  
+  
   if(metricMan != nullptr) {
   //send SN metrics
     metricMan->sendMetric(
