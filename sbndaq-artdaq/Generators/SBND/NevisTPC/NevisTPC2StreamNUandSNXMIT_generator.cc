@@ -30,36 +30,41 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   SNCircularBuffer_.Init();
   SNBuffer_ = new uint16_t[fSNChunkSize];
   N_SNDMAs = 0;
+  N_NUDMAs = 0;
   N_SNWrites = 0;
+  SNDMATransferCnt_ = 0;
+  SNBinSubFileNum_ = -1;
   //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
+
+   t = time(0);
+   ltm = *localtime( &t );
 
   if(fUseZMQ){
       _zmqGPSPublisher.bind(fGPSZMQPortNTB);} // This port can be configured in fcl file and need to change the localhost to -daq subnet  to find daq subnet, ifconfig and choose ino2 10.226.36.6
       // Any port > 10000 can be used by artdaq (netstat -lpnu4 --> this will tell you the used ports)
       //    publisher.bind("udp://127.0.0.1:7620");
-
-  if( fDumpBinary ){
+  //if( fDumpBinary ){
     // Get timestamp for binary file name
-    time_t t = time(0);
-    struct tm ltm = *localtime( &t );
-    sprintf(binFileNameNU, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_NU.dat",
-	    fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
-	    ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
+    //    time_t t = time(0);
+    //struct tm ltm = *localtime( &t );
+    //sprintf(binFileNameNU, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_NU.dat",
+    //	    fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
+    //      ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
     
-    TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameNU;
-    binFileNU.open( binFileNameNU, std::ofstream::out | std::ofstream::binary ); // temp
+    //TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameNU;
+    //binFileNU.open( binFileNameNU, std::ofstream::out | std::ofstream::binary ); // temp
 
-    if( fSNReadout ){ 
-      sprintf(binFileNameSN, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_SN.dat",
-	      fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
-	      ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
+    //if( fSNReadout ){ 
+    //  sprintf(binFileNameSN, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_SN.dat",
+    //	      fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
+    //	      ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
     
-      TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameSN;
-      binFileSN.open( binFileNameSN, std::ofstream::out | std::ofstream::binary ); // temp
+    //  TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameSN;
+    //  binFileSN.open( binFileNameSN, std::ofstream::out | std::ofstream::binary ); // temp
       // to do: Send SN data to a dedicated Event Builder? Does it require its own BoardReader?
       // Otherwise use MicroBooNE example to make several files with the binary dump instead of a giant file
-    }
-  }
+    //}
+  //}
 
   // Create Crate object
   fCrate = std::make_shared<nevistpc::Crate>( fControllerModule, fNUXMITReader, ps_, fSNXMITReader );
@@ -312,6 +317,11 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   //unsigned wordsRead = bytesRead * sizeof(char) / sizeof(uint16_t);
   TLOG(TGETDATA) << "Number of bytes read:" << int(bytesRead) ;
 
+  if (bytesRead == fChunkSize){
+    ++N_NUDMAs;
+    TLOG(TLVL_INFO)  << "Number of NU DMAs: " << N_NUDMAs ;
+  }
+
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::micro> duration_us = end - start;
 
@@ -319,7 +329,18 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
 
   //if( fDumpBinary ) binFileNU.write( (char*)buffer, fChunkSize );
 
-  if( fDumpBinary ) binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
+  //if( fDumpBinary ) binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
+  if( fDumpBinary ) {
+    if (!binFileNU.is_open()) {
+      sprintf(binFileNameNU, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_NU.dat", 
+        fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
+	ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
+    
+      TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameNU;
+      binFileNU.open( binFileNameNU, std::ofstream::out | std::ofstream::binary ); // temp
+    }
+    binFileNU.write( (char*)(&DMABuffer_[0]), fChunkSize );
+  }
 
   auto end1 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::micro> duration_us1 = end1 - end;
@@ -352,6 +373,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
   if (bytesRead == fSNChunkSize){
     ++N_SNDMAs;
+    TLOG(TLVL_INFO)  << "Number of SN DMAs: " << N_SNDMAs ;
   }
 
   size_t n_words = bytesRead/sizeof(uint16_t);
@@ -399,7 +421,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
         }
  
         ++SNBinSubFileNum_;
- 
+
         sprintf(binFileNameSN, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_subfile%i_TPC_SN.dat",
           fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(),
           ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec, SNBinSubFileNum_);
@@ -420,7 +442,9 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 	      SNBuffer_);                                                                                                                               
                                                                                                                                                          
     binFileSN.write(reinterpret_cast<char*>(SNBuffer_), fSNChunkSize);                                                                                  
-    ++N_SNWrites;                                                                                                                                       
+    ++N_SNWrites;
+    ++SNDMATransferCnt_;
+
     binFileSN.flush();                                                                                                                                  
                                                                                                                                                          
     size_t n_words_written = fSNChunkSize / sizeof(uint16_t);                                                                                             

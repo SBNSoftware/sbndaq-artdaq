@@ -16,6 +16,7 @@
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
 
 #include <fstream> // temp
+#include <ctime>
 #include <zmq.hpp>
 
 namespace sbndaq {
@@ -84,13 +85,19 @@ namespace sbndaq {
     std::ofstream binFileNU; // temp 
     std::ofstream binFileSN; // temp 
     char binFileNameNU[80]; // Name of binary dump file for NU stream
-    char binFileNameSN[80]; // Name of binary dump file for SN stream
+    char binFileNameSN[200]; // Name of binary dump file for SN stream
     
-    size_t total_words_insterted = 0;
+    size_t total_words_inserted = 0;
     size_t total_words_written = 0;    
 
     int N_SNDMAs;
+    int N_NUDMAs;
     int N_SNWrites;
+    int SNDMATransferCnt_;
+    int SNBinSubFileNum_;
+    time_t t;
+    struct tm ltm;
+
 
   };
   
