@@ -8,10 +8,10 @@
 
 sbndaq::CAENException::CAENException(CAEN_DGTZ_ErrorCode error_, 
 				      std::string label_,
-				      int boardId_):
+				      int fragID_):
   error(error_),
   label(label_),
-  boardId(boardId_)
+  fragID(fragID_)
 {
 }
 
@@ -23,12 +23,14 @@ std::string sbndaq::CAENException::what()
 }
 
 void sbndaq::CAENException::print(std::ostream & os) 
-{ os << *this;}
+{ 
+  os << *this;
+}
 
 std::ostream& operator<<(std::ostream& s, const sbndaq::CAENException& e)
 {
+  if ( e.fragID >= 0 ) { s << "(fragID=" << e.fragID << ") ";}
   s << "ERROR: " << e.label << " " << sbndaq::CAENDecoder::CAENError(e.error);
-  if ( e.boardId >= 0 ) { s << " BoardId " << e.boardId ;}
   s << std::endl;
   return(s);
 }

@@ -164,7 +164,7 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps)
 
   // LVDS output mode flag
   // difference between ICARUS and SBND
-  // ICARUS=1, SBND=0
+  // ICARUS=1 (LVDS_TRIGGER), SBND=0
   modeLVDS = ps.get<uint32_t>("ModeLVDS"); 
 
   // Sets the TRIG-IN control
@@ -312,7 +312,7 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
   os << "SelfTrgMask         0x" << std::hex << e.selfTrgMask << std::dec << " " << e.selfTrgMask << std::endl;
   os << "SWTrigger             " << e.swTrigger << std::endl;
   os << "AllowTriggerOverlap   " << e.allowTriggerOverlap << std::endl;
-  os << "selfTrgBit          0x" << std::hex << e.selfTrgBit << std::dec << " " << e.selfTrgBit << std::endl;
+  os << "selfTrgBit            " << " " << e.selfTrgBit << std::endl;
   os << "TriggerPolarity       " << e.triggerPolarity << " " 
                                    << sbndaq::CAENDecoder::TriggerPolarity((CAEN_DGTZ_TriggerPolarity_t)e.triggerPolarity) 
                                    << std::endl;
