@@ -169,9 +169,17 @@ namespace nevistpc {
  
   XMITReader::dma_completion_status XMITReader::dmaWaitWithTimeout ( unsigned int microseconds )
   {
-
-    //    struct timeval time_start, time_now;
       struct timeval time_start, time_now;
+
+      // Acquire lock before starting timer
+      //      std::unique_lock<std::timed_mutex> lock(_inuse_mutex, std::defer_lock);
+
+
+      /*      if (!lock.try_lock_for(std::chrono::milliseconds(3))) {
+        // Couldn’t get lock within timeout
+        return dma_completion_status::timeout;
+	}*/
+
 
       gettimeofday(&time_start,NULL);
       while(1){
@@ -180,7 +188,7 @@ namespace nevistpc {
 	gettimeofday(&time_now,NULL);
 	long diff_time = diff_time_microseconds(time_now,time_start);
 	TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   "DiffTime in function: " << diff_time ;
-	TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "microseconds to compare to: " << microseconds;
+	//	TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "microseconds to compare to: " << microseconds;
 
 	if(diff_time > microseconds){
 	  return dma_completion_status::timeout;
@@ -298,11 +306,28 @@ namespace nevistpc {
     fos.close();
   }
 
+  /*
+  bool XMITReader::acquireDMANU(unsigned int milisecond) {
+    // NU will wait only for its readout window
+    if (_inuse_mutex.try_lock_for(std::chrono::milliseconds(milisecond))) {
+      return true;  // got DMA
+    } else {
+      TLOG(TLVL_ERROR) << "NU could not acquire DMA within window!";
+      return false; // treat as timeout
+    }
+  }
+
+  // SN waits until NU is completely done
+  void XMITReader::acquireDMASN() {
+    _inuse_mutex.lock();  // block until free
+    }*/
+  
+
   std::streamsize XMITReader::readsome ( char* buffer, std::streamsize size )
   {
     //    std::cout << "READSOME FUNCTION CALLED!!!!!!!!!!!!" << std::endl;
     //    exit(0);
-
+   
     static unsigned long int _loopNumber = 0;
 
     struct timeval t1, t2;
@@ -311,7 +336,21 @@ namespace nevistpc {
 
     assert ( buffer != NULL );
     assert ( size > 0 );
-      
+
+    /*  if (_stream_name == "nu_xmit_reader") {
+      // e.g. allow NU 7ms to grab DMA
+      if (!acquireDMANU(7)) {
+	TLOG(TLVL_ERROR) << "SKIPPING NU CYCLE as couldn't acquire data within 3ms" ;
+        return 0; // give up this cycle
+      }
+      // do DMA work...
+      //_inuse_mutex.unlock();
+    } else if (_stream_name == "sn_xmit_reader") {
+      acquireDMASN();
+    }      
+    _inuse_mutex.unlock();
+    */
+ 
     _dma1.readSize = ( size_t ) size;
     _dma2.readSize = ( size_t ) size;
     
