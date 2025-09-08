@@ -10,6 +10,7 @@
  *************************************************************************/
 #ifndef LINUX
 #define LINUX
+#include <cstddef>
 #endif
 
 #include <stdio.h>
@@ -110,7 +111,7 @@ static WDC_DEVICE_HANDLE DeviceFindAndOpen(DWORD dwVendorId, DWORD dwDeviceId, D
 
     if(!DeviceFind(dwVendorId, dwDeviceId, dwBus, &slot))
     {
-        return NULL;
+      slot= {0, dwBus, 0 , 0};
     }
 
     return DeviceOpen(&slot);

@@ -21,14 +21,12 @@ class CAENDecoder
 {
  public:
 
-  const static char * zeit(char delimiter = ':');
-  static void commError(CAENComm_ErrorCode retcod, 
-			      const std::string label);
-  static void vmeError(CVErrorCodes retcod, 
-		       const std::string label);
-  static void checkError(CAEN_DGTZ_ErrorCode err, 
-			       const std::string label,
-			       int boardId=-1);
+  // convert CAENComm error code to readable format
+  static void commError(CAENComm_ErrorCode retcod, const std::string label, const int fragID=-1);
+  // convert CAENVME error code to readable format
+  static void vmeError(CVErrorCodes retcod, const std::string label, const int fragID=-1);
+  // convert CAENDGTZ error code to readbale format
+  static void checkError(CAEN_DGTZ_ErrorCode err, const std::string label, const int fragId=-1);
 
   const static std::string CAENError(CAEN_DGTZ_ErrorCode err)
   {
