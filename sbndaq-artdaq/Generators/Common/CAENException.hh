@@ -16,13 +16,12 @@ class CAENException: public std::exception
 
   CAEN_DGTZ_ErrorCode error; 
   std::string label;
-  int boardId;
+  int fragID;
 
-  CAENException(CAEN_DGTZ_ErrorCode error_, 
-		std::string label_,
-		int boardId_);
+  CAENException(CAEN_DGTZ_ErrorCode error_, std::string label_, int fragID_);
 
   void print(std::ostream & os = std::cout);
+  
   using std::exception::what;
   std::string what();// override;
 };

@@ -29,131 +29,142 @@ namespace sbndaq
 
   public:
 
+    // constructor: initialize and configure
     explicit CAENV1730Readout(fhicl::ParameterSet const& ps);
+    // destructor: freeing the buffer
     virtual ~CAENV1730Readout();
 
+    // getNext_ builds fragments from buffer
     bool getNext_(artdaq::FragmentPtrs & output) override;
+    // poll hardware status 
     bool checkHWStatus_() override;
+    // called at START transition
     void start() override;
+    // called at STOP transition
     void stop() override;
     void stopNoMutex() override { stop(); }
-    //void init();
 
   private:
+
+    // support function for getNext_ loop
     bool readSingleWindowFragments(artdaq::FragmentPtrs &);
-    bool readSingleWindowDataBlock();
+    // waits for interrupt, puts data into buffer
+    bool GetData();
+    // support function for GetData loop
     bool readWindowDataBlocks();
+
+    // support function for configuration
+    // called from constructor
+    void Configure();
+    void ConfigureInterrupts();
+    void ConfigureRecordFormat();    
+    void ConfigureDataBuffer();
+    void ConfigureTrigger();
+    void ConfigureReadout();
+    void ConfigureAcquisition();
+    void ConfigureLVDS();
+    void ConfigureSelfTriggerMode();
+    void ConfigureClkToTrgOut();
 	
-    typedef enum 
-    { 
-      CONFIG_READ_ADDR     = 0x8000,
-      CONFIG_SET_ADDR      = 0x8004,
-      CONFIG_CLEAR_ADDR    = 0x8008,
-      TRIGGER_OVERLAP_MASK = 0x0002
-    } REGISTERS_t;
+    // print board + CAEN software info
+    void GetSWInfo();
+
+    // run ADC self-calibration 
+    void RunADCCalibration();
+    // lock ADC temperature self-calibration
+    void SetLockTempCalibration(bool onOff, uint32_t ch);
+
+    // support function for register read/write operations
+    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
+    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
+
+    // check readback value from register
+    void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
 
     //CAEN pieces
-    CAENConfiguration     fCAEN;	// initialized in the constructor
-    int                   fHandle;
-    CAEN_DGTZ_BoardInfo_t fBoardInfo;
-    //char*                 fBuffer;
-    uint32_t              fBufferSize;
-    //uint32_t              fCircularBufferSize;
+    CAENConfiguration     fCAEN;	    // initialized in the constructor
+    CAEN_DGTZ_BoardInfo_t fBoardInfo; // board S/N, firmware relase
+    size_t   fNChannels; // number of channels
+    int fHandle;         // access handle
+    bool fail_GetNext; // tracks GetNext_ failure
 
-    typedef enum {
-      TEST_PATTERN_S=3
-    } TEST_PATTERN_t;
+    // PoolBuffer implementation
+    sbndaq::PoolBuffer fPoolBuffer;  		
+    std::unique_ptr<uint16_t[]> fBuffer; 
+    uint32_t fBufferSize;
+
+    // GetData worker thread
+    share::WorkerThreadUPtr GetData_thread_;
+
+    //internals in getting the data
+    boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
+    boost::posix_time::ptime fTimeEpoch;
+    boost::posix_time::time_duration fTimeDiffPollBegin, fTimeDiffPollEnd;
+
+    // map fragmen sequence ID to timestamp
+    std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
+    mutable std::mutex fTimestampMapMutex;
+
+    // fragment timestamping
+    artdaq::Fragment::timestamp_t fTS; 
+    uint64_t fMeanPollTime;
+    uint64_t fMeanPollTimeNS;
+    uint32_t fTTT;
+    long fTTT_ns;
+
+    // max event number internal to the V1730 board
+    static constexpr uint32_t EVENT_COUNTER_MASK = 0xFFFFFFu; // 24-bit
+    // last event counter seen in GetData() thread
+    uint32_t last_rcv_event_counter;
+
+    // count overflows of V1730 event counter
+    uint32_t fOverflowCounter; 
+    // last fragment event counter sent
+    uint32_t last_sent_event_counter;
+    // last fragment sequence id sent
+    uint64_t last_sent_seqid;
+    // last fragment timestamps sent
+    uint32_t last_sent_ts;
+
+    // hardware status check
+    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
+    uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
     
     typedef enum {
-      BOARD_READY  = 0x0100,
-      PLL_STATUS   = 0x0080,
-      PLL_BYPASS   = 0x0040,
-      CLOCK_SOURCE = 0x0020,
-      EVENT_FULL   = 0x0010,
-      EVENT_READY  = 0x0008,
-      RUN_ENABLED  = 0x0004
-    } ACQ_STATUS_MASK_t;
-
-    typedef enum {
-      DYNAMIC_RANGE      = 0x8028,
-      TRG_OUT_WIDTH      = 0x8070,
-      TRG_OUT_WIDTH_CH   = 0x1070,
-      SLF_TRG_LG_CH      = 0x1084,
-      SLF_TRG_LG_GLB     = 0x8084,
-      GLB_TRG_MASK       = 0x810C,
-      ACQ_CONTROL        = 0x8100,
-      FP_TRG_OUT_CONTROL = 0x8110,
-      FP_IO_CONTROL      = 0x811C,
-      FP_LVDS_CONTROL    = 0x81A0,
-      READOUT_CONTROL    = 0xEF00,
-      // Animesh & Aiwu add registers for the LVDS logic
-      FP_LVDS_Logic_G1   = 0x1084,
-      FP_LVDS_Logic_G2   = 0x1284,
-      FP_LVDS_Logic_G3   = 0x1484,
-      FP_LVDS_Logic_G4   = 0x1684,
-      FP_LVDS_Logic_G5   = 0x1884,
-      FP_LVDS_Logic_G6   = 0x1A84,
-      FP_LVDS_Logic_G7   = 0x1C84,
-      FP_LVDS_Logic_G8   = 0x1E84,
-      // Animesh & Aiwu add end
-      // Animesh & Aiwu add registers for the LVDS output width
-      FP_LVDS_OutWidth_Ch1   = 0x1070,
-      FP_LVDS_OutWidth_Ch2   = 0x1170,
-      FP_LVDS_OutWidth_Ch3   = 0x1270,
-      FP_LVDS_OutWidth_Ch4   = 0x1370,
-      FP_LVDS_OutWidth_Ch5   = 0x1470,
-      FP_LVDS_OutWidth_Ch6   = 0x1570,
-      FP_LVDS_OutWidth_Ch7   = 0x1670,
-      FP_LVDS_OutWidth_Ch8   = 0x1770,
-      FP_LVDS_OutWidth_Ch9   = 0x1870,
-      FP_LVDS_OutWidth_Ch10   = 0x1970,
-      FP_LVDS_OutWidth_Ch11   = 0x1A70,
-      FP_LVDS_OutWidth_Ch12   = 0x1B70,
-      FP_LVDS_OutWidth_Ch13   = 0x1C70,
-      FP_LVDS_OutWidth_Ch14   = 0x1D70,
-      FP_LVDS_OutWidth_Ch15   = 0x1E70,
-      FP_LVDS_OutWidth_Ch16   = 0x1F70,
-      // Animesh & Aiwu add - check DPP algorithm feature
-      DPP_Alo_Feature_Ch1 = 0x1080,
-      DPP_Alo_Feature_Ch2 = 0x1180,
-      Baseline_Ch1 = 0x1098,
-      Baseline_Ch2 = 0x1198,
-      Baseline_Ch3 = 0x1298,
-      Baseline_Ch4 = 0x1398,
-      Baseline_Ch5 = 0x1498,
-      Baseline_Ch6 = 0x1598,
-      Baseline_Ch7 = 0x1698,
-      Baseline_Ch8 = 0x1798,
-      Baseline_Ch9 = 0x1898,
-      Baseline_Ch10 = 0x1998,
-      Baseline_Ch11 = 0x1A98,
-      Baseline_Ch12 = 0x1B98,
-      Baseline_Ch13 = 0x1C98,
-      Baseline_Ch14 = 0x1D98,
-      Baseline_Ch15 = 0x1E98,
-      Baseline_Ch16 = 0x1F98,
-      // want to send a software trigger
-      // SWTriggerValue = 0x8108
-      // Animesh & Aiwu add end
+      BOARD_CONFIG_READ  = 0x8000, // board configuration read register
+      BOARD_CONFIG_SET   = 0x8004, // board configuration set register
+      BOARD_CONFIG_CLEAR = 0x8008, // board configuration clear register
+      FP_TRG_OUT_CONTROL = 0x8110, // front panel TRG-OUT control
+      FP_IO_CONTROL      = 0x811C, // front panel I/O control
+      FP_LVDS_CONTROL    = 0x81A0, // front panel LVDS control
+      ACQ_CONTROL        = 0x8100, // acquisition control register
+      READOUT_CONTROL    = 0xEF00, // readout control
+      GLB_TRG_MASK       = 0x810C, // global trigger mask
+      CH_ENABLE_MASK     = 0x8120, // channel enable mask
+      DYNAMIC_RANGE      = 0x8028, // dynamic range control 
+      TRG_OUT_WIDTH_CH   = 0x1070, // channel n LVDS pulse width
+                                   // 0x1n70 for n=0,..,F
+      SLF_TRG_LG_CH      = 0x1084, // couple n self-trigger logic
+                                   // 0x1n84 for n=0,2,4,6,8,A,C,E
+      ANALOG_MON_MODE    = 0x8144, // analog monitor output mode
     } ADDRESS_t;
 
     typedef enum 
     {
-      ENABLE_LVDS_TRIGGER  = 0x20000000,
-      ENABLE_EXT_TRIGGER   = 0x40000000,
-      ENABLE_NEW_LVDS      = 0x100,
-      ENABLE_TRG_OUT       = 0xFF,
-      TRG_IN_LEVEL         = 0x400,
-      TRIGGER_LOGIC        = 0x1F00,
-      DISABLE_TRG_OUT_LEMO = 0x2,
-      LVDS_IO              = 0x3C,
-      LVDS_BUSY            = 0,
-      LVDS_TRIGGER         = 1,
-      LVDS_nBUSY_nVETO     = 2,
-      LVDS_LEGACY          = 3
+      TRIGGER_OVERLAP_MASK = 0x0002, // bitmask for trigger overlap
+      SLF_TRG_BIT_MASK     = 0x40,   // bitmask for self-trigger polarity
+      ENABLE_NEW_LVDS      = 0x100,  // bitmask to enable "new" LVDS features
+      TRG_IN_LEVEL         = 0x400,  // bitmask to configure TRG-IN as level/edge
+      DISABLE_TRG_OUT_LEMO = 0x2,    // bitmask to disable TRG-OUT LEMO output
+      LVDS_IO              = 0x3C,   // bitmask for LVDS I/O pins
+      LVDS_BUSY            = 0, // LVDS output is BUSY status
+      LVDS_TRIGGER         = 1, // LVDS output is TRIGGER (ICARUS mode)
+      LVDS_nBUSY_nVETO     = 2, // LVDS output is nBUSY/nVETO
+      LVDS_LEGACY          = 3  // legacy LVDS behavior
     } IO_MASK_t;
 
-    enum {
+    enum 
+    {
       TERROR    = TLVL_ERROR,
       TWARNING  = TLVL_WARNING,
       TINFO     = TLVL_INFO,
@@ -172,72 +183,12 @@ namespace sbndaq
     {
       V1730_UNPHYSICAL_TEMPERATURE = 200  // degC
     };
- 
-    //internals
-    size_t   fNChannels;
-    uint32_t fBoardID;
-    bool     fOK;
-    bool     fail_GetNext;
-    uint32_t fEvCounter; // set to zero at the beginning
-    uint32_t fOverflowCounter; //count overflows of fEvCounter
-    uint32_t last_rcvd_rwcounter;
-    uint32_t last_sent_seqid;
-    const uint32_t max_rwcounter = 0xFFFFFF; //24-bit
-    uint32_t last_sent_ts;
-    uint32_t total_data_size;
-    //uint32_t event_size;	
-    uint32_t n_readout_windows;
-    uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
-    uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
-    
-    //functions
-    void GetSWInfo();
-    void Configure();
 
-    void ConfigureInterrupts();
-    void ConfigureRecordFormat();    
-    void ConfigureDataBuffer();
-    void ConfigureTrigger();
-    void ConfigureReadout();
-    void ConfigureAcquisition();
-    void ConfigureLVDS();
-    void ConfigureSelfTriggerMode();
-    void ConfigureClkToTrgOut();
-    void RunADCCalibration();
-    void SetLockTempCalibration(bool onOff, uint32_t ch);
-    CAEN_DGTZ_ErrorCode WriteSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t value);
-    CAEN_DGTZ_ErrorCode ReadSPIRegister(int handle, uint32_t ch, uint32_t address, uint8_t *value);
-    void Read_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    void Write_ADC_CalParams_V1730(int handle, int ch, uint8_t *CalParams);
-    void ReadChannelBusyStatus(int handle, uint32_t ch, uint32_t& status);
+    typedef enum {
+      TEST_PATTERN_S=3
+    } TEST_PATTERN_t;
 
-    bool WaitForTrigger();
-    bool GetData();
-    share::WorkerThreadUPtr GetData_thread_;
-    sbndaq::PoolBuffer fPoolBuffer; 		
-    std::unique_ptr<uint16_t[]> fBuffer;
-
-    std::unordered_map<uint32_t,artdaq::Fragment::timestamp_t> fTimestampMap;
-    mutable std::mutex fTimestampMapMutex;
-
-    //internals in getting the data
-    boost::posix_time::ptime fTimePollEnd,fTimePollBegin;
-    boost::posix_time::ptime fTimeEpoch;
-    boost::posix_time::time_duration fTimeDiffPollBegin,fTimeDiffPollEnd;
-    
-    artdaq::Fragment::timestamp_t fTS;
-    uint64_t fMeanPollTime;
-    uint64_t fMeanPollTimeNS;
-    uint32_t fTTT;
-    long fTTT_ns;
-
-    void CheckReadback(std::string,int,uint32_t,uint32_t,int channelID=-1);
-
-    CAEN_DGTZ_ErrorCode	WriteRegisterBitmask(int32_t handle, uint32_t address,
-					     uint32_t data, uint32_t bitmask); 
-    
   };
-
 }
 
 #endif
