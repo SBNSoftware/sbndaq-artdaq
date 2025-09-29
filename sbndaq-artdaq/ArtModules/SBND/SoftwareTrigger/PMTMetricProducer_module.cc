@@ -350,12 +350,13 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     // # of containers = # of boards
     // # of entries inside the container = # of triggers 
     if (fragmentHandle->front().type() == artdaq::Fragment::ContainerFragmentType) {
-      foundfragments = true;
       for (auto cont : *fragmentHandle) {
 	      artdaq::ContainerFragment contf(cont);
         if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
+          if (cont.block_count()==0) continue; 
           if (std::find(fFragIDs.begin(), fFragIDs.end(), contf[0].get()->fragmentID()) == fFragIDs.end()) continue;
           if (fVerbose>=3) TLOG(TLVL_INFO) << "Found " << contf.block_count() << " CAEN1730 fragments in container with fragID " << contf[0].get()->fragmentID();
+          foundfragments = true;
 
           if (etrig_frag_dt==1e9){
             for (size_t ii = 0; ii < contf.block_count(); ++ii){
