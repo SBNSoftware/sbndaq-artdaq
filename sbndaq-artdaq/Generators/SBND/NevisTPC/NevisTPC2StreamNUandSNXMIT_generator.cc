@@ -18,6 +18,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fCALIBFreq             = ps_.get<double>("CALIBTriggerFrequency", -1);
   fControllerTriggerFreq = ps_.get<double>("ControllerTriggerFrequency", -1);
   fDumpBinary            = ps_.get<bool>("DumpBinary", false);
+  fDumpSNBinary            = ps_.get<bool>("DumpSNBinary", false);
   fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout             = ps_.get<bool>("DoSNReadout", true);
   fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
@@ -414,7 +415,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
     //Make binary subfiles
     if (SNDMATransferCnt_ == 1000) SNDMATransferCnt_ = 0;
     if (SNDMATransferCnt_ == 0) {
-      if (fDumpBinary && fSNReadout) {
+      if (fDumpSNBinary && fSNReadout) {
         if (binFileSN.is_open()) {
           TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameSN;
           binFileSN.close();
