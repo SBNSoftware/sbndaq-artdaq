@@ -190,12 +190,12 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
   if( fDumpBinary ){
     TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameNU;
     binFileNU.close(); // temp
-
-    if( fSNReadout ){
+  }
+  if(fDumpSNBinary){
       TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameSN;
       binFileSN.close(); // temp
     }
-  }
+  
   delete[] SNBuffer_;
   fNUXMITReader->dmaStop();
 
