@@ -16,6 +16,7 @@ uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
   uint64_t host_time_ns =
       std::chrono::duration_cast<nanoseconds>(clk::time_point{clk::now()}.time_since_epoch()).count();
   
+  //This checks time causality where sample time is in the future
   if (sample_time_ns > host_time_ns){
 
     auto lag_ns = sample_time_ns - host_time_ns;  
@@ -24,15 +25,26 @@ uint64_t utls::elapsed_time_ns(uint64_t sample_time_ns) {
  
     if ( lag_ns < utls::onesecond_ns ) {
 
-      TLOG(TLVL_WARNING) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time = "<< lag_ns - utls::as_seconds << " ms. NTP drift > 300 ms! Check White Rabbit and NTP synchronisation.";
+      TLOG(TLVL_WARNING) << "Causility!!! Sample time > host time; sample_time-host_time = "<< lag_ns - utls::as_milliseconds << " ms. " << "Sample time in ns = " << sample_time_ns << ". Host time in ns = " << host_time_ns;
 
     } else {
- 
-      TLOG(TLVL_ERROR) << "Wrong TDC sample time. Sample time > host time; sample_time-host_time = "<< lag_ns / utls::as_seconds << " s. NTP drift >= 1s! Check White Rabbit and NTP synchronisation.";
-
+      TLOG(TLVL_WARNING) << "Causility!!! Sample time > host time; sample_time-host_time = "<< lag_ns - utls::as_seconds << " ms. " << "Sample time in ns = " << sample_time_ns << ". Host time in ns = " << host_time_ns;
     }
 
     return 0;
+  } 
+
+  if (host_time_ns > sample_time_ns) {
+
+    auto lag_ns = host_time_ns - sample_time_ns;
+    
+    if ( lag_ns > utls::max_sample_time_lag_ns ) {
+      TLOG(TLVL_ERROR) << "NTP drift > 300 ms! Wrong TDC sample time. Host time > sample time; host_time-sample_time = " << lag_ns / utls::as_milliseconds << " ms. Host time in ns = " << host_time_ns << ". Sample time in ns = " << sample_time_ns;
+    }
+
+    if ( lag_ns > utls::onesecond_ns ) {
+      TLOG(TLVL_ERROR) << "NTP drift > 1s! Wrong TDC sample time. Host time > sample time; host_time-sample_time = " << lag_ns / utls::as_seconds << " s. Host time in ns = " << host_time_ns << ". Sample time in ns = " << sample_time_ns;
+    }
   }
   
   return host_time_ns - sample_time_ns;
