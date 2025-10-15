@@ -150,8 +150,8 @@ This function is added to debug FEMs is software but hasnot tested yet
     
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
     // Setup XMIT reader for nustream
-    getXMITReader()->configureReader();
-    getXMITReader()->initializePCIeCard();
+    //    getXMITReader()->configureReader();
+    //getXMITReader()->initializePCIeCard();
     
     // Setup controller module
     getControllerModule()->initialize();
@@ -180,7 +180,7 @@ This function is added to debug FEMs is software but hasnot tested yet
     }
 
     // Setup tx mode registers (this is done twice for some reason...)
-    getXMITReader()->setupTXModeRegister();
+    //getXMITReader()->setupTXModeRegister();
     
     // Config trigger module
     if(hasTrigger)
@@ -190,11 +190,11 @@ This function is added to debug FEMs is software but hasnot tested yet
     linkSetup();
     
     // Enable triggered stream & Disable continuous stream
-    getXMITModule()->enableNUChanEvents(1);
-    getXMITModule()->enableSNChanEvents(0);
+    // getXMITModule()->enableNUChanEvents(1);
+    //getXMITModule()->enableSNChanEvents(0);
     
     // setup tx mode registers (again, I know)
-    getXMITReader()->setupTXModeRegister();
+    // getXMITReader()->setupTXModeRegister();
     getControllerModule()->setupTXModeRegister();
     //getXMITModule()->configureSNStreamReader_SNRunOnSyncOnMode();
     
@@ -224,11 +224,11 @@ This function is added to debug FEMs is software but hasnot tested yet
     
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
     // Setup XMIT reader for NU stream
-    getXMITReader("NU")->configureReader();
-    getXMITReader("NU")->initializePCIeCard();
+    //    getXMITReader("NU")->configureReader();
+    // getXMITReader("NU")->initializePCIeCard();
     // Setup XMIT reader for SN stream
-    getXMITReader("SN")->configureReader();
-    getXMITReader("SN")->initializePCIeCard();
+    //getXMITReader("SN")->configureReader();
+    //getXMITReader("SN")->initializePCIeCard();
     
     // Setup controller module
     getControllerModule()->initialize();
@@ -258,8 +258,8 @@ This function is added to debug FEMs is software but hasnot tested yet
     }
 
     // Setup tx mode registers (this is done twice for some reason...)
-    getXMITReader("NU")->setupTXModeRegister();
-    getXMITReader("SN")->setupTXModeRegister();
+    //getXMITReader("NU")->setupTXModeRegister();
+    //getXMITReader("SN")->setupTXModeRegister();
     
     // Config trigger module
     if(hasTrigger)
@@ -269,12 +269,12 @@ This function is added to debug FEMs is software but hasnot tested yet
     linkSetup();
     
     // Enable triggered stream & Disable continuous stream
-    getXMITModule()->enableNUChanEvents(1);
-    getXMITModule()->enableSNChanEvents(1);
+    // getXMITModule()->enableNUChanEvents(1);
+    //getXMITModule()->enableSNChanEvents(1);
     
     // setup tx mode registers (again, I know)
-    getXMITReader("NU")->setupTXModeRegister();
-    getXMITReader("SN")->setupTXModeRegister();
+    // getXMITReader("NU")->setupTXModeRegister();
+    ///getXMITReader("SN")->setupTXModeRegister();
     getControllerModule()->setupTXModeRegister();
     
     /*
