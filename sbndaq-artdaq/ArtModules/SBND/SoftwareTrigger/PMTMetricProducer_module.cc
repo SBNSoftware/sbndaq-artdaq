@@ -608,12 +608,14 @@ int8_t sbnd::trigger::pmtSoftwareTriggerProducer::getClosestFTrig(double refTime
 
 std::vector<uint32_t> sbnd::trigger::pmtSoftwareTriggerProducer::sumWvfms(const std::vector<uint32_t>& v1, const std::vector<uint16_t>& v2) 
 {
-  // if one wvfm is larger than expected (most likely due to jitter), only keep the smaller one....
-  // we don't know the baseline of each wvfm so can't put a dummy value
-  size_t result_len = (v1.size() > v2.size()) ? v2.size() : v1.size();
-  std::vector<uint32_t>  result(result_len,0);
-  for (size_t i = 0; i < result_len; i++)
-    result.at(i) = v1[i] + v2[i];
+  size_t result_len = (v1.size() > v2.size()) ? v1.size() : v2.size();
+  // padding with 1e5 (for baseline ~14e3, 1e5 is safe value) 
+  std::vector<uint32_t>  result(result_len, 1e5);
+  for (size_t i = 0; i < result_len; i++){
+    auto value1 = (i < v1.size()) ? v1[i] : 1e5;
+    auto value2 = (i < v2.size()) ? v2[i] : 1e5;
+    result.at(i) = value1 + value2;
+  }
   return result;
 }
 
