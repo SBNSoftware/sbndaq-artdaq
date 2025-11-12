@@ -609,11 +609,11 @@ int8_t sbnd::trigger::pmtSoftwareTriggerProducer::getClosestFTrig(double refTime
 std::vector<uint32_t> sbnd::trigger::pmtSoftwareTriggerProducer::sumWvfms(const std::vector<uint32_t>& v1, const std::vector<uint16_t>& v2) 
 {
   size_t result_len = (v1.size() > v2.size()) ? v1.size() : v2.size();
-  // padding with 1e5 (for baseline ~14e3, 1e5 is safe value) 
-  std::vector<uint32_t>  result(result_len, 1e5);
+  std::vector<uint32_t>  result(result_len, 0);
   for (size_t i = 0; i < result_len; i++){
-    auto value1 = (i < v1.size()) ? v1[i] : 1e5;
-    auto value2 = (i < v2.size()) ? v2[i] : 1e5;
+    // padding with 2e4 (for baseline ~14e3, 2e4 is safe value) 
+	auto value1 = (i < v1.size()) ? v1[i] : 2e4;
+    auto value2 = (i < v2.size()) ? v2[i] : 2e4;
     result.at(i) = value1 + value2;
   }
   return result;
