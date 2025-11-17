@@ -54,20 +54,20 @@ private:
   std::string fTagNTB;
 
   // NTB Data
-  int ntb_eventno;
-  int ntb_frameno;
-  int ntb_sampleno;
+  uint32_t ntb_eventno;
+  uint32_t ntb_frameno;
+  uint16_t ntb_sampleno;
   
   // TPC Data
-  int tpc_eventno;
-  int tpc_packframeno;
-  int tpc_trigframeno;
-  int tpc_slot;
-  int tpc_crate;
-  int tpc_sampleno;
+  uint32_t tpc_eventno;
+  uint32_t tpc_packframeno;
+  uint32_t tpc_trigframeno;
+  uint16_t tpc_slot;
+  uint16_t tpc_crate;
+  uint32_t tpc_sampleno;
 
-  int N_Bad_DFEMFrame;
-  int N_Bad_DNTBFEMSample;
+  uint8_t N_Bad_DFEMFrame;
+  uint8_t N_Bad_DNTBFEMSample;
 
 };
 
