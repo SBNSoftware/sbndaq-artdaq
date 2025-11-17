@@ -54,20 +54,20 @@ private:
   std::string fTagNTB;
 
   // NTB Data
-  uint32_t ntb_eventno;
-  uint32_t ntb_frameno;
-  uint16_t ntb_sampleno;
+  int ntb_eventno;
+  int ntb_frameno;
+  int ntb_sampleno;
   
   // TPC Data
-  uint32_t tpc_eventno;
-  uint32_t tpc_packframeno;
-  uint32_t tpc_trigframeno;
-  uint16_t tpc_slot;
-  uint16_t tpc_crate;
-  uint32_t tpc_sampleno;
+  int tpc_eventno;
+  int tpc_packframeno;
+  int tpc_trigframeno;
+  int tpc_slot;
+  int tpc_crate;
+  int tpc_sampleno;
 
-  uint8_t N_Bad_DFEMFrame;
-  uint8_t N_Bad_DNTBFEMSample;
+  int N_Bad_DFEMFrame;
+  int N_Bad_DNTBFEMSample;
 
 };
 
@@ -98,14 +98,14 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
     //std::cout << "********SIZE: "<< daq_handleNTB->size() << std::endl;
     for (auto const &rawfragntb: *daq_handleNTB) {
       readNTB(rawfragntb);
-
+      /*
       if(metricMan != nullptr) {
         //send flag metrics
         metricMan->sendMetric(
             "NTB Sample Number",
             ntb_sampleno,
             "ntb_sample_number", 11, artdaq::MetricMode::LastPoint);
-      }      
+      }*/      
     }
     
     //std::cout << "********SIZE: "<< daq_handleTPC->size() << std::endl;
@@ -129,7 +129,7 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
       
       int D_NTBFEMSampleNo = tpc_abssampleno - ntb_abssampleno;
 
-      if(metricMan != nullptr) {
+      /*if(metricMan != nullptr) {
         metricMan->sendMetric(
             "TPC Sample Number",
             tpc_sampleno,
@@ -141,7 +141,7 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
             "TPC-NTB Sample Number",
             D_NTBFEMSampleNo,
             "tpcntb_samplediff", 11, artdaq::MetricMode::LastPoint);   
-      } 
+      } */
 
       if (ntb_sampleno == 0){
         if (D_NTBFEMSampleNo != 1 && D_NTBFEMSampleNo != 2){
