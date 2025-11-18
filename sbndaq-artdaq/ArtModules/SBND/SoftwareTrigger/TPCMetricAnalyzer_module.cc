@@ -32,8 +32,6 @@
 #include "sbndaq-artdaq-core/Overlays/SBND/NevisTPC/NevisTPCTypes.hh"
 #include "sbndaq-artdaq-core/Overlays/SBND/NevisTPC/NevisTPCUtilities.hh"
 
-#include "sbndaq-artdaq-core/Obj/SBND/TPCmetric.hh"
-
 using artdaq::MetricMode;
 
 namespace sbndaq {
