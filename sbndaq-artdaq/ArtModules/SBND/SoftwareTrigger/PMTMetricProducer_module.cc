@@ -352,7 +352,7 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     // # of entries inside the container = # of triggers 
     // # Check if every board has equal number of fragments
     bool firstboard = true;
-    bool equalfragments = false;
+    bool equalfragments = true;
     size_t numfragments = std::numeric_limits<size_t>::max();
     if (fragmentHandle->front().type() == artdaq::Fragment::ContainerFragmentType) {
       for (auto cont : *fragmentHandle) {
@@ -365,7 +365,10 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
             firstboard = false;
 	  }
           else{
-            if(contf.block_count() != numfragments) equalfragments = true;
+            if(contf.block_count() != numfragments) {
+	      equalfragments = false;
+	      break;
+            }
           }
         }
       }
