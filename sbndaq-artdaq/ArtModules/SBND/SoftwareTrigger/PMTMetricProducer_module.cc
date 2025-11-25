@@ -346,9 +346,36 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
         TLOG(TLVL_WARNING) << "No CAEN V1730 fragments with label " << caen_name << " found.";
         continue;
     }
+
     // Container fragment
     // # of containers = # of boards
     // # of entries inside the container = # of triggers 
+    // # Check if every board has equal number of fragments
+    bool firstboard = true;
+    bool equalfragments = false;
+    size_t numfragments = std::numeric_limits<size_t>::max();
+    if (fragmentHandle->front().type() == artdaq::Fragment::ContainerFragmentType) {
+      for (auto cont : *fragmentHandle) {
+	      artdaq::ContainerFragment contf(cont);
+        if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
+          if (contf.block_count()==0) continue; //skip empty container 
+          if (std::find(fFragIDs.begin(), fFragIDs.end(), contf[0].get()->fragmentID()) == fFragIDs.end()) continue;
+	  if (firstboard){
+ 	    numfragments = contf.block_count();
+            firstboard = false;
+	  }
+          else{
+            if(contf.block_count() != numfragments) equalfragments = true;
+          }
+        }
+      }
+    }
+    if (equalfragments==false){
+        TLOG(TLVL_WARNING)<< "CAEN container has different number of fragments... producing empty PMT metrics." << std::endl;
+        e.put(std::move(trig_metrics_v),fMetricInstanceLabel);
+        return;
+    }
+
     if (fragmentHandle->front().type() == artdaq::Fragment::ContainerFragmentType) {
       for (auto cont : *fragmentHandle) {
 	      artdaq::ContainerFragment contf(cont);
