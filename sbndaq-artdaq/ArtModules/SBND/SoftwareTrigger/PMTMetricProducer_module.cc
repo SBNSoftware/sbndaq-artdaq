@@ -360,10 +360,10 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
         if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
           if (contf.block_count()==0) continue; //skip empty container 
           if (std::find(fFragIDs.begin(), fFragIDs.end(), contf[0].get()->fragmentID()) == fFragIDs.end()) continue;
-	  if (firstboard){
- 	    numfragments = contf.block_count();
+          if (firstboard){
+            numfragments = contf.block_count();
             firstboard = false;
-	  }
+          }
           else{
             if(contf.block_count() != numfragments) {
 	      equalfragments = false;
@@ -374,7 +374,16 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
       }
     }
     if (equalfragments==false){
-        TLOG(TLVL_WARNING)<< "CAEN container has different number of fragments... producing empty PMT metrics." << std::endl;
+        TLOG(TLVL_WARNING)<< "Event " <<  e.id().event() << ": CAEN container has different number of fragments... filling -8888 as holder value." << std::endl;
+
+        trig_metrics.foundBeamTrigger = false;
+        trig_metrics.trig_ts = -8888;
+        trig_metrics.nAboveThreshold = -8888;
+        trig_metrics.promptPE = -8888;
+        trig_metrics.prelimPE = -8888;
+        trig_metrics.peakPE   = -8888;
+        trig_metrics.peaktime = -8888;
+    	trig_metrics_v->push_back(trig_metrics);
         e.put(std::move(trig_metrics_v),fMetricInstanceLabel);
         return;
     }
