@@ -366,8 +366,8 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
           }
           else{
             if(contf.block_count() != numfragments) {
-	      equalfragments = false;
-	      break;
+              equalfragments = false;
+              break;
             }
           }
         }
