@@ -350,12 +350,13 @@ void sbnd::trigger::pmtSoftwareTriggerProducer::produce(art::Event& e)
     // # of containers = # of boards
     // # of entries inside the container = # of triggers 
     if (fragmentHandle->front().type() == artdaq::Fragment::ContainerFragmentType) {
-      foundfragments = true;
       for (auto cont : *fragmentHandle) {
 	      artdaq::ContainerFragment contf(cont);
         if (contf.fragment_type()==sbndaq::detail::FragmentType::CAENV1730) {
+          if (contf.block_count()==0) continue; 
           if (std::find(fFragIDs.begin(), fFragIDs.end(), contf[0].get()->fragmentID()) == fFragIDs.end()) continue;
           if (fVerbose>=3) TLOG(TLVL_INFO) << "Found " << contf.block_count() << " CAEN1730 fragments in container with fragID " << contf[0].get()->fragmentID();
+          foundfragments = true;
 
           if (etrig_frag_dt==1e9){
             for (size_t ii = 0; ii < contf.block_count(); ++ii){
@@ -608,10 +609,11 @@ int8_t sbnd::trigger::pmtSoftwareTriggerProducer::getClosestFTrig(double refTime
 std::vector<uint32_t> sbnd::trigger::pmtSoftwareTriggerProducer::sumWvfms(const std::vector<uint32_t>& v1, const std::vector<uint16_t>& v2) 
 {
   size_t result_len = (v1.size() > v2.size()) ? v1.size() : v2.size();
-  std::vector<uint32_t>  result(result_len,0);
+  std::vector<uint32_t>  result(result_len, 0);
   for (size_t i = 0; i < result_len; i++){
-    auto value1 = (i < v1.size()) ? v1[i] : 0;
-    auto value2 = (i < v2.size()) ? v2[i] : 0;
+    // padding with 2e4 (for baseline ~14e3, 2e4 is safe value) 
+	auto value1 = (i < v1.size()) ? v1[i] : 2e4;
+    auto value2 = (i < v2.size()) ? v2[i] : 2e4;
     result.at(i) = value1 + value2;
   }
   return result;
