@@ -382,11 +382,11 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
     if(metricMan != nullptr) {
       //send flag metrics
       metricMan->sendMetric(
-          "NTB_DeltaEvent/=1_Count",
+          "NTB_DeltaEvent_not1_Count",
           N_Bad_DEvents,
           "ntb_badeventdiff_count", 11, artdaq::MetricMode::LastPoint);
       metricMan->sendMetric(
-          "NTB_DeltaFrame>Deadtime_Count",
+          "NTB_DeltaFrame<Deadtime_Count",
           N_Bad_DFrames,
           "ntb_badframendiff_count", 11, artdaq::MetricMode::LastPoint);       
     }

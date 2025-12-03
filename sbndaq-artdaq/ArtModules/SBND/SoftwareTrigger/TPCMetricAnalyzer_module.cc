@@ -96,14 +96,6 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
     //std::cout << "********SIZE: "<< daq_handleNTB->size() << std::endl;
     for (auto const &rawfragntb: *daq_handleNTB) {
       readNTB(rawfragntb);
-      /*
-      if(metricMan != nullptr) {
-        //send flag metrics
-        metricMan->sendMetric(
-            "NTB Sample Number",
-            ntb_sampleno,
-            "ntb_sample_number", 11, artdaq::MetricMode::LastPoint);
-      }*/      
     }
     
     //std::cout << "********SIZE: "<< daq_handleTPC->size() << std::endl;
@@ -126,20 +118,6 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
       int tpc_abssampleno = tpc_packframeno * 1144 + tpc_sampleno;
       
       int D_NTBFEMSampleNo = tpc_abssampleno - ntb_abssampleno;
-
-      /*if(metricMan != nullptr) {
-        metricMan->sendMetric(
-            "TPC Sample Number",
-            tpc_sampleno,
-            "tpc_sample_number", 11, artdaq::MetricMode::LastPoint);   
-      }
-
-      if(metricMan != nullptr) {
-        metricMan->sendMetric(
-            "TPC-NTB Sample Number",
-            D_NTBFEMSampleNo,
-            "tpcntb_samplediff", 11, artdaq::MetricMode::LastPoint);   
-      } */
 
       if (ntb_sampleno == 0){
         if (D_NTBFEMSampleNo != 1 && D_NTBFEMSampleNo != 2){
@@ -173,7 +151,7 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
   if(metricMan != nullptr) {
     //send flag metrics
     metricMan->sendMetric(
-        "FEM_trig-pack/=1_Count",
+        "FEM_trig-pack_not1_Count",
         N_Bad_DFEMFrame,
         "fem_badframediff_count", 11, artdaq::MetricMode::LastPoint);
     metricMan->sendMetric(
