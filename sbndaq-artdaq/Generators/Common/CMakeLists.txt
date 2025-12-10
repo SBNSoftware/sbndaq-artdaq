@@ -4,6 +4,7 @@ add_subdirectory(Bern)
 add_definitions(-DLINUX)
 
 SET_SOURCE_FILES_PROPERTIES(febdrv.cc PROPERTIES COMPILE_FLAGS "-Wno-stringop-truncation")
+SET_SOURCE_FILES_PROPERTIES(CAENV1730Readout_generator.cc PROPERTIES COMPILE_FLAGS "-Wno-unused-but-set-variable")
 
 if(DEFINED ENV{CAENCOMM_DIR})
     include_directories($ENV{CAENCOMM_INC})
