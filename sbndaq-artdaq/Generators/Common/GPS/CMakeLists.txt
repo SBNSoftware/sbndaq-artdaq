@@ -16,6 +16,8 @@ if(DEFINED ENV{PQXX_DIR})
     endif()
 endif()
 
+SET_SOURCE_FILES_PROPERTIES(GPSBroadcast.cc PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+
 cet_make_library(LIBRARY_NAME sbndaq-artdaq_Generators_Common_GPS_GPSInfoBase
 SOURCE
 GPSInfo.cc 

@@ -166,15 +166,98 @@ namespace nevistpc {
     nevisPCIeCard->writeAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, u32Data );
   }
   
+ 
   XMITReader::dma_completion_status XMITReader::dmaWaitWithTimeout ( unsigned int microseconds )
   {
-    struct timeval time_start, time_now;
-    
-    gettimeofday(&time_start,NULL);
-    while(1){
+      struct timeval time_start, time_now;
+
+      // Acquire lock before starting timer
+      //      std::unique_lock<std::timed_mutex> lock(_inuse_mutex, std::defer_lock);
+
+
+      /*      if (!lock.try_lock_for(std::chrono::milliseconds(3))) {
+        // Couldn’t get lock within timeout
+        return dma_completion_status::timeout;
+	}*/
+
+
+      gettimeofday(&time_start,NULL);
+      while(1){
+      
+	//check for timeout
+	gettimeofday(&time_now,NULL);
+	long diff_time = diff_time_microseconds(time_now,time_start);
+	TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   "DiffTime in function: " << diff_time ;
+	//	TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "microseconds to compare to: " << microseconds;
+
+	if(diff_time > microseconds){
+	  return dma_completion_status::timeout;
+	}//end if timeout condition
+      
+	UINT32 dmaStatus {0};
+      
+	nevisPCIeCard->readAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, dmaStatus );
+      
+	if ( ( dmaStatus & dma_detail::dma_in_progress ) == 0 ) {
+	  return dma_completion_status::complete;
+	}//end if dma complete
+      }//end infinite while
+  }
+   
+  /*
+   
+  XMITReader::dma_completion_status XMITReader::dmaWaitWithTimeout ( unsigned int microseconds )
+  {
+
+    if (_stream_name=="nu_xmit_reader"){ 
+      struct timeval time_start, time_now;
+      gettimeofday(&time_start,NULL);     
+      while(1){                           
+        gettimeofday(&time_now,NULL);     
+        long diff_time = diff_time_microseconds(time_now,time_start); 
+        TLOG(TLVL_INFO) << "NU XMITReader " << _stream_name <<   "DiffTime in function: " << diff_time ; 
+        TLOG(TLVL_INFO) << "NU XMITReader " << _stream_name << "microseconds to compare to: " << microseconds;
+        if(diff_time > microseconds){                                                                         
+          return dma_completion_status::timeout;                                                              
+        }//end if timeout condition                                                                           
+        UINT32 dmaStatus {0};                                                                                 
+        nevisPCIeCard->readAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, dmaStatus );                
+        if ( ( dmaStatus & dma_detail::dma_in_progress ) == 0 ) {                                             
+          return dma_completion_status::complete;                                                             
+        }//end if dma complete                                                                                
+      }//end infinite while                                                                                                                                   
+   }                                                                                                                                                          
+    else{      
+      struct timeval time_start, time_now;    
+      gettimeofday(&time_start,NULL);
+      bool waitingForNewDMA = true;  
+      while(1){
+	UINT32 dmaStatus {0};        
+	nevisPCIeCard->readAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, dmaStatus ); 
+	if (waitingForNewDMA && (dmaStatus & dma_detail::dma_in_progress)) { 
+	  gettimeofday(&time_start, NULL);        
+	  // Print in hex and binary for clarity
+	  TLOG(TLVL_INFO) << "DMA Status = 0x" << std::hex << dmaStatus 
+			  << " (" << std::dec << dmaStatus << ")" ;                  
+	  waitingForNewDMA = false;                                            
+	}                                                                    
+	gettimeofday(&time_now,NULL);                                        
+	long diff_time = diff_time_microseconds(time_now,time_start);        
+	TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   "DiffTime in function: " << diff_time ; 
+	TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "microseconds to compare to: " << microseconds;
+	if(diff_time > microseconds){                                                                      
+	  return dma_completion_status::timeout;                                                           
+	}//end if timeout condition                                                                        
+	if ((dmaStatus & dma_detail::dma_in_progress) == 0 && !waitingForNewDMA) {                         
+	  return dma_completion_status::complete;                                                          
+	}           
+      }
+    }
+  }
+  */  /*
       
       //check for timeout
-      gettimeofday(&time_now,NULL);
+     gettimeofday(&time_now,NULL);
       long diff_time = diff_time_microseconds(time_now,time_start);
       if(diff_time > microseconds){
 	return dma_completion_status::timeout;
@@ -187,9 +270,11 @@ namespace nevistpc {
       if ( ( dmaStatus & dma_detail::dma_in_progress ) == 0 ) {
 	return dma_completion_status::complete;
       }//end if dma complete
-    }//end infinite while
+      */
+  // }//end infinite while
     
-  }
+// }
+
   
   void XMITReader::dmaReportTransferStatus()
   {
@@ -221,11 +306,28 @@ namespace nevistpc {
     fos.close();
   }
 
+  /*
+  bool XMITReader::acquireDMANU(unsigned int milisecond) {
+    // NU will wait only for its readout window
+    if (_inuse_mutex.try_lock_for(std::chrono::milliseconds(milisecond))) {
+      return true;  // got DMA
+    } else {
+      TLOG(TLVL_ERROR) << "NU could not acquire DMA within window!";
+      return false; // treat as timeout
+    }
+  }
+
+  // SN waits until NU is completely done
+  void XMITReader::acquireDMASN() {
+    _inuse_mutex.lock();  // block until free
+    }*/
+  
+
   std::streamsize XMITReader::readsome ( char* buffer, std::streamsize size )
   {
     //    std::cout << "READSOME FUNCTION CALLED!!!!!!!!!!!!" << std::endl;
     //    exit(0);
-
+   
     static unsigned long int _loopNumber = 0;
 
     struct timeval t1, t2;
@@ -234,7 +336,21 @@ namespace nevistpc {
 
     assert ( buffer != NULL );
     assert ( size > 0 );
-      
+
+    /*  if (_stream_name == "nu_xmit_reader") {
+      // e.g. allow NU 7ms to grab DMA
+      if (!acquireDMANU(7)) {
+	TLOG(TLVL_ERROR) << "SKIPPING NU CYCLE as couldn't acquire data within 3ms" ;
+        return 0; // give up this cycle
+      }
+      // do DMA work...
+      //_inuse_mutex.unlock();
+    } else if (_stream_name == "sn_xmit_reader") {
+      acquireDMASN();
+    }      
+    _inuse_mutex.unlock();
+    */
+ 
     _dma1.readSize = ( size_t ) size;
     _dma2.readSize = ( size_t ) size;
     
@@ -268,6 +384,7 @@ namespace nevistpc {
     std::streamsize readSize = -1;
   
 
+    TLOG(TLVL_INFO) << "XMITReader " << _stream_name  << "Checking for timeout: " ;
     if ( dmaWaitWithTimeout ( _dma_settings->dma_max_polling_time_microseconds ) == dma_completion_status::timeout ) {
     
       UINT64 dmaReadback {0};

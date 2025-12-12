@@ -97,10 +97,11 @@ void TDCChan::read() {
     ts_gap = ts.timestamp_ns() - last_seen_sample_ts; 
     last_seen_sample_ts = ts.timestamp_ns();
 
-    if (ts_gap < fmctdc.max_time_gap_ns ) {
-      TLOG(TLVL_WARNING) << "Detected a time gap < " << fmctdc.max_time_gap_ns << " in the channel " << int{id}
-                         << "; ts gap = " << ts_gap << " us.";
+    if (ts_gap > fmctdc.max_time_gap_ns ) {
+      TLOG(TLVL_WARNING) << "Detected a time gap > " << fmctdc.max_time_gap_ns << " in the channel " << int{id}
+                         << "; ts gap = " << ts_gap << " ns.";
     }
+
     if (metricMan) {
       metricMan->sendMetric(metric_prefix + lit::tdc_ts_gap, uint64_t{ts_gap},
                           lit::unit_sample_count, 11, MetricMode::LastPoint);
@@ -109,7 +110,7 @@ void TDCChan::read() {
 
   if (metricMan) {
     metricMan->sendMetric(metric_prefix + lit::tdc_sample_rate, uint64_t(read_count), lit::unit_samples_per_second, 11,
-                          MetricMode::Rate);
+                          MetricMode::Rate | MetricMode::Maximum | MetricMode::Average);
   }
   bytes_read += read_count * sizeof(fmctdc_time);
 }

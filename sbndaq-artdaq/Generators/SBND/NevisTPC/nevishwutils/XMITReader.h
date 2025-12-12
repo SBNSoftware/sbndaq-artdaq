@@ -6,6 +6,8 @@
 
 #include <iosfwd>
 #include <string>
+#include <mutex>
+
 
 namespace nevistpc{
   
@@ -44,12 +46,13 @@ namespace nevistpc{
     void initializePCIeCard();
 
     void setupTXModeRegister();
-
     virtual std::streamsize readsome ( char* buffer, std::streamsize requestedSize );
     virtual void dmaStop(); //Erin: stop the xmit
     virtual ~XMITReader(){};
   private:
     bool dmaLockBuffer ( dma_buffer& dma );
+    //    bool acquireDMANU(unsigned int milliseconds);
+    //void  acquireDMASN();
     void dmaSetTXModeRegister();
     void dmaAbort();
     void dmaClearRegister();
@@ -62,7 +65,8 @@ namespace nevistpc{
     dma_completion_status  dmaWaitWithTimeout ( unsigned int microseconds );
     void dmaReportTransferStatus();
     void writeBufferToBinaryFile ( const char* buffer, const std::streamsize size );
-
+    std::timed_mutex  _inuse_mutex;
+    typedef std::chrono::milliseconds ms;
   private:
     const std::string _stream_name; // XMIT stream name
     const fhicl::ParameterSet _params; // FHiCL parameter set

@@ -16,6 +16,7 @@
 #include "sbndaq-artdaq/Generators/SBND/NevisTPC/nevishwutils/XMITReader.h"
 
 #include <fstream> // temp
+#include <ctime>
 #include <zmq.hpp>
 
 namespace sbndaq {
@@ -80,11 +81,25 @@ namespace sbndaq {
     zmq::socket_t _zmqGPSPublisher;
 
     bool fDumpBinary; //!< Write binary file before the artdaq back-end
+    bool fDumpSNBinary; //!< Write binary file before the artdaq back-end                                                                                           
+
     std::string fDumpBinaryDir; //!< Directory for binary file dump
     std::ofstream binFileNU; // temp 
     std::ofstream binFileSN; // temp 
     char binFileNameNU[80]; // Name of binary dump file for NU stream
-    char binFileNameSN[80]; // Name of binary dump file for SN stream
+    char binFileNameSN[200]; // Name of binary dump file for SN stream
+    
+    size_t total_words_inserted = 0;
+    size_t total_words_written = 0;    
+
+    int N_SNDMAs;
+    int N_NUDMAs;
+    int N_SNWrites;
+    int SNDMATransferCnt_;
+    int SNBinSubFileNum_;
+    time_t t;
+    struct tm ltm;
+
 
   };
   

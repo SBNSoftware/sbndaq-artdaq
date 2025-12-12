@@ -31,12 +31,18 @@
 #include <unistd.h>
 #include <thread>
 
-int numGates[5] ={0,0,0,0,0}; //Index is numGate for different HLT--> numGates[0] = HLT 1, numGates[1] = HLT 2, numGates[2] = HLT 3, numGates[3] = HLT 4, numGates[4] = HLT 6
+int numGates[9] ={0,0,0,0,0,0,0,0,0}; //Index is numGate for different HLT--> numGates[0] = HLT 1, numGates[1] = HLT 2, numGates[2] = HLT 3, numGates[3] = HLT 4, numGates[4] = HLT 6
+// numGates[5] = 16, numGates[6] = 17, numGates[7] = 22, numGates[8] = 23
 uint64_t prevHLT01TS =0;
 uint64_t prevHLT02TS =0;
 uint64_t prevHLT03TS =0;
 uint64_t prevHLT04TS =0;
 uint64_t prevHLT06TS =0;
+
+uint64_t prevHLT16TS =0;
+uint64_t prevHLT17TS =0;
+uint64_t prevHLT22TS =0;
+uint64_t prevHLT23TS =0;
 
 bool isVerbose;
 
@@ -407,6 +413,8 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	numGates[0]++;
 	numGates[1]++;
 	numGates[4]++;
+	numGates[5]++;
+	numGates[7]++;
 	TRACE(TLVL_INFO, "Beam acceptance window (LLT 30) started at time: %lu", t->timestamp);
 	if (isVerbose) TRACE(TLVL_INFO, "LLT 30 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates[0]: %d , numGates[1]: %d , numGates[4]: %d ", t->timestamp, numGates[0], numGates[1], numGates[4]); 
       }
@@ -447,9 +455,12 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
       if (t -> IsTrigger(27)){
 	numGates[2]++;
 	numGates[3]++;
+	numGates[6]++;
+	numGates[8]++;
 	if (isVerbose) TRACE(TLVL_INFO, "HLT 27 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates[2]: %d , numGates[3]: %d", t->timestamp, numGates[2], numGates[3]);
       }
-
+      //Important note is that if multiple HLT bits are up, then the order below matters as it will rewrite the previous HLT gatecounter and prev timestamp
+      
       //Setting the previous HLT timestamp and adding it to the new HLT word
       if (t -> IsTrigger(1)){
 	t -> setGateCounter(numGates[0]);      //Setting the gate Counters for HLT 1
@@ -489,6 +500,36 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	temp_PTBBR_word.setPrevTimestamp(prevHLT06TS);
 	prevHLT06TS = t->timestamp;
       }
+
+      if(t -> IsTrigger(16)){
+	t -> setGateCounter(numGates[5]);      //Setting the gate Counters for HLT 16
+	numGates[5]=0; //reset counter
+	temp_PTBBR_word.setPrevTimestamp(prevHLT16TS);
+	prevHLT16TS = t->timestamp;
+      }
+
+      if(t -> IsTrigger(17)){
+	t -> setGateCounter(numGates[6]);      //Setting the gate Counters for HLT 17
+	numGates[6]=0; //reset counter
+	temp_PTBBR_word.setPrevTimestamp(prevHLT17TS);
+	prevHLT17TS = t->timestamp;
+      }
+
+      if(t -> IsTrigger(22)){
+	t -> setGateCounter(numGates[7]);      //Setting the gate Counters for HLT 22
+	numGates[7]=0; //reset counter
+	temp_PTBBR_word.setPrevTimestamp(prevHLT22TS);
+	prevHLT22TS = t->timestamp;
+      }
+
+      if(t -> IsTrigger(23)){
+	t -> setGateCounter(numGates[8]);      //Setting the gate Counters for HLT 23
+	numGates[8]=0; //reset counter
+	temp_PTBBR_word.setPrevTimestamp(prevHLT23TS);
+	prevHLT23TS = t->timestamp;
+      }
+      
+
       
       //Adding the gate count to the HLT words
       memcpy( BRfragptr->dataBeginBytes() + (word_counter-1) * word_BR_bytes + 8, &temp_word, word_bytes );    

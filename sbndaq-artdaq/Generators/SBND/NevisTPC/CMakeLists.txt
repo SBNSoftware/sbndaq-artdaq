@@ -9,10 +9,11 @@ if(DEFINED ENV{ZMQ_DIR})
     link_directories($ENV{ZMQ_LIB})
 endif()
 
-SET_SOURCE_FILES_PROPERTIES(NevisTPC2StreamNUandSNXMIT_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
+SET_SOURCE_FILES_PROPERTIES(NevisTPC2StreamNUandSNXMIT_generator.cc PROPERTIES COMPILE_FLAGS "-Wno-error=unused-function -Wno-deprecated-declarations")
 SET_SOURCE_FILES_PROPERTIES(NevisTBStream_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCNUXMIT_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
 SET_SOURCE_FILES_PROPERTIES(NevisTPCCALIB_generator.cc PROPERTIES COMPILE_FLAGS -Wno-error=unused-function)
+SET_SOURCE_FILES_PROPERTIES(NevisTB_generatorBase.cc PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 cet_make_library(
   LIBRARY_NAME
     sbndaq-artdaq_NevisTPCGeneratorBase

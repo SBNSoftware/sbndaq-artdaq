@@ -28,8 +28,8 @@ namespace nevistpc {
 
   public:
 
-  TPCFEMStatus(uint8_t mod_num=0)
-    : config_module(mod_num),
+    TPCFEMStatus(uint8_t mod_num=0)
+      : config_module(mod_num),
       nu_buffer_module(mod_num),
       sn_buffer_module(mod_num),
       error_flag_v(kFEM_ERROR_TYPE_MAX,false),
@@ -76,6 +76,9 @@ namespace nevistpc {
 
   private:
     bool badstat;
+    std::vector<unsigned int> threshold;                                                                                                                                                     
+    std::vector<unsigned int> baseline;       
+ 
   };
 
   class NevisTPCFEM: public UsesControllerModule {
@@ -85,24 +88,24 @@ namespace nevistpc {
     //Chip id=1  arria_fpga
     enum  chip_1:
     operation_id_t
-    {
-      POWER_ON = 1,
+      {
+	POWER_ON = 1,
       POWER_OFF
-    };
+	  };
     typedef chip_1 arria_fpga;
 
     //Chip id=2 stratix_fpga_cfg
     enum  chip_2:
     operation_id_t
     {
-	CONFIGURE_ON = 0,
+      CONFIGURE_ON = 0,
 	CONFIGURE_OFF
-    };
+	};
     typedef chip_2 stratix_fpga_cfg;
 
     enum  chip_3:
       operation_id_t{
-	ADC_RECEIVER_DATA_ALIGNMENT = 1,
+      ADC_RECEIVER_DATA_ALIGNMENT = 1,
 	NU_CHAN_COMPRESSION = 2,
 	SN_CHAN_COMPRESSION,
 	BLOCK_SIZE,
@@ -125,7 +128,7 @@ namespace nevistpc {
 	NU_DATA_READ_PULSE = 22,
 	SN_HEADER_READ_PULSE  = 23,
 	SN_DATA_READ_PULSE = 24,
-  	TM1_READ_PULSE = 30,
+	TM1_READ_PULSE = 30,
 	DRAM_RESET = 31,
 	DRAM_USER_LOGIC_RESET = 32,
 	ADC_RESET_PULSE = 33,
@@ -138,7 +141,7 @@ namespace nevistpc {
 	LOAD_THRESHOLD = 100,
 	LOAD_THRESHOLD_MEAN = 164,
 	LOAD_THRESHOLD_VARIANCE,
-  	BIPOLAR = 167,
+	BIPOLAR = 167,
 	LOAD_PRESAMPLE,
 	LOAD_POSTSAMPLE,
 	CHANNEL_THRESHOLD,
@@ -149,7 +152,7 @@ namespace nevistpc {
 	LOAD_BASELINE = 246,
 	WRITE_BASELINE = 247
 
-	  };
+	};
     typedef chip_3 stratix_fpga;
 
 
@@ -157,41 +160,41 @@ namespace nevistpc {
     enum  chip_4:
     operation_id_t
     {
-	LAST_MODULE_OFF=0,
+      LAST_MODULE_OFF=0,
 	LAST_MODULE_ON,
 	TP_RECEIVER_RESET,
 	PULSE_TP_RECEIVER,
 	PLL_LINK_RESET=5,
 	OP8=8
-    };
+	};
     typedef chip_4 token_passing_control;
 
     //Chip id=5 adc
     enum  chip_5:
     operation_id_t
     {
-	DATA_SEND1 = 0
+      DATA_SEND1 = 0
 
-    };
+	};
     typedef chip_5 adc;
 
     enum  chip_7:
     operation_id_t
     {
-	PROGRAM_FIRMWARE = 0
-    };
+      PROGRAM_FIRMWARE = 0
+	};
     typedef chip_7 stratix_fpga_program;
 
     enum  device:
     chip_address_t
     {
-	ARRIA_FPGA = 1,
+      ARRIA_FPGA = 1,
 	STRATIX_FPGA_CFG,
 	STRATIX_FPGA,
 	TOKEN_PASSING_CONTROL,
 	ADC_CONTROL_BLOCK,
 	STRATIX_FPGA_PROGRAM = 7
-    };
+	};
 
   public:
     explicit NevisTPCFEM( uint8_t slot_number );
@@ -259,8 +262,8 @@ namespace nevistpc {
     void setFEMBipolar(data_payload_t const &size);
     void setLoadBaseline(data_payload_t const &chan, data_payload_t const &size);
     void enableFEMFakeData(bool const &flag);
-    void loadFEMFakeData(std::string const &pattern);
-
+    //    void loadFEMFakeData(std::string const &pattern);
+    void loadFEMFakeData(std::string const &pattern, const std::vector<unsigned int>& threshold, const std::vector<unsigned int>& baseline);
     void runDefaultNUConfig(data_payload_t const&febChanID);
     void fem_setup(fhicl::ParameterSet const& configParams);
 

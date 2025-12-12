@@ -111,7 +111,9 @@ static WDC_DEVICE_HANDLE DeviceFindAndOpen(DWORD dwVendorId, DWORD dwDeviceId, D
 
     if(!DeviceFind(dwVendorId, dwDeviceId, dwBus, &slot))
     {
-      slot= {0, dwBus, 0 , 0};
+      slot.dwBus = dwBus;
+      slot.dwSlot = 0;
+      slot.dwFunction = 0;
     }
 
     return DeviceOpen(&slot);
