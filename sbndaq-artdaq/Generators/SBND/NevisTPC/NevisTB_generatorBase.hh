@@ -131,9 +131,14 @@ namespace sbndaq
     
     int current_ntbevent, current_ntbframenum; // for checking consistency between FEMs within a run
     bool desyncCrash;
-    uint64_t pseudo_ntbfragment; 
+    uint64_t pseudo_ntbfragment;
     int rollCounter;
     int prevFrame;
+    int prevEvent;
+    int prevCorrFrame;
+    int N_Bad_DEvents;
+    int deadtime_in_frames;
+    int N_Bad_DFrames;
     long long GPSframe;
     long long GPSsample;
     long long GPSdiv;
