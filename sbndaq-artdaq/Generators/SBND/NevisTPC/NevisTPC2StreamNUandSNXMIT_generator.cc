@@ -16,6 +16,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fCALIBFreq             = ps_.get<double>("CALIBTriggerFrequency", -1);
   fControllerTriggerFreq = ps_.get<double>("ControllerTriggerFrequency", -1);
   fDumpBinary            = ps_.get<bool>("DumpBinary", false);
+  fDumpSNBinary            = ps_.get<bool>("DumpSNBinary", false);
   fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout             = ps_.get<bool>("DoSNReadout", true);
   fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
@@ -27,6 +28,13 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
   SNCircularBuffer_.Init();
   SNBuffer_ = new uint16_t[fSNChunkSize];
+
+  SNDMATransferCnt_ = 0;
+  SNBinSubFileNum_  = -1;
+  t = time(0);
+  ltm = *localtime( &t );
+
+
   //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
 
   if(fUseZMQ){
@@ -36,8 +44,8 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
 
   if( fDumpBinary ){
     // Get timestamp for binary file name
-    time_t t = time(0);
-    struct tm ltm = *localtime( &t );
+   // time_t t = time(0);
+   // struct tm ltm = *localtime( &t );
     sprintf(binFileNameNU, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_NU.dat",
 	    fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
 	    ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
@@ -45,16 +53,16 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
     TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameNU;
     binFileNU.open( binFileNameNU, std::ofstream::out | std::ofstream::binary ); // temp
 
-    if( fSNReadout ){ 
-      sprintf(binFileNameSN, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_SN.dat",
-	      fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
-	      ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
+//    if( fSNReadout ){ 
+//      sprintf(binFileNameSN, "%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_TPC_SN.dat",
+//	      fDumpBinaryDir.c_str(), sbndaq::NevisTPC_generatorBase::run_number(), 
+//	      ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec);
     
-      TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameSN;
-      binFileSN.open( binFileNameSN, std::ofstream::out | std::ofstream::binary ); // temp
+  //    TLOG(TLVL_INFO)<< "Opening raw binary file " << binFileNameSN;
+    //  binFileSN.open( binFileNameSN, std::ofstream::out | std::ofstream::binary ); // temp
       // to do: Send SN data to a dedicated Event Builder? Does it require its own BoardReader?
       // Otherwise use MicroBooNE example to make several files with the binary dump instead of a giant file
-    }
+   // }
   }
 
   // Create Crate object
@@ -181,7 +189,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
     TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameNU;
     binFileNU.close(); // temp
 
-    if( fSNReadout ){
+    if( fDumpSNBinary ){
       TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameSN;
       binFileSN.close(); // temp
     }
@@ -344,11 +352,35 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
   if( SNCircularBuffer_.buffer.size() < fSNChunkSize ) return false;
 
+// add for subfile
+  if (SNDMATransferCnt_ == 1000) SNDMATransferCnt_ = 0;
+
+  if (SNDMATransferCnt_ == 0) {
+
+    if (fDumpSNBinary && fSNReadout) {
+   if (binFileSN.is_open()) {
+     TLOG(TLVL_INFO) << "Closing raw SN binary file " << binFileNameSN;
+     binFileSN.close();
+     }
+    
+    ++SNBinSubFileNum_;
+    
+    sprintf(binFileNameSN,"%s/sbndrawbin_run%06i_%4i.%02i.%02i-%02i.%02i.%02i_subfile%i_TPC_SN.dat",
+                         fDumpBinaryDir.c_str(),sbndaq::NevisTPC_generatorBase::run_number(),
+                         ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday,ltm.tm_hour, ltm.tm_min, ltm.tm_sec,SNBinSubFileNum_);
+    
+    TLOG(TLVL_INFO) << "Opening raw SN binary file " << binFileNameSN;
+    binFileSN.open(binFileNameSN, std::ofstream::out | std::ofstream::binary);   
+    }
+      }
+
   std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + fSNChunkSize, SNBuffer_);
 
   binFileSN.write((char*)SNBuffer_, fSNChunkSize );
 
   binFileSN.flush();
+
+  ++SNDMATransferCnt_;
 
   size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize);
   TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize << " . SN Buffer occupancy now " << new_buffer_size;
