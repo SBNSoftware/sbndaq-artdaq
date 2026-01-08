@@ -64,8 +64,8 @@ private:
   int tpc_crate;
   int tpc_sampleno;
 
-  int N_Bad_DFEMFrame;
-  int N_Bad_DNTBFEMSample;
+  int N_Bad_DFEMFrame = 0;
+  int N_Bad_DNTBFEMSample = 0;
 
 };
 
@@ -88,8 +88,6 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
   auto daq_handleTPC = evt.getHandle<artdaq::Fragments>(fTagTPC);
   auto daq_handleNTB = evt.getHandle<artdaq::Fragments>(fTagNTB);
 
-  N_Bad_DFEMFrame = 0;
-  N_Bad_DNTBFEMSample = 0;
 
   if ( daq_handleTPC.isValid() and daq_handleNTB.isValid()  ) {
     //TLOG(TLVL_DEBUG+1)     << "********NTB fragment SIZE: "<< daq_handleNTB->size();
@@ -115,34 +113,34 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
       
       // Check 4: Is TPC FEM absolute sample number expected with respect to NTB frame number?
       int ntb_abssampleno = ntb_frameno * 1144 + ntb_sampleno;
-      int tpc_abssampleno = tpc_packframeno * 1144 + tpc_sampleno;
+      int tpc_abssampleno = tpc_trigframeno * 1144 + tpc_sampleno;
       
-      int D_NTBFEMSampleNo = tpc_abssampleno - ntb_abssampleno;
+      int D_NTBFEMSampleNo = tpc_abssampleno - ntb_abssampleno - 1144; // Subtract the frame size
 
       if (ntb_sampleno == 0){
         if (D_NTBFEMSampleNo != 1 && D_NTBFEMSampleNo != 2){
           N_Bad_DNTBFEMSample += 1;
-          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the NTB - TPC absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << "and boundary NTB sample number 0.";
+          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the TPC - NTB absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and boundary NTB sample number 0.";
         }
       } else if (ntb_sampleno == 1141){
         if (D_NTBFEMSampleNo != 0 && D_NTBFEMSampleNo != 1 && D_NTBFEMSampleNo != 4){
           N_Bad_DNTBFEMSample += 1;
-          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the NTB - TPC absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << "and boundary NTB sample number 1141.";
+          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the TPC - NTB absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and boundary NTB sample number 1141.";
         }
       } else if (ntb_sampleno == 1142){
         if (D_NTBFEMSampleNo != 3 && D_NTBFEMSampleNo != 4){
           N_Bad_DNTBFEMSample += 1;
-          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the NTB - TPC absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << "and boundary NTB sample number 1142.";
+          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the TPC - NTB absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and boundary NTB sample number 1142.";
         }
       } else if (ntb_sampleno == 1143){
         if (D_NTBFEMSampleNo != 2 && D_NTBFEMSampleNo != 3){
           N_Bad_DNTBFEMSample += 1;
-          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the NTB - TPC absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << "and boundary NTB sample number 1143.";
+          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the TPC - NTB absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and boundary NTB sample number 1143.";
         }
       } else {
         if (D_NTBFEMSampleNo != 0 && D_NTBFEMSampleNo != 1){
           N_Bad_DNTBFEMSample += 1;
-          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the NTB - TPC absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << "and NTB sample number" << ntb_sampleno << ".";
+          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the TPC - NTB absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and NTB sample number" << ntb_sampleno << ".";
         }
       }
     }
