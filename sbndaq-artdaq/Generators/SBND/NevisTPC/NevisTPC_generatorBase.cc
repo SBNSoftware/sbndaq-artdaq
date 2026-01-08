@@ -256,6 +256,14 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     char line [132];
     sprintf(line,"Header out of sync: %X", CircularBuffer_.buffer[0]);
     TRACE(TERROR,line);
+
+    char line2 [512]; size_t pos = 0; 
+    for (size_t i = 0; i < 20; i++) { 
+      uint16_t word = (i < CircularBuffer_.buffer.size()) ? CircularBuffer_.buffer[i] : 0; 
+      pos += snprintf(line2 + pos, sizeof(line2) - pos, "%04X ", word); 
+    } 
+    TRACE(TERROR, "Next words: %s", line2);
+
     throw std::runtime_error(line);
     return false;
   }
