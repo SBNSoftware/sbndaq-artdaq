@@ -76,6 +76,8 @@ namespace nevistpc {
 
   private:
     bool badstat;
+    std::vector<unsigned int> threshold; 
+    std::vector<unsigned int> baseline; 
   };
 
   class NevisTPCFEM: public UsesControllerModule {
@@ -259,7 +261,7 @@ namespace nevistpc {
     void setFEMBipolar(data_payload_t const &size);
     void setLoadBaseline(data_payload_t const &chan, data_payload_t const &size);
     void enableFEMFakeData(bool const &flag);
-    void loadFEMFakeData(std::string const &pattern);
+    void loadFEMFakeData(std::string const &pattern, const std::vector<unsigned int>& threshold, const std::vector<unsigned int>& baseline);
 
     void runDefaultNUConfig(data_payload_t const&febChanID);
     void fem_setup(fhicl::ParameterSet const& configParams);
