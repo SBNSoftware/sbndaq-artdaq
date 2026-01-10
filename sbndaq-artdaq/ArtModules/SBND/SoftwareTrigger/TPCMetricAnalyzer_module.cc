@@ -108,7 +108,7 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
         N_Bad_DFEMFrame += 1;
         
         // Add more information to log files if counter increments
-        TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << tpc_eventno << ", the FEM trigger - packet frame number is " << D_FEMFrameNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << "and for NTB frame & sample number " << ntb_frameno << " & " << ntb_sampleno << " and TPC trigger frame & sample number " << tpc_trigframeno << " & " << tpc_sampleno << ".";
+        TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << tpc_eventno << ", the FEM trigger - packet frame number is " << D_FEMFrameNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and for NTB frame & sample number " << ntb_frameno << " & " << ntb_sampleno << " and TPC trigger frame & sample number " << tpc_trigframeno << " & " << tpc_sampleno << ".";
       }
       
       // Check 4: Is TPC FEM absolute sample number expected with respect to NTB frame number?
