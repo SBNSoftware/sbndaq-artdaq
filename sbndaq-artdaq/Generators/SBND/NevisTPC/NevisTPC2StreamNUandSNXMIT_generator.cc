@@ -19,6 +19,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fDumpSNBinary            = ps_.get<bool>("DumpSNBinary", false);
   fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout             = ps_.get<bool>("DoSNReadout", true);
+  fDisableNUStream       = ps_.get<bool>("DisableNUStream", false);
   fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
   fGPSTimeFreq           = ps_.get<double>("GPSTimeFrequency", -1);
   fGPSZMQPortNTB         = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
@@ -69,14 +70,43 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fCrate = std::make_shared<nevistpc::Crate>( fControllerModule, fNUXMITReader, ps_, fSNXMITReader );
   
   // Run configuration recipe
-  if( fCALIBFreq > 0 && fControllerTriggerFreq <= 0 ) fSNReadout? fCrate->runCalib2Stream( ps_ ) : fCrate->runCalib( ps_ );
-  else if( fControllerTriggerFreq > 0 && fCALIBFreq <= 0 ) fCrate->runControllerTrigger2Stream ( ps_ ); // implement NU-only stream if needed
-  else if( fCALIBFreq > 0 && fControllerTriggerFreq > 0){
+  if( fCALIBFreq > 0 && fControllerTriggerFreq <= 0 ){
+ 
+     if (fDisableNUStream) {
+      TLOG(TLVL_ERROR) << "DisableNUStream=true with CALIBTriggerFrequency>0 is not supported. "
+                     << "Either enable NU or disable CALIB trigger." << TLOG_ENDL;
+      std::exit(EXIT_FAILURE);
+     }
+
+fSNReadout? fCrate->runCalib2Stream( ps_ ) : fCrate->runCalib( ps_ );
+}  else if( fControllerTriggerFreq > 0 && fCALIBFreq <= 0 ){
+
+     if (fDisableNUStream) {
+       // ControllerTrigger sends NU triggers, so SN-only doesn't apply here
+       TLOG(TLVL_ERROR) << "DisableNUStream=true with ControllerTriggerFrequency>0 is not supported. "
+                        << "Controller triggers are NU-trigger based." << TLOG_ENDL;
+       std::exit(EXIT_FAILURE);
+      }
+
+      fCrate->runControllerTrigger2Stream ( ps_ ); // implement NU-only stream if needed
+
+ } else if( fCALIBFreq > 0 && fControllerTriggerFreq > 0){
     // Prevent running with two internal trigger sources as it could have unpredicted behavior
     TLOG(TLVL_ERROR) << "Two internal trigger sources (CALIB and Controller) are enabled simultaneously. Exit..." << TLOG_ENDL;
     mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Two internal trigger sources (CALIB and Controller) are enabled simultaneously. Exit...";
     std::exit (EXIT_FAILURE);
-  } else fSNReadout? fCrate->run2Stream( ps_ ) : fCrate->runNUStream( ps_ );
+  } else{
+
+      if (fDisableNUStream) {
+         if (!fSNReadout) {
+            TLOG(TLVL_ERROR) << "DisableNUStream=true but DoSNReadout=false. No stream enabled. Exit..." << TLOG_ENDL;
+            std::exit(EXIT_FAILURE);
+         }
+         fCrate->runSNStream( ps_ );
+      } else {
+       fSNReadout? fCrate->run2Stream( ps_ ) : fCrate->runNUStream( ps_ );
+      }
+   }
 
   // To do: nevistpc::Crate should have a general runConfiguration function
   // The specific Crate configuration function to run should be specified in a fcl file

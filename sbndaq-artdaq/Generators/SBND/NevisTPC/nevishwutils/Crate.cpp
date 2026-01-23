@@ -291,6 +291,62 @@ This function is added to debug FEMs is software but hasnot tested yet
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
   }
 
+
+void Crate::runSNStream(fhicl::ParameterSet const& _p){ 
+    
+    fhicl::ParameterSet crateconfig;
+    // NOTE: the name of the block in the fcl file must match 
+    if( ! _p.get_if_present<fhicl::ParameterSet> ( "nevis_crate", crateconfig ) ){
+      TLOG(TLVL_ERROR) << "Crate: Missing nevis_crate configuration block in fcl file" ;
+    }
+                       
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
+    // Setup XMIT reader for SN stream
+    getXMITReader("SN")->configureReader();
+    getXMITReader("SN")->initializePCIeCard();
+                                           
+    // Setup controller module
+    getControllerModule()->initialize();
+    getControllerModule()->testOn();
+    getControllerModule()->runOff();
+    getControllerModule()->testOff();
+                                                                   
+                                                                       
+    // Load xmit firmware
+    getXMITModule()->setMax3000Config();
+    getXMITModule()->programMax3000FPGAFirmware( crateconfig.get<std::string>( "xmit_fpga", "") );
+                                                                                       
+    // Setup FEMs
+    if(getNumberOfTPCFEMs()){
+       // Loop over FEMs
+       for(size_t tpc_it = 0; tpc_it < getNumberOfTPCFEMs(); tpc_it++){
+           usleep(10000);
+           // To do: This function needs to be updated/overloaded to configure the zero suppression
+           getTPCFEM(tpc_it)->fem_setup(crateconfig);
+           TLOG(TLVL_INFO) << "Crate: FEM in slot " << getTPCFEM(tpc_it)->module_number() << " all set.";
+          }
+         }
+    
+    // Setup tx mode registers (this is done twice for some reason...)
+    getXMITReader("SN")->setupTXModeRegister();
+                                                                                                           				                      
+    
+    // set up link
+    linkSetup();
+                                                                                                           				                                  
+    // Disable triggered stream & Enable continuous stream
+    getXMITModule()->enableNUChanEvents(0);
+    getXMITModule()->enableSNChanEvents(1);
+                                                                                                           				                                                  
+    // setup tx mode registers (again, I know)
+    getXMITReader("SN")->setupTXModeRegister();
+    getControllerModule()->setupTXModeRegister();
+                                                                                                           				                                                                  
+    TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
+   }
+
+
+
   void Crate::runControllerTrigger2Stream(fhicl::ParameterSet const& _p){ 
     
     fhicl::ParameterSet crateconfig;
