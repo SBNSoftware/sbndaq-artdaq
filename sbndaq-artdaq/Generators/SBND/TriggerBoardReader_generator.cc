@@ -459,9 +459,18 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	numGates[8]++;
 	if (isVerbose) TRACE(TLVL_INFO, "HLT 27 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates[2]: %d , numGates[3]: %d", t->timestamp, numGates[2], numGates[3]);
       }
-      //Important note is that if multiple HLT bits are up, then the order below matters as it will rewrite the previous HLT gatecounter and prev timestamp
-      
-      //Setting the previous HLT timestamp and adding it to the new HLT word
+
+		
+      // ***************************************** IMPORTANT NOTE FOR BELOW ************************************************************
+      // IF MULTIPLE HLT BITS ARE UP, THE ORDER BELOW MATTERS SINCE temp_PTBBR_word's GATECOUNTER AND PREV TIMESTAMP WILL BE OVERWRITTEN
+	  //  BY THE OTHER HLT'S IN THE SAME WORD. WHAT FINALLY GETS PUSHED TO THE temp_PTBBR_word IS THE LAST HLT IN THIS ORDER. 
+	  //
+	  // CURRENT CHOICE:
+	  //  		FOR HLT 6 WE MOVED IT ABOVE HLT 2 SINCE HLT 2 (BNB+LIGHT) REQUIRES THIS INFO FOR POT ACCOUNTING, BUT HLT 6 WHICH COMMONLY 
+	  //        IS IN CONJUNCTION WITH HLT 2 OVERWRITES HLT 2'S POT INFO IS NOT RECOVERABLE OFFLINE
+      // ******************************************************************************************************************************
+
+		//Setting the previous HLT timestamp and adding it to the new HLT word
       if (t -> IsTrigger(1)){
 	t -> setGateCounter(numGates[0]);      //Setting the gate Counters for HLT 1
 	numGates[0]=0; //reset counter
@@ -469,7 +478,14 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	//std::cout << "Previous HLT 1 TS: " << prevHLT01TS << std::endl; 
 	prevHLT01TS = t->timestamp;
       }
-
+		
+	if(t -> IsTrigger(6)){
+	t -> setGateCounter(numGates[4]);      //Setting the gate Counters for HLT 6
+	numGates[4]=0; //reset counter
+	temp_PTBBR_word.setPrevTimestamp(prevHLT06TS);
+	prevHLT06TS = t->timestamp;
+      }
+		
       if (t -> IsTrigger(2)){
 	t -> setGateCounter(numGates[1]);      //Setting the gate Counters for HLT 2
 	numGates[1]=0; //reset counter
@@ -492,13 +508,6 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	temp_PTBBR_word.setPrevTimestamp(prevHLT04TS);
 	//std::cout << "Previous HLT 4 TS: " << prevHLT04TS << std::endl; 
 	prevHLT04TS = t->timestamp;
-      }
-
-      if(t -> IsTrigger(6)){
-	t -> setGateCounter(numGates[4]);      //Setting the gate Counters for HLT 6
-	numGates[4]=0; //reset counter
-	temp_PTBBR_word.setPrevTimestamp(prevHLT06TS);
-	prevHLT06TS = t->timestamp;
       }
 
       if(t -> IsTrigger(16)){
