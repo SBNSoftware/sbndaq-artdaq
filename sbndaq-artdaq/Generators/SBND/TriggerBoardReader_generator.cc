@@ -414,7 +414,6 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	numGates[1]++;
 	numGates[4]++;
 	numGates[5]++;
-	numGates[7]++;
 	TRACE(TLVL_INFO, "Beam acceptance window (LLT 30) started at time: %lu", t->timestamp);
 	if (isVerbose) TRACE(TLVL_INFO, "LLT 30 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates[0]: %d , numGates[1]: %d , numGates[4]: %d ", t->timestamp, numGates[0], numGates[1], numGates[4]); 
       }
@@ -456,6 +455,7 @@ artdaq::Fragment* sbndaq::TriggerBoardReader::CreateFragment() {
 	numGates[2]++;
 	numGates[3]++;
 	numGates[6]++;
+	numGates[7]++;
 	numGates[8]++;
 	if (isVerbose) TRACE(TLVL_INFO, "HLT 27 occurred at timestamp: %lu and incrementing number of gates by 1 so numGates[2]: %d , numGates[3]: %d", t->timestamp, numGates[2], numGates[3]);
       }
