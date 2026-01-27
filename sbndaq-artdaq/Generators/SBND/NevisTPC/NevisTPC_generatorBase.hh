@@ -83,6 +83,9 @@ protected:
   int32_t _this_event;
   int32_t _subrun_event_0;
 
+  uint32_t last_last_wordcount;
+  uint32_t last_wordcount;
+
   std::map<uint32_t, uint32_t> rollCounters;
   std::map<uint32_t, uint32_t> prevFrames;
 

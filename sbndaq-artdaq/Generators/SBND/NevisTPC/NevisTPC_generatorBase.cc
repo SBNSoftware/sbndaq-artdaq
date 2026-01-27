@@ -50,6 +50,9 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   current_subrun_ = 0;
   events_seen_ = 0;
 
+  last_last_wordcount = 0;
+  last_wordcount = 0;
+
   // initialize event and frame counting                                                                                                       
   _subrun_event_0 = -1;
   _this_event = -1;
@@ -263,7 +266,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
       pos += snprintf(line2 + pos, sizeof(line2) - pos, "%04X ", word); 
     } 
     TRACE(TERROR, "Next words: %s", line2);
-
+    TRACE(TERROR, "Last wordcount: %u (0x%x), last last wordcount: %u (0x%x)", last_wordcount, last_wordcount,
+      last_last_wordcount, last_last_wordcount);
+      
     throw std::runtime_error(line);
     return false;
   }
@@ -316,6 +321,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     //TRACE(TFILLFRAG,"Not enough data for expected size %lu. Return and try again.",expected_size);
     return false;
   }
+
+  last_last_wordcount = last_wordcount;
+  last_wordcount = header->getADCWordCount();
 
   // First, let's figure out how big our data packet actually is since we can't trust the FEM
   for(int i = 0; i < wiggle_room * 2; i++){
