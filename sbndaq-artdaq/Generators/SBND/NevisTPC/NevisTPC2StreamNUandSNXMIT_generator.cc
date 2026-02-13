@@ -318,10 +318,10 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   //unsigned wordsRead = bytesRead * sizeof(char) / sizeof(uint16_t);
   TLOG(TGETDATA) << "Number of bytes read:" << int(bytesRead) ;
 
-  if (bytesRead == fChunkSize){
-    ++N_NUDMAs;
-    TLOG(TLVL_INFO)  << "Number of NU DMAs: " << N_NUDMAs ;
-  }
+  //if (bytesRead == fChunkSize){
+  //  ++N_NUDMAs;
+  //  TLOG(TLVL_INFO)  << "Number of NU DMAs: " << N_NUDMAs ;
+  //}
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::micro> duration_us = end - start;
@@ -372,10 +372,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
  if (bytesRead <=0) return false;
 
-  if (bytesRead == fSNChunkSize){
-    ++N_SNDMAs;
-    TLOG(TLVL_INFO)  << "Number of SN DMAs: " << N_SNDMAs ;
-  }
+  //if (bytesRead == fSNChunkSize){
+  //  ++N_SNDMAs;
+  //  TLOG(TLVL_INFO)  << "Number of SN DMAs: " << N_SNDMAs ;
+  //}
 
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
