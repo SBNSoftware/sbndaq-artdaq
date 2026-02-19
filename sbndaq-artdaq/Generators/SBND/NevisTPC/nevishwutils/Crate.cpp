@@ -302,6 +302,8 @@ void Crate::runSNStream(fhicl::ParameterSet const& _p){
                        
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
     // Setup XMIT reader for SN stream
+   // getXMITReader("NU")->configureReader();
+   // getXMITReader("NU")->initializePCIeCard();
     getXMITReader("SN")->configureReader();
     getXMITReader("SN")->initializePCIeCard();
                                            
@@ -310,6 +312,13 @@ void Crate::runSNStream(fhicl::ParameterSet const& _p){
     getControllerModule()->testOn();
     getControllerModule()->runOff();
     getControllerModule()->testOff();
+
+
+    if(hasTrigger){
+      getTriggerModule()->runOnSyncOff();
+      getTriggerModule()->disableTriggers(false);
+      getTriggerModule()->setDeadtimeSize(100);//0x59); //100);
+    }
                                                                    
                                                                        
     // Load xmit firmware
@@ -328,20 +337,27 @@ void Crate::runSNStream(fhicl::ParameterSet const& _p){
          }
     
     // Setup tx mode registers (this is done twice for some reason...)
+    //getXMITReader("NU")->setupTXModeRegister();
     getXMITReader("SN")->setupTXModeRegister();
+
+   // Config trigger module
+    if(hasTrigger)
+       getTriggerModule()->configureTrigger( _p );
                                                                                                            				                      
     
     // set up link
     linkSetup();
                                                                                                            				                                  
     // Disable triggered stream & Enable continuous stream
-    getXMITModule()->enableNUChanEvents(0);
+   // getXMITModule()->enableNUChanEvents(0);
     getXMITModule()->enableSNChanEvents(1);
                                                                                                            				                                                  
     // setup tx mode registers (again, I know)
+   // getXMITReader("NU")->setupTXModeRegister();
     getXMITReader("SN")->setupTXModeRegister();
     getControllerModule()->setupTXModeRegister();
-                                                                                                           				                                                                  
+    
+    getTriggerModule()->enableTriggers();                                                                                                       				                                                                  
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is finished!"; 
    }
 

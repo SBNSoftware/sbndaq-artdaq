@@ -86,9 +86,9 @@ namespace nevistpc {
     dma.bufferSize = _dma_settings->dma_buffer_size;
     dma.readSize = _dma_settings->dma_buffer_size;
     
-    TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": buffer allocation lower address = " 
+    TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "_dma@" << &dma  << ": buffer allocation lower address = " 
 	    << hex( 8, ( dma.pDMABuffer->Page->pPhysicalAddr & 0xffffffff ) ) ;
-    TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": buffer allocation higher address = " 
+    TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "_dma@" << &dma  << ": buffer allocation higher address = " 
 	    << hex( 8, ( ( dma.pDMABuffer->Page->pPhysicalAddr >> 32 ) & 0xffffffff ) ) ;
     return true;
   }
@@ -239,6 +239,16 @@ namespace nevistpc {
     _dma2.readSize = ( size_t ) size;
     
     dma_buffer& dma = ( ( _loopNumber % 2 ) == 0 ) ? _dma1 : _dma2;
+
+//    if (_stream_name == "sn_xmit_reader") {
+  //    const char* which = ((_loopNumber % 2) == 0) ? "dma1(r1)" : "dma2(r2)";
+    //  TLOG(TLVL_INFO) << "DEBUG " << _stream_name
+      //                << " loop=" << _loopNumber
+        //              << " using=" << which
+          //            << " r_cs_reg=0x" << std::hex << dma.r_cs_reg << std::dec;
+   // }
+
+
   
     if ( _isFirstEverDMA ) {
 
@@ -268,7 +278,17 @@ namespace nevistpc {
     std::streamsize readSize = -1;
   
 
-    if ( dmaWaitWithTimeout ( _dma_settings->dma_max_polling_time_microseconds ) == dma_completion_status::timeout ) {
+    auto st = dmaWaitWithTimeout(_dma_settings->dma_max_polling_time_microseconds);
+
+   // const char* which = ((_loopNumber % 2) == 0) ? "dma1(r1)" : "dma2(r2)";
+   // if (_stream_name == "sn_xmit_reader") {
+     //   TLOG(TLVL_INFO) << "DEBUG " << _stream_name
+       //                 << " using=" << which
+        //                << " wait=" << (st == dma_completion_status::complete ? "complete" : "timeout");
+       // }
+
+    if (st == dma_completion_status::timeout) {
+  //  if ( dmaWaitWithTimeout ( _dma_settings->dma_max_polling_time_microseconds ) == dma_completion_status::timeout ) {
     
       UINT64 dmaReadback {0};
       nevisPCIeCard->readAddr64 ( dma_detail::cs_bar, dma.r_cs_reg, dmaReadback );
@@ -303,6 +323,15 @@ namespace nevistpc {
     readSize = dma.readSize;
 
     ::memcpy ( buffer, ( char* ) dma.pUserModeBuffer, readSize );
+    
+   // if (_stream_name == "sn_xmit_reader" && (_loopNumber % 200 == 0)) {
+     //  uint16_t w0 = *reinterpret_cast<uint16_t*>(buffer);
+     //  uint16_t w1 = *(reinterpret_cast<uint16_t*>(buffer) + 1);
+      // TLOG(TLVL_INFO) << "DEBUG " << _stream_name
+       //                << " using=" << which
+        //               << " first_words=0x" << std::hex << w0 << " 0x" << w1 << std::dec;
+      // }
+
   
     if(_do_timing) {
       gettimeofday(&t2,NULL);

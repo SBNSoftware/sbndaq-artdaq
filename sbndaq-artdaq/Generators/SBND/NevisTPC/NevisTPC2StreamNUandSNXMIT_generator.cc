@@ -7,6 +7,8 @@
 #include <chrono>
 #include <ctime>
 #include <zmq.hpp>
+#include <fstream>
+#include <unistd.h>
 
 void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   TLOG(TLVL_INFO) << "ConfigureStart";
@@ -29,7 +31,9 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   SNCircularBuffer_ = CircularBuffer(1e9/sizeof(uint16_t)); // to do: define in fcl
   SNCircularBuffer_.Init();
   SNBuffer_ = new uint16_t[fSNChunkSize];
-
+  N_SNDMAs = 0;
+  N_NUDMAs = 0;
+  N_SNWrites = 0;
   SNDMATransferCnt_ = 0;
   SNBinSubFileNum_  = -1;
   t = time(0);
@@ -72,21 +76,21 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   // Run configuration recipe
   if( fCALIBFreq > 0 && fControllerTriggerFreq <= 0 ){
  
-     if (fDisableNUStream) {
-      TLOG(TLVL_ERROR) << "DisableNUStream=true with CALIBTriggerFrequency>0 is not supported. "
-                     << "Either enable NU or disable CALIB trigger." << TLOG_ENDL;
-      std::exit(EXIT_FAILURE);
-     }
+    // if (fDisableNUStream) {
+     // TLOG(TLVL_ERROR) << "DisableNUStream=true with CALIBTriggerFrequency>0 is not supported. "
+      //                 << "Either enable NU or disable CALIB trigger." << TLOG_ENDL;
+     //  std::exit(EXIT_FAILURE);
+     // }
 
 fSNReadout? fCrate->runCalib2Stream( ps_ ) : fCrate->runCalib( ps_ );
 }  else if( fControllerTriggerFreq > 0 && fCALIBFreq <= 0 ){
 
-     if (fDisableNUStream) {
+    // if (fDisableNUStream) {
        // ControllerTrigger sends NU triggers, so SN-only doesn't apply here
-       TLOG(TLVL_ERROR) << "DisableNUStream=true with ControllerTriggerFrequency>0 is not supported. "
-                        << "Controller triggers are NU-trigger based." << TLOG_ENDL;
-       std::exit(EXIT_FAILURE);
-      }
+      //  TLOG(TLVL_ERROR) << "DisableNUStream=true with ControllerTriggerFrequency>0 is not supported. "
+        //                 << "Controller triggers are NU-trigger based." << TLOG_ENDL;
+    //  std::exit(EXIT_FAILURE);
+    //  }
 
       fCrate->runControllerTrigger2Stream ( ps_ ); // implement NU-only stream if needed
 
@@ -97,15 +101,15 @@ fSNReadout? fCrate->runCalib2Stream( ps_ ) : fCrate->runCalib( ps_ );
     std::exit (EXIT_FAILURE);
   } else{
 
-      if (fDisableNUStream) {
-         if (!fSNReadout) {
-            TLOG(TLVL_ERROR) << "DisableNUStream=true but DoSNReadout=false. No stream enabled. Exit..." << TLOG_ENDL;
-            std::exit(EXIT_FAILURE);
-         }
-         fCrate->runSNStream( ps_ );
-      } else {
+    //  if (fDisableNUStream) {
+      //   if (!fSNReadout) {
+        //    TLOG(TLVL_ERROR) << "DisableNUStream=true but DoSNReadout=false. No stream enabled. Exit..." << TLOG_ENDL;
+          //  std::exit(EXIT_FAILURE);
+         // }
+       //  fCrate->runSNStream( ps_ );
+       // } else {
        fSNReadout? fCrate->run2Stream( ps_ ) : fCrate->runNUStream( ps_ );
-      }
+      // }
    }
 
   // To do: nevistpc::Crate should have a general runConfiguration function
@@ -359,6 +363,17 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   
   TLOG(TGETDATA)<< "GetSNData";
+  auto start = std::chrono::high_resolution_clock::now();
+
+  static std::ofstream dbg;
+  static bool dbg_init = false;
+  if (!dbg_init) {
+    dbg.open("/home/sbnd/DAQ_SPACK_DevAreas/DAQ_2026-01-23_SCHUNG_v1_10_08/DAQInterface/sn_getsndata_debug.log", std::ios::out | std::ios::app);
+    dbg_init = true;
+    dbg << "=== GetSNData debug start, pid=" << getpid() << " ===\n";
+    dbg.flush();
+   }
+
 
   // Just for tests
   // Taken from NevisTPCFile_generator and adapted to use an XMITReader
@@ -366,10 +381,52 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   // uint16_t* SNBuffer_ = new uint16_t[fSNChunkSize];
 
   std::streamsize bytesRead = fSNXMITReader->readsome(reinterpret_cast<char*>(&SNDMABuffer_[0]), fSNChunkSize);
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> duration_us = end - start;
+
+  if (bytesRead <=0) return false;
+
+  if (bytesRead == fSNChunkSize){
+    ++N_SNDMAs;
+    dbg << "Number of SN DMAs: " << N_SNDMAs ;
+    dbg << "\n";
+  }
+
+  
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
+  
 
   TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
+
+
+  dbg << "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
+  dbg << "\n";
+
+  total_words_inserted += n_words;
+  dbg << "Inserted " << n_words << " words. Total inserted: " << total_words_inserted;
+  dbg << "\n";
+  auto end1 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> duration_us1 = end1 - end;
+  dbg << "SN DMA read time (us): " << duration_us.count();
+  dbg << "SN Buffer Write time (us): "  << duration_us1.count();
+  dbg << "\n";
+
+
+  dbg << "SNCircularBuffer_.buffer: " << SNCircularBuffer_.buffer.size() ; 
+  //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
+  //    //delete[] SNBuffer_;
+  //      //memset(SNBuffer_, 0, fSNChunkSize*sizeof(uint16_t)); // avoid clearing?
+  //  dbg << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer.size() ; 
+  //        if(metricMan != nullptr) {
+  //          //send SN metrics
+  //            metricMan->sendMetric(
+  //                "SN_DMA_Count",
+  //                    N_SNDMAs,
+  //                        "SN_dma_count", 11, artdaq::MetricMode::LastPoint);    
+  //
+  dbg << "\n";                        
+  dbg.flush();
 
   //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
   //delete[] SNBuffer_;
@@ -380,7 +437,20 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
-  if( SNCircularBuffer_.buffer.size() < fSNChunkSize ) return false;
+  auto start = std::chrono::high_resolution_clock::now();  
+
+
+  static std::ofstream wdbg;
+  static bool wdbg_init = false;
+  if (!wdbg_init) {
+    wdbg.open("/home/sbnd/DAQ_SPACK_DevAreas/DAQ_2026-01-23_SCHUNG_v1_10_08/DAQInterface/sn_writesndata_debug.log", std::ios::out | std::ios::app);
+    wdbg_init = true;
+    wdbg << "=== WriteSNData debug start, pid=" << getpid() << " ===\n";
+    wdbg.flush();
+   } 
+
+
+  if( SNCircularBuffer_.buffer.size() < fSNChunkSize/ sizeof(uint16_t) ) return false;
 
 // add for subfile
   if (SNDMATransferCnt_ == 1000) SNDMATransferCnt_ = 0;
@@ -404,16 +474,36 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
     }
       }
 
-  std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + fSNChunkSize, SNBuffer_);
 
-  binFileSN.write((char*)SNBuffer_, fSNChunkSize );
+ // auto end = std::chrono::high_resolution_clock::now();
+ // std::chrono::duration<double, std::micro> duration_us = end - start;
+ // wdbg <<  "SN buffer to disk write time (us): " << duration_us.count;
+ // wdbg << "\n";
+
+ // std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + fSNChunkSize, SNBuffer_);
+  std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + (fSNChunkSize / sizeof(uint16_t)), SNBuffer_);
+
+
+  binFileSN.write(reinterpret_cast<char*>(SNBuffer_), fSNChunkSize );
+  ++N_SNWrites;
+  ++SNDMATransferCnt_;
 
   binFileSN.flush();
 
-  ++SNDMATransferCnt_;
+  size_t n_words_written = fSNChunkSize / sizeof(uint16_t);  
+  total_words_written += n_words_written;  
 
-  size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize);
-  TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize << " . SN Buffer occupancy now " << new_buffer_size;
+  wdbg << "Wrote " << n_words_written << " words (" << fSNChunkSize << " bytes) to binary file. "                                            
+		    << "Total written: " << total_words_written;
+  wdbg << "\n";
+
+
+  size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize/sizeof(uint16_t));
+  TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;
+
+  wdbg << "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;
+  wdbg << "\n"; 
+  wdbg.flush();
 
   return true;
 }
