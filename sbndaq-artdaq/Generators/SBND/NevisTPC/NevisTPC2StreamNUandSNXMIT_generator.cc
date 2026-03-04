@@ -363,7 +363,7 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   
   TLOG(TGETDATA)<< "GetSNData";
-  auto start = std::chrono::high_resolution_clock::now();
+  // auto start = std::chrono::high_resolution_clock::now();
 
   static std::ofstream dbg;
   static bool dbg_init = false;
@@ -373,6 +373,8 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
     dbg << "=== GetSNData debug start, pid=" << getpid() << " ===\n";
     dbg.flush();
    }
+
+  auto start = std::chrono::high_resolution_clock::now();
 
 
   // Just for tests
@@ -386,26 +388,26 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
   if (bytesRead <=0) return false;
 
-  if (bytesRead == fSNChunkSize){
-    ++N_SNDMAs;
-    dbg << "Number of SN DMAs: " << N_SNDMAs ;
-    dbg << "\n";
-  }
+//  if (bytesRead == fSNChunkSize){
+  //  ++N_SNDMAs;
+   // dbg << "Number of SN DMAs: " << N_SNDMAs ;
+   // dbg << "\n";
+ // }
 
   
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
   
 
-  TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
+  //TLOG(TGETDATA)<< "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
 
 
-  dbg << "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
-  dbg << "\n";
+ // dbg << "Successfully inserted " << n_words << " . SN Buffer occupancy now " << new_buffer_size;
+ // dbg << "\n";
 
-  total_words_inserted += n_words;
-  dbg << "Inserted " << n_words << " words. Total inserted: " << total_words_inserted;
-  dbg << "\n";
+ // total_words_inserted += n_words;
+ // dbg << "Inserted " << n_words << " words. Total inserted: " << total_words_inserted;
+ // dbg << "\n";
   auto end1 = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::micro> duration_us1 = end1 - end;
   dbg << "SN DMA read time (us): " << duration_us.count();
@@ -413,7 +415,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   dbg << "\n";
 
 
-  dbg << "SNCircularBuffer_.buffer: " << SNCircularBuffer_.buffer.size() ; 
+ // dbg << "SNCircularBuffer_.buffer: " << SNCircularBuffer_.buffer.size() ; 
   //  if( fDumpBinary ) binFileSN.write( (char*)(&SNDMABuffer_[0]), fSNChunkSize );
   //    //delete[] SNBuffer_;
   //      //memset(SNBuffer_, 0, fSNChunkSize*sizeof(uint16_t)); // avoid clearing?
@@ -425,6 +427,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   //                    N_SNDMAs,
   //                        "SN_dma_count", 11, artdaq::MetricMode::LastPoint);    
   //
+  dbg << "-----end of one GetData-----";
   dbg << "\n";                        
   dbg.flush();
 
@@ -437,7 +440,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
-  auto start = std::chrono::high_resolution_clock::now();  
+ // auto start = std::chrono::high_resolution_clock::now();  
 
 
   static std::ofstream wdbg;
@@ -447,7 +450,9 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
     wdbg_init = true;
     wdbg << "=== WriteSNData debug start, pid=" << getpid() << " ===\n";
     wdbg.flush();
-   } 
+   }
+
+  auto start = std::chrono::high_resolution_clock::now(); 
 
 
   if( SNCircularBuffer_.buffer.size() < fSNChunkSize/ sizeof(uint16_t) ) return false;
@@ -475,10 +480,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
       }
 
 
- // auto end = std::chrono::high_resolution_clock::now();
- // std::chrono::duration<double, std::micro> duration_us = end - start;
- // wdbg <<  "SN buffer to disk write time (us): " << duration_us.count;
- // wdbg << "\n";
+   //auto end = std::chrono::high_resolution_clock::now();
+   //std::chrono::duration<double, std::micro> duration_us = end - start;
+   //wdbg <<  "SN buffer to disk write time (us): " << duration_us.count();
+   //wdbg << "\n";
 
  // std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + fSNChunkSize, SNBuffer_);
   std::copy(SNCircularBuffer_.buffer.begin(), SNCircularBuffer_.buffer.begin() + (fSNChunkSize / sizeof(uint16_t)), SNBuffer_);
@@ -493,15 +498,19 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
   size_t n_words_written = fSNChunkSize / sizeof(uint16_t);  
   total_words_written += n_words_written;  
 
-  wdbg << "Wrote " << n_words_written << " words (" << fSNChunkSize << " bytes) to binary file. "                                            
-		    << "Total written: " << total_words_written;
-  wdbg << "\n";
+  //wdbg << "Wrote " << n_words_written << " words (" << fSNChunkSize << " bytes) to binary file. "                                            
+//		    << "Total written: " << total_words_written;
+ // wdbg << "\n";
 
 
   size_t new_buffer_size = SNCircularBuffer_.Erase(fSNChunkSize/sizeof(uint16_t));
-  TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;
+  // TLOG(TFILLFRAG)<< "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;
 
-  wdbg << "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;
+  //wdbg << "Successfully erased " << fSNChunkSize/sizeof(uint16_t) << " . SN Buffer occupancy now " << new_buffer_size;
+  //wdbg << "\n";
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::micro> duration_us = end - start;
+  wdbg <<  "SN buffer to disk write time (us): " << duration_us.count();
   wdbg << "\n"; 
   wdbg.flush();
 

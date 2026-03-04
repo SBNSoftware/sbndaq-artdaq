@@ -171,6 +171,11 @@ namespace nevistpc {
     struct timeval time_start, time_now;
     
     gettimeofday(&time_start,NULL);
+
+    static uint64_t n_complete = 0;
+    static uint64_t sum_wait_us = 0;
+    static uint64_t max_wait_us = 0;
+
     while(1){
       
       //check for timeout
@@ -185,8 +190,29 @@ namespace nevistpc {
       nevisPCIeCard->readAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, dmaStatus );
       
       if ( ( dmaStatus & dma_detail::dma_in_progress ) == 0 ) {
+
+     // ---start of debug
+        n_complete++;
+    sum_wait_us += diff_time;
+
+    if ((uint64_t)diff_time > max_wait_us)
+        max_wait_us = diff_time;
+
+    if (n_complete % 10000 == 0) {
+        double avg = (double)sum_wait_us / (double)n_complete;
+
+        //TLOG(TLVL_INFO)
+        //    << "DMAwait(" << _stream_name << ") "
+        //    << "avg_us=" << avg
+        //    << " max_us=" << max_wait_us
+        //    << " last_us=" << diff_time
+        //    << " count=" << n_complete;
+    }
+    // ----end of debug
+
 	return dma_completion_status::complete;
       }//end if dma complete
+      usleep(5);
     }//end infinite while
     
   }
@@ -225,6 +251,11 @@ namespace nevistpc {
   {
     //    std::cout << "READSOME FUNCTION CALLED!!!!!!!!!!!!" << std::endl;
     //    exit(0);
+    
+    // --- start of debug
+   // struct timeval rs_start, rs_end;
+   // gettimeofday(&rs_start, NULL);
+    // ---end of debug
 
     static unsigned long int _loopNumber = 0;
 
@@ -268,12 +299,12 @@ namespace nevistpc {
     setupTransceivers ( dma );
     dmaStart ( dma );
 
-    if(_do_timing) {
+   // if(_do_timing) {
       gettimeofday(&t2,NULL);
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 1 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-      }
+    //  }
 
     std::streamsize readSize = -1;
   
@@ -304,21 +335,21 @@ namespace nevistpc {
       return 0;
     }
   
-    if(_do_timing) {
+   // if(_do_timing) {
       gettimeofday(&t2,NULL);
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 2 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-    }
+   // }
   
     ::WDC_DMASyncIo ( dma.pDMABuffer );
   
-    if(_do_timing) {
+   // if(_do_timing) {
       gettimeofday(&t2,NULL);
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 3 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-    }
+   // }
 
     readSize = dma.readSize;
 
@@ -333,15 +364,17 @@ namespace nevistpc {
       // }
 
   
-    if(_do_timing) {
+   // if(_do_timing) {
       gettimeofday(&t2,NULL);
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 4 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-    }
+   // }
 
     _loopNumber++;
     //    exit(0);
+
+
     return readSize;
 
   }
