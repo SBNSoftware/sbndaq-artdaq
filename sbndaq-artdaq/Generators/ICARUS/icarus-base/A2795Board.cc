@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "CAENComm.h"
-
+#include "sbndaq-artdaq/Generators/Common/CAENDecoder.hh"
 #include "artdaq/DAQdata/Globals.hh"
 
 #define WRITE 1
@@ -16,7 +16,7 @@
 
 #define HOST 1
 
-A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr)
+A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr), busNbr(bus)
 {
 
 #ifndef _simulate_
@@ -139,32 +139,41 @@ int
 A2795Board::isDataRdy()
 {
 
-     int timeoutCounter = 250000; // Timeout waiting for a trigger
-     int errTimeoutCounter = 500000; // Timeout for acquisition completion
-     //int errTimeoutCounter = 1; // Timeout for acquisition completion
-     //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+11,"A2795Board::isDataRdy(): BoardId %d BoardNbr %d",boardId, boardNbr);
-    //#endif
+  int timeoutCounter = 250000; // Timeout waiting for a trigger
+  int errTimeoutCounter = 500000; // Timeout for acquisition completion
+  //int errTimeoutCounter = 1; // Timeout for acquisition completion
+  //#ifdef _dbg_
+  TRACEN("A2795Board.cc",TLVL_DEBUG+11,"A2795Board::isDataRdy(): BoardId %d BoardNbr %d",boardId, boardNbr);
+  //#endif
 
-        int status;
-        bool done=false;
+  int status;
+  bool done=false;
 
 
-	while (!done && errTimeoutCounter--)
+  while (!done && errTimeoutCounter--)
+    {
+      //	AcqrsD1_acqDone(boardId, &done); // Poll for the end of the acquisition
+      //      Acqrs_logicDeviceIO(boardId, "Block1Dev1", 69, 1, &regValue, READ, 0);
+      int ret = CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*) &status);
+
+      // Printing out error on comunication
+      if (ret != CAENComm_Success)
 	{
-	//	AcqrsD1_acqDone(boardId, &done); // Poll for the end of the acquisition
-        //      Acqrs_logicDeviceIO(boardId, "Block1Dev1", 69, 1, &regValue, READ, 0);
-             CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*) &status);
-             TRACEN("A2795Board.cc",TLVL_DEBUG+12, "A2795Board::isDataRdy(): Status: %x", status);
-             done=(status&STATUS_DRDY);  //has data bit 4 Status Reg
-		if (!timeoutCounter--) // Trigger timeout occured
-		{
-			TRACEN("A2795Board.cc",TLVL_DEBUG+13,"A2795Board::isDataRdy(): Slow trigger...");
-                       vetoOff();
-		       //AcqrsD1_forceTrig(boardId); // Force a 'manual' (or 'software') trigger
-                }
+	  char msgBuffer[256];
+	  CAENComm_DecodeError(ret, msgBuffer);
+	  TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::isDataRdy(): On bus %d boardId %d throw error %s", busNbr, boardId, msgBuffer);
 	}
-	return done;
+      
+      TRACEN("A2795Board.cc",TLVL_DEBUG+12, "A2795Board::isDataRdy(): Status: %x", status);
+      done=(status&STATUS_DRDY);  //has data bit 4 Status Reg
+      if (!timeoutCounter--) // Trigger timeout occured
+	{
+	  TRACEN("A2795Board.cc",TLVL_DEBUG+13,"A2795Board::isDataRdy(): Slow trigger...");
+	  vetoOff();
+	  //AcqrsD1_forceTrig(boardId); // Force a 'manual' (or 'software') trigger
+	}
+    }
+  return done;
 }
 
 int A2795Board::Status()
@@ -192,7 +201,6 @@ A2795Board::ArmTrigger()
 
   return 0;
 }
-
 int
 A2795Board::fillHeader(DataTile* buf)
 {
@@ -224,57 +232,61 @@ A2795Board::getData(int channel,char* buf)
   (void)channel;
 
   //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+17,"A2795Board::getData(): wait a second...");
-    //#endif
+  TRACEN("A2795Board.cc",TLVL_DEBUG+17,"A2795Board::getData(): wait a second...");
+  //#endif
 
   // ### Readout the data ###
-    //int status;
-    int ret;
-    //int xco,ii,jj,totwords;
-    //int regValue,
-    int rValue[950*1024];
-    //char *mwaveform=(char *)buf;
+  //int status;
+  int ret;
+  //int xco,ii,jj,totwords;
+  //int regValue,
+  int rValue[950*1024];
+  //char *mwaveform=(char *)buf;
   int nw;
 
-     //  totwords=nSamples/4;
+  //  totwords=nSamples/4;
 
   TRACEN("A2795Board.cc",TLVL_DEBUG+18,"Before BLT Read call: %d, %d, %d",bdhandle, A_OutputBuffer,BUFFER_SIZE);
 
-   ret = CAENComm_BLTRead(bdhandle, A_OutputBuffer,(uint32_t*) buf, BUFFER_SIZE, &nw);
-   if ((ret != CAENComm_Success) && (ret != CAENComm_Terminated)){
-                TRACEN("A2795Board.cc",TLVL_DEBUG+19,"BLTReadCycle Error on Module (ret = %d)", ret);
-   }
+  ret = CAENComm_BLTRead(bdhandle, A_OutputBuffer,(uint32_t*) buf, BUFFER_SIZE, &nw);
+
+  if ((ret != CAENComm_Success) || (ret != CAENComm_Terminate))
+    {
+      char msgBuffer[256];
+      CAENComm_DecodeError(ret, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::getData(): On bus %d boardId %d throw error %s", busNbr, boardId, msgBuffer);
+    }
  
   // TRACEN("A2795Board.cc",20,"After BLT Read call.");
   // isDataRdy();
 
 
-for (int ii=0;ii<10;ii++)
-     TRACEN("A2795Board.cc",TLVL_DEBUG+20,"%d ",rValue[ii]);
+  for (int ii=0;ii<10;ii++)
+    TRACEN("A2795Board.cc",TLVL_DEBUG+20,"%d ",rValue[ii]);
  
- TRACEN("A2795Board.cc",TLVL_DEBUG+21,"start decoding nw %d Boardid %d",nw,boardId);
+  TRACEN("A2795Board.cc",TLVL_DEBUG+21,"start decoding nw %d Boardid %d",nw,boardId);
 
-/*  for (ii=0;ii<(nSamples/16); ii++) {
-        for (jj=3;jj>=0;jj--)
-        {
-          unsigned char samp=((rValue[jj+(ii*4)]&0xff000000)>>24)&0xff;
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-          samp=(rValue[jj+(ii*4)]&0xff0000)>>16;
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-          samp=(rValue[jj+(ii*4)]&0xff00)>>8;
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-          samp=(rValue[jj+(ii*4)]&0xff);
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-        }
+  /*  for (ii=0;ii<(nSamples/16); ii++) {
+      for (jj=3;jj>=0;jj--)
+      {
+      unsigned char samp=((rValue[jj+(ii*4)]&0xff000000)>>24)&0xff;
+      mwaveform[xco++]=samp-127;
+      //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
+      samp=(rValue[jj+(ii*4)]&0xff0000)>>16;
+      mwaveform[xco++]=samp-127;
+      //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
+      samp=(rValue[jj+(ii*4)]&0xff00)>>8;
+      mwaveform[xco++]=samp-127;
+      //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
+      samp=(rValue[jj+(ii*4)]&0xff);
+      mwaveform[xco++]=samp-127;
+      //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
+      }
 
-  }
+      }
 
-*/
- return nw*4;
+  */
+  return nw*4;
 
 }
 
