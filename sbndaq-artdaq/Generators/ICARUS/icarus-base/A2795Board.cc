@@ -269,7 +269,7 @@ int A2795Board::getData(int channel, char *buf)
 
   ret = CAENComm_BLTRead(bdhandle, A_OutputBuffer, (uint32_t *)buf, BUFFER_SIZE, &nw);
 
-  if ((ret != CAENComm_Success) && (ret != CAENComm_Terminate))
+  if ((ret != CAENComm_Success) && (ret != CAENComm_Terminated))
   {
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
