@@ -136,10 +136,8 @@ int A2795Board::isDataRdy()
 
   int timeoutCounter = 250000;    // Timeout waiting for a trigger
   int errTimeoutCounter = 500000; // Timeout for acquisition completion
-  // int errTimeoutCounter = 1; // Timeout for acquisition completion
-  // #ifdef _dbg_
+
   TRACEN("A2795Board.cc", TLVL_DEBUG + 11, "A2795Board::isDataRdy(): BoardId %d BoardNbr %d", boardId, boardNbr);
-  // #endif
 
   int status;
   bool done = false;
@@ -163,9 +161,9 @@ int A2795Board::isDataRdy()
     {
       TRACEN("A2795Board.cc", TLVL_DEBUG + 13, "A2795Board::isDataRdy(): Slow trigger...");
       vetoOff();
-      // AcqrsD1_forceTrig(boardId); // Force a 'manual' (or 'software') trigger
     }
   }
+
   if (!done)
   {
     TRACEN("A2795Board.cc", TLVL_WARNING,
@@ -289,9 +287,8 @@ int A2795Board::getData(int channel, char *buf)
 
 // Writes to a register on the FPGA.
 // Input (param): int reg - register number
-// Input (param): int n - number of values to write
-// Input (param): int* buffer - pointer to the memory to read from.
-// Output (return): int - outcome of the operation. See the Acqiris manual for information.
+// Input (param): int value - value to write.
+// Output (return): int - outcome of the operation.
 int A2795Board::write(int reg, int value)
 {
   int ret = CAENComm_Write32(bdhandle, reg, value);
@@ -308,9 +305,8 @@ int A2795Board::write(int reg, int value)
 
 // Reads from a register on the FPGA.
 // Input (param): int reg - register number
-// Input (param): int n - number of values to read
 // Output (param): int* buffer - pointer to the memory area to write to.
-// Output (return): int - outcome of the operation. See the Acqiris manual for information.
+// Output (return): int - outcome of the operation.
 int A2795Board::read(int reg, int *value)
 {
   int ret = CAENComm_Read32(bdhandle, reg, (uint32_t *)value);
