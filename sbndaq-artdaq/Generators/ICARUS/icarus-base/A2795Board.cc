@@ -34,7 +34,7 @@ A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr), busNbr(b
   {
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
-    TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::A2795Board(): CAENComm_OpenDevice2 failed on link %d board %d: %s",
+    TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::A2795Board(): CAENComm_OpenDevice2 failed on link %d board %d: %s, retrying...",
            busNbr, boardNbr, msgBuffer);
     boardId = -1;
   }
