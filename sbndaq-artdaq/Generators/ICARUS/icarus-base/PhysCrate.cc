@@ -89,7 +89,7 @@ void PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> bo
         {
           TRACEN("PhysCrate.cc", TLVL_ERROR, "PhysCrate::initialize(): [frag=%d] Could not connect to board on link %d, node %d. Bail.",
              fragmentID_, nBus, nBoardInCrate);
-          throw cet::exception("PhysCrate") << "Could not connect to board " << nBoardInCrate << " on link " << nBus;
+          throw cet::exception("PhysCrate") << "[frag=" << fragmentID_ << "] Could not connect to board " << nBoardInCrate << " on link " << nBus;
         }
       }
       ++link;
