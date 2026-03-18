@@ -139,7 +139,7 @@ int A2795Board::isDataRdy()
 
   TRACEN("A2795Board.cc", TLVL_DEBUG + 11, "A2795Board::isDataRdy(): BoardId %d BoardNbr %d", boardId, boardNbr);
 
-  int status;
+  int status = 0;
   bool done = false;
 
   while (!done && errTimeoutCounter--)
@@ -153,20 +153,21 @@ int A2795Board::isDataRdy()
       CAENComm_DecodeError(ret, msgBuffer);
       TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::isDataRdy(): CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
              busNbr, boardNbr, msgBuffer);
+      status = 0; // can't read status, assume no data ready
     }
 
     TRACEN("A2795Board.cc", TLVL_DEBUG + 12, "A2795Board::isDataRdy(): Status: %x", status);
     done = (status & STATUS_DRDY); // has data bit 4 Status Reg
     if (!timeoutCounter--)         // Trigger timeout occured
     {
-      TRACEN("A2795Board.cc", TLVL_DEBUG + 13, "A2795Board::isDataRdy(): Slow trigger...");
+      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::isDataRdy(): Slow trigger or missing data on link %d board %d...", busNbr, boardNbr);
       vetoOff();
     }
   }
 
   if (!done)
   {
-    TRACEN("A2795Board.cc", TLVL_WARNING,
+    TRACEN("A2795Board.cc", TLVL_ERROR,
            "A2795Board::isDataRdy(): timeout waiting for data-ready on link %d board %d",
            busNbr, boardNbr);
   }
