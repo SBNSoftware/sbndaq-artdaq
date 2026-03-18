@@ -21,9 +21,10 @@ private:
     char * tilebuf;
     int presBoard;
     int mip;
+    uint32_t fragmentID_;
     std::vector< int > BoardIDs;
 public:
-    PhysCrate();
+    PhysCrate(uint32_t fragmentID);
     ~PhysCrate();
 
     void initialize( std::vector<int> busVec=std::vector<int>(),

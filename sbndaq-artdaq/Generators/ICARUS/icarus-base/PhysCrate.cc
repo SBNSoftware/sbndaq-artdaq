@@ -14,7 +14,7 @@
 #define kMaxBoardsonLink 5
 #define kMaxLinks 4
 
-PhysCrate::PhysCrate() {}
+PhysCrate::PhysCrate(uint32_t fragmentID) : fragmentID_(fragmentID) {}
 
 PhysCrate::~PhysCrate()
 {
@@ -44,7 +44,7 @@ void PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> bo
       {
         TRACEN("PhysCrate.cc", TLVL_INFO, "trying bus=%d,dev=%d", nBus, nDev);
 
-        boards[nBoards] = new A2795Board(nDev, nBus);
+        boards[nBoards] = new A2795Board(nDev, nBus, fragmentID_);
         boardId = boards[nBoards]->boardId;
         nDev++;
         if (boardId > -1)
@@ -68,7 +68,7 @@ void PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> bo
       {
         TRACEN("PhysCrate.cc", TLVL_INFO, "trying bus=%d,dev=%d", nBus, nBoardInCrate);
 
-        boards[nBoards] = new A2795Board(nBoardInCrate, nBus);
+        boards[nBoards] = new A2795Board(nBoardInCrate, nBus, fragmentID_);
         boardId = boards[nBoards]->boardId;
         if (boardId > -1)
         {
@@ -80,13 +80,15 @@ void PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> bo
           // if the counter hasn't reached zero, try again.
           // the only members which have been set at this point are the boards and boardId,
           // and they will get reset on the next loop, so no cleanup should be necessary
-          TRACEN("PhysCrate.cc", TLVL_WARNING, "PhysCrate::initialize(): Could not connect to board on link %d, node %d. Try %d more time(s)...", nBus, nBoardInCrate, countdown);
+          TRACEN("PhysCrate.cc", TLVL_WARNING, "PhysCrate::initialize(): [frag=%d] Could not connect to board on link %d, node %d. Try %d more time(s)...",
+             fragmentID_, nBus, nBoardInCrate, countdown);
           initialize(busVec, boardsinCrateVec, countdown - 1);
           return;
         }
         else
         {
-          TRACEN("PhysCrate.cc", TLVL_ERROR, "PhysCrate::initialize(): Could not connect to board on link %d, node %d. Bail.", nBus, nBoardInCrate);
+          TRACEN("PhysCrate.cc", TLVL_ERROR, "PhysCrate::initialize(): [frag=%d] Could not connect to board on link %d, node %d. Bail.",
+             fragmentID_, nBus, nBoardInCrate);
           throw cet::exception("PhysCrate") << "Could not connect to board " << nBoardInCrate << " on link " << nBus;
         }
       }
@@ -144,7 +146,7 @@ void PhysCrate::initialize()
   boards = new A2795Board *[nBoards];
   for (int i = 0; i < nBoards; i++)
   {
-    boards[i] = new A2795Board(i, 0);
+    boards[i] = new A2795Board(i, 0, fragmentID_);
     TRACEN("PhysCrate.cc", TLVL_DEBUG, "PhysCrate::initialize(): Created board.");
   }
   int size = sizeof(DataTile) + 2 * kMaxSize * nBoards;

@@ -15,7 +15,7 @@ class A2795Board
 private:
     int boardNbr;
     int serialNbr,busNbr,slotNbr;
-    char boardname[256];
+    uint32_t fragmentID_;
     int preSamples;
     int mThre;
     int bdhandle;
@@ -24,7 +24,7 @@ public:
 
     int boardId;
     int nSamples;
-    A2795Board ( int nbr, int bus );
+    A2795Board ( int nbr, int bus, uint32_t fragmentID );
     ~A2795Board();
     void configure ( BoardConf conf );
     void configureTrig ( TrigConf conf );

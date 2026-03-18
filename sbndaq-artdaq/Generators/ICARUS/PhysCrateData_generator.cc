@@ -248,7 +248,7 @@ void icarus::PhysCrateData::VetoOff(){
 }
 
 void icarus::PhysCrateData::InitializeHardware(){
-  physCr = std::make_unique<PhysCrate>();
+  physCr = std::make_unique<PhysCrate>(fragmentID_);
   try
   {
     physCr->initialize(pcieLinks_, boardsPerLink_);

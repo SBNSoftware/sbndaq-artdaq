@@ -16,7 +16,7 @@
 
 #define HOST 1
 
-A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr), busNbr(bus)
+A2795Board::A2795Board(int nbr, int bus, uint32_t fragmentID) : boardNbr(nbr), boardId(nbr), busNbr(bus), fragmentID_(fragmentID)
 {
 
 #ifndef _simulate_
@@ -34,8 +34,8 @@ A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr), busNbr(b
   {
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
-    TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::A2795Board(): CAENComm_OpenDevice2 failed on link %d board %d: %s, retrying...",
-           busNbr, boardNbr, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::A2795Board(): [frag=%d] CAENComm_OpenDevice2 failed on link %d board %d: %s, retrying...",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
     boardId = -1;
   }
   else
@@ -48,8 +48,8 @@ A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr), busNbr(b
     {
       char msgBuffer[256];
       CAENComm_DecodeError(ret, msgBuffer);
-      TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::A2795Board(): CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
-             busNbr, boardNbr, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::A2795Board(): [frag=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
     }
     TRACEN("A2795Board.cc", TLVL_DEBUG + 2, "board %d status %d", boardId, status);
 
@@ -76,16 +76,16 @@ A2795Board::~A2795Board()
     {
       char msgBuffer[256];
       CAENComm_DecodeError(ret, msgBuffer);
-      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::~A2795Board(): CAENComm_Write32(SIGNALS_TTLINK_EOR) failed on link %d board %d: %s",
-             busNbr, boardNbr, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::~A2795Board(): [frag=%d] CAENComm_Write32(SIGNALS_TTLINK_EOR) failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
     }
     ret = CAENComm_CloseDevice(bdhandle);
     if (ret != CAENComm_Success)
     {
       char msgBuffer[256];
       CAENComm_DecodeError(ret, msgBuffer);
-      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::~A2795Board(): CAENComm_CloseDevice failed on link %d board %d: %s",
-             busNbr, boardNbr, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::~A2795Board(): [frag=%d] CAENComm_CloseDevice failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
     }
   }
 }
@@ -151,8 +151,8 @@ int A2795Board::isDataRdy()
     {
       char msgBuffer[256];
       CAENComm_DecodeError(ret, msgBuffer);
-      TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::isDataRdy(): CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
-             busNbr, boardNbr, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::isDataRdy(): [frag=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
       status = 0; // can't read status, assume no data ready
     }
 
@@ -160,7 +160,7 @@ int A2795Board::isDataRdy()
     done = (status & STATUS_DRDY); // has data bit 4 Status Reg
     if (!timeoutCounter--)         // Trigger timeout occured
     {
-      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::isDataRdy(): Slow trigger or missing data on link %d board %d...", busNbr, boardNbr);
+      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::isDataRdy(): [frag=%d] Slow trigger or missing data on link %d board %d...", fragmentID_, busNbr, boardNbr);
       vetoOff();
     }
   }
@@ -168,8 +168,8 @@ int A2795Board::isDataRdy()
   if (!done)
   {
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::isDataRdy(): timeout waiting for data-ready on link %d board %d",
-           busNbr, boardNbr);
+           "A2795Board::isDataRdy(): [frag=%d] timeout waiting for data-ready on link %d board %d",
+           fragmentID_, busNbr, boardNbr);
   }
   return done;
 }
@@ -183,8 +183,8 @@ int A2795Board::Status()
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::Status(): CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
-           busNbr, boardNbr, msgBuffer);
+           "A2795Board::Status(): [frag=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
   }
   return status;
 }
@@ -198,8 +198,8 @@ uint32_t A2795Board::Temperatures()
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::Temperatures(): CAENComm_Read32(A_Temperature) failed on link %d board %d: %s",
-           busNbr, boardNbr, msgBuffer);
+           "A2795Board::Temperatures(): [frag=%d] CAENComm_Read32(A_Temperature) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
   }
   return status;
 }
@@ -224,8 +224,8 @@ int A2795Board::fillHeader(DataTile *buf)
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::fillHeader(): CAENComm_Read32(A_ControlReg) failed on link %d board %d: %s",
-           busNbr, boardNbr, msgBuffer);
+           "A2795Board::fillHeader(): [frag=%d] CAENComm_Read32(A_ControlReg) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
   }
   ret = CAENComm_Read32(bdhandle, A_StatusReg, (uint32_t *)&buf->Header.info2);
   if (ret != CAENComm_Success)
@@ -233,8 +233,8 @@ int A2795Board::fillHeader(DataTile *buf)
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::fillHeader(): CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
-           busNbr, boardNbr, msgBuffer);
+           "A2795Board::fillHeader(): [frag=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
   }
   ret = CAENComm_Read32(bdhandle, A_NevStored, (uint32_t *)&buf->Header.info3);
   if (ret != CAENComm_Success)
@@ -242,8 +242,8 @@ int A2795Board::fillHeader(DataTile *buf)
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::fillHeader(): CAENComm_Read32(A_NevStored) failed on link %d board %d: %s",
-           busNbr, boardNbr, msgBuffer);
+           "A2795Board::fillHeader(): [frag=%d] CAENComm_Read32(A_NevStored) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
   }
 
   TRACEN("A2795Board.cc", TLVL_DEBUG + 16, "Filled header...");
@@ -264,7 +264,7 @@ int A2795Board::getData(int channel, char *buf)
 
   // ### Readout the data ###
   int ret;
-  int nw;
+  int nw=0;
 
   TRACEN("A2795Board.cc", TLVL_DEBUG + 18, "Before BLT Read call: %d, %d, %d", bdhandle, A_OutputBuffer, BUFFER_SIZE);
 
@@ -275,8 +275,8 @@ int A2795Board::getData(int channel, char *buf)
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::getData(): CAENComm_BLTRead(A_OutputBuffer) failed on link %d board %d, nw=%d: %s",
-           busNbr, boardNbr, nw, msgBuffer);
+           "A2795Board::getData(): [frag=%d] CAENComm_BLTRead(A_OutputBuffer) failed on link %d board %d, nw=%d: %s",
+           fragmentID_, busNbr, boardNbr, nw, msgBuffer);
   }
 
   // TRACEN("A2795Board.cc",20,"After BLT Read call.");
@@ -298,8 +298,8 @@ int A2795Board::write(int reg, int value)
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::write(): CAENComm_Write32(reg=0x%x, val=0x%x) failed on link %d board %d: %s",
-           reg, value, busNbr, boardNbr, msgBuffer);
+           "A2795Board::write(): [frag=%d] CAENComm_Write32(reg=0x%x, val=0x%x) failed on link %d board %d: %s",
+           fragmentID_, reg, value, busNbr, boardNbr, msgBuffer);
   }
   return ret;
 }
@@ -316,8 +316,8 @@ int A2795Board::read(int reg, int *value)
     char msgBuffer[256];
     CAENComm_DecodeError(ret, msgBuffer);
     TRACEN("A2795Board.cc", TLVL_ERROR,
-           "A2795Board::read(): CAENComm_Read32(reg=0x%x) failed on link %d board %d: %s",
-           reg, busNbr, boardNbr, msgBuffer);
+           "A2795Board::read(): [frag=%d] CAENComm_Read32(reg=0x%x) failed on link %d board %d: %s",
+           fragmentID_, reg, busNbr, boardNbr, msgBuffer);
   }
   return ret;
 }
