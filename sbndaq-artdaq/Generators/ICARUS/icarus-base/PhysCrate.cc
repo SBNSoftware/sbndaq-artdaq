@@ -80,16 +80,16 @@ void PhysCrate::initialize(std::vector<int> busVec, std::vector<unsigned int> bo
           // if the counter hasn't reached zero, try again.
           // the only members which have been set at this point are the boards and boardId,
           // and they will get reset on the next loop, so no cleanup should be necessary
-          TRACEN("PhysCrate.cc", TLVL_WARNING, "PhysCrate::initialize(): [frag=%d] Could not connect to board on link %d, node %d. Try %d more time(s)...",
+          TRACEN("PhysCrate.cc", TLVL_WARNING, "PhysCrate::initialize(): [fragment id=%d] Could not connect to board on link %d, node %d. Try %d more time(s)...",
              fragmentID_, nBus, nBoardInCrate, countdown);
           initialize(busVec, boardsinCrateVec, countdown - 1);
           return;
         }
         else
         {
-          TRACEN("PhysCrate.cc", TLVL_ERROR, "PhysCrate::initialize(): [frag=%d] Could not connect to board on link %d, node %d. Bail.",
+          TRACEN("PhysCrate.cc", TLVL_ERROR, "PhysCrate::initialize(): [fragment id=%d] Could not connect to board on link %d, node %d. Bail.",
              fragmentID_, nBus, nBoardInCrate);
-          throw cet::exception("PhysCrate") << "[frag=" << fragmentID_ << "] Could not connect to board " << nBoardInCrate << " on link " << nBus;
+          throw cet::exception("PhysCrate") << "[fragment id=" << fragmentID_ << "] Could not connect to board " << nBoardInCrate << " on link " << nBus;
         }
       }
       ++link;
