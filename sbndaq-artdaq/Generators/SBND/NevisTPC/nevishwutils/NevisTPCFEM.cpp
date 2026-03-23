@@ -591,26 +591,27 @@ namespace nevistpc {
     
     
                 if (shape == "uB") {//signals movtivated by physics of uB                                                                                                                      
-                    if(chnl<64){
-           	unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 750;
-    		unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 100;
-          	if (smpl>=2 && smpl<10){
+                    if(chnl<4){
+           	//unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 750;
+    		//unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 100;
+          	unsigned int ped_val = 750;
+                unsigned int ch_val = 100;
+                if (smpl>=2 && smpl<10){
                    int signal = std::round(600*std::sin(PI/48*(smpl-1)));
                	   signall = ped_val + signal + noise;
-       	  	   TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: "  <<  ped_val;
-    	                TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: "  <<  ch_val;
-  
+       	  	   //TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: "  <<  ped_val;
+    	            //    TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: "  <<  ch_val;
            	  return (signall & 0xfff);
-                                 				  	  	            	  	}
-   	else{                               				  	  	            	  			  
+                }
+   	        else{                               				  	  	            	  			  
                 bkgg = ped_val + noise;  
-                          				  	  	            	  			  	  TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: " <<  ped_val;
-                   				  	  	            	  			  	            TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: " <<  ch_val;
-               				  	  	            	  			  	            	  return (bkgg & 0xfff); //baseline + noise ;                                                                                                                                        				  	  	           
-             }
-                 }}
+                //TLOG(TLVL_INFO) << "Check pedestal for channel:: " << chnl << " is: " <<  ped_val;
+                //TLOG(TLVL_INFO) << "Check threshold for channel:: " << chnl << " is: " <<  ch_val;
+                return (bkgg & 0xfff); //baseline + noise ;                                                                                                                                        				  	  	           
+                }
+               }}
               return (bkgg & 0xfff); 
-				  	  	            	  			  	            	  	            }
+	}
 
 
 
@@ -764,8 +765,8 @@ namespace nevistpc {
              std::string ped_key = "ped" + std::to_string(chan_it); 
              
              //default values
-             unsigned int ch_val= 100; 
-             unsigned int ped_val = 650;           
+             unsigned int ch_val= 150; 
+             unsigned int ped_val = 750;           
 
  
            /* // use this block to use threshold and baseline from config file

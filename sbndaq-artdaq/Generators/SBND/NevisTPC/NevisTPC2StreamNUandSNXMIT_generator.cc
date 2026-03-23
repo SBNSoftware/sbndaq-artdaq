@@ -22,6 +22,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout             = ps_.get<bool>("DoSNReadout", true);
   fDisableNUStream       = ps_.get<bool>("DisableNUStream", false);
+  fSNToDisk              = ps_.get<bool>("SNToDisk", true);
   fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
   fGPSTimeFreq           = ps_.get<double>("GPSTimeFrequency", -1);
   fGPSZMQPortNTB         = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
@@ -394,6 +395,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
    // dbg << "\n";
  // }
 
+  if(!fSNToDisk){
+     return true;
+  }
+
   
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
@@ -440,7 +445,16 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
- // auto start = std::chrono::high_resolution_clock::now();  
+ // auto start = std::chrono::high_resolution_clock::now();
+  if(!fSNToDisk){
+     if(SNCircularBuffer_.buffer.size() < fSNChunkSize / sizeof(uint16_t)) {
+        return false;
+     }
+
+     SNCircularBuffer_.Erase(fSNChunkSize / sizeof(uint16_t));
+
+     return true;
+  }  
 
 
   static std::ofstream wdbg;

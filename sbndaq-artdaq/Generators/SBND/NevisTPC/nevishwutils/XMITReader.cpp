@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <cstdint>
 
 #include "XMITReader.h"
 #include "daqExceptions.h"
@@ -169,50 +170,46 @@ namespace nevistpc {
   XMITReader::dma_completion_status XMITReader::dmaWaitWithTimeout ( unsigned int microseconds )
   {
     struct timeval time_start, time_now;
+    struct timeval time_debug1, time_debug2;
     
     gettimeofday(&time_start,NULL);
 
-    static uint64_t n_complete = 0;
-    static uint64_t sum_wait_us = 0;
-    static uint64_t max_wait_us = 0;
+    long loop_count = 0;
 
     while(1){
+
+      loop_count++;
       
       //check for timeout
       gettimeofday(&time_now,NULL);
       long diff_time = diff_time_microseconds(time_now,time_start);
+      //TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   "DMAWaitWithTimeout, check1 (us) : " << diff_time ;
+
       if(diff_time > microseconds){
 	return dma_completion_status::timeout;
       }//end if timeout condition
+     
+      gettimeofday(&time_debug1,NULL);
       
       UINT32 dmaStatus {0};
       
       nevisPCIeCard->readAddr32 ( dma_detail::cs_bar, dma_detail::cs_dma_cntrl, dmaStatus );
+     
+      gettimeofday(&time_debug2,NULL);
+      long diff_time_debug = diff_time_microseconds(time_debug2,time_debug1);
+      TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, check for DMA completion (us) : " << diff_time_debug;
+
       
       if ( ( dmaStatus & dma_detail::dma_in_progress ) == 0 ) {
 
-     // ---start of debug
-        n_complete++;
-    sum_wait_us += diff_time;
-
-    if ((uint64_t)diff_time > max_wait_us)
-        max_wait_us = diff_time;
-
-    if (n_complete % 10000 == 0) {
-        double avg = (double)sum_wait_us / (double)n_complete;
-
-        //TLOG(TLVL_INFO)
-        //    << "DMAwait(" << _stream_name << ") "
-        //    << "avg_us=" << avg
-        //    << " max_us=" << max_wait_us
-        //    << " last_us=" << diff_time
-        //    << " count=" << n_complete;
-    }
-    // ----end of debug
+        TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, check for dmaWaitWithTimeout (us) : " << diff_time;
+        TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, number of loops: " << loop_count;
 
 	return dma_completion_status::complete;
       }//end if dma complete
-      usleep(5);
+
+      usleep(200); //wait 200 us for the next check
+
     }//end infinite while
     
   }
@@ -261,7 +258,8 @@ namespace nevistpc {
 
     struct timeval t1, t2;
     
-    if(_do_timing) gettimeofday(&t1,NULL);
+   // if(_do_timing) gettimeofday(&t1,NULL);
+    gettimeofday(&t1,NULL);
 
     assert ( buffer != NULL );
     assert ( size > 0 );
@@ -344,32 +342,40 @@ namespace nevistpc {
   
     ::WDC_DMASyncIo ( dma.pDMABuffer );
   
-   // if(_do_timing) {
+   if(_do_timing) {
       gettimeofday(&t2,NULL);
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 3 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-   // }
+    }
 
     readSize = dma.readSize;
 
     ::memcpy ( buffer, ( char* ) dma.pUserModeBuffer, readSize );
     
-   // if (_stream_name == "sn_xmit_reader" && (_loopNumber % 200 == 0)) {
-     //  uint16_t w0 = *reinterpret_cast<uint16_t*>(buffer);
-     //  uint16_t w1 = *(reinterpret_cast<uint16_t*>(buffer) + 1);
-      // TLOG(TLVL_INFO) << "DEBUG " << _stream_name
-       //                << " using=" << which
-        //               << " first_words=0x" << std::hex << w0 << " 0x" << w1 << std::dec;
-      // }
+   // Print signature of the buffer
+    uint32_t sig = 0;
+    int n = (readSize < 32) ? readSize : 32;
+    for (int i = 0; i < n; i++) {
+         sig = sig * 33 + (uint8_t)buffer[i];
+    }
+
+    //static uint64_t sig_count = 0;
+    //sig_count++;
+
+    TLOG(TLVL_INFO) << "XMITReader " << _stream_name
+                    << " readSize=" << readSize
+                    << " sig=" << sig
+                    << " loop=" << _loopNumber;
+    // end of debug
 
   
-   // if(_do_timing) {
+   if(_do_timing) {
       gettimeofday(&t2,NULL);
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 4 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-   // }
+    }
 
     _loopNumber++;
     //    exit(0);

@@ -81,6 +81,7 @@ namespace sbndaq {
     zmq::socket_t _zmqGPSPublisher;
 
     bool fDisableNUStream;
+    bool fSNToDisk;
     bool fDumpBinary; //!< Write binary file before the artdaq back-end
     bool fDumpSNBinary;
     std::string fDumpBinaryDir; //!< Directory for binary file dump
