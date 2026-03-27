@@ -1,0 +1,5 @@
+TPCmetricanalyzer: {
+    module_type: "TPCMetricAnalyzer"
+    tpc_data_label: "daq:NEVISTPC"
+    ntb_data_label: "daq:NEVISTB"
+}
