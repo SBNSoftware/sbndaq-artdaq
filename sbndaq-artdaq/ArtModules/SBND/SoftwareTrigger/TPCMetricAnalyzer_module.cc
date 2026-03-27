@@ -140,7 +140,7 @@ void sbndaq::TPCMetricAnalyzer::analyze(const art::Event& evt)
       } else {
         if (D_NTBFEMSampleNo != 0 && D_NTBFEMSampleNo != 1){
           N_Bad_DNTBFEMSample += 1;
-          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the TPC - NTB absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and NTB sample number" << ntb_sampleno << ".";
+          TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntb_eventno << ", the TPC - NTB absolute sample number is " << D_NTBFEMSampleNo << " for TPC Crate " << tpc_crate << " FEM " << tpc_slot << " and NTB sample number " << ntb_sampleno << ".";
         }
       }
     }
