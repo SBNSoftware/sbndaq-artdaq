@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "CAENComm.h"
-
+#include "sbndaq-artdaq/Generators/Common/CAENDecoder.hh"
 #include "artdaq/DAQdata/Globals.hh"
 
 #define WRITE 1
@@ -16,48 +16,77 @@
 
 #define HOST 1
 
-A2795Board::A2795Board(int nbr, int bus) : boardNbr(nbr), boardId(nbr)
+A2795Board::A2795Board(int nbr, int bus, uint32_t fragmentID) : boardNbr(nbr), boardId(nbr), busNbr(bus), fragmentID_(fragmentID)
 {
 
 #ifndef _simulate_
 
-// Acqrs_getInstrumentData(boardId, boardname, &serialNbr, &busNbr, &slotNbr);
   int ret;
-  bdhandle=0;
-  
-  TRACEN("A2795Board.cc",TLVL_DEBUG+1, "calling CAENComm_OpenDevice for boardNbr %d boardId %d",boardNbr,boardId);
-  
-  ret=CAENComm_OpenDevice2(CAENComm_OpticalLink, &bus, nbr, 0, &bdhandle);
-  
-  TRACEN("A2795Board.cc",TLVL_DEBUG+2, "CAENComm_OpenDevice returned status %d",ret);
-  
-  if (ret != CAENComm_Success) boardId=-1;
-  else 
+  bdhandle = 0;
+
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 1, "calling CAENComm_OpenDevice for boardNbr %d boardId %d", boardNbr, boardId);
+
+  ret = CAENComm_OpenDevice2(CAENComm_OpticalLink, &bus, nbr, 0, &bdhandle);
+
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 2, "CAENComm_OpenDevice returned status %d", ret);
+
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::A2795Board(): [fragment id=%d] CAENComm_OpenDevice2 failed on link %d board %d: %s, retrying...",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
+    boardId = -1;
+  }
+  else
+  {
+    int status;
+    // CAENComm_Write32(bdhandle, A_Signals, SIGNALS_SWRESET);
+
+    ret = CAENComm_Read32(bdhandle, A_StatusReg, (uint32_t *)&status);
+    if (ret != CAENComm_Success)
     {
-      int status;
-      //CAENComm_Write32(bdhandle, A_Signals, SIGNALS_SWRESET);
-      CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*) &status);
-      TRACEN("A2795Board.cc",TLVL_DEBUG+2, "board %d status %d",boardId,status);
-      
-      boardId=status&STATUS_SLOT_ID;
-      
-      //CAENComm_Write32(bdhandle, A_ControlReg_Clear, CTRL_TTLINK_MODE);
-      //    CAENComm_Write32(bdhandle, A_ControlReg_Set, CTRL_ACQRUN);
+      char msgBuffer[256];
+      CAENComm_DecodeError(ret, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::A2795Board(): [fragment id=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
     }
+    TRACEN("A2795Board.cc", TLVL_DEBUG + 2, "board %d status %d", boardId, status);
+
+    boardId = status & STATUS_SLOT_ID;
+
+    // CAENComm_Write32(bdhandle, A_ControlReg_Clear, CTRL_TTLINK_MODE);
+    // CAENComm_Write32(bdhandle, A_ControlReg_Set, CTRL_ACQRUN);
+  }
 #endif
-  
-serialNbr=boardNbr;
- if (boardId!=-1) {
-   	 TRACEN("A2795Board.cc",TLVL_DEBUG+3, "BoardId %d serial %d bus %d slot %d",boardId,serialNbr, busNbr, slotNbr);
- }
+
+  serialNbr = boardNbr;
+  if (boardId != -1)
+  {
+    TRACEN("A2795Board.cc", TLVL_DEBUG + 3, "BoardId %d serial %d bus %d slot %d", boardId, serialNbr, busNbr, slotNbr);
+  }
 }
 
 A2795Board::~A2795Board()
 {
-  if (bdhandle!=-1)
+  if (bdhandle != -1)
   {
-    CAENComm_Write32(bdhandle, A_Signals, SIGNALS_TTLINK_EOR);
-    CAENComm_CloseDevice(bdhandle);
+    int ret = CAENComm_Write32(bdhandle, A_Signals, SIGNALS_TTLINK_EOR);
+    if (ret != CAENComm_Success)
+    {
+      char msgBuffer[256];
+      CAENComm_DecodeError(ret, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::~A2795Board(): [fragment id=%d] CAENComm_Write32(SIGNALS_TTLINK_EOR) failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
+    }
+    ret = CAENComm_CloseDevice(bdhandle);
+    if (ret != CAENComm_Success)
+    {
+      char msgBuffer[256];
+      CAENComm_DecodeError(ret, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::~A2795Board(): [fragment id=%d] CAENComm_CloseDevice failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
+    }
   }
 }
 
@@ -65,300 +94,284 @@ A2795Board::~A2795Board()
 
 // Configures the board.
 // Input (param): BoardConf conf - structure with the configuration parameters.
-void
-A2795Board::configure (BoardConf conf)
-{		
+void A2795Board::configure(BoardConf conf)
+{
+  // int status;
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 4, "Configuring Board");
 
-  //int status;
+  CAENComm_Write32(bdhandle, A_RELE, RELE_TP_DIS);
 
-      TRACEN("A2795Board.cc",TLVL_DEBUG+4, "Configuring Board");
+  // Configure timebase
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 5, "Conf Board %d offs %f thre %f ", boardNbr, conf.coff[boardNbr * 2], conf.cthre[boardNbr * 2]);
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 6, "offs %f thre %f ", conf.coff[(boardNbr * 2) + 1], conf.cthre[(boardNbr * 2) + 1]);
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 7, "off %f thre %f ", conf.coff[(boardNbr) * 2], conf.cthre[(boardNbr) * 2]);
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 8, "off %f thre %f", conf.coff[(boardNbr) * 2 + 1], conf.cthre[(boardNbr) * 2 + 1]);
 
+  // Set DC offset
+  // tobeset     CAENComm_Write32(bdhandle, A_DAC, 0x00070000 | (conf.coff[boardNbr*2] & 0xFFFF) );
 
-       CAENComm_Write32(bdhandle, A_RELE, RELE_TP_DIS);
-
-
-       //status = Acqrs_calibrate(boardId);
-       //AcqUtils::checkStatus(status, "Calibrated.");
-
-
-
-
-    // Configure timebase
-
-	TRACEN("A2795Board.cc",TLVL_DEBUG+5, "Conf Board %d offs %f thre %f ",boardNbr,conf.coff[boardNbr*2],conf.cthre[boardNbr*2]);
-	
-	TRACEN("A2795Board.cc",TLVL_DEBUG+6,"offs %f thre %f ",conf.coff[(boardNbr*2)+1],conf.cthre[(boardNbr*2)+1]);
-        TRACEN("A2795Board.cc",TLVL_DEBUG+7,"off %f thre %f ", conf.coff[(boardNbr)*2],conf.cthre[(boardNbr)*2]);
-        TRACEN("A2795Board.cc",TLVL_DEBUG+8,"off %f thre %f", conf.coff[(boardNbr)*2+1],conf.cthre[(boardNbr)*2+1]);
-
-       // Set DC offset
-  //tobeset     CAENComm_Write32(bdhandle, A_DAC, 0x00070000 | (conf.coff[boardNbr*2] & 0xFFFF) );
-
-	TRACEN("A2795Board.cc",TLVL_DEBUG+9,"A2795Board::configure(): board %d configured.", boardNbr);
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 9, "A2795Board::configure(): board %d configured.", boardNbr);
 }
 
 // Configures the trigger parameters.
 // Input (param): TrigConf conf - structure with the trigger parameters.
-void
-A2795Board::configureTrig (TrigConf conf)
+void A2795Board::configureTrig(TrigConf conf)
 {
-
-      nSamples=conf.nsamples;
-      preSamples = conf.presamples;
-
-
-
-
-
-      //printf("Set nSamples to %d \n",conf.nsamples);
-      //printf("Set preSamples to %d \n",conf.presamples);
-	//AcqrsD1_configTrigClass(boardId, conf.trigClass, conf.sourcePattern, 0, 0, 0.0, 0.0);
-	//AcqrsD1_configTrigSource(boardId, conf.channel, conf.trigCoupling, conf.trigSlope, conf.trigLevel1, conf.trigLevel2);
-  
-    //    ViInt32 regValue;
-    //    regValue=nSamples/16;
-    //    Acqrs_logicDeviceIO(boardId, "Block1Dev1", 71, 1, &regValue, WRITE, 0);
-
-     //   regValue=24000/16; //pretrigger samples
-     //   Acqrs_logicDeviceIO(boardId, "Block1Dev1", 72, 1, &regValue, WRITE, 0);
+  nSamples = conf.nsamples;
+  preSamples = conf.presamples;
 }
 
 // Starts the DPU on the board.
-void
-A2795Board::startDPU ()
+void A2795Board::startDPU()
 {
-
-    TRACEN("A2795Board.cc",TLVL_DEBUG+10,"A2795Board::startDPU(): core of board (%d,%d) started.", boardNbr, (int)boardId);
-    CAENComm_Write32(bdhandle, A_ControlReg_Set, CTRL_ACQRUN);
-//CAENComm_Write32(bdhandle, A_Signals, SIGNALS_TTLINK_SOR);
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 10, "A2795Board::startDPU(): core of board (%d,%d) started.", boardNbr, (int)boardId);
+  CAENComm_Write32(bdhandle, A_ControlReg_Set, CTRL_ACQRUN);
+  // CAENComm_Write32(bdhandle, A_Signals, SIGNALS_TTLINK_SOR);
 }
 
 // Tells if data are ready
 // Output (return): true if there are ready data, false otherwise.
-int
-A2795Board::isDataRdy()
+int A2795Board::isDataRdy()
 {
 
-     int timeoutCounter = 250000; // Timeout waiting for a trigger
-     int errTimeoutCounter = 500000; // Timeout for acquisition completion
-     //int errTimeoutCounter = 1; // Timeout for acquisition completion
-     //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+11,"A2795Board::isDataRdy(): BoardId %d BoardNbr %d",boardId, boardNbr);
-    //#endif
+  int timeoutCounter = 250000;    // Timeout waiting for a trigger
+  int errTimeoutCounter = 500000; // Timeout for acquisition completion
 
-        int status;
-        bool done=false;
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 11, "A2795Board::isDataRdy(): BoardId %d BoardNbr %d", boardId, boardNbr);
 
+  int status = 0;
+  bool done = false;
 
-	while (!done && errTimeoutCounter--)
-	{
-	//	AcqrsD1_acqDone(boardId, &done); // Poll for the end of the acquisition
-        //      Acqrs_logicDeviceIO(boardId, "Block1Dev1", 69, 1, &regValue, READ, 0);
-             CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*) &status);
-             TRACEN("A2795Board.cc",TLVL_DEBUG+12, "A2795Board::isDataRdy(): Status: %x", status);
-             done=(status&STATUS_DRDY);  //has data bit 4 Status Reg
-		if (!timeoutCounter--) // Trigger timeout occured
-		{
-			TRACEN("A2795Board.cc",TLVL_DEBUG+13,"A2795Board::isDataRdy(): Slow trigger...");
-                       vetoOff();
-		       //AcqrsD1_forceTrig(boardId); // Force a 'manual' (or 'software') trigger
-                }
-	}
-	return done;
+  while (!done && errTimeoutCounter--)
+  {
+    int ret = CAENComm_Read32(bdhandle, A_StatusReg, (uint32_t *)&status);
+
+    // Printing out error on comunication
+    if (ret != CAENComm_Success)
+    {
+      char msgBuffer[256];
+      CAENComm_DecodeError(ret, msgBuffer);
+      TRACEN("A2795Board.cc", TLVL_ERROR, "A2795Board::isDataRdy(): [fragment id=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+             fragmentID_, busNbr, boardNbr, msgBuffer);
+      status = 0; // can't read status, assume no data ready
+    }
+
+    TRACEN("A2795Board.cc", TLVL_DEBUG + 12, "A2795Board::isDataRdy(): Status: %x", status);
+    done = (status & STATUS_DRDY); // has data bit 4 Status Reg
+    if (!timeoutCounter--)         // Trigger timeout occured
+    {
+      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::isDataRdy(): [fragment id=%d] Slow trigger or missing data on link %d board %d...", fragmentID_, busNbr, boardNbr);
+      vetoOff();
+    }
+  }
+
+  if (!done)
+  {
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::isDataRdy(): [fragment id=%d] timeout waiting for data-ready on link %d board %d",
+           fragmentID_, busNbr, boardNbr);
+  }
+  return done;
 }
 
 int A2795Board::Status()
 {
   int status;
-  CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*) &status);
+  int ret = CAENComm_Read32(bdhandle, A_StatusReg, (uint32_t *)&status);
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::Status(): [fragment id=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
+  }
   return status;
 }
 
 uint32_t A2795Board::Temperatures()
 {
   uint32_t status;
-  CAENComm_Read32(bdhandle, A_Temperature,&status);
+  int ret = CAENComm_Read32(bdhandle, A_Temperature, &status);
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::Temperatures(): [fragment id=%d] CAENComm_Read32(A_Temperature) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
+  }
   return status;
 }
 
-int 
-A2795Board::ArmTrigger()
+int A2795Board::ArmTrigger()
 {
 
-  //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+14,"A2795Board::ArmTrigger(): wait a second...");
-    //#endif
+  // #ifdef _dbg_
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 14, "A2795Board::ArmTrigger(): wait a second...");
+  // #endif
 
+  return 0;
+}
+int A2795Board::fillHeader(DataTile *buf)
+{
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 15, "A2795Board::fillHeader(): wait a second...");
+
+  int ret;
+  ret = CAENComm_Read32(bdhandle, A_ControlReg, (uint32_t *)&buf->Header.info1);
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::fillHeader(): [fragment id=%d] CAENComm_Read32(A_ControlReg) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
+  }
+  ret = CAENComm_Read32(bdhandle, A_StatusReg, (uint32_t *)&buf->Header.info2);
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::fillHeader(): [fragment id=%d] CAENComm_Read32(A_StatusReg) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
+  }
+  ret = CAENComm_Read32(bdhandle, A_NevStored, (uint32_t *)&buf->Header.info3);
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::fillHeader(): [fragment id=%d] CAENComm_Read32(A_NevStored) failed on link %d board %d: %s",
+           fragmentID_, busNbr, boardNbr, msgBuffer);
+  }
+
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 16, "Filled header...");
 
   return 0;
 }
 
-int
-A2795Board::fillHeader(DataTile* buf)
-{
-  //int  rValue[950*1024];
-  //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+15,"A2795Board::fillHeader(): wait a second...");
-    //#endif
-
-     CAENComm_Read32(bdhandle, A_ControlReg,(uint32_t*)&buf->Header.info1);
-     CAENComm_Read32(bdhandle, A_StatusReg,(uint32_t*)&buf->Header.info2);
-     CAENComm_Read32(bdhandle, A_NevStored,(uint32_t*)&buf->Header.info3);
-     //buf->Header.info3=((int)inet_lnaof(mId))&0xff;
-//   buf->Header.timeinfo= htonl((int) rValue[0]);
-//   buf->Header.chID= htonl(serialNbr);
-
-     TRACEN("A2795Board.cc",TLVL_DEBUG+16,"Filled header...");
-
-     return 0;
-}
-
-#define BUFFER_SIZE ((4*1024)*32)+3
+#define BUFFER_SIZE ((4 * 1024) * 32) + 3
 
 // Writes the data gathered by the board starting from the passed address.
 // Output (param): char* buf - pointer to the memory area to write to.
-int
-A2795Board::getData(int channel,char* buf)
+int A2795Board::getData(int channel, char *buf)
 {
 
   (void)channel;
 
-  //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+17,"A2795Board::getData(): wait a second...");
-    //#endif
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 17, "A2795Board::getData(): wait a second...");
 
   // ### Readout the data ###
-    //int status;
-    int ret;
-    //int xco,ii,jj,totwords;
-    //int regValue,
-    int rValue[950*1024];
-    //char *mwaveform=(char *)buf;
-  int nw;
+  int ret;
+  int nw=0;
 
-     //  totwords=nSamples/4;
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 18, "Before BLT Read call: %d, %d, %d", bdhandle, A_OutputBuffer, BUFFER_SIZE);
 
-  TRACEN("A2795Board.cc",TLVL_DEBUG+18,"Before BLT Read call: %d, %d, %d",bdhandle, A_OutputBuffer,BUFFER_SIZE);
+  ret = CAENComm_BLTRead(bdhandle, A_OutputBuffer, (uint32_t *)buf, BUFFER_SIZE, &nw);
 
-   ret = CAENComm_BLTRead(bdhandle, A_OutputBuffer,(uint32_t*) buf, BUFFER_SIZE, &nw);
-   if ((ret != CAENComm_Success) && (ret != CAENComm_Terminated)){
-                TRACEN("A2795Board.cc",TLVL_DEBUG+19,"BLTReadCycle Error on Module (ret = %d)", ret);
-   }
- 
-  // TRACEN("A2795Board.cc",20,"After BLT Read call.");
-  // isDataRdy();
-
-
-for (int ii=0;ii<10;ii++)
-     TRACEN("A2795Board.cc",TLVL_DEBUG+20,"%d ",rValue[ii]);
- 
- TRACEN("A2795Board.cc",TLVL_DEBUG+21,"start decoding nw %d Boardid %d",nw,boardId);
-
-/*  for (ii=0;ii<(nSamples/16); ii++) {
-        for (jj=3;jj>=0;jj--)
-        {
-          unsigned char samp=((rValue[jj+(ii*4)]&0xff000000)>>24)&0xff;
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-          samp=(rValue[jj+(ii*4)]&0xff0000)>>16;
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-          samp=(rValue[jj+(ii*4)]&0xff00)>>8;
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-          samp=(rValue[jj+(ii*4)]&0xff);
-          mwaveform[xco++]=samp-127;
-          //if ((boardId==1)&&(channel==1)&&(xco<10)) printf("%d %d\n",xco-1,samp);
-        }
-
+  if ((ret != CAENComm_Success) && (ret != CAENComm_Terminated))
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::getData(): [fragment id=%d] CAENComm_BLTRead(A_OutputBuffer) failed on link %d board %d, nw=%d: %s",
+           fragmentID_, busNbr, boardNbr, nw, msgBuffer);
   }
 
-*/
- return nw*4;
+  // TRACEN("A2795Board.cc",20,"After BLT Read call.");
 
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 21, "start decoding nw %d Boardid %d", nw, boardId);
+
+  return nw * 4;
 }
-
 
 // Writes to a register on the FPGA.
 // Input (param): int reg - register number
-// Input (param): int n - number of values to write
-// Input (param): int* buffer - pointer to the memory to read from.
-// Output (return): int - outcome of the operation. See the Acqiris manual for information.
-int
-A2795Board::write(int reg, int value)
+// Input (param): int value - value to write.
+// Output (return): int - outcome of the operation.
+int A2795Board::write(int reg, int value)
 {
-      CAENComm_Write32(bdhandle, reg, value);
-//    return Acqrs_logicDeviceIO(boardId, "Block1Dev1", reg, n, buffer, 1, 0);
- return 0;
+  int ret = CAENComm_Write32(bdhandle, reg, value);
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::write(): [fragment id=%d] CAENComm_Write32(reg=0x%x, val=0x%x) failed on link %d board %d: %s",
+           fragmentID_, reg, value, busNbr, boardNbr, msgBuffer);
+  }
+  return ret;
 }
 
 // Reads from a register on the FPGA.
 // Input (param): int reg - register number
-// Input (param): int n - number of values to read
 // Output (param): int* buffer - pointer to the memory area to write to.
-// Output (return): int - outcome of the operation. See the Acqiris manual for information.
-int
-A2795Board::read(int reg, int *value)
+// Output (return): int - outcome of the operation.
+int A2795Board::read(int reg, int *value)
 {
-   return CAENComm_Read32(bdhandle, reg,(uint32_t *) value);
-    // return Acqrs_logicDeviceIO(boardId, "Block1Dev1", reg, n, buffer, 0, 0);
+  int ret = CAENComm_Read32(bdhandle, reg, (uint32_t *)value);
+  if (ret != CAENComm_Success)
+  {
+    char msgBuffer[256];
+    CAENComm_DecodeError(ret, msgBuffer);
+    TRACEN("A2795Board.cc", TLVL_ERROR,
+           "A2795Board::read(): [fragment id=%d] CAENComm_Read32(reg=0x%x) failed on link %d board %d: %s",
+           fragmentID_, reg, busNbr, boardNbr, msgBuffer);
+  }
+  return ret;
 }
 #endif
 
 // For testing purposes. If _simulate_ is defined, it should work without the hardware.
 #ifdef _simulate_
-void A2795Board::configure (BoardConf conf) {
-
-  TRACEN("A2795Board.cc",TLVL_DEBUG+21, "Conf Board %d offs %f thre %f \n",boardNbr,conf.coff[boardNbr*2],
-    conf.cthre[boardNbr*2]);
-  
-  TRACEN("A2795Board.cc",TLVL_DEBUG+22, "offs %f thre %f \n",conf.coff[(boardNbr*2)+1],conf.cthre[(boardNbr*2)+1]);
-
-}
-
-void
-A2795Board::configureTrig (TrigConf conf)
+void A2795Board::configure(BoardConf conf)
 {
 
-      nSamples=conf.nsamples;
-      preSamples = conf.presamples;
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 21, "Conf Board %d offs %f thre %f \n", boardNbr, conf.coff[boardNbr * 2],
+         conf.cthre[boardNbr * 2]);
 
-      TRACEN("A2795Board.cc",TLVL_DEBUG+23,"Set nSamples to %d ",conf.nsamples);
-      TRACEN("A2795Board.cc",TLVL_DEBUG+24,"Set preSamples to %d ",conf.presamples);
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 22, "offs %f thre %f \n", conf.coff[(boardNbr * 2) + 1], conf.cthre[(boardNbr * 2) + 1]);
 }
 
-void A2795Board::startDPU () {}
-
-int 
-A2795Board::isDataRdy()
+void A2795Board::configureTrig(TrigConf conf)
 {
-  //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+25,"A2795Board::isDataRdy(): wait a second...");
-    sleep(1);
-    //#endif
-    return true;
+
+  nSamples = conf.nsamples;
+  preSamples = conf.presamples;
+
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 23, "Set nSamples to %d ", conf.nsamples);
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 24, "Set preSamples to %d ", conf.presamples);
 }
 
-int
-A2795Board::ArmTrigger()
+void A2795Board::startDPU() {}
+
+int A2795Board::isDataRdy()
+{
+  // #ifdef _dbg_
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 25, "A2795Board::isDataRdy(): wait a second...");
+  sleep(1);
+  // #endif
+  return true;
+}
+
+int A2795Board::ArmTrigger()
 {
   return 0;
 }
-int
-A2795Board::fillHeader(DataTile* buf)
+int A2795Board::fillHeader(DataTile *buf)
 {
-   //buf->Header.timeinfo= htonl((int) rValue[0]);
-   buf->Header.chID= htonl(serialNbr);
+  // buf->Header.timeinfo= htonl((int) rValue[0]);
+  buf->Header.chID = htonl(serialNbr);
 }
 
-int
-A2795Board::getData(int boa,char* buf)
+int A2795Board::getData(int boa, char *buf)
 {
-  //#ifdef _dbg_
-    TRACEN("A2795Board.cc",TLVL_DEBUG+26,"A2795Board::getData(): filling with %d (%d) for %d bytes", id, id, nSamples);
-    //#endif
-    for (int i = 0; i < nSamples; i++)
-        buf[i] = (char)(boardNbr+'0');
+  // #ifdef _dbg_
+  TRACEN("A2795Board.cc", TLVL_DEBUG + 26, "A2795Board::getData(): filling with %d (%d) for %d bytes", id, id, nSamples);
+  // #endif
+  for (int i = 0; i < nSamples; i++)
+    buf[i] = (char)(boardNbr + '0');
   return nSamples;
 }
 

@@ -38,6 +38,7 @@ void icarus::PhysCrate_GeneratorBase::Initialize(){
   nADCBits_ = ps_.get<uint8_t>("nADCBits",12);
   ChannelsPerBoard_ = ps_.get<uint16_t>("ChannelsPerBoard",16);
   nBoards_ = ps_.get<uint16_t>("nBoards",9);
+  fragmentID_ = ps_.get<uint32_t>("fragment_id");
   CrateID_ = ps_.get<uint8_t>("CrateID",0x1);
   assignBoardID_ = ps_.get<bool>("AssignBoardID", false);
   if ( assignBoardID_ ) BoardIDs_ = ps_.get< std::vector<PhysCrateFragmentMetadata::id_t> >("BoardIDs");
