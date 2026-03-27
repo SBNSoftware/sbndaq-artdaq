@@ -102,6 +102,12 @@ namespace sbndaq
     struct sockaddr_in si_pmtdata_;
     int pmtsocket_;
 
+    //adding socket_timeout timer
+    std::optional<std::chrono::steady_clock::time_point> socket_timeout = std::nullopt;
+
+    // added data_timeout parameter 
+    int data_timeout_s_; // in seconds
+
     //retry for init msg
     int n_init_retries_;
     int n_init_timeout_ms_;
