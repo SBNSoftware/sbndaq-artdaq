@@ -111,6 +111,7 @@ static WDC_DEVICE_HANDLE DeviceFindAndOpen(DWORD dwVendorId, DWORD dwDeviceId, D
 
     if(!DeviceFind(dwVendorId, dwDeviceId, dwBus, &slot))
     {
+      slot.dwDomain   =  0;
       slot.dwBus = dwBus;
       slot.dwSlot = 0;
       slot.dwFunction = 0;
@@ -244,7 +245,7 @@ static WDC_DEVICE_HANDLE DeviceOpen(const WD_PCI_SLOT *pSlot)
                       NEVISPCI_GetLastErr());
         return NULL;
     }
-
+    printf("DeviceOpen: Opened device on bus 0x%lx, slot 0x%lx, function 0x%lx\n", pSlot->dwBus, pSlot->dwSlot, pSlot->dwFunction);
     return hDev;
 }
 

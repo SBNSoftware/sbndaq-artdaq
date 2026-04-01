@@ -107,7 +107,7 @@ void nevistpc::NevisControllerPCIeCard::send(ControlDataPacket const &packet,
   TLOG(TLVL_SEND)<< "Obtained device lock.";
 
   if (!_deviceInfo.deviceHandle()){
-    TLOG(TLVL_ERROR)<<"SEND ERROR: handle not initialized for %s",_deviceInfo.info().c_str();
+    TLOG(TLVL_ERROR)<<"SEND ERROR: handle not initialized for %s" << _deviceInfo.info().c_str();
     throw RuntimeErrorException(std::string("NevisControllerPCIeCard was not initialized, unable to send a packet ").append(packet.toString()));
   }
 
