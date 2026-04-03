@@ -29,7 +29,7 @@ namespace nevistpc
 
     nevisPCIeCard = std::unique_ptr<NevisControllerPCIeCard>( new NevisControllerPCIeCard(*nevisDeviceInfo) );
     nevisPCIeCard->deviceOpen();
-    TLOG(TLVL_INFO)<< "ControllerModule: called "<< __func__ ;
+    //TLOG(TLVL_INFO)<< "ControllerModule: called "<< __func__ ;
   }
 
   ControllerModule::~ControllerModule()

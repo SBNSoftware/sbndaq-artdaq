@@ -187,7 +187,7 @@ namespace nevistpc {
 	//check for timeout
 	gettimeofday(&time_now,NULL);
 	long diff_time = diff_time_microseconds(time_now,time_start);
-	TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   "DiffTime in function: " << diff_time ;
+	//  TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   "DiffTime in function: " << diff_time ;
 	//	TLOG(TLVL_INFO) << "XMITReader " << _stream_name << "microseconds to compare to: " << microseconds;
 
 	if(diff_time > microseconds){
@@ -384,7 +384,7 @@ namespace nevistpc {
     std::streamsize readSize = -1;
   
 
-    TLOG(TLVL_INFO) << "XMITReader " << _stream_name  << "Checking for timeout: " ;
+    //TLOG(TLVL_INFO) << "XMITReader " << _stream_name  << "Checking for timeout: " ;
     if ( dmaWaitWithTimeout ( _dma_settings->dma_max_polling_time_microseconds ) == dma_completion_status::timeout ) {
     
       UINT64 dmaReadback {0};

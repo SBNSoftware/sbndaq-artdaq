@@ -50,6 +50,9 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   current_subrun_ = 0;
   events_seen_ = 0;
 
+  last_last_wordcount = 0;
+  last_wordcount = 0;
+
   // initialize event and frame counting                                                                                                       
   _subrun_event_0 = -1;
   _this_event = -1;
@@ -256,6 +259,16 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     char line [132];
     sprintf(line,"Header out of sync: %X", CircularBuffer_.buffer[0]);
     TRACE(TERROR,line);
+
+    char line2 [512]; size_t pos = 0; 
+    for (size_t i = 0; i < 20; i++) { 
+      uint16_t word = (i < CircularBuffer_.buffer.size()) ? CircularBuffer_.buffer[i] : 0; 
+      pos += snprintf(line2 + pos, sizeof(line2) - pos, "%04X ", word); 
+    } 
+    TRACE(TERROR, "Next words: %s", line2);
+    TRACE(TERROR, "Last wordcount: %u (0x%x), last last wordcount: %u (0x%x)", last_wordcount, last_wordcount,
+      last_last_wordcount, last_last_wordcount);
+      
     throw std::runtime_error(line);
     return false;
   }
@@ -308,6 +321,9 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
     //TRACE(TFILLFRAG,"Not enough data for expected size %lu. Return and try again.",expected_size);
     return false;
   }
+
+  last_last_wordcount = last_wordcount;
+  last_wordcount = header->getADCWordCount();
 
   // First, let's figure out how big our data packet actually is since we can't trust the FEM
   for(int i = 0; i < wiggle_room * 2; i++){
@@ -377,7 +393,7 @@ bool sbndaq::NevisTPC_generatorBase::FillFragment(artdaq::FragmentPtrs &frags, b
   if ( prevFrames[slot] > frame )
   {
     rollCounters[slot] +=1;
-    TLOG(TLVL_INFO) << "TPC boardreader: Trigger frames rolled over this many times: " << rollCounters[slot] << "for FEM Slot: " << slot;
+    TLOG(TLVL_INFO) << "TPC boardreader: Trigger frames rolled over this many times: " << rollCounters[slot] << " for FEM Slot: " << slot;
   }
 
   corrFrame = frame + rollCounters[slot]*16777216;  //new frame is uncorrected frame + 2^24 * number_of_rollovers

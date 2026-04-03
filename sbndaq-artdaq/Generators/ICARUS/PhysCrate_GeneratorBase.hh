@@ -37,6 +37,7 @@ namespace icarus {
     uint16_t nBoards_;
     uint32_t CompressionScheme_;
 
+    uint32_t fragmentID_;
     uint8_t  CrateID_;
     std::vector<PhysCrateFragmentMetadata::id_t> BoardIDs_;
     bool assignBoardID_;

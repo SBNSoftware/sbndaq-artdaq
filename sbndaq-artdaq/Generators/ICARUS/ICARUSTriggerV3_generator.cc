@@ -39,6 +39,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   , n_init_timeout_ms_(ps.get<size_t>("n_init_timeout_ms",1000))
   , use_wr_time_(ps.get<bool>("use_wr_time"))
   , wr_time_offset_ns_(ps.get<long>("wr_time_offset_ns",2e9))
+  , data_timeout_s_(ps.get<int>("data_timeout_s",60))
   , initialization_data_fpga_(ps.get<fhicl::ParameterSet>("fpga_init_params"))
   , initialization_data_spexi_(ps.get<fhicl::ParameterSet>("spexi_init_params"))
 {
@@ -135,6 +136,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   }
   else
     TLOG(TLVL_WARNING) << "No keys detected for FPGA parameter initialization, continuing";
+  
   TLOG(TLVL_INFO) << "Sending Initialization Parameters for SPEXI";
 
 
@@ -153,7 +155,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   else
     TLOG(TLVL_WARNING) << "No keys detected for SPEXI parameter initialization, continuing";
 
-  TLOG(TLVL_INFO) << "Waiting for response from board to finish initialization";
+  TLOG(TLVL_INFO) << "Waiting for response from SPEXI to finish initialization";
 
   usleep(30000000); /*30s*/  TLOG(TLVL_DEBUG+1) << "Continuing after init (debugging) inserted 30s sleep";
 
@@ -163,7 +165,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
       if(size_bytes>0){
         buffer[size_bytes+1] = {'\0'};
         readTCP(configdatafd_,ip_config_,si_config_,size_bytes,buffer);
-        TLOG(TLVL_DEBUG) << "Initialization final step - received:: " << buffer;
+        TLOG(TLVL_DEBUG) << "Initialization SPEXI final step - received:: " << buffer;
         break;
       }
       if(tries == 0)
@@ -172,6 +174,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
           "ICARUSTriggerV3: Did not successfully communicate ability to go to start of run communication to SPEXI";
         exit(1);
       }
+
       --tries;
   }
 
@@ -255,7 +258,7 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
   int size_bytes = poll_with_timeout(dataconnfd_,ip_data_, si_data_,500);  
   std::string data_input = "";
   std::fill( buffer, buffer + sizeof(buffer), '\0' ); 
-  if(size_bytes>0){
+  if(size_bytes>0){ // THERE IS DATA from the socket
     //TLOG(TLVL_DEBUG) << "size_bytes from poll_with_timeout " << size_bytes ;
 
     //Not currently using peek buffer result, just using buffer
@@ -264,7 +267,7 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
 
     //here it seems we request to read 999 bytes (sizeof(buffer)-1)from the socket
     //original code (JZ)
-    //int x = readTCP(dataconnfd_,ip_data_,si_data_,sizeof(buffer)-1,buffer)
+    //int x = readTCP(dataconnf:d_,ip_data_,si_data_,sizeof(buffer)-1,buffer)
     //TLOG(TLVL_DEBUG) << "in getNext x:: " << x << " errno:: " << errno << " data received:: " << buffer;
     //
 
@@ -304,7 +307,7 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     // fill the data array (GT string data) here
     data_input = buffer;
 
-  }
+  }// end THERE IS DATA fron the socket
   TLOG(TLVL_DEBUG) << "string received:: " << data_input;
 
   artdaq::Fragment::timestamp_t ts(0);
@@ -326,9 +329,25 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     fInitialStep = 1;
   }
 
-  if(data_input==""){
+  // if no data received, string is empty
+  if (data_input == "")
+  {
+    if (!socket_timeout.has_value()) // if first timeout, start timer
+    {  
+      socket_timeout = std::chrono::steady_clock::now();
+    } else // if already in timeout, check duration
+    { 
+      std::chrono::duration<double> timeout_duration = std::chrono::steady_clock::now() - *socket_timeout;
+      if (timeout_duration.count() >= data_timeout_s_ ) // if in timeout for longer than threshold, log error
+      {
+        TLOG(TLVL_ERROR) << "ICARUSTriggerV3::getNext_: No data received for " << data_timeout_s_ << " seconds!!!";
+      }
+    }
     TLOG(TLVL_DEBUG) << "No data after poll with timeout? " << data_input;
     return true;
+  } else // if data received, reset timeout timer
+  {
+    socket_timeout = std::nullopt;  
   }
 
   icarus::ICARUSTriggerInfo datastream_info = icarus::parse_ICARUSTriggerV3String(buffer);
@@ -774,13 +793,14 @@ int sbndaq::ICARUSTriggerV3::read(int socket, std::string ip, struct sockaddr_in
 }
 
 int sbndaq::ICARUSTriggerV3::readTCP(int socket, std::string ip, struct sockaddr_in& si, int size, char* buffer){
-  TLOG(TLVL_DEBUG) << "in readTCP:: get " << size << " bytes from " << ip.c_str() << "\n";
+  TLOG(TLVL_DEBUG) << "in readTCP:: get " << size << " bytes from NI RT controller " << ip.c_str() << "\n";
   socklen_t slen = sizeof(si); 
-  int size_rcv = recv(socket, buffer, size, 0); //for TCP/IP stuff
-  if(size_rcv<0)
-    TLOG(TLVL_ERROR) << "in readTCP:: error receiving data (" << size_rcv << " bytes from " << ip.c_str() << ")\n";
+  int size_rcv = recv(socket, buffer, size, 0);  //for TCP/IP stuff
+  //if(size_rcv<0)  ID WAS like this when the TCP/IP problem occurred in Feb 2026 and we had to power cycle the RT controller
+  if(size_rcv<=0 )  //error should be repoerte ecev whne size is == 0 
+    TLOG(TLVL_ERROR) << "in readTCP:: error receiving data (" << size_rcv << " bytes from NI RT controller " << ip.c_str() << ") \n";
   else
-    TLOG(TLVL_DEBUG) << "in readTCP:: received " << size_rcv << " bytes from " << ip.c_str() << "\n";
+    TLOG(TLVL_DEBUG) << "in readTCP:: received " << size_rcv << " bytes from NI RT controller " << ip.c_str() << " \n";
 
   return size_rcv;
 }
@@ -794,11 +814,11 @@ int sbndaq::ICARUSTriggerV3::initialization(int retries, int sleep_time_ms)
     char cmd[16];
     sprintf(cmd,"%s","TTLK_CMD_INIT");
     
-    TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n"; 
+    TLOG(TLVL_DEBUG) << "to send:: COMMAND " << cmd << " to NI RT controller " << ip_config_.c_str() << ":" << configport_ << "\n"; 
     //sendto(configsocket_,&cmd,16, 0, (struct sockaddr *) &si_config_, sizeof(si_config_));
     int sendcode = send(configdatafd_,&cmd,16, 0); //datafd
     TLOG(TLVL_INFO) << "retcode from send call is: " << sendcode;
-    TLOG(TLVL_DEBUG) << "sent:: COMMAND " << cmd << "to " << ip_config_.c_str() << ":" << configport_ << "\n";
+    TLOG(TLVL_DEBUG) << "sent:: COMMAND " << cmd << " to NI RT controller " << ip_config_.c_str() << ":" << configport_ << "\n";
     //int size_bytes = poll_with_timeout(configsocket_,ip_config_, si_config_, sleep_time_ms);
     int size_bytes = poll_with_timeout(configdatafd_,ip_config_, si_config_, sleep_time_ms);  
     if(size_bytes>0){
@@ -860,7 +880,7 @@ int sbndaq::ICARUSTriggerV3::send_init_params(std::vector<std::string> param_key
     init_send += data_name + " = \"" + data_value + "\", ";
   }
   init_send += "\r\n";
-  TLOG(TLVL_INFO) << "Initialization step - sending:: " << init_send;
+  TLOG(TLVL_INFO) << "Initialization step - sending init string::" << init_send;
   int sendcode = send(configdatafd_,&init_send[0],init_send.size(),0);
   int size_bytes = 0;
   int attempts = 0;
@@ -870,7 +890,7 @@ int sbndaq::ICARUSTriggerV3::send_init_params(std::vector<std::string> param_key
       if(size_bytes>0){
 	buffer[size_bytes+1] = {'\0'};
 	readTCP(configdatafd_,ip_config_,si_config_,size_bytes,buffer);
-	TLOG(TLVL_DEBUG) << "Initialization step - received:: " << buffer;
+	TLOG(TLVL_DEBUG) << "Initialization step - received back from controller:: " << buffer;
 	if(buffer[0] == '1')
 	{
 	  TLOG(TLVL_INFO) << "Parameters accepted, continuing";
@@ -878,7 +898,7 @@ int sbndaq::ICARUSTriggerV3::send_init_params(std::vector<std::string> param_key
 	}
 	else if(buffer[0] == '0')
 	{
-	  TLOG(TLVL_WARNING) << "Parameters not communicated successfully communicated, failing";
+	  TLOG(TLVL_WARNING) << "Parameters not communicated successfully! Failing";
 	  return 0;
 	}
 	else

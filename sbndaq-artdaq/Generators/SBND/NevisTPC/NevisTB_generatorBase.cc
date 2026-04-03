@@ -18,6 +18,8 @@
 #include <zmq.hpp>
 #include <cmath>
 
+using artdaq::MetricMode;
+
 sbndaq::NevisTB_generatorBase::NevisTB_generatorBase(fhicl::ParameterSet const & ps): CommandableFragmentGenerator(ps), rec_context(1), _zmqGPSSubscriber(rec_context, ZMQ_SUB), ps_(ps) {
   
   Initialize();
@@ -50,6 +52,12 @@ void sbndaq::NevisTB_generatorBase::Initialize(){
   TLOG(TLVL_INFO) << "Frames Per Second: " << FramesPerSecond_ ;
   rollCounter = 0;
   prevFrame   = 0;
+  prevEvent   = 0;
+  prevCorrFrame = 0;
+  N_Bad_DEvents = 0;
+  deadtime_in_frames = 5; // change to nevis deadtime
+  N_Bad_DFrames = 0;
+    
   //set up zmq to listen for messages from TPC server
   _zmqGPSSubscriber.setsockopt(ZMQ_SUBSCRIBE, "", 0);
   _zmqGPSSubscriber.connect(GPSZMQPortNTB_.c_str());
@@ -350,6 +358,42 @@ bool sbndaq::NevisTB_generatorBase::FillNTBFragment(artdaq::FragmentPtrs &frags,
 							detail::FragmentType::NevisTB,   //Fragment Type
 							ntbmetadata_, 
 							ntb_fragment_timestamp) );
+                  
+    // Perform Data Check #1: No missing NTB triggers, Check #2 NTB frame numbers are always increasing          
+    // Calculate sequential event & frame difference          
+    int D_EventNo = ntbmetadata_.EventNumber() - prevEvent;
+    int D_FrameNo = ntbmetadata_.FrameNumber() - prevCorrFrame;      
+    
+    if (D_EventNo != 1){
+      N_Bad_DEvents += 1;
+      
+      // Add more information to log files if counter increments
+      TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntbmetadata_.EventNumber() << ", the NTB event number incremented by" << D_EventNo << "triggers since last event.";
+    }
+
+    if (D_FrameNo <= deadtime_in_frames){
+      N_Bad_DFrames += 1;
+
+      // Add more information to log files if counter increments
+      TLOG(TLVL_INFO)<< "TPC READOUT ERROR: For Event " << ntbmetadata_.EventNumber() << ", the NTB frame number changed by"  << D_FrameNo << "frames since last event.";
+    }
+
+    // Send values to Grafana
+    if(metricMan != nullptr) {
+      //send flag metrics
+      metricMan->sendMetric(
+          "NTB_DeltaEvent_not1_Count",
+          N_Bad_DEvents,
+          "ntb_badeventdiff_count", 11, artdaq::MetricMode::LastPoint);
+      metricMan->sendMetric(
+          "NTB_DeltaFrame<Deadtime_Count",
+          N_Bad_DFrames,
+          "ntb_badframendiff_count", 11, artdaq::MetricMode::LastPoint);       
+    }
+
+    // Update previous event and previous corrected frame number          
+    prevEvent   = ntbmetadata_.EventNumber();
+    prevCorrFrame = ntbmetadata_.FrameNumber();          
  
     std::copy(CircularBufferNTB_.buffer.begin(),                                                                                                          
 	      CircularBufferNTB_.buffer.begin()+(expected_size/sizeof(uint16_t)),                                                                         

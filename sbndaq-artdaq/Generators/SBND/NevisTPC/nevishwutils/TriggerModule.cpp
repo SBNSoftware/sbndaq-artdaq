@@ -422,10 +422,10 @@ namespace nevistpc
                                     sample,
                                     uint16_t((*dataIterator & 0x70000) >> 16) );
 
-    TLOG(TLVL_INFO) << "TriggerModule: called " <<  __func__ ;
-    TLOG(TLVL_INFO) << "TriggerModule: last GPS timestamp frame " << lastStamp.gps_frame 
-		    << " sample " << lastStamp.gps_sample 
-		    << " div " << lastStamp.gps_sample_div ;
+    //TLOG(TLVL_INFO) << "TriggerModule: called " <<  __func__ ;
+    //TLOG(TLVL_INFO) << "TriggerModule: last GPS timestamp frame " << lastStamp.gps_frame 
+    //    << " sample " << lastStamp.gps_sample 
+		//    << " div " << lastStamp.gps_sample_div ;
 
     return lastStamp;
   }
