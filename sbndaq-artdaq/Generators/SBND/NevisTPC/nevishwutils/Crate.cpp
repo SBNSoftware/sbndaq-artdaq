@@ -190,8 +190,8 @@ This function is added to debug FEMs is software but hasnot tested yet
     linkSetup();
     
     // Enable triggered stream & Disable continuous stream
-    getXMITModule()->enableNUChanEvents(1);
-    getXMITModule()->enableSNChanEvents(0);
+    getXMITModule()->enableNUChanEvents(0);
+    getXMITModule()->enableSNChanEvents(1);
     
     // setup tx mode registers (again, I know)
     getXMITReader()->setupTXModeRegister();
@@ -302,8 +302,8 @@ void Crate::runSNStream(fhicl::ParameterSet const& _p){
                        
     TLOG(TLVL_INFO) << "Crate: called " << __func__ << " recipe is about to start!"; 	
     // Setup XMIT reader for SN stream
-   // getXMITReader("NU")->configureReader();
-   // getXMITReader("NU")->initializePCIeCard();
+    getXMITReader("NU")->configureReader();
+    getXMITReader("NU")->initializePCIeCard();
     getXMITReader("SN")->configureReader();
     getXMITReader("SN")->initializePCIeCard();
                                            
@@ -337,7 +337,7 @@ void Crate::runSNStream(fhicl::ParameterSet const& _p){
          }
     
     // Setup tx mode registers (this is done twice for some reason...)
-    //getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("NU")->setupTXModeRegister();
     getXMITReader("SN")->setupTXModeRegister();
 
    // Config trigger module
@@ -349,11 +349,11 @@ void Crate::runSNStream(fhicl::ParameterSet const& _p){
     linkSetup();
                                                                                                            				                                  
     // Disable triggered stream & Enable continuous stream
-   // getXMITModule()->enableNUChanEvents(0);
+    getXMITModule()->enableNUChanEvents(0);
     getXMITModule()->enableSNChanEvents(1);
                                                                                                            				                                                  
     // setup tx mode registers (again, I know)
-   // getXMITReader("NU")->setupTXModeRegister();
+    getXMITReader("NU")->setupTXModeRegister();
     getXMITReader("SN")->setupTXModeRegister();
     getControllerModule()->setupTXModeRegister();
     

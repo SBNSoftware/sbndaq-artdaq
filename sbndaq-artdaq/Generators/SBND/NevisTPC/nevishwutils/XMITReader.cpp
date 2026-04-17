@@ -197,13 +197,13 @@ namespace nevistpc {
      
       gettimeofday(&time_debug2,NULL);
       long diff_time_debug = diff_time_microseconds(time_debug2,time_debug1);
-      TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, check for DMA completion (us) : " << diff_time_debug;
+      //TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, check for DMA completion (us) : " << diff_time_debug;
 
       
       if ( ( dmaStatus & dma_detail::dma_in_progress ) == 0 ) {
 
-        TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, check for dmaWaitWithTimeout (us) : " << diff_time;
-        TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, number of loops: " << loop_count;
+        //TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, check for dmaWaitWithTimeout (us) : " << diff_time;
+        //TLOG(TLVL_INFO) << "XMITReader " << _stream_name <<   " DMAWaitWithTimeout, number of loops: " << loop_count;
 
 	return dma_completion_status::complete;
       }//end if dma complete
@@ -299,8 +299,8 @@ namespace nevistpc {
 
    // if(_do_timing) {
       gettimeofday(&t2,NULL);
-      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
-	      << " us: Checkpoint 1 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
+     // TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
+         //	      << " us: Checkpoint 1 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
     //  }
 
@@ -326,6 +326,11 @@ namespace nevistpc {
     
       TLOG(TLVL_ERROR) << "XMITReader " << _stream_name << ": *** *** DMA timed out. DMAed " << readSize 
 	      << " bytes. Set to readout " << dma.readSize << " bytes. *** ***" ;
+    
+      gettimeofday(&t2,NULL);
+      TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec)
+              << " us: Checkpoint 2 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
+    
       dmaAbort();
       dmaClearRegister();
       _loopNumber = 0;
@@ -333,12 +338,12 @@ namespace nevistpc {
       return 0;
     }
   
-   // if(_do_timing) {
+    if(_do_timing) {
       gettimeofday(&t2,NULL);
       TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": Timestamp "<< (t2.tv_sec*1e6 + t2.tv_usec) 
 	      << " us: Checkpoint 2 elapsed time "<< diff_time_microseconds(t2, t1) << " us" ;
       gettimeofday(&t1,NULL);
-   // }
+    }
   
     ::WDC_DMASyncIo ( dma.pDMABuffer );
   
@@ -363,10 +368,10 @@ namespace nevistpc {
     //static uint64_t sig_count = 0;
     //sig_count++;
 
-    TLOG(TLVL_INFO) << "XMITReader " << _stream_name
-                    << " readSize=" << readSize
-                    << " sig=" << sig
-                    << " loop=" << _loopNumber;
+   // TLOG(TLVL_INFO) << "XMITReader " << _stream_name
+     //               << " readSize=" << readSize
+       //             << " sig=" << sig
+         //           << " loop=" << _loopNumber;
     // end of debug
 
   

@@ -80,7 +80,7 @@ namespace sbndaq {
     zmq::context_t context;
     zmq::socket_t _zmqGPSPublisher;
 
-    bool fDisableNUStream;
+    //bool fDisableNUStream;
     bool fSNToDisk;
     bool fDumpBinary; //!< Write binary file before the artdaq back-end
     bool fDumpSNBinary;

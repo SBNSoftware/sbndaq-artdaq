@@ -21,7 +21,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fDumpSNBinary            = ps_.get<bool>("DumpSNBinary", false);
   fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout             = ps_.get<bool>("DoSNReadout", true);
-  fDisableNUStream       = ps_.get<bool>("DisableNUStream", false);
+//  fDisableNUStream       = ps_.get<bool>("DisableNUStream", false);
   fSNToDisk              = ps_.get<bool>("SNToDisk", true);
   fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
   fGPSTimeFreq           = ps_.get<double>("GPSTimeFrequency", -1);
@@ -102,15 +102,23 @@ fSNReadout? fCrate->runCalib2Stream( ps_ ) : fCrate->runCalib( ps_ );
     std::exit (EXIT_FAILURE);
   } else{
 
-    //  if (fDisableNUStream) {
-      //   if (!fSNReadout) {
-        //    TLOG(TLVL_ERROR) << "DisableNUStream=true but DoSNReadout=false. No stream enabled. Exit..." << TLOG_ENDL;
-          //  std::exit(EXIT_FAILURE);
-         // }
-       //  fCrate->runSNStream( ps_ );
-       // } else {
-       fSNReadout? fCrate->run2Stream( ps_ ) : fCrate->runNUStream( ps_ );
-      // }
+       //fSNReadout? fCrate->run2Stream( ps_ ) : fCrate->runNUStream( ps_ );
+      
+	if (fSNReadout && !fDisableNUStream) {
+           fCrate->run2Stream(ps_);
+        }
+        else if (!fSNReadout && !fDisableNUStream) {
+           fCrate->runNUStream(ps_);
+        }
+        else if (fSNReadout && fDisableNUStream) {
+           fCrate->runSNStream(ps_);
+        }
+        else{
+        TLOG(TLVL_ERROR) << "Invalid stream configuration: SN readout disabled while NU stream is also disabled." << TLOG_ENDL;
+        std::exit (EXIT_FAILURE);
+        }
+
+
    }
 
   // To do: nevistpc::Crate should have a general runConfiguration function
@@ -230,7 +238,10 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
     }
   }
   delete[] SNBuffer_;
-  fNUXMITReader->dmaStop();
+
+  if (!fDisableNUStream) {
+     fNUXMITReader->dmaStop();
+  }
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
@@ -339,6 +350,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GPSTime() {
 size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
+
+  if (fDisableNUStream) {
+     return 0;
+  }
 
   // Just for tests
   // Taken from NevisTPCFile_generator and adapted to use an XMITReader
