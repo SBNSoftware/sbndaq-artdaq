@@ -118,6 +118,10 @@ namespace nevistpc {
     dmaClearRegister();
     TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": called "<< __func__ ;
   }
+
+  bool XMITReader::hasSNDMATimedOut() const{
+      return SNDMATimedOut;
+  }
   
   void  XMITReader::initializeReceivers()
   {
@@ -394,6 +398,13 @@ namespace nevistpc {
     
       TLOG(TLVL_ERROR) << "XMITReader " << _stream_name << ": *** *** DMA timed out. DMAed " << readSize 
 	      << " bytes. Set to readout " << dma.readSize << " bytes. *** ***" ;
+     
+      TLOG(TLVL_ERROR) << "Current stream: " << _stream_name  << "." ; 
+      if(_stream_name == "sn_xmit_reader"){
+         TLOG(TLVL_ERROR) << "Set SN DMA Timed out to true";
+         SNDMATimedOut = true;
+      }
+      
       dmaAbort();
       dmaClearRegister();
       _loopNumber = 0;

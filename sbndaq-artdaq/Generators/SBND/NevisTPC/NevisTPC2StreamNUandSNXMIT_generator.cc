@@ -21,6 +21,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   fDumpSNBinary            = ps_.get<bool>("DumpSNBinary", false);
   fDumpBinaryDir         = ps_.get<std::string>("DumpBinaryDir", ".");
   fSNReadout             = ps_.get<bool>("DoSNReadout", true);
+  fEnableSNFailover      = ps_.get<bool>("EnableSNFailover", true);
   fSNChunkSize           = ps_.get<int>("SNChunkSize", 100000);
   fGPSTimeFreq           = ps_.get<double>("GPSTimeFrequency", -1);
   fGPSZMQPortNTB         = ps_.get<std::string>("GPSZMQPortNTB", "tcp://10.226.36.6:11212");
@@ -35,6 +36,7 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
   N_SNWrites = 0;
   SNDMATransferCnt_ = 0;
   SNBinSubFileNum_ = -1;
+  SNStreamFailed = false;
   //std::string connectionString = "tcp://10.226.36.6:" + std::to_string(fGPSZMQPortNTB);
 
    t = time(0);
@@ -357,6 +359,26 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
   
+  TLOG(TLVL_INFO)<< "SNStreamFailed Status: " << SNStreamFailed;
+  
+  if (SNStreamFailed){
+      return true;
+   }
+
+
+  if (fEnableSNFailover && fSNXMITReader->hasSNDMATimedOut()){
+     SNStreamFailed = true;
+     //WriteSNData_thread_->stop();
+     if(fDumpSNBinary){
+       TLOG(TLVL_INFO)<< "Closing raw binary file " << binFileNameSN;
+       binFileSN.close();
+     }
+     fCrate->getXMITModule()->enableSNChanEvents(0);
+     return true;
+  }
+
+
+
   TLOG(TGETDATA)<< "GetSNData";
   auto start = std::chrono::high_resolution_clock::now();
 
@@ -407,6 +429,12 @@ TLOG(TGETDATA) << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer
 }
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
+
+  if(SNStreamFailed){
+    return true;
+  }	
+
+
   auto start = std::chrono::high_resolution_clock::now();
 
   //Writing and erasing number of words to and from circular buffer --> to fix missing frames issue
