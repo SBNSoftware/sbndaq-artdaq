@@ -49,6 +49,7 @@ namespace nevistpc{
     virtual std::streamsize readsome ( char* buffer, std::streamsize requestedSize );
     virtual void dmaStop(); //Erin: stop the xmit
     virtual ~XMITReader(){};
+    bool hasSNDMATimedOut() const;
   private:
     bool dmaLockBuffer ( dma_buffer& dma );
     //    bool acquireDMANU(unsigned int milliseconds);
@@ -75,6 +76,7 @@ namespace nevistpc{
 
     bool _isFirstEverDMA; // First DMA flag
     bool _do_timing; // Timing profile flag
+    bool SNDMATimedOut = false; // SN DMA Timed out flag
 
     dma_settingsSPtr _dma_settings;
     dma_buffer _dma1;

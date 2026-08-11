@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <chrono>
 
 #include "XMITReader.h"
 #include "daqExceptions.h"
@@ -118,6 +119,10 @@ namespace nevistpc {
     dmaClearRegister();
     TLOG(TLVL_INFO) << "XMITReader " << _stream_name << ": called "<< __func__ ;
   }
+
+ bool XMITReader::hasSNDMATimedOut() const{
+    return SNDMATimedOut;
+ }
   
   void  XMITReader::initializeReceivers()
   {
@@ -327,6 +332,8 @@ namespace nevistpc {
   {
     //    std::cout << "READSOME FUNCTION CALLED!!!!!!!!!!!!" << std::endl;
     //    exit(0);
+    
+    static const auto readout_start_time = std::chrono::steady_clock::now();
    
     static unsigned long int _loopNumber = 0;
 
@@ -394,6 +401,18 @@ namespace nevistpc {
     
       TLOG(TLVL_ERROR) << "XMITReader " << _stream_name << ": *** *** DMA timed out. DMAed " << readSize 
 	      << " bytes. Set to readout " << dma.readSize << " bytes. *** ***" ;
+      
+      if(_stream_name == "sn_xmit_reader"){
+           const auto elapsed = std::chrono::steady_clock::now() - readout_start_time;
+           if (elapsed >= std::chrono::minutes(10)){
+           TLOG(TLVL_ERROR) << "SN DMA timedout occurred >10 mins after readout started. Set SN DMA Timed out to true";
+           SNDMATimedOut = true;
+           }
+           else{
+           TLOG(TLVL_ERROR) << "Ignore SN DMA timedout during startup";
+           }
+      }
+
       dmaAbort();
       dmaClearRegister();
       _loopNumber = 0;
