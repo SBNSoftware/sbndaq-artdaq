@@ -80,8 +80,25 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStart() {
     TLOG(TLVL_ERROR) << "Two internal trigger sources (CALIB and Controller) are enabled simultaneously. Exit..." << TLOG_ENDL;
     mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Two internal trigger sources (CALIB and Controller) are enabled simultaneously. Exit...";
     std::exit (EXIT_FAILURE);
-  } else fSNReadout? fCrate->run2Stream( ps_ ) : fCrate->runNUStream( ps_ );
+  } else{
 
+      //fSNReadout? fCrate->run2Stream( ps_ ) : fCrate->runNUStream( ps_ );
+      
+      if (fSNReadout && !fDisableNUStream) {
+           fCrate->run2Stream(ps_);
+        }
+        else if (!fSNReadout && !fDisableNUStream) {
+           fCrate->runNUStream(ps_);
+        }
+        else if (fSNReadout && fDisableNUStream) {
+           fCrate->runSNStream(ps_);
+        }
+        else{
+        TLOG(TLVL_ERROR) << "Invalid stream configuration: SN readout disabled while NU stream is also disabled." << TLOG_ENDL;
+        std::exit (EXIT_FAILURE);
+        }
+
+  }
   // To do: nevistpc::Crate should have a general runConfiguration function
   // The specific Crate configuration function to run should be specified in a fcl file
   // Therefore, only one common generator would be need for all configurations that run the same GetFEMCrateData() function
@@ -199,7 +216,10 @@ void sbndaq::NevisTPC2StreamNUandSNXMIT::ConfigureStop() {
     }
   
   delete[] SNBuffer_;
+
+  if (!fDisableNUStream) {
   fNUXMITReader->dmaStop();
+  }
 
   TLOG(TLVL_INFO)<< "Successful " << __func__ ;
   mf::LogInfo("NevisTPC2StreamNUandSNXMIT") << "Successful " << __func__;
@@ -309,6 +329,10 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
   
   TLOG(TGETDATA)<< "GetFEMCrateData";
 
+  if (fDisableNUStream) {
+     return 0;
+  }
+
   auto start = std::chrono::high_resolution_clock::now();
   // Just for tests
   // Taken from NevisTPCFile_generator and adapted to use an XMITReader
@@ -363,7 +387,7 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
       return true;
   }
 
-  TLOG(TLVL_INFO)<<"SN Stream Status: " <<SNStreamFailed;
+  //TLOG(TLVL_INFO)<<"SN Stream Status: " <<SNStreamFailed;
   if (fEnableSNFailover && fSNXMITReader->hasSNDMATimedOut()){
      SNStreamFailed = true;
      if(fDumpSNBinary){
