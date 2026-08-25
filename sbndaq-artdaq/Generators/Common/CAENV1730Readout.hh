@@ -124,7 +124,7 @@ namespace sbndaq
     // last fragment sequence id sent
     uint64_t last_sent_seqid;
     // last fragment timestamps sent
-    uint32_t last_sent_ts;
+    artdaq::Fragment::timestamp_t last_sent_ts;
 
     // hardware status check
     uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];

@@ -1054,7 +1054,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     // 2) check for no data
     if(read_data_size==0) {
       TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
-                         << " ReadData returned 0 bytes after a successful IRQWait."
+                         << " ReadData returned 0 bytes after a successful IRQWait.";
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
@@ -1538,9 +1538,13 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     if(CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&eventsStored) == CAEN_DGTZ_Success){
       metricMan->sendMetric("BoardEventsStored", uint64_t{eventsStored}, "events", 11,
                             artdaq::MetricMode::Maximum);
-      metricMan->sendMetric("BoardBufferFillPercent",
-                            100.0*double(eventsStored)/double(fNumBoardBuffers), "%", 11,
-                            artdaq::MetricMode::Maximum);
+      // fNumBoardBuffers is only known once ConfigureDataBuffer() has run, so a
+      // poll before the first start would divide by zero
+      if(fNumBoardBuffers > 0){
+        metricMan->sendMetric("BoardBufferFillPercent",
+                              100.0*double(eventsStored)/double(fNumBoardBuffers), "%", 11,
+                              artdaq::MetricMode::Maximum);
+      }
     }
 
   } else {
