@@ -40,6 +40,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 
   fail_GetNext=false;
   fNChannels = fCAEN.nChannels;
+  fNumBoardBuffers=0;
 
   TLOG(TCONFIG) << ": Using FragID=" << fCAEN.fragmentId 
     << " BoardID=" << fCAEN.boardId 
@@ -803,6 +804,19 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
   retcode = CAEN_DGTZ_FreeReadoutBuffer(&myBuffer);
   sbndaq::CAENDecoder::checkError(retcode,"FreeReadoutBuffer",fCAEN.fragmentId);
 
+  // how many events the board itself can hold: BUFFER_ORGANIZATION gives
+  // 2^N buffers, and it is programmed indirectly by SetRecordLength, so it
+  // has to be read back rather than computed
+  uint32_t bufferOrganization = 0;
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,BUFFER_ORGANIZATION,&bufferOrganization);
+  sbndaq::CAENDecoder::checkError(retcode,"ReadBufferOrganization",fCAEN.fragmentId);
+  fNumBoardBuffers = 1u<<(bufferOrganization & 0xF); // code is in bits [3:0]
+  TLOG(TLVL_INFO) << "Buffer organization (BUFFER_ORGANIZATION=0x"
+                  << std::hex << static_cast<unsigned int>(BUFFER_ORGANIZATION) << ") = 0x"
+                  << bufferOrganization << std::dec
+                  << " -> " << fNumBoardBuffers << " buffers of "
+                  << fCAEN.recordLength << " samples";
+
   // now we prepare the pool buffer on the boardreader side
   // single block size is CAEN buffer size
   TLOG_ARB(TSTART,TRACE_NAME) << "Configuring PoolBuffer of size " << fCAEN.poolBufferSize << TLOG_ENDL;
@@ -966,6 +980,14 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     return true;
   }
 
+  // catch any other IRQWait failure
+  if (retcode != CAEN_DGTZ_Success) {
+    TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                     << " CAEN_DGTZ_IRQWait failed; return code=" << int{retcode}
+                     << "; not calling ReadData.";
+    return true; // go again, do not stop for a transient failure
+  }
+
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
 		 << "No timeout. TimePollBegin=" 
 		 << fTimePollBegin << " TimePollEnd=" << fTimePollEnd;
@@ -1017,21 +1039,30 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     // 1) check to make sure no errors on readout
     if (retcode != CAEN_DGTZ_Success) {
-      TLOG(TLVL_ERROR) << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
+      uint32_t stored=0, eventSize=0;
+      CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&stored);
+      CAEN_DGTZ_ReadRegister(fHandle,EVENT_SIZE,&eventSize);
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode}
+                       << ", EVENT_STORED=" << stored
+                       << ", EVENT_SIZE=" << eventSize << " words";
       fPoolBuffer.returnFreeBlock(block);
       std::this_thread::yield();
       return false;
     }
 
-    // 2) check for no data 
-    if(read_data_size==0) { 
+    // 2) check for no data
+    if(read_data_size==0) {
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                         << " ReadData returned 0 bytes after a successful IRQWait."
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
-    
+
     // 3) check if data is within buffer boundaries
     if(read_data_size > block->size){
-      TLOG(TLVL_ERROR) << "CAENReadData() tried to write " << read_data_size
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " CAENReadData() tried to write " << read_data_size
                        << " bytes into a " << block->size << "-byte buffer; dropping.";
       fPoolBuffer.returnFreeBlock(block);
       break;
@@ -1495,10 +1526,22 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     bool run  = data & 0x0004; // is running?
     bool full = data & 0x0010; // is busy?
     bool shut = data & 0x80000; // is shutting down? 
+    bool pll  = data & 0x0080; // is the PLL locked?
 
     metricMan->sendMetric("Running", int(run), "", 11, artdaq::MetricMode::LastPoint);
     metricMan->sendMetric("Busy", int(full), "", 11, artdaq::MetricMode::LastPoint);
     metricMan->sendMetric("Shutdown", int(shut), "", 11, artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("PLLLock", int(pll), "", 11, artdaq::MetricMode::LastPoint);
+
+    // How close is the board to refusing triggers? 
+    uint32_t eventsStored = 0;
+    if(CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&eventsStored) == CAEN_DGTZ_Success){
+      metricMan->sendMetric("BoardEventsStored", uint64_t{eventsStored}, "events", 11,
+                            artdaq::MetricMode::Maximum);
+      metricMan->sendMetric("BoardBufferFillPercent",
+                            100.0*double(eventsStored)/double(fNumBoardBuffers), "%", 11,
+                            artdaq::MetricMode::Maximum);
+    }
 
   } else {
     TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
