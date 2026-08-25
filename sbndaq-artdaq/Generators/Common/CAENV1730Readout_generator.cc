@@ -1052,9 +1052,14 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     }
 
     // 2) check for no data
+    // a zero-length read is the NORMAL exit of this loop once the board has been
+    // drained, so only warn when it happens on the first iteration, i.e. IRQWait
+    // said an event was ready and ReadData then returned nothing
     if(read_data_size==0) {
-      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
-                         << " ReadData returned 0 bytes after a successful IRQWait.";
+      if(n_reads==0) {
+        TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                           << " ReadData returned 0 bytes after a successful IRQWait.";
+      }
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
