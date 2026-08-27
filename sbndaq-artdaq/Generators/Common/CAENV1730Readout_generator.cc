@@ -872,6 +872,7 @@ void sbndaq::CAENV1730Readout::start()
   
   fOverflowCounter=0;
   last_rcv_event_counter=0x0;
+  fHavePrevTS=false;
   last_sent_event_counter=0x0;
   last_sent_seqid =0x0;
   last_sent_ts=0x0;
@@ -1186,14 +1187,29 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     {
       TLOG (TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
         << " Missing triggers; current trigger eventCounter=" << current_event_counter
-        << ", previous trigger eventCounter / gap  = " << last_rcv_event_counter << " / " << gap 
-        << ", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
-        << ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() 
+        << ", previous trigger eventCounter / gap  = " << last_rcv_event_counter << " / " << gap
+        << ", freeBlockCount=" << fPoolBuffer.freeBlockCount()
+        << ", activeBlockCount=" << fPoolBuffer.activeBlockCount()
         << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
-    }    
+    }
+
+    // board trigger rate: event-counter increase over the time between event timestamps.
+    // The board counts ALL triggers, accepted or not (ACQ_CONTROL bit[3], set in
+    // ConfigureReadout()): with trigger overlap enabled overlapping events are merged
+    // (gap=1); with it disabled they are discarded but still counted (gap>1), so
+    // discarded triggers still enter the rate.
+    if(fHavePrevTS && fTS > fPrevTS) // skip if previous timestamp is not available (eg, first event)
+    { 
+      const double delta_sec = 1e-9*double(fTS - fPrevTS);
+      metricMan->sendMetric("BoardEventRate", double(gap)/delta_sec, "Hz", 11,
+                            artdaq::MetricMode::Average | artdaq::MetricMode::Maximum);
+    }
+
     // update
     last_rcv_event_counter = current_event_counter;
-    
+    fPrevTS = fTS;
+    fHavePrevTS = true;
+
     //return active block
     fPoolBuffer.returnActiveBlock(block);
     

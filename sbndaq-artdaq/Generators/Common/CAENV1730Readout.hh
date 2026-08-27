@@ -116,6 +116,9 @@ namespace sbndaq
     static constexpr uint32_t EVENT_COUNTER_MASK = 0xFFFFFFu; // 24-bit
     // last event counter seen in GetData() thread
     uint32_t last_rcv_event_counter;
+    // timestamp of the previous read-out event, for the board trigger rate
+    artdaq::Fragment::timestamp_t fPrevTS;
+    bool fHavePrevTS;
 
     // count overflows of V1730 event counter
     uint32_t fOverflowCounter; 
