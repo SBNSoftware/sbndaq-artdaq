@@ -493,7 +493,8 @@ void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
 {
   /* Check to output ONLY CLK OR CLK PHASE */
   if ( fCAEN.outputClk && fCAEN.outputClkPhase ){
-    TLOG(TLVL_ERROR) << "Error configuring output clock: Cannot output clock and its phase at the same time." << TLOG_ENDL;
+    TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                     << " Error configuring output clock: Cannot output clock and its phase at the same time." << TLOG_ENDL;
     abort();
   } 
 
@@ -844,10 +845,10 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
       channelLabel << " Channel/Group " << channelID;
     
     std::stringstream text;
-    text << " " << label << " ReadBack error fragID=" << fragID 
+    text << " " << label << " ReadBack error"
       << channelLabel.str() << " wrote " << wrote << " read " << readback;
 
-    TLOG(TLVL_ERROR ) << "" << text.str();
+    TLOG(TLVL_ERROR ) << "(FragID=" << fragID << ")" << text.str();
   }
 }
 
@@ -1045,7 +1046,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
                        << " CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode}
                        << ", EVENT_STORED=" << stored
-                       << ", EVENT_SIZE=" << eventSize << " words";
+                       << ", EVENT_SIZE=" << eventSize*sizeof(uint32_t) << " bytes";
       fPoolBuffer.returnFreeBlock(block);
       std::this_thread::yield();
       return false;
@@ -1315,7 +1316,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     int ts_loop=0;
     while(ts_loop<3 && ts_count==0)
     {
-      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                         << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
 			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
       ts_loop++;
@@ -1353,7 +1355,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // no "polling" correction being applied here
     else
     {
-      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
 		       << " Will generate new one now...";
 
       if(fCAEN.useTimeTagForTimeStamp)
@@ -1412,17 +1415,20 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // note: ts_frag is a mix of server time + CAEN TTT
     // bad values in TTT (board not getting PPS reset properly) might trigger a problem here
     if( ts_frag>ts_now )
-      TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Causality problem!!"
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+			 << " Fragment assigned timestamp is after timestamp from fragment creation! Causality problem!!"
 			 << "ts_frag - ts_now = " << ts_frag - ts_now << " ns!"
 			 << TLOG_ENDL;
 
     else if( (ts_now-ts_frag)>5e9 ){
-      TLOG(TLVL_ERROR) << "Fragment being packged more than 5 seconds after timestamp: "
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+		       << " Fragment being packged more than 5 seconds after timestamp: "
 		       << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 		       << TLOG_ENDL;
     }
     else if( (ts_now-ts_frag)>1e9 ){
-      TLOG(TLVL_WARNING) << "Fragment being packged more than 1 second after timestamp: "
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+			 << " Fragment being packged more than 1 second after timestamp: "
 			 << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 			 << TLOG_ENDL;
     }
@@ -1444,7 +1450,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // look for gaps in the sequence_id
     if( sequence_id_gap > 1u )
     {
-      TLOG (TLVL_WARNING) << "Missing data; current fragment sequenceID=" << current_sequence_id
+      TLOG (TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+         << " Missing data; current fragment sequenceID=" << current_sequence_id
          << ", previous fragment sequenceID / gap  = " << last_sent_seqid << " / " << sequence_id_gap;
       metricMan->sendMetric("Missing Fragments", uint64_t{sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
     }
@@ -1452,11 +1459,13 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // look for bad ordering
     if( current_sequence_id < last_sent_seqid )
     {
-      TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! " << current_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " SequenceIDs processed out of order!! " << current_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
     }
     if( last_sent_ts > ts_frag)
     {
-      TLOG(TLVL_ERROR) << "Timestamps out of order!! Last event later than current one." << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " Timestamps out of order!! Last event later than current one." << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
     }
 
     // finally push the fragments to the eventbuilders
@@ -1671,7 +1680,8 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
       cvAX818 = cvA5818;
       break;
     default:
-      TLOG(TLVL_ERROR) << "Do not know how to handle fCAEN.aX818 == " << fCAEN.aX818;
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " Do not know how to handle fCAEN.aX818 == " << fCAEN.aX818;
       return;
   }
 
