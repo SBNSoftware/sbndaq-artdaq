@@ -1021,7 +1021,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
                        << "(FragID=" << fCAEN.fragmentId << ")"
                        << ", activeBlockCount=" << fPoolBuffer.activeBlockCount();
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-                       << "Critical error; aborting boardreader process....";				
+                       << "Critical error; aborting boardreader process....";
       fail_GetNext = true;
       std::this_thread::yield();
       return false;
@@ -1040,20 +1040,26 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     // 1) check to make sure no errors on readout
     if (retcode != CAEN_DGTZ_Success) {
-      uint32_t stored=0, eventSize=0;
+      uint32_t stored=0, eventSize=0, acqStatus=0;
       CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&stored);
       CAEN_DGTZ_ReadRegister(fHandle,EVENT_SIZE,&eventSize);
+      CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_ACQ_STATUS_ADD,&acqStatus);
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
                        << " CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode}
-                       << ", EVENT_STORED=" << stored
-                       << ", EVENT_SIZE=" << eventSize*sizeof(uint32_t) << " bytes";
+                       << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")"
+                       << ", EVENT_STORED=" << stored << "/" << fNumBoardBuffers
+                       << ", EVENT_SIZE=" << eventSize*sizeof(uint32_t) << " bytes"
+                       << ", ACQ_STATUS=0x" << std::hex << acqStatus << std::dec
+                       << " (eventFull=" << bool(acqStatus & 0x10)
+                       << ", eventReady=" << bool(acqStatus & 0x8)
+                       << "), n_reads this poll=" << n_reads;
       fPoolBuffer.returnFreeBlock(block);
       std::this_thread::yield();
       return false;
     }
 
     // 2) check for no data
-    // a zero-length read is the NORMAL exit of this loop once the board has been
+    // a zero-length read can be the normal exit of this loop once the board has been
     // drained, so only warn when it happens on the first iteration, i.e. IRQWait
     // said an event was ready and ReadData then returned nothing
     if(read_data_size==0) {
@@ -1198,8 +1204,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   }//end while read_data_size is not zero
 
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
-		 << "n_reads=" << n_reads; 
-  
+		 << "n_reads=" << n_reads;
+
   //update the polling time for the next poll
   fTimePollBegin = fTimePollEnd;
 
@@ -1547,24 +1553,28 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     metricMan->sendMetric("Shutdown", int(shut), "", 11, artdaq::MetricMode::LastPoint);
     metricMan->sendMetric("PLLLock", int(pll), "", 11, artdaq::MetricMode::LastPoint);
 
-    // How close is the board to refusing triggers? 
-    uint32_t eventsStored = 0;
-    if(CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&eventsStored) == CAEN_DGTZ_Success){
-      metricMan->sendMetric("BoardEventsStored", uint64_t{eventsStored}, "events", 11,
-                            artdaq::MetricMode::Maximum);
-      // fNumBoardBuffers is only known once ConfigureDataBuffer() has run, so a
-      // poll before the first start would divide by zero
-      if(fNumBoardBuffers > 0){
-        metricMan->sendMetric("BoardBufferFillPercent",
-                              100.0*double(eventsStored)/double(fNumBoardBuffers), "%", 11,
-                              artdaq::MetricMode::Maximum);
-      }
-    }
-
   } else {
     TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
                        << "Failed reading CAEN_DGTZ_ACQ_STATUS_ADD register!";
-  } 
+  }
+
+  // How close is the board to refusing triggers?
+  uint32_t eventsStored = 0;
+  ret = CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&eventsStored);
+  if(ret == CAEN_DGTZ_Success){
+    metricMan->sendMetric("BoardEventsStored", uint64_t{eventsStored}, "events", 11,
+                          artdaq::MetricMode::Maximum);
+    // fNumBoardBuffers is only known once ConfigureDataBuffer() has run, so a
+    // poll before the first start would divide by zero
+    if(fNumBoardBuffers > 0){
+      metricMan->sendMetric("BoardBufferFillPercent",
+                            100.0*double(eventsStored)/double(fNumBoardBuffers), "%", 11,
+                            artdaq::MetricMode::Maximum);
+    }
+  } else {
+    TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
+                       << "Failed reading EVENT_STORED register!";
+  }
 
   // second, check individual channel status
   // this provides temperature reading + channel memory full
