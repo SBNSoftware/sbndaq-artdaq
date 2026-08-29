@@ -872,7 +872,6 @@ void sbndaq::CAENV1730Readout::start()
   
   fOverflowCounter=0;
   last_rcv_event_counter=0x0;
-  fHavePrevTS=false;
   last_sent_event_counter=0x0;
   last_sent_seqid =0x0;
   last_sent_ts=0x0;
@@ -1182,6 +1181,10 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     // compute gap: look only at first 24bits to handle possible overflows
     uint32_t current_event_counter = uint32_t{header->eventCounter};
     uint32_t gap  = (current_event_counter - last_rcv_event_counter) & EVENT_COUNTER_MASK;
+    // trigger rate: the board counts ALL triggers, accepted or not (ACQ_CONTROL
+    // bit[3], set in ConfigureReadout()), so Rate mode sums gap over the
+    // reporting interval and counts every trigger, event or not
+    metricMan->sendMetric("BoardEventRate", double(gap), "Hz", 11, artdaq::MetricMode::Rate);
 
     if(gap > 1u)
     {
@@ -1193,22 +1196,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
         << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
     }
 
-    // board trigger rate: event-counter increase over the time between event timestamps.
-    // The board counts ALL triggers, accepted or not (ACQ_CONTROL bit[3], set in
-    // ConfigureReadout()): with trigger overlap enabled overlapping events are merged
-    // (gap=1); with it disabled they are discarded but still counted (gap>1), so
-    // discarded triggers still enter the rate.
-    if(fHavePrevTS && fTS > fPrevTS) // skip if previous timestamp is not available (eg, first event)
-    { 
-      const double delta_sec = 1e-9*double(fTS - fPrevTS);
-      metricMan->sendMetric("BoardEventRate", double(gap)/delta_sec, "Hz", 11,
-                            artdaq::MetricMode::Average | artdaq::MetricMode::Maximum);
-    }
-
     // update
     last_rcv_event_counter = current_event_counter;
-    fPrevTS = fTS;
-    fHavePrevTS = true;
 
     //return active block
     fPoolBuffer.returnActiveBlock(block);
