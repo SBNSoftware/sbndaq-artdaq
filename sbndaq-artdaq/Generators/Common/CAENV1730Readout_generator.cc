@@ -1184,7 +1184,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     // trigger rate: the board counts ALL triggers, accepted or not (ACQ_CONTROL
     // bit[3], set in ConfigureReadout()), so Rate mode sums gap over the
     // reporting interval and counts every trigger, event or not
-    metricMan->sendMetric("BoardEventRate", double(gap), "Hz", 11, artdaq::MetricMode::Rate);
+    metricMan->sendMetric("BoardEventRate", uint64_t{gap}, "triggers", 11, artdaq::MetricMode::Rate);
 
     if(gap > 1u)
     {
