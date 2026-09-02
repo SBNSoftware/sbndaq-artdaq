@@ -693,16 +693,16 @@ CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, u
   {
     if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
     {
-      return CAEN_DGTZ_CommError;
+      return retcod;
     }
     SPIBusy = (SPIBusy>>2)&0x1;
     if (!SPIBusy) 
     {
       if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
+      { return retcod;}
 
       if((retcod = CAEN_DGTZ_ReadRegister(handle, valueRegAddr, &val)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
+      { return retcod;}
     }
     *value = (uint8_t)val;
     usleep(1000);
@@ -722,15 +722,15 @@ CAEN_DGTZ_ErrorCode CAENV1730Readout::WriteSPIRegister(int handle, uint32_t ch, 
   {
     if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
     {
-      return CAEN_DGTZ_CommError;
+      return retcod;
     }
     SPIBusy = (SPIBusy>>2)&0x1;
     if (!SPIBusy) 
     {
       if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
-      {  return CAEN_DGTZ_CommError;}
+      {  return retcod;}
       if((retcod = CAEN_DGTZ_WriteRegister(handle, valueRegAddr, (uint32_t)value)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
+      { return retcod;}
     }
     usleep(1000);
   }
@@ -957,7 +957,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_RearmInterrupt(fHandle);
     if(retcode < 0){
       TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
-                         << " RearmInterrupt() failed: " << retcode;
+                         << " RearmInterrupt() failed; return code=" << int{retcode}
+                         << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")";
     } 
   }
 
@@ -985,6 +986,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   if (retcode != CAEN_DGTZ_Success) {
     TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
                      << " CAEN_DGTZ_IRQWait failed; return code=" << int{retcode}
+                     << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")"
                      << "; not calling ReadData.";
     return true; // go again, do not stop for a transient failure
   }
@@ -1627,7 +1629,8 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
         TLOG(TLVL_WARNING) << "CAENV1730 fragID=" << fCAEN.fragmentId << " : "
 			   << " Channel " << ch
 			   << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
-			   << " ReadTemperature Return Code = " << retcod
+			   << " ReadTemperature Return Code = " << int{retcod}
+			   << " (" << sbndaq::CAENDecoder::CAENError(retcod) << ")"
 			   << TLOG_ENDL;
       }
     }
@@ -1647,7 +1650,9 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
       metricMan->sendMetric(memfullStream.str(), int(full), "", 11, artdaq::MetricMode::LastPoint);
     } else {
       TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
-                         << "Failed reading CHANNEL_STATUS register for channel " << ch;
+                         << "Failed reading CHANNEL_STATUS register for channel " << ch
+                         << "; return code=" << int{retcod}
+                         << " (" << sbndaq::CAENDecoder::CAENError(retcod) << ")";
     }
   } //end channel loop
   return true;
