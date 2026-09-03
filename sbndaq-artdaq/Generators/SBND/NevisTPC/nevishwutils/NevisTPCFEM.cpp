@@ -606,7 +606,7 @@ void NevisTPCFEM::powerOnArriaFPGA(){
 
 
     if (shape == "uB") {//signals movtivated by physics of uB                                                                                                                      
-      if(chnl<4){
+      if(chnl<64){
 	unsigned int ped_val = (chnl < baseline.size()) ? baseline[chnl] : 750;
 	unsigned int ch_val  = (chnl < threshold.size()) ? threshold[chnl] : 100;
 	if (smpl>=2 && smpl<10){

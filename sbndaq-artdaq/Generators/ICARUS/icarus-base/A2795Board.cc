@@ -160,14 +160,14 @@ int A2795Board::isDataRdy()
     done = (status & STATUS_DRDY); // has data bit 4 Status Reg
     if (!timeoutCounter--)         // Trigger timeout occured
     {
-      TRACEN("A2795Board.cc", TLVL_WARNING, "A2795Board::isDataRdy(): [fragment id=%d] Slow trigger or missing data on link %d board %d...", fragmentID_, busNbr, boardNbr);
+      TRACEN("A2795Board.cc", TLVL_DEBUG, "A2795Board::isDataRdy(): [fragment id=%d] Slow trigger or missing data on link %d board %d...", fragmentID_, busNbr, boardNbr);
       vetoOff();
     }
   }
 
   if (!done)
   {
-    TRACEN("A2795Board.cc", TLVL_ERROR,
+    TRACEN("A2795Board.cc", TLVL_WARNING,
            "A2795Board::isDataRdy(): [fragment id=%d] timeout waiting for data-ready on link %d board %d",
            fragmentID_, busNbr, boardNbr);
   }
