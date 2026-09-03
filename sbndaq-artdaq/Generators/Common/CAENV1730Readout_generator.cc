@@ -40,6 +40,7 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
 
   fail_GetNext=false;
   fNChannels = fCAEN.nChannels;
+  fNumBoardBuffers=0;
 
   TLOG(TCONFIG) << ": Using FragID=" << fCAEN.fragmentId 
     << " BoardID=" << fCAEN.boardId 
@@ -492,7 +493,8 @@ void sbndaq::CAENV1730Readout::ConfigureClkToTrgOut()
 {
   /* Check to output ONLY CLK OR CLK PHASE */
   if ( fCAEN.outputClk && fCAEN.outputClkPhase ){
-    TLOG(TLVL_ERROR) << "Error configuring output clock: Cannot output clock and its phase at the same time." << TLOG_ENDL;
+    TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                     << " Error configuring output clock: Cannot output clock and its phase at the same time." << TLOG_ENDL;
     abort();
   } 
 
@@ -691,16 +693,16 @@ CAEN_DGTZ_ErrorCode CAENV1730Readout::ReadSPIRegister(int handle, uint32_t ch, u
   {
     if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
     {
-      return CAEN_DGTZ_CommError;
+      return retcod;
     }
     SPIBusy = (SPIBusy>>2)&0x1;
     if (!SPIBusy) 
     {
       if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
+      { return retcod;}
 
       if((retcod = CAEN_DGTZ_ReadRegister(handle, valueRegAddr, &val)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
+      { return retcod;}
     }
     *value = (uint8_t)val;
     usleep(1000);
@@ -720,15 +722,15 @@ CAEN_DGTZ_ErrorCode CAENV1730Readout::WriteSPIRegister(int handle, uint32_t ch, 
   {
     if((retcod = CAEN_DGTZ_ReadRegister(handle, SPIBusyAddr, &SPIBusy)) != CAEN_DGTZ_Success)
     {
-      return CAEN_DGTZ_CommError;
+      return retcod;
     }
     SPIBusy = (SPIBusy>>2)&0x1;
     if (!SPIBusy) 
     {
       if((retcod = CAEN_DGTZ_WriteRegister(handle, addressingRegAddr, address)) != CAEN_DGTZ_Success)
-      {  return CAEN_DGTZ_CommError;}
+      {  return retcod;}
       if((retcod = CAEN_DGTZ_WriteRegister(handle, valueRegAddr, (uint32_t)value)) != CAEN_DGTZ_Success)
-      { return CAEN_DGTZ_CommError;}
+      { return retcod;}
     }
     usleep(1000);
   }
@@ -803,6 +805,19 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
   retcode = CAEN_DGTZ_FreeReadoutBuffer(&myBuffer);
   sbndaq::CAENDecoder::checkError(retcode,"FreeReadoutBuffer",fCAEN.fragmentId);
 
+  // how many events the board itself can hold: BUFFER_ORGANIZATION gives
+  // 2^N buffers, and it is programmed indirectly by SetRecordLength, so it
+  // has to be read back rather than computed
+  uint32_t bufferOrganization = 0;
+  retcode = CAEN_DGTZ_ReadRegister(fHandle,BUFFER_ORGANIZATION,&bufferOrganization);
+  sbndaq::CAENDecoder::checkError(retcode,"ReadBufferOrganization",fCAEN.fragmentId);
+  fNumBoardBuffers = 1u<<(bufferOrganization & 0xF); // code is in bits [3:0]
+  TLOG(TLVL_INFO) << "Buffer organization (BUFFER_ORGANIZATION=0x"
+                  << std::hex << static_cast<unsigned int>(BUFFER_ORGANIZATION) << ") = 0x"
+                  << bufferOrganization << std::dec
+                  << " -> " << fNumBoardBuffers << " buffers of "
+                  << fCAEN.recordLength << " samples";
+
   // now we prepare the pool buffer on the boardreader side
   // single block size is CAEN buffer size
   TLOG_ARB(TSTART,TRACE_NAME) << "Configuring PoolBuffer of size " << fCAEN.poolBufferSize << TLOG_ENDL;
@@ -830,10 +845,10 @@ void sbndaq::CAENV1730Readout::CheckReadback(std::string label,
       channelLabel << " Channel/Group " << channelID;
     
     std::stringstream text;
-    text << " " << label << " ReadBack error fragID=" << fragID 
+    text << " " << label << " ReadBack error"
       << channelLabel.str() << " wrote " << wrote << " read " << readback;
 
-    TLOG(TLVL_ERROR ) << "" << text.str();
+    TLOG(TLVL_ERROR ) << "(FragID=" << fragID << ")" << text.str();
   }
 }
 
@@ -942,7 +957,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     CAEN_DGTZ_ErrorCode retcode = CAEN_DGTZ_RearmInterrupt(fHandle);
     if(retcode < 0){
       TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
-                         << " RearmInterrupt() failed: " << retcode;
+                         << " RearmInterrupt() failed; return code=" << int{retcode}
+                         << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")";
     } 
   }
 
@@ -964,6 +980,15 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     //go again!
     return true;
+  }
+
+  // catch any other IRQWait failure
+  if (retcode != CAEN_DGTZ_Success) {
+    TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                     << " CAEN_DGTZ_IRQWait failed; return code=" << int{retcode}
+                     << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")"
+                     << "; not calling ReadData.";
+    return true; // go again, do not stop for a transient failure
   }
 
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
@@ -998,7 +1023,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
                        << "(FragID=" << fCAEN.fragmentId << ")"
                        << ", activeBlockCount=" << fPoolBuffer.activeBlockCount();
       TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-                       << "Critical error; aborting boardreader process....";				
+                       << "Critical error; aborting boardreader process....";
       fail_GetNext = true;
       std::this_thread::yield();
       return false;
@@ -1017,21 +1042,41 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
 
     // 1) check to make sure no errors on readout
     if (retcode != CAEN_DGTZ_Success) {
-      TLOG(TLVL_ERROR) << "CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode};
+      uint32_t stored=0, eventSize=0, acqStatus=0;
+      CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&stored);
+      CAEN_DGTZ_ReadRegister(fHandle,EVENT_SIZE,&eventSize);
+      CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_ACQ_STATUS_ADD,&acqStatus);
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode}
+                       << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")"
+                       << ", EVENT_STORED=" << stored << "/" << fNumBoardBuffers
+                       << ", EVENT_SIZE=" << eventSize*sizeof(uint32_t) << " bytes"
+                       << ", ACQ_STATUS=0x" << std::hex << acqStatus << std::dec
+                       << " (eventFull=" << bool(acqStatus & 0x10)
+                       << ", eventReady=" << bool(acqStatus & 0x8)
+                       << "), n_reads this poll=" << n_reads;
       fPoolBuffer.returnFreeBlock(block);
       std::this_thread::yield();
       return false;
     }
 
-    // 2) check for no data 
-    if(read_data_size==0) { 
+    // 2) check for no data
+    // a zero-length read can be the normal exit of this loop once the board has been
+    // drained, so only warn when it happens on the first iteration, i.e. IRQWait
+    // said an event was ready and ReadData then returned nothing
+    if(read_data_size==0) {
+      if(n_reads==0) {
+        TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                           << " ReadData returned 0 bytes after a successful IRQWait.";
+      }
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
-    
+
     // 3) check if data is within buffer boundaries
     if(read_data_size > block->size){
-      TLOG(TLVL_ERROR) << "CAENReadData() tried to write " << read_data_size
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " CAENReadData() tried to write " << read_data_size
                        << " bytes into a " << block->size << "-byte buffer; dropping.";
       fPoolBuffer.returnFreeBlock(block);
       break;
@@ -1138,19 +1183,24 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
     // compute gap: look only at first 24bits to handle possible overflows
     uint32_t current_event_counter = uint32_t{header->eventCounter};
     uint32_t gap  = (current_event_counter - last_rcv_event_counter) & EVENT_COUNTER_MASK;
+    // trigger rate: the board counts ALL triggers, accepted or not (ACQ_CONTROL
+    // bit[3], set in ConfigureReadout()), so Rate mode sums gap over the
+    // reporting interval and counts every trigger, event or not
+    metricMan->sendMetric("BoardEventRate", uint64_t{gap}, "triggers", 11, artdaq::MetricMode::Rate);
 
     if(gap > 1u)
     {
       TLOG (TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
         << " Missing triggers; current trigger eventCounter=" << current_event_counter
-        << ", previous trigger eventCounter / gap  = " << last_rcv_event_counter << " / " << gap 
-        << ", freeBlockCount=" <<fPoolBuffer.freeBlockCount() 
-        << ", activeBlockCount=" <<fPoolBuffer.activeBlockCount() 
+        << ", previous trigger eventCounter / gap  = " << last_rcv_event_counter << " / " << gap
+        << ", freeBlockCount=" << fPoolBuffer.freeBlockCount()
+        << ", activeBlockCount=" << fPoolBuffer.activeBlockCount()
         << ", fullyDrainedCount=" << fPoolBuffer.fullyDrainedCount();
-    }    
+    }
+
     // update
     last_rcv_event_counter = current_event_counter;
-    
+
     //return active block
     fPoolBuffer.returnActiveBlock(block);
     
@@ -1161,8 +1211,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   }//end while read_data_size is not zero
 
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
-		 << "n_reads=" << n_reads; 
-  
+		 << "n_reads=" << n_reads;
+
   //update the polling time for the next poll
   fTimePollBegin = fTimePollEnd;
 
@@ -1279,7 +1329,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     int ts_loop=0;
     while(ts_loop<3 && ts_count==0)
     {
-      TLOG(TLVL_WARNING) << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                         << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
 			 << " Will sleep for 200 ms and try again. Times tried = " << ts_loop;
       ::usleep(200000);
       ts_loop++;
@@ -1317,7 +1368,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // no "polling" correction being applied here
     else
     {
-      TLOG(TLVL_ERROR) << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " TIMESTAMP FOR SEQID " << current_sequence_id << " EVCOUNTER " << current_event_counter << " not found in fTimestampMap!"
 		       << " Will generate new one now...";
 
       if(fCAEN.useTimeTagForTimeStamp)
@@ -1376,17 +1428,20 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // note: ts_frag is a mix of server time + CAEN TTT
     // bad values in TTT (board not getting PPS reset properly) might trigger a problem here
     if( ts_frag>ts_now )
-      TLOG(TLVL_WARNING) << "Fragment assigned timestamp is after timestamp from fragment creation! Causality problem!!"
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+			 << " Fragment assigned timestamp is after timestamp from fragment creation! Causality problem!!"
 			 << "ts_frag - ts_now = " << ts_frag - ts_now << " ns!"
 			 << TLOG_ENDL;
 
     else if( (ts_now-ts_frag)>5e9 ){
-      TLOG(TLVL_ERROR) << "Fragment being packged more than 5 seconds after timestamp: "
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+		       << " Fragment being packged more than 5 seconds after timestamp: "
 		       << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 		       << TLOG_ENDL;
     }
     else if( (ts_now-ts_frag)>1e9 ){
-      TLOG(TLVL_WARNING) << "Fragment being packged more than 1 second after timestamp: "
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+			 << " Fragment being packged more than 1 second after timestamp: "
 			 << "ts_now - ts_frag = " << ts_now-ts_frag << " ns!"
 			 << TLOG_ENDL;
     }
@@ -1408,7 +1463,8 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // look for gaps in the sequence_id
     if( sequence_id_gap > 1u )
     {
-      TLOG (TLVL_WARNING) << "Missing data; current fragment sequenceID=" << current_sequence_id
+      TLOG (TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+         << " Missing data; current fragment sequenceID=" << current_sequence_id
          << ", previous fragment sequenceID / gap  = " << last_sent_seqid << " / " << sequence_id_gap;
       metricMan->sendMetric("Missing Fragments", uint64_t{sequence_id_gap}, "frags", 11, artdaq::MetricMode::Accumulate);
     }
@@ -1416,11 +1472,13 @@ bool sbndaq::CAENV1730Readout::readSingleWindowFragments(artdaq::FragmentPtrs & 
     // look for bad ordering
     if( current_sequence_id < last_sent_seqid )
     {
-      TLOG(TLVL_ERROR) << "SequenceIDs processed out of order!! " << current_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " SequenceIDs processed out of order!! " << current_sequence_id << " < " << last_sent_seqid << TLOG_ENDL;
     }
     if( last_sent_ts > ts_frag)
     {
-      TLOG(TLVL_ERROR) << "Timestamps out of order!! Last event later than current one." << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " Timestamps out of order!! Last event later than current one." << ts_frag << " < " << last_sent_ts << TLOG_ENDL;
     }
 
     // finally push the fragments to the eventbuilders
@@ -1495,15 +1553,35 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
     bool run  = data & 0x0004; // is running?
     bool full = data & 0x0010; // is busy?
     bool shut = data & 0x80000; // is shutting down? 
+    bool pll  = data & 0x0080; // is the PLL locked?
 
     metricMan->sendMetric("Running", int(run), "", 11, artdaq::MetricMode::LastPoint);
     metricMan->sendMetric("Busy", int(full), "", 11, artdaq::MetricMode::LastPoint);
     metricMan->sendMetric("Shutdown", int(shut), "", 11, artdaq::MetricMode::LastPoint);
+    metricMan->sendMetric("PLLLock", int(pll), "", 11, artdaq::MetricMode::LastPoint);
 
   } else {
     TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
                        << "Failed reading CAEN_DGTZ_ACQ_STATUS_ADD register!";
-  } 
+  }
+
+  // How close is the board to refusing triggers?
+  uint32_t eventsStored = 0;
+  ret = CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&eventsStored);
+  if(ret == CAEN_DGTZ_Success){
+    metricMan->sendMetric("BoardEventsStored", uint64_t{eventsStored}, "events", 11,
+                          artdaq::MetricMode::Maximum);
+    // fNumBoardBuffers is only known once ConfigureDataBuffer() has run, so a
+    // poll before the first start would divide by zero
+    if(fNumBoardBuffers > 0){
+      metricMan->sendMetric("BoardBufferFillPercent",
+                            100.0*double(eventsStored)/double(fNumBoardBuffers), "%", 11,
+                            artdaq::MetricMode::Maximum);
+    }
+  } else {
+    TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
+                       << "Failed reading EVENT_STORED register!";
+  }
 
   // second, check individual channel status
   // this provides temperature reading + channel memory full
@@ -1551,7 +1629,8 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
         TLOG(TLVL_WARNING) << "CAENV1730 fragID=" << fCAEN.fragmentId << " : "
 			   << " Channel " << ch
 			   << " unphysical temperature " << ch_temps[ch] << " degrees Celsius."
-			   << " ReadTemperature Return Code = " << retcod
+			   << " ReadTemperature Return Code = " << int{retcod}
+			   << " (" << sbndaq::CAENDecoder::CAENError(retcod) << ")"
 			   << TLOG_ENDL;
       }
     }
@@ -1571,7 +1650,9 @@ bool sbndaq::CAENV1730Readout::checkHWStatus_(){
       metricMan->sendMetric(memfullStream.str(), int(full), "", 11, artdaq::MetricMode::LastPoint);
     } else {
       TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ") "
-                         << "Failed reading CHANNEL_STATUS register for channel " << ch;
+                         << "Failed reading CHANNEL_STATUS register for channel " << ch
+                         << "; return code=" << int{retcod}
+                         << " (" << sbndaq::CAENDecoder::CAENError(retcod) << ")";
     }
   } //end channel loop
   return true;
@@ -1619,7 +1700,8 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
       cvAX818 = cvA5818;
       break;
     default:
-      TLOG(TLVL_ERROR) << "Do not know how to handle fCAEN.aX818 == " << fCAEN.aX818;
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                       << " Do not know how to handle fCAEN.aX818 == " << fCAEN.aX818;
       return;
   }
 
