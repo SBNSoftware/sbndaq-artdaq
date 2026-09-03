@@ -425,7 +425,7 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	      if (pair.second > 0)
 		{
 		  std::ostringstream metricLocation;
-		  metricLocation << "MissingFragments."
+		  metricLocation << "EmptyFragments."
 				 << boardreader_eventbuilder_by_fragmentID_[pair.first].EventBuilder << "."
 				 << boardreader_eventbuilder_by_fragmentID_[pair.first].BoardReader << "";
 		  
