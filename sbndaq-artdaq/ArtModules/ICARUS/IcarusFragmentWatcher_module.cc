@@ -114,7 +114,8 @@ private:
     std::string BoardReader;
     std::string EventBuilder;
   };
-  
+
+  bool loaded_fragment_map_;
   std::map<int, BoardReader_EventBuilder> boardreader_eventbuilder_by_fragmentID_;
   
   enum Subsystems {
@@ -145,6 +146,7 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
   , missing_fragments_by_subsystem_()
   , empty_fragments_by_subsystem_()
   , boardreader_eventbuilder_by_fragmentID_()
+  , loaded_fragment_map_(false)
 {
   std::string full_path = fragments_look_up_table_path_ + "/" + fragments_look_up_table_name_;
 
@@ -154,6 +156,8 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
   std::string resolved_path;
   bool found = sp.find_file(full_path, resolved_path);
   if (!found) {
+
+    loaded_fragment_map_ = false; // Boilerplate for now
     throw cet::exception("IcarusFragmentWatcher")
       << "Could not locate fragment lookup table '" << fragments_look_up_table_name_
       << "' along search path '" << fragments_look_up_table_path_ << "'";
@@ -161,6 +165,7 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
 
   std::ifstream fragments_look_up_table_(resolved_path);
   if (!fragments_look_up_table_) {
+    loaded_fragment_map_ = false; // Boilerplate for now
     throw cet::exception("IcarusFragmentWatcher")
       << "Found but could not open fragment lookup table at '" << resolved_path << "'";
   }
