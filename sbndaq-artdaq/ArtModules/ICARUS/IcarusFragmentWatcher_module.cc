@@ -28,6 +28,9 @@
 #include "artdaq-core/Data/ContainerFragment.hh"
 #include "artdaq-core/Data/Fragment.hh"
 
+#include "cetlib/search_path.h"
+#include "cetlib_except/exception.h"
+
 #include <bitset>
 #include <iostream>
 #include <fstream>
@@ -143,10 +146,26 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
   , empty_fragments_by_subsystem_()
   , boardreader_eventbuilder_by_fragmentID_()
 {
-  std::ostringstream path;
-  path << fragments_look_up_table_path_ << "/" << fragments_look_up_table_name_;
-  std::ifstream fragments_look_up_table_(path);
+  std::string full_path = fragments_look_up_table_path_ + "/" + fragments_look_up_table_name_;
 
+  // Option A: Expand tilde using cetlib environment expansion / search path
+  cet::search_path sp(".:");
+
+  std::string resolved_path;
+  bool found = sp.find_file(full_path, resolved_path);
+  if (!found) {
+    throw cet::exception("IcarusFragmentWatcher")
+      << "Could not locate fragment lookup table '" << fragments_look_up_table_name_
+      << "' along search path '" << fragments_look_up_table_path_ << "'";
+  }
+
+  std::ifstream fragments_look_up_table_(resolved_path);
+  if (!fragments_look_up_table_) {
+    throw cet::exception("IcarusFragmentWatcher")
+      << "Found but could not open fragment lookup table at '" << resolved_path << "'";
+  }
+
+  
   std::string boardreader, eventbuilder;
   int fragmentID;
 
@@ -390,7 +409,7 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	    {
 	      if (pair.second > 0)
 		{
-		  std::ostringstram metricLocation;
+		  std::ostringstream metricLocation;
 		  metricLocation << "MissingFragments." << pair.first << "";
 		  
 		  // Ensure only sending fragentsID if greater than zero
@@ -403,7 +422,7 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	    {
 	      if (pair.second > 0)
 		{
-		  std::ostringstram metricLocation;
+		  std::ostringstream metricLocation;
 		  metricLocation << "EmptyFragments." << pair.first << "";
 		  
 		  // Ensure only sending fragentsID if greater than zero
