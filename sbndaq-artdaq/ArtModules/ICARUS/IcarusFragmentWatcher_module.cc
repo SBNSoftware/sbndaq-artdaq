@@ -410,7 +410,9 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	      if (pair.second > 0)
 		{
 		  std::ostringstream metricLocation;
-		  metricLocation << "MissingFragments." << pair.first << "";
+		  metricLocation << "MissingFragments."
+				 << boardreader_eventbuilder_by_fragmentID_[pair.first].EventBuilder << "."
+				 << boardreader_eventbuilder_by_fragmentID_[pair.first].BoardReader << "";
 		  
 		  // Ensure only sending fragentsID if greater than zero
 		  metricMan->sendMetric(metricLocation.str(), pair.second, "Fragments", metrics_reporting_level_, artdaq::MetricMode::LastPoint);
@@ -423,7 +425,9 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	      if (pair.second > 0)
 		{
 		  std::ostringstream metricLocation;
-		  metricLocation << "EmptyFragments." << pair.first << "";
+		  metricLocation << "MissingFragments."
+				 << boardreader_eventbuilder_by_fragmentID_[pair.first].EventBuilder << "."
+				 << boardreader_eventbuilder_by_fragmentID_[pair.first].BoardReader << "";
 		  
 		  // Ensure only sending fragentsID if greater than zero
 		  metricMan->sendMetric(metricLocation.str(), pair.second, "Fragments", metrics_reporting_level_, artdaq::MetricMode::LastPoint);
