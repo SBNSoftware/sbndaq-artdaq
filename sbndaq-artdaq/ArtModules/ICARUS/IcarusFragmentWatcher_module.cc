@@ -141,18 +141,17 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
     , empty_fragments_by_fragmentID_()
     , missing_fragments_by_subsystem_()
     , empty_fragments_by_subsystem_()
-    , fragments_look_up_table_path_(pset.get<std::string>("fragment_lut_path", "~/DAQ_SPACK_ProdAreas/"))
+    , fragments_look_up_table_path_(pset.get<std::string>("fragment_lut_path", "THIS_SBN_DAQ_DAQINTERFACE_DIR"))
     , fragments_look_up_table_name_(pset.get<std::string>("fragment_lut_name", "fragment_lookup_table"))			 
     , loaded_fragment_map_(false)
     , boardreader_eventbuilder_by_fragmentID_()
 {
-    std::string full_path = fragments_look_up_table_path_ + "/" + fragments_look_up_table_name_;
 
-  // Option A: Expand tilde using cetlib environment expansion / search path
-  cet::search_path sp(".:");
+  // Using cetlib cet::search_path to resolve env. var. and find look up table
+  cet::search_path sp(fragments_look_up_table_path_);
 
   std::string resolved_path;
-  bool found = sp.find_file(full_path, resolved_path);
+  bool found = sp.find_file(fragments_look_up_table_name_, resolved_path);
   if (!found) {
 
     loaded_fragment_map_ = false; // Boilerplate for now
