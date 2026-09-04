@@ -125,7 +125,7 @@ private:
 
 icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& pset)
     : EDAnalyzer(pset)
-    , mode_bitset_(std::bitset<3>(pset.get<int>("mode_bitmask", 0x1)))
+    , mode_bitset_(std::bitset<3>(pset.get<int>("mode_bitmask", 0x4)))
     , metrics_reporting_level_(pset.get<int>("metrics_reporting_level", 1))
     , events_processed_(0)
     , expected_fragmentID_list_()
@@ -402,6 +402,7 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 		// 	metricMan->sendMetric("EmptyFragmentSnapshot", oss.str(), "xml_string",
 		// 	                      metrics_reporting_level_, artdaq::MetricMode::LastPoint);
 		// }
+
 	  if  (missing_fragment_count_this_event > 0 || empty_fragment_count_this_event > 0) {
 	    // Missing fragments
 	    for (auto const& pair: missing_fragments_by_fragmentID_) {
