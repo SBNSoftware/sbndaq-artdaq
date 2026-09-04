@@ -108,13 +108,13 @@ private:
   std::string fragments_look_up_table_path_;
   std::string fragments_look_up_table_name_;
 
-  struct BoardReader_EventBuilder {
+  struct BoardReader_Host {
     std::string BoardReader;
-    std::string EventBuilder;
+    std::string Host;
   };
 
   bool loaded_fragment_map_;
-  std::map<int, BoardReader_EventBuilder> boardreader_eventbuilder_by_fragmentID_;
+  std::map<int, BoardReader_Host> boardreader_host_by_fragmentID_;
 
   enum Subsystems {
     kTPC = 0x1000,
@@ -144,7 +144,7 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
     , fragments_look_up_table_path_(pset.get<std::string>("fragment_lut_path", "THIS_SBN_DAQ_DAQINTERFACE_DIR"))
     , fragments_look_up_table_name_(pset.get<std::string>("fragment_lut_name", "fragment_lookup_table"))			 
     , loaded_fragment_map_(false)
-    , boardreader_eventbuilder_by_fragmentID_()
+    , boardreader_host_by_fragmentID_()
 {
 
   // Using cetlib cet::search_path to resolve env. var. and find look up table
@@ -168,11 +168,11 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
   }
 
   
-  std::string boardreader, eventbuilder;
+  std::string boardreader, host;
   int fragmentID;
 
-  while (fragments_look_up_table_ >> fragmentID >> boardreader >> eventbuilder) {
-    boardreader_eventbuilder_by_fragmentID_[fragmentID] = {boardreader, eventbuilder};
+  while (fragments_look_up_table_ >> fragmentID >> boardreader >> host) {
+    boardreader_host_by_fragmentID_[fragmentID] = {boardreader, host};
   }
   fragments_look_up_table_.close();
 }
@@ -193,7 +193,7 @@ std::string icarus::IcarusFragmentWatcher::getNameFromKey( const int key ){
 }
 
 void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
-{
+{ 
 	events_processed_++;
 
 	// get all the artdaq fragment collections in the event.
@@ -407,9 +407,10 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	    for (auto const& pair: missing_fragments_by_fragmentID_) {
 	      if (pair.second > 0) {
 		std::ostringstream metricLocation;
-		metricLocation << "MissingFragments."
-			       << boardreader_eventbuilder_by_fragmentID_[pair.first].EventBuilder << "."
-			       << boardreader_eventbuilder_by_fragmentID_[pair.first].BoardReader << "";
+		metricLocation << getNameFromKey(pair.first & 0xF000) << "." // the MSB of the fragID encoding holds information on the subsystem
+			       << boardreader_host_by_fragmentID_[pair.first].Host << "."
+			       << boardreader_host_by_fragmentID_[pair.first].BoardReader
+			       << ".MissingFragments";
 		
 		// Ensure only sending fragentsID if greater than zero
 		metricMan->sendMetric(metricLocation.str(), pair.second, "Fragments", metrics_reporting_level_, artdaq::MetricMode::LastPoint);
@@ -420,9 +421,10 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	    for (auto const& pair: empty_fragments_by_fragmentID_) {
 	      if (pair.second > 0) {
 		std::ostringstream metricLocation;
-		metricLocation << "EmptyFragments."
-			       << boardreader_eventbuilder_by_fragmentID_[pair.first].EventBuilder << "."
-			       << boardreader_eventbuilder_by_fragmentID_[pair.first].BoardReader << "";
+		metricLocation << getNameFromKey(pair.first & 0xF000) << "." // the MSB of the fragID encoding holds information on the subsystem
+			       << boardreader_host_by_fragmentID_[pair.first].Host << "."
+			       << boardreader_host_by_fragmentID_[pair.first].BoardReader
+			       << ".EmptyFragments";
 		
 		// Ensure only sending fragentsID if greater than zero
 		metricMan->sendMetric(metricLocation.str(), pair.second, "Fragments", metrics_reporting_level_, artdaq::MetricMode::LastPoint);
