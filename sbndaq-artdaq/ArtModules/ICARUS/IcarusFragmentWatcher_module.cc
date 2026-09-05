@@ -140,7 +140,7 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
     , empty_fragments_by_fragmentID_()
     , missing_fragments_by_subsystem_()
     , empty_fragments_by_subsystem_()
-    , fragments_look_up_table_(pset.get<fhicl::ParameterSet>("fragments_look_up_table"))
+    , fragments_look_up_table_(pset.get<fhicl::ParameterSet>("fragments_lookup_table"))
     , boardreader_host_by_fragmentID_()
 {
   for (auto const& boardreader: fragments_look_up_table_.get_pset_names()) {
