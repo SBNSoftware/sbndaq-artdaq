@@ -28,8 +28,12 @@
 #include "artdaq-core/Data/ContainerFragment.hh"
 #include "artdaq-core/Data/Fragment.hh"
 
+#include "cetlib/search_path.h"
+#include "cetlib_except/exception.h"
+
 #include <bitset>
 #include <iostream>
+#include <fstream>
 #include <map>
 
 #define TLVL_BAD_FRAGMENTS TLVL_WARNING
@@ -101,7 +105,16 @@ private:
 	const int BASIC_COUNTS_MODE = 0;
 	const int FRACTIONAL_COUNTS_MODE = 1;
 	const int DETAILED_COUNTS_MODE = 2;
+
+  fhicl::ParameterSet fragments_look_up_table_;
+
+  struct BoardReader_Host {
+    std::string BoardReader;
+    std::string Host;
+  };
   
+  std::map<int, BoardReader_Host> boardreader_host_by_fragmentID_;
+
   enum Subsystems {
     kTPC = 0x1000,
     kPMT = 0x2000,
@@ -111,7 +124,7 @@ private:
 
 icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& pset)
     : EDAnalyzer(pset)
-    , mode_bitset_(std::bitset<3>(pset.get<int>("mode_bitmask", 0x1)))
+    , mode_bitset_(std::bitset<3>(pset.get<int>("mode_bitmask", 0x4)))
     , metrics_reporting_level_(pset.get<int>("metrics_reporting_level", 1))
     , events_processed_(0)
     , expected_fragmentID_list_()
@@ -127,7 +140,25 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
     , empty_fragments_by_fragmentID_()
     , missing_fragments_by_subsystem_()
     , empty_fragments_by_subsystem_()
+    , fragments_look_up_table_(pset.get<fhicl::ParameterSet>("fragments_lookup_table"))
+    , boardreader_host_by_fragmentID_()
 {
+  for (auto const& boardreader: fragments_look_up_table_.get_pset_names()) {
+    for (auto const& entry: fragments_look_up_table_.get<std::vector<fhicl::ParameterSet>>(boardreader)) {
+      int const fragmentID = entry.get<int>("fragment_id");
+      std::string host     = entry.get<std::string>("host");
+
+      auto const [it, inserted] =
+	boardreader_host_by_fragmentID_.emplace(fragmentID, BoardReader_Host{boardreader, host});
+
+      if (!inserted) {
+        throw cet::exception("IcarusFragmentWatcher")
+            << "Duplicate fragment_id " << fragmentID
+            << " found for boardreaders '" << it->second.BoardReader
+            << "' and '" << boardreader << "'";
+      }
+    }
+  }
 }
 
 icarus::IcarusFragmentWatcher::~IcarusFragmentWatcher()
@@ -146,7 +177,7 @@ std::string icarus::IcarusFragmentWatcher::getNameFromKey( const int key ){
 }
 
 void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
-{
+{ 
 	events_processed_++;
 
 	// get all the artdaq fragment collections in the event.
@@ -212,7 +243,7 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	}
 
 	// common metric reporting for multiple modes
-	if (metricMan != nullptr && (mode_bitset_.test(BASIC_COUNTS_MODE) || mode_bitset_.test(FRACTIONAL_COUNTS_MODE)))
+	if (metricMan != nullptr && (mode_bitset_.test(BASIC_COUNTS_MODE) || mode_bitset_.test(FRACTIONAL_COUNTS_MODE) || mode_bitset_.test(DETAILED_COUNTS_MODE)))
 	{
 		metricMan->sendMetric("EventsProcessed", events_processed_, "events", metrics_reporting_level_,
 		                      artdaq::MetricMode::LastPoint);
@@ -253,7 +284,7 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	}
 
 	// reporting for the BASIC_COUNTS_MODE
-	if (metricMan != nullptr && mode_bitset_.test(BASIC_COUNTS_MODE))
+	if (metricMan != nullptr && (mode_bitset_.test(BASIC_COUNTS_MODE) || mode_bitset_.test(DETAILED_COUNTS_MODE)))
 	{
 		if (missing_fragment_count_this_event > 0) { ++events_with_missing_fragments_; }
 		if (empty_fragment_count_this_event > 0) { ++events_with_empty_fragments_; }
@@ -331,29 +362,59 @@ void icarus::IcarusFragmentWatcher::analyze(art::Event const& evt)
 	if (metricMan != nullptr && mode_bitset_.test(DETAILED_COUNTS_MODE))
 	{
 		// only send an update when the missing or empty fragment counts, by FragmentID, changed,
-		// as indicated by a non-zero number of missing or empty fragments in this event
-		if (missing_fragment_count_this_event > 0 || empty_fragment_count_this_event > 0)
-		{
-			std::ostringstream oss;
-			oss << "<eventbuilder_snapshot app_name=\"" << app_name << "\"><events_processed>" << events_processed_
-			    << "</events_processed>";
-			oss << "<missing_fragment_counts>";
-			for (auto const& mapIter : missing_fragments_by_fragmentID_)
-			{
-				oss << "<count fragment_id=" << mapIter.first << ">" << mapIter.second << "</count>";
-			}
-			oss << "</missing_fragment_counts>";
-			oss << "<empty_fragment_counts>";
-			for (auto const& mapIter : empty_fragments_by_fragmentID_)
-			{
-				oss << "<count fragment_id=" << mapIter.first << ">" << mapIter.second << "</count>";
-			}
-			oss << "</empty_fragment_counts>";
-			oss << "</eventbuilder_snapshot>";
+		// // as indicated by a non-zero number of missing or empty fragments in this event
+		// if (missing_fragment_count_this_event > 0 || empty_fragment_count_this_event > 0)
+		// {
+		// 	std::ostringstream oss;
+		// 	oss << "<eventbuilder_snapshot app_name=\"" << app_name << "\"><events_processed>" << events_processed_
+		// 	    << "</events_processed>";
+		// 	oss << "<missing_fragment_counts>";
+		// 	for (auto const& mapIter : missing_fragments_by_fragmentID_)
+		// 	{
+		// 		oss << "<count fragment_id=" << mapIter.first << ">" << mapIter.second << "</count>";
+		// 	}
+		// 	oss << "</missing_fragment_counts>";
+		// 	oss << "<empty_fragment_counts>";
+		// 	for (auto const& mapIter : empty_fragments_by_fragmentID_)
+		// 	{
+		// 		oss << "<count fragment_id=" << mapIter.first << ">" << mapIter.second << "</count>";
+		// 	}
+		// 	oss << "</empty_fragment_counts>";
+		// 	oss << "</eventbuilder_snapshot>";
 
-			metricMan->sendMetric("EmptyFragmentSnapshot", oss.str(), "xml_string",
-			                      metrics_reporting_level_, artdaq::MetricMode::LastPoint);
-		}
+		// 	metricMan->sendMetric("EmptyFragmentSnapshot", oss.str(), "xml_string",
+		// 	                      metrics_reporting_level_, artdaq::MetricMode::LastPoint);
+		// }
+
+	  if  (missing_fragment_count_this_event > 0 || empty_fragment_count_this_event > 0) {
+	    // Missing fragments
+	    for (auto const& pair: missing_fragments_by_fragmentID_) {
+	      if (pair.second > 0) {
+		std::ostringstream metricLocation;
+		metricLocation << getNameFromKey(pair.first & 0xF000) << "." // the MSB of the fragID encoding holds information on the subsystem
+			       << boardreader_host_by_fragmentID_[pair.first].Host << "."
+			       << boardreader_host_by_fragmentID_[pair.first].BoardReader
+			       << ".MissingFragments";
+		
+		// Ensure only sending fragentsID if greater than zero
+		metricMan->sendMetric(metricLocation.str(), pair.second, "Fragments", metrics_reporting_level_, artdaq::MetricMode::LastPoint);
+	      }
+	    }
+	    
+	    // Empty fragments
+	    for (auto const& pair: empty_fragments_by_fragmentID_) {
+	      if (pair.second > 0) {
+		std::ostringstream metricLocation;
+		metricLocation << getNameFromKey(pair.first & 0xF000) << "." // the MSB of the fragID encoding holds information on the subsystem
+			       << boardreader_host_by_fragmentID_[pair.first].Host << "."
+			       << boardreader_host_by_fragmentID_[pair.first].BoardReader
+			       << ".EmptyFragments";
+		
+		// Ensure only sending fragentsID if greater than zero
+		metricMan->sendMetric(metricLocation.str(), pair.second, "Fragments", metrics_reporting_level_, artdaq::MetricMode::LastPoint);
+	      }
+	    }
+	  }
 	}
 
 #if 0
