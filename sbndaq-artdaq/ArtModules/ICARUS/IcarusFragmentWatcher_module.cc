@@ -154,7 +154,7 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
       if (!inserted) {
         throw cet::exception("IcarusFragmentWatcher")
             << "Duplicate fragment_id " << fragmentID
-            << " found for boardreaders '" << it->second.boardreader
+            << " found for boardreaders '" << it->second.BoardReader
             << "' and '" << boardreader << "'";
       }
     }
