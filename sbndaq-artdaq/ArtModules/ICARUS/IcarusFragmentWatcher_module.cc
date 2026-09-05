@@ -105,15 +105,14 @@ private:
 	const int BASIC_COUNTS_MODE = 0;
 	const int FRACTIONAL_COUNTS_MODE = 1;
 	const int DETAILED_COUNTS_MODE = 2;
-  std::string fragments_look_up_table_path_;
-  std::string fragments_look_up_table_name_;
+
+  fhicl::ParameterSet fragments_look_up_table_;
 
   struct BoardReader_Host {
     std::string BoardReader;
     std::string Host;
   };
-
-  bool loaded_fragment_map_;
+  
   std::map<int, BoardReader_Host> boardreader_host_by_fragmentID_;
 
   enum Subsystems {
@@ -141,40 +140,25 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
     , empty_fragments_by_fragmentID_()
     , missing_fragments_by_subsystem_()
     , empty_fragments_by_subsystem_()
-    , fragments_look_up_table_path_(pset.get<std::string>("fragment_lut_path", "THIS_SBN_DAQ_DAQINTERFACE_DIR"))
-    , fragments_look_up_table_name_(pset.get<std::string>("fragment_lut_name", "fragment_lookup_table"))			 
-    , loaded_fragment_map_(false)
+    , fragments_look_up_table_(pset.get<fhicl::ParameterSet>("fragments_look_up_table"))
     , boardreader_host_by_fragmentID_()
 {
+  for (auto const& boardreader: fragments_look_up_table_.get_pset_names()) {
+    for (auto const& entry: fragments_look_up_table_.get<std::vector<fhicl::ParameterSet>>(boardreader)) {
+      int const fragmentID = entry.get<int>("fragment_id");
+      std::string host     = entry.get<std::string>("host");
 
-  // Using cetlib cet::search_path to resolve env. var. and find look up table
-  cet::search_path sp(fragments_look_up_table_path_);
+      auto const [it, inserted] =
+	boardreader_host_by_fragmentID_.emplace(fragmentID, BoardReader_Host{boardreader, host});
 
-  std::string resolved_path;
-  bool found = sp.find_file(fragments_look_up_table_name_, resolved_path);
-  if (!found) {
-
-    loaded_fragment_map_ = false; // Boilerplate for now
-    throw cet::exception("IcarusFragmentWatcher")
-      << "Could not locate fragment lookup table '" << fragments_look_up_table_name_
-      << "' along search path '" << fragments_look_up_table_path_ << "'";
+      if (!inserted) {
+        throw cet::exception("IcarusFragmentWatcher")
+            << "Duplicate fragment_id " << fragmentID
+            << " found for boardreaders '" << it->second.boardreader
+            << "' and '" << boardreader << "'";
+      }
+    }
   }
-
-  std::ifstream fragments_look_up_table_(resolved_path);
-  if (!fragments_look_up_table_) {
-    loaded_fragment_map_ = false; // Boilerplate for now
-    throw cet::exception("IcarusFragmentWatcher")
-      << "Found but could not open fragment lookup table at '" << resolved_path << "'";
-  }
-
-  
-  std::string boardreader, host;
-  int fragmentID;
-
-  while (fragments_look_up_table_ >> fragmentID >> boardreader >> host) {
-    boardreader_host_by_fragmentID_[fragmentID] = {boardreader, host};
-  }
-  fragments_look_up_table_.close();
 }
 
 icarus::IcarusFragmentWatcher::~IcarusFragmentWatcher()
