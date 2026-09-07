@@ -383,7 +383,21 @@ size_t sbndaq::NevisTPC2StreamNUandSNXMIT::GetFEMCrateData() {
 
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
+  if(metricMan != nullptr) {
+  //send SN metrics
+  metricMan->sendMetric("SN_Stream_Stopped", SNStreamFailed,
+    "SN_stream_stopped", 11, artdaq::MetricMode::LastPoint);
+  }
+
+
   if (SNStreamFailed){
+      if(metricMan != nullptr) {
+           //send SN metrics
+           metricMan->sendMetric(
+               "SN_DMA_Count",
+               N_SNDMAs,
+               "SN_dma_count", 11, artdaq::MetricMode::LastPoint);
+      }
       return true;
   }
 
@@ -414,10 +428,10 @@ bool sbndaq::NevisTPC2StreamNUandSNXMIT::GetSNData() {
 
  if (bytesRead <=0) return false;
 
-  //if (bytesRead == fSNChunkSize){
-  //  ++N_SNDMAs;
-  //  TLOG(TLVL_INFO)  << "Number of SN DMAs: " << N_SNDMAs ;
-  //}
+  if (bytesRead == fSNChunkSize){
+    ++N_SNDMAs;
+    //TLOG(TLVL_INFO)  << "Number of SN DMAs: " << N_SNDMAs ;
+  }
 
   size_t n_words = bytesRead/sizeof(uint16_t);
   size_t new_buffer_size = SNCircularBuffer_.Insert(n_words, SNDMABuffer_);
@@ -451,6 +465,13 @@ TLOG(TGETDATA) << "SNCircularBuffer_.buffer.size() " << SNCircularBuffer_.buffer
 bool sbndaq::NevisTPC2StreamNUandSNXMIT::WriteSNData() {
 
   if(SNStreamFailed){
+     if(metricMan != nullptr) {
+       //send SN metrics
+        metricMan->sendMetric(
+          "SN_WritetoDisk_Count",
+          N_SNWrites,
+         "SN_write_count", 11, artdaq::MetricMode::LastPoint);
+     }
      return true;
   }
 
