@@ -124,7 +124,7 @@ private:
 
 icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& pset)
     : EDAnalyzer(pset)
-    , mode_bitset_(std::bitset<3>(pset.get<int>("mode_bitmask", 0x4)))
+    , mode_bitset_(std::bitset<3>(pset.get<int>("mode_bitmask", 0x1)))
     , metrics_reporting_level_(pset.get<int>("metrics_reporting_level", 1))
     , events_processed_(0)
     , expected_fragmentID_list_()
