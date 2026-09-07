@@ -144,18 +144,21 @@ icarus::IcarusFragmentWatcher::IcarusFragmentWatcher(fhicl::ParameterSet const& 
     , boardreader_host_by_fragmentID_()
 {
   for (auto const& boardreader: fragments_look_up_table_.get_pset_names()) {
-    for (auto const& entry: fragments_look_up_table_.get<std::vector<fhicl::ParameterSet>>(boardreader)) {
-      int const fragmentID = entry.get<int>("fragment_id");
-      std::string host     = entry.get<std::string>("host");
-
+    auto this_boardreader = fragments_look_up_table_.get<fhicl::ParameterSet>(boardreader);
+    
+    std::vector<int> fragIDs = this_boardreader.get<std::vector<int>>("fragment_ids");
+    std::string host = this_boardreader.get<std::string>("host");
+    
+    for (auto const& fragID: fragIDs) {
+      
       auto const [it, inserted] =
-	boardreader_host_by_fragmentID_.emplace(fragmentID, BoardReader_Host{boardreader, host});
-
+	boardreader_host_by_fragmentID_.emplace(fragID, BoardReader_Host{boardreader, host});
+      
       if (!inserted) {
         throw cet::exception("IcarusFragmentWatcher")
-            << "Duplicate fragment_id " << fragmentID
-            << " found for boardreaders '" << it->second.BoardReader
-            << "' and '" << boardreader << "'";
+	  << "Duplicate fragment_id " << fragmentID
+	  << " found for boardreaders '" << it->second.BoardReader
+	  << "' and '" << boardreader << "'";
       }
     }
   }
