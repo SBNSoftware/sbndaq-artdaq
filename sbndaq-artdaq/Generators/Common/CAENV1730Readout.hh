@@ -124,11 +124,13 @@ namespace sbndaq
     // last fragment sequence id sent
     uint64_t last_sent_seqid;
     // last fragment timestamps sent
-    uint32_t last_sent_ts;
+    artdaq::Fragment::timestamp_t last_sent_ts;
 
     // hardware status check
     uint32_t ch_temps[CAENConfiguration::MAX_CHANNELS];
     uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
+    // number of board memory buffers, read back from BUFFER_ORGANIZATION
+    uint32_t fNumBoardBuffers;
     
     typedef enum {
       BOARD_CONFIG_READ  = 0x8000, // board configuration read register
@@ -139,6 +141,9 @@ namespace sbndaq
       FP_LVDS_CONTROL    = 0x81A0, // front panel LVDS control
       ACQ_CONTROL        = 0x8100, // acquisition control register
       READOUT_CONTROL    = 0xEF00, // readout control
+      BUFFER_ORGANIZATION= 0x800C, // number of board memory buffers = 2^N
+      EVENT_STORED       = 0x812C, // events currently stored, awaiting readout
+      EVENT_SIZE         = 0x814C, // size of the next event, in 32-bit words
       GLB_TRG_MASK       = 0x810C, // global trigger mask
       CH_ENABLE_MASK     = 0x8120, // channel enable mask
       DYNAMIC_RANGE      = 0x8028, // dynamic range control 

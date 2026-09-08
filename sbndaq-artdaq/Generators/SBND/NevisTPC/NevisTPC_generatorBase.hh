@@ -75,6 +75,8 @@ protected:
   bool fUseCompression;
   uint32_t fTimeoutSec;
 
+  bool fDisableNUStream;
+
   std::vector<artdaq::Fragment::fragment_id_t> fragment_ids;
   std::vector<uint64_t> FEMIDs_;
   uint32_t RunNumber_;
