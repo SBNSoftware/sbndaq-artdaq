@@ -35,6 +35,7 @@ namespace nevistpc{
     void runNUStream(fhicl::ParameterSet const& _p);
     // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU and SN streams with external triggers
     void run2Stream(fhicl::ParameterSet const& _p);
+    void runSNStream(fhicl::ParameterSet const& _p);
     void runControllerTrigger2Stream(fhicl::ParameterSet const& _p);
     void runCalib2Stream(fhicl::ParameterSet const& _p);
     // Configure Trigger Board, FEM, XMIT Module and XMITReader for readout of the NU stream with internal CALIB triggers

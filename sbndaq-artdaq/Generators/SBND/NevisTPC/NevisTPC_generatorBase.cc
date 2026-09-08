@@ -42,6 +42,8 @@ void sbndaq::NevisTPC_generatorBase::Initialize(){
   fNChannels         = ps_.get<uint32_t>("NChannels",64);
   fUseCompression    = ps_.get<bool>("UseCompression",false);
   fTimeoutSec        = ps_.get<uint32_t>("TimeoutSec", 60);
+
+  fDisableNUStream = ps_.get<bool>("DisableNUStream", false);
    
   DMABufferSizeBytes_ = ps_.get<uint32_t>("DMABufferSize",1e6);	
   DMABuffer_.reset(new uint16_t[DMABufferSizeBytes_]);
@@ -170,6 +172,11 @@ size_t sbndaq::NevisTPC_generatorBase::CircularBuffer::Erase(size_t n_words){
 
 bool sbndaq::NevisTPC_generatorBase::GetData(){
   
+  if(fDisableNUStream){
+    usleep(1);
+    return false;
+  }
+
   TRACE(TGETDATA,"GetData() called");
 
   auto start_time = std::chrono::steady_clock::now(); 
