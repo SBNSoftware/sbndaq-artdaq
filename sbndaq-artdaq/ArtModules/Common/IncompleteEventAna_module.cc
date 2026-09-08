@@ -145,12 +145,12 @@ void sbndaq::IncompleteEventAna::analyze(const art::Event& evt)
     // fill stream, then print
     // avoids hitting rate limit
     std::ostringstream oss; 
+    oss << "(Run,Ev)=(" << run << "," << event << "): " << "Missing fragment id(s) ";
 
     for(auto id : fragIDDiffSet)
-      oss << "(Run,Ev)=(" << run << "," << event << "): "
-          << "Missing fragment id " << id << '\n';
+      oss << << id << ", ";
 
-    TLOG_WARNING("IncompleteEventAna") << oss.str();
+    TLOG_WARNING("IncompleteEventAna") << oss.str() << '\n';
   }
 
 }
