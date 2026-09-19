@@ -24,6 +24,7 @@
 #include <deque>
 #include <vector>
 #include <ostream>
+#include <fstream>
 
 namespace sbndaq
 {
@@ -153,13 +154,52 @@ namespace sbndaq
       uint32_t flags;              // bit0: dropped by the header size check
       std::vector<uint8_t> data;   // raw copy of the returned bytes
     };
-    static constexpr size_t   kRawRingDepth  = 16;          // events kept
+    static constexpr size_t   kRawRingDepth  = 64;          // events kept (a whole +-1 ms trigger cluster is 13-16)
     static constexpr uint32_t kSentinelWord  = 0xDEADBEEFu; // block pre-fill before ReadData
     static constexpr size_t   kFifoPopWords  = 4096;        // single-word pops of 0x0000 after failure
     static constexpr uint32_t kTTTMask       = 0x7FFFFFFFu; // TTT is 31 bits
     static constexpr uint32_t kUnknown32     = 0xFFFFFFFFu;
 
     std::deque<RawEventRecord> fRawRing;
+
+    // per-event header record, one per ReadData (also for reads dropped by the size check):
+    // written to a per-board binary file for the whole run so that the complete TRG-IN
+    // sequence of every global trigger is available offline (decode: tools/decode_v1730_events.py)
+    struct EventRecord {
+      uint32_t eventCounter;       // CAEN header
+      uint32_t triggerTimeTag;     // CAEN header, 8 ns ticks
+      uint32_t eventSizeWords;     // CAEN header
+      uint32_t dTTT;               // ticks since previous good event; 0xFFFFFFFF if unknown
+      uint64_t hostPollEndNs;      // host time when ReadData returned, ns since epoch
+      uint32_t flags;              // bit0 dropped by size check, bit1 tail-repeat corruption seen,
+                                   // bit2 short event, bit3 overlapped; bits 16-31: per-channel tail-repeat mask
+      uint16_t nReadsInPoll;       // index of this read within its poll
+      uint16_t eventsStoredAtPoll; // EVENT_STORED at poll start, saturated at 0xFFFF
+      uint32_t returnedBytes;      // bytes returned by ReadData
+      uint32_t reserved;           // keeps the record at 40 bytes
+    };
+    static_assert(sizeof(EventRecord) == 40, "EventRecord must be 40 bytes");
+    struct EventFileHeader {       // 64 bytes at the start of the per-board file
+      char     magic[8];           // "V1730EVT"
+      uint32_t version;            // 1
+      uint32_t fragmentId;
+      uint32_t runNumber;
+      uint32_t recordLength;       // samples
+      uint32_t expectedEventSizeWords;
+      uint32_t channelEnableMask;
+      uint64_t startTimeNs;        // host time at start(), ns since epoch
+      uint32_t boardSerial;
+      uint32_t reserved[5];
+    };
+    static_assert(sizeof(EventFileHeader) == 64, "EventFileHeader must be 64 bytes");
+    std::ofstream fEventRecordFile;
+    uint64_t fEventRecordCount;
+    uint64_t fTailCorruptCount;        // events whose 4th-channel tails repeat one memory word
+    void     openEventRecordFile();
+    void     closeEventRecordFile();
+    void     writeEventRecord(const RawEventRecord& r, bool shortEvent, bool overlapped, uint32_t tailMask);
+    uint32_t tailRepeatMask(const uint8_t* begin, size_t bytes) const;
+
     bool     fIncidentDumped;          // one dump per run
     uint64_t fConsecutiveReadErrors;   // throttles the -22 log spam
     bool     fHaveLastTTT;

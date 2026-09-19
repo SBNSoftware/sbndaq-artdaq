@@ -53,6 +53,8 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   fIncidentDumped = false;
   fConsecutiveReadErrors = 0;
   fHaveLastTTT = false;
+  fEventRecordCount = 0;
+  fTailCorruptCount = 0;
   fLastTTT = 0;
   fExpectedEventSizeWords = 0;
   fAnomalousEventLogCount = 0;
@@ -910,6 +912,8 @@ void sbndaq::CAENV1730Readout::start()
   fConsecutiveReadErrors = 0;
   fHaveLastTTT = false;
   fAnomalousEventLogCount = 0;
+  fTailCorruptCount = 0;
+  openEventRecordFile();
 
   // Manual calibration added by Animesh - DELETE?
   // "its origin and purpose is still a total mistery"
@@ -1563,6 +1567,7 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
 
   GetData_thread_->stop();
+  closeEventRecordFile();
 
   CAEN_DGTZ_ErrorCode retcode;
   TLOG_ARB(TSTOP,TRACE_NAME) << "SWStopAcquisition" << TLOG_ENDL;
@@ -1860,20 +1865,33 @@ void sbndaq::CAENV1730Readout::recordRawEvent(const uint8_t* begin, size_t bytes
   rec.returnedBytes = static_cast<uint32_t>(bytes);
   rec.flags = flags;
   rec.data.assign(begin, begin + bytes);
+  // tail-repeat check (signature of the run-14755 corruption: the last words of a channel are one
+  // 128-bit memory word repeated); done on every read, dropped ones included
+  const uint32_t tailMask = (flags == 0) ? tailRepeatMask(begin, bytes) : 0u;
+  if (tailMask) rec.flags |= 0x2u;
   fRawRing.push_back(std::move(rec));
 
-  if (flags != 0) return;
-
-  // 7.1: overlap bookkeeping from header fields we already have
   const RawEventRecord& r = fRawRing.back();
   const bool shortEvent = (r.eventSizeWords != fExpectedEventSizeWords);
   const uint32_t recordTicks = static_cast<uint32_t>(fCAEN.recordLength) / 4u; // 2 ns samples -> 8 ns TTT ticks
   const bool overlapped = (r.dTTT != kUnknown32) && (r.dTTT < recordTicks);
+  writeEventRecord(r, shortEvent, overlapped, tailMask);
 
-  metricMan->sendMetric("EventSizeWordsMin", uint64_t{r.eventSizeWords}, "words", 11, artdaq::MetricMode::Minimum);
-  if (r.dTTT != kUnknown32) {
-    metricMan->sendMetric("dTTTMin", uint64_t{r.dTTT}, "ticks", 11, artdaq::MetricMode::Minimum);
+  if (tailMask) {
+    ++fTailCorruptCount;
+    if (fTailCorruptCount <= 20 || fTailCorruptCount % 100 == 0) {
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") TAIL-REPEAT corruption (#" << fTailCorruptCount
+                       << "): last 4 words of channel(s) mask=0x" << std::hex << tailMask << std::dec
+                       << " repeat the 4 before them; eventCounter=" << r.eventCounter
+                       << ", eventSize=" << r.eventSizeWords << " words, TTT=" << r.triggerTimeTag
+                       << ", dTTT=" << r.dTTT << " ticks, read " << readIndexInPoll << " of this poll"
+                       << ", EVENT_STORED at poll start=" << storedAtPoll;
+    }
   }
+
+  if (flags != 0) return;
+
+  // 7.1: overlap bookkeeping from header fields we already have
 
   if (shortEvent || overlapped) {
     ++fAnomalousEventLogCount;
@@ -1888,6 +1906,97 @@ void sbndaq::CAENV1730Readout::recordRawEvent(const uint8_t* begin, size_t bytes
                          << ", EVENT_STORED at poll start=" << storedAtPoll;
     }
   }
+}
+
+// ------------------------------------------------------------------------
+// per-event header records (complete TRG-IN sequence of the run, per board)
+
+uint32_t sbndaq::CAENV1730Readout::tailRepeatMask(const uint8_t* begin, size_t bytes) const
+{
+  // For every enabled channel: do the last 4 32-bit words equal the 4 before them? Genuine
+  // waveform data never repeats a 128-bit word exactly; the run-14755 corruption does.
+  const size_t nWords = bytes / sizeof(uint32_t);
+  if (nWords < 4) return 0u;
+  const size_t nCh = static_cast<size_t>(__builtin_popcount(fCAEN.channelEnableMask & 0xFFFFu));
+  if (nCh == 0 || nCh > 16) return 0u;
+  const size_t perCh = (nWords - 4) / nCh;
+  if (perCh < 8) return 0u;
+  const uint32_t* w = reinterpret_cast<const uint32_t*>(begin) + 4;
+  uint32_t mask = 0;
+  for (size_t ch = 0; ch < nCh; ++ch) {
+    const uint32_t* end = w + (ch + 1) * perCh;
+    if (end[-1] == end[-5] && end[-2] == end[-6] && end[-3] == end[-7] && end[-4] == end[-8]) mask |= (1u << ch);
+  }
+  return mask;
+}
+
+void sbndaq::CAENV1730Readout::openEventRecordFile()
+{
+  // TEST CODE: same hardcoded directory as the incident dump
+  const std::string dir = "/daq/scratch/mvicenzi/v1730_dumps";
+  ::mkdir(dir.c_str(), 0775);
+  char host[HOST_NAME_MAX + 1] = "unknownhost";
+  if (::gethostname(host, sizeof(host)) != 0) std::strcpy(host, "unknownhost");
+  host[sizeof(host) - 1] = '\0';
+  std::ostringstream name;
+  name << dir << "/v1730_events_frag" << fCAEN.fragmentId
+       << "_run" << artdaq::CommandableFragmentGenerator::run_number()
+       << "_" << host << "_pid" << ::getpid() << ".bin";
+  closeEventRecordFile();
+  fEventRecordFile.open(name.str(), std::ios::binary | std::ios::trunc);
+  fEventRecordCount = 0;
+  if (!fEventRecordFile) {
+    TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") cannot open per-event record file " << name.str()
+                     << " (errno=" << errno << ", " << std::strerror(errno) << "); no event records this run";
+    return;
+  }
+  EventFileHeader fh{};
+  std::memcpy(fh.magic, "V1730EVT", sizeof(fh.magic));
+  fh.version = 1;
+  fh.fragmentId = fCAEN.fragmentId;
+  fh.runNumber = artdaq::CommandableFragmentGenerator::run_number();
+  fh.recordLength = fCAEN.recordLength;
+  fh.expectedEventSizeWords = fExpectedEventSizeWords;
+  fh.channelEnableMask = fCAEN.channelEnableMask;
+  fh.startTimeNs = static_cast<uint64_t>(
+      (boost::posix_time::microsec_clock::universal_time() - fTimeEpoch).total_nanoseconds());
+  {
+    CAEN_DGTZ_BoardInfo_t info;
+    fh.boardSerial = (CAEN_DGTZ_GetInfo(fHandle, &info) == CAEN_DGTZ_Success) ? info.SerialNumber : 0u;
+  }
+  fEventRecordFile.write(reinterpret_cast<const char*>(&fh), sizeof(fh));
+  fEventRecordFile.flush();
+  TLOG(TLVL_INFO) << "(FragID=" << fCAEN.fragmentId << ") writing per-event header records (40 bytes/event) to "
+                  << name.str();
+}
+
+void sbndaq::CAENV1730Readout::closeEventRecordFile()
+{
+  if (fEventRecordFile.is_open()) {
+    fEventRecordFile.flush();
+    fEventRecordFile.close();
+    TLOG(TLVL_INFO) << "(FragID=" << fCAEN.fragmentId << ") per-event record file closed after "
+                    << fEventRecordCount << " records, " << fTailCorruptCount << " with tail-repeat corruption";
+  }
+}
+
+void sbndaq::CAENV1730Readout::writeEventRecord(const RawEventRecord& r, bool shortEvent, bool overlapped,
+                                                uint32_t tailMask)
+{
+  if (!fEventRecordFile.is_open()) return;
+  EventRecord e{};
+  e.eventCounter = r.eventCounter;
+  e.triggerTimeTag = r.triggerTimeTag;
+  e.eventSizeWords = r.eventSizeWords;
+  e.dTTT = r.dTTT;
+  e.hostPollEndNs = r.hostPollEndNs;
+  e.flags = (r.flags & 0x1u) | (tailMask ? 0x2u : 0u) | (shortEvent ? 0x4u : 0u) | (overlapped ? 0x8u : 0u)
+          | (tailMask << 16);
+  e.nReadsInPoll = static_cast<uint16_t>(std::min<uint32_t>(r.nReadsInPoll, 0xFFFFu));
+  e.eventsStoredAtPoll = static_cast<uint16_t>(std::min<uint32_t>(r.eventsStoredAtPoll, 0xFFFFu));
+  e.returnedBytes = r.returnedBytes;
+  fEventRecordFile.write(reinterpret_cast<const char*>(&e), sizeof(e));
+  if ((++fEventRecordCount % 64u) == 0u) fEventRecordFile.flush();   // lose at most ~1 s of events on a crash
 }
 
 void sbndaq::CAENV1730Readout::handleReadDataError(CAEN_DGTZ_ErrorCode retcode, uint8_t* blockBegin, size_t blockSize,
