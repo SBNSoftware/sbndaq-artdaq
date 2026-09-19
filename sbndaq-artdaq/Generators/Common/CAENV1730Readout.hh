@@ -21,6 +21,9 @@
 #include <string>
 #include <unordered_map>
 #include <mutex>
+#include <deque>
+#include <vector>
+#include <ostream>
 
 namespace sbndaq
 {
@@ -131,6 +134,49 @@ namespace sbndaq
     uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
     // number of board memory buffers, read back from BUFFER_ORGANIZATION
     uint32_t fNumBoardBuffers;
+
+    // ------------------------------------------------------------------
+    // error-22 (CAEN_DGTZ_OutOfMemory) test instrumentation.
+    // TEST CODE: everything is hardcoded (ring depth, dump directory,
+    // sentinel, FIFO pop count); see error22_analysis_2026-09-18.md, sec. 7.
+    // ------------------------------------------------------------------
+    struct RawEventRecord {
+      uint64_t hostPollBeginNs;    // fTimePollBegin, ns since epoch
+      uint64_t hostPollEndNs;      // fTimePollEnd (when ReadData returned), ns since epoch
+      uint32_t eventCounter;       // from the CAEN header
+      uint32_t eventSizeWords;     // from the CAEN header
+      uint32_t triggerTimeTag;     // from the CAEN header (8 ns ticks)
+      uint32_t dTTT;               // TTT - previous good TTT (8 ns ticks); 0xFFFFFFFF if unknown
+      uint32_t nReadsInPoll;       // 0-based index of this read within its poll
+      uint32_t eventsStoredAtPoll; // EVENT_STORED read once at poll start; 0xFFFFFFFF if read failed
+      uint32_t returnedBytes;      // read_data_size reported by ReadData
+      uint32_t flags;              // bit0: dropped by the header size check
+      std::vector<uint8_t> data;   // raw copy of the returned bytes
+    };
+    static constexpr size_t   kRawRingDepth  = 16;          // events kept
+    static constexpr uint32_t kSentinelWord  = 0xDEADBEEFu; // block pre-fill before ReadData
+    static constexpr size_t   kFifoPopWords  = 4096;        // single-word pops of 0x0000 after failure
+    static constexpr uint32_t kTTTMask       = 0x7FFFFFFFu; // TTT is 31 bits
+    static constexpr uint32_t kUnknown32     = 0xFFFFFFFFu;
+
+    std::deque<RawEventRecord> fRawRing;
+    bool     fIncidentDumped;          // one dump per run
+    uint64_t fConsecutiveReadErrors;   // throttles the -22 log spam
+    bool     fHaveLastTTT;
+    uint32_t fLastTTT;
+    uint32_t fExpectedEventSizeWords;  // 4 + Nch * recordLength/2
+    uint64_t fAnomalousEventLogCount;  // throttles short/overlapped event warnings
+
+    void   fillSentinel(uint8_t* begin, size_t bytes);
+    size_t sentinelOverwriteExtent(const uint8_t* begin, size_t bytes, size_t& changedWords) const;
+    void   recordRawEvent(const uint8_t* begin, size_t bytes, size_t readIndexInPoll,
+                          uint32_t storedAtPoll, uint32_t flags);
+    void   handleReadDataError(CAEN_DGTZ_ErrorCode retcode, uint8_t* blockBegin, size_t blockSize,
+                               size_t blockIndex, size_t n_reads, uint32_t storedAtPoll);
+    void   snapshotRegisters(std::ostream& os, const char* label);
+    void   dumpIncident(CAEN_DGTZ_ErrorCode retcode, const uint8_t* blockBegin, size_t blockSize,
+                        size_t blockIndex, size_t extent, size_t changedWords, size_t n_reads,
+                        uint32_t storedAtPoll, uint32_t stored, uint32_t eventSize, uint32_t acqStatus);
     
     typedef enum {
       BOARD_CONFIG_READ  = 0x8000, // board configuration read register
@@ -152,6 +198,13 @@ namespace sbndaq
       SLF_TRG_LG_CH      = 0x1084, // couple n self-trigger logic
                                    // 0x1n84 for n=0,2,4,6,8,A,C,E
       ANALOG_MON_MODE    = 0x8144, // analog monitor output mode
+      // error-22 instrumentation
+      READOUT_BUFFER     = 0x0000, // event readout buffer (single D32 read pops one word)
+      RECORD_LENGTH_REG  = 0x8020, // custom record length
+      POST_TRIGGER_REG   = 0x8114, // post trigger
+      BOARD_FAILURE_STAT = 0x8178, // board failure status
+      READOUT_STATUS     = 0xEF04, // readout status (event ready, BERR, ...)
+      CHANNEL_STATUS_CH0 = 0x1088, // 0x1n88 channel n status
     } ADDRESS_t;
 
     typedef enum 

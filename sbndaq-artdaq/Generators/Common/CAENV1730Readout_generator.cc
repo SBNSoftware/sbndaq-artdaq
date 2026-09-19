@@ -12,8 +12,15 @@
 
 #include <iostream>
 #include <sstream>
+#include <fstream>
+#include <iomanip>
+#include <cstring>
+#include <cerrno>
+#include <cstdio>
 #include <time.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <limits.h>
 #include <algorithm>
 
 #include "boost/date_time/microsec_time_clock.hpp"
@@ -41,6 +48,14 @@ sbndaq::CAENV1730Readout::CAENV1730Readout(fhicl::ParameterSet const& ps) :
   fail_GetNext=false;
   fNChannels = fCAEN.nChannels;
   fNumBoardBuffers=0;
+
+  // error-22 instrumentation state
+  fIncidentDumped = false;
+  fConsecutiveReadErrors = 0;
+  fHaveLastTTT = false;
+  fLastTTT = 0;
+  fExpectedEventSizeWords = 0;
+  fAnomalousEventLogCount = 0;
 
   TLOG(TCONFIG) << ": Using FragID=" << fCAEN.fragmentId 
     << " BoardID=" << fCAEN.boardId 
@@ -824,6 +839,19 @@ void sbndaq::CAENV1730Readout::ConfigureDataBuffer()
   fPoolBuffer.allocate(fBufferSize,fCAEN.poolBufferSize,true);
   fPoolBuffer.debugInfo();
 
+  // error-22 instrumentation (7.1): sizes at INFO level, they matter for the
+  // interpretation of the -22 and were only visible at TSTART level before
+  fExpectedEventSizeWords = 4u + static_cast<uint32_t>(__builtin_popcount(fCAEN.channelEnableMask & 0xFFFFu))
+                                 * static_cast<uint32_t>(fCAEN.recordLength) / 2u;
+  TLOG(TLVL_INFO) << "(FragID=" << fCAEN.fragmentId << ")"
+                  << " CAEN MallocReadoutBuffer size=" << fBufferSize << " bytes"
+                  << ", PoolBuffer block size=" << fPoolBuffer.blockSize()
+                  << " bytes x " << fPoolBuffer.blockCount() << " blocks"
+                  << ", expected event size=" << fExpectedEventSizeWords << " words ("
+                  << fExpectedEventSizeWords*sizeof(uint32_t) << " bytes)"
+                  << ", sentinel pre-fill=0x" << std::hex << kSentinelWord << std::dec
+                  << ", raw ring depth=" << kRawRingDepth;
+
   // lock a mutex protecting fTimestampMap and clear it
   std::lock_guard<std::mutex> lock(fTimestampMapMutex);
   fTimestampMap.clear();
@@ -875,6 +903,13 @@ void sbndaq::CAENV1730Readout::start()
   last_sent_event_counter=0x0;
   last_sent_seqid =0x0;
   last_sent_ts=0x0;
+
+  // error-22 instrumentation: fresh state per run (GetData thread is not running here)
+  fRawRing.clear();
+  fIncidentDumped = false;
+  fConsecutiveReadErrors = 0;
+  fHaveLastTTT = false;
+  fAnomalousEventLogCount = 0;
 
   // Manual calibration added by Animesh - DELETE?
   // "its origin and purpose is still a total mistery"
@@ -992,8 +1027,15 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
   }
 
   TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
-		 << "No timeout. TimePollBegin=" 
+		 << "No timeout. TimePollBegin="
 		 << fTimePollBegin << " TimePollEnd=" << fTimePollEnd;
+
+  // error-22 instrumentation (7.2): board occupancy once per poll (one register
+  // read per poll, not per event) so the raw ring knows the backlog at poll start
+  uint32_t storedAtPoll = kUnknown32;
+  if (CAEN_DGTZ_ReadRegister(fHandle, EVENT_STORED, &storedAtPoll) != CAEN_DGTZ_Success) {
+    storedAtPoll = kUnknown32;
+  }
 
   uint32_t read_data_size = 1;
   size_t n_reads=0;
@@ -1037,28 +1079,22 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
                    << "Calling ReadData(fHandle="<<fHandle<< ",bufp=" << (void*)block->begin
                    << ",&block.size="<<(void*)&(block->size) << ")";
 
+    // error-22 instrumentation (7.3): known pattern, so that after a failure we can
+    // tell how many bytes ReadData actually wrote (about 10 us for 160 kB)
+    fillSentinel(block->begin, block->size);
+
     retcode = CAEN_DGTZ_ReadData(fHandle,CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                                 (char*)block->begin,&read_data_size);
 
     // 1) check to make sure no errors on readout
     if (retcode != CAEN_DGTZ_Success) {
-      uint32_t stored=0, eventSize=0, acqStatus=0;
-      CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&stored);
-      CAEN_DGTZ_ReadRegister(fHandle,EVENT_SIZE,&eventSize);
-      CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_ACQ_STATUS_ADD,&acqStatus);
-      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
-                       << " CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode}
-                       << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")"
-                       << ", EVENT_STORED=" << stored << "/" << fNumBoardBuffers
-                       << ", EVENT_SIZE=" << eventSize*sizeof(uint32_t) << " bytes"
-                       << ", ACQ_STATUS=0x" << std::hex << acqStatus << std::dec
-                       << " (eventFull=" << bool(acqStatus & 0x10)
-                       << ", eventReady=" << bool(acqStatus & 0x8)
-                       << "), n_reads this poll=" << n_reads;
+      // logs (throttled), dumps ring + failing block + FIFO once per run
+      handleReadDataError(retcode, block->begin, block->size, block->index, n_reads, storedAtPoll);
       fPoolBuffer.returnFreeBlock(block);
       std::this_thread::yield();
       return false;
     }
+    fConsecutiveReadErrors = 0;
 
     // 2) check for no data
     // a zero-length read can be the normal exit of this loop once the board has been
@@ -1115,9 +1151,14 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
                        << ", PMT_EVENT_SIZE=" << header->eventSize
                        << ", PMT_TIME_TAG=" << header->triggerTimeTag 
                        << ". DROPPING THIS FRAGMENT.";
+      // error-22 instrumentation (7.2): keep the dropped read in the ring too (flag bit0)
+      recordRawEvent(block->begin, block->data_size, n_reads-1, storedAtPoll, 1u);
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
+
+    // error-22 instrumentation (7.1/7.2): raw ring copy, dTTT and event-size bookkeeping
+    recordRawEvent(block->begin, block->data_size, n_reads-1, storedAtPoll, 0u);
 
     //do all the timestamp assignment
     //first reference against epoch
@@ -1725,6 +1766,366 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
 
     CAENVME_End(BHandle);
   }
+}
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------
+// error-22 (CAEN_DGTZ_OutOfMemory) test instrumentation
+// TEST CODE, everything hardcoded. See error22_analysis_2026-09-18.md, sec. 7.
+// Decoder for the .bin file: tools/decode_v1730_dump.py
+// ------------------------------------------------------------------------
+
+namespace {
+
+  // fixed 88-byte record header in the binary dump
+  struct DumpRecordHeader {
+    char     magic[8];      // "V1730DMP"
+    uint32_t type;          // 1 = ring event, 2 = failing block, 3 = FIFO pop words
+    uint32_t version;       // 1
+    uint64_t payloadBytes;  // bytes following this header
+    uint64_t meta[8];       // type-specific, documented in decode_v1730_dump.py
+  };
+  static_assert(sizeof(DumpRecordHeader) == 88, "DumpRecordHeader must be 88 bytes");
+
+  void writeDumpRecord(std::ofstream& bin, uint32_t type, const uint64_t (&meta)[8],
+                       const void* payload, size_t bytes)
+  {
+    DumpRecordHeader h;
+    std::memcpy(h.magic, "V1730DMP", sizeof(h.magic));
+    h.type = type;
+    h.version = 1;
+    h.payloadBytes = bytes;
+    std::memcpy(h.meta, meta, sizeof(h.meta));
+    bin.write(reinterpret_cast<const char*>(&h), sizeof(h));
+    if (bytes != 0) bin.write(reinterpret_cast<const char*>(payload), bytes);
+  }
+
+  std::string hexWord(uint32_t w)
+  {
+    std::ostringstream os;
+    os << "0x" << std::hex << std::setw(8) << std::setfill('0') << w;
+    return os.str();
+  }
+}
+
+void sbndaq::CAENV1730Readout::fillSentinel(uint8_t* begin, size_t bytes)
+{
+  auto words = reinterpret_cast<uint32_t*>(begin);
+  std::fill_n(words, bytes / sizeof(uint32_t), kSentinelWord);
+}
+
+// bytes up to and including the last word that differs from the sentinel,
+// plus the number of words that differ (real data equal to the sentinel is negligible)
+size_t sbndaq::CAENV1730Readout::sentinelOverwriteExtent(const uint8_t* begin, size_t bytes,
+                                                         size_t& changedWords) const
+{
+  auto words = reinterpret_cast<const uint32_t*>(begin);
+  const size_t n = bytes / sizeof(uint32_t);
+  changedWords = 0;
+  size_t last = 0;
+  for (size_t i = 0; i < n; ++i) {
+    if (words[i] != kSentinelWord) { ++changedWords; last = i + 1; }
+  }
+  return last * sizeof(uint32_t);
+}
+
+void sbndaq::CAENV1730Readout::recordRawEvent(const uint8_t* begin, size_t bytes, size_t readIndexInPoll,
+                                              uint32_t storedAtPoll, uint32_t flags)
+{
+  RawEventRecord rec;
+  // recycle the oldest record's storage instead of allocating 160 kB per event
+  if (fRawRing.size() >= kRawRingDepth) {
+    rec.data = std::move(fRawRing.front().data);
+    fRawRing.pop_front();
+  }
+  rec.hostPollBeginNs = (fTimePollBegin - fTimeEpoch).total_nanoseconds();
+  rec.hostPollEndNs   = (fTimePollEnd   - fTimeEpoch).total_nanoseconds();
+  rec.eventCounter = 0; rec.eventSizeWords = 0; rec.triggerTimeTag = 0;
+  if (bytes >= sizeof(CAENV1730EventHeader)) {
+    const auto header = reinterpret_cast<CAENV1730EventHeader const *>(begin);
+    rec.eventCounter   = uint32_t{header->eventCounter};
+    rec.eventSizeWords = uint32_t{header->eventSize};
+    rec.triggerTimeTag = uint32_t{header->triggerTimeTag};
+  }
+  rec.dTTT = kUnknown32;
+  if (flags == 0) {
+    if (fHaveLastTTT) rec.dTTT = (rec.triggerTimeTag - fLastTTT) & kTTTMask;
+    fLastTTT = rec.triggerTimeTag;
+    fHaveLastTTT = true;
+  }
+  rec.nReadsInPoll = static_cast<uint32_t>(readIndexInPoll);
+  rec.eventsStoredAtPoll = storedAtPoll;
+  rec.returnedBytes = static_cast<uint32_t>(bytes);
+  rec.flags = flags;
+  rec.data.assign(begin, begin + bytes);
+  fRawRing.push_back(std::move(rec));
+
+  if (flags != 0) return;
+
+  // 7.1: overlap bookkeeping from header fields we already have
+  const RawEventRecord& r = fRawRing.back();
+  const bool shortEvent = (r.eventSizeWords != fExpectedEventSizeWords);
+  const uint32_t recordTicks = static_cast<uint32_t>(fCAEN.recordLength) / 4u; // 2 ns samples -> 8 ns TTT ticks
+  const bool overlapped = (r.dTTT != kUnknown32) && (r.dTTT < recordTicks);
+
+  metricMan->sendMetric("EventSizeWordsMin", uint64_t{r.eventSizeWords}, "words", 11, artdaq::MetricMode::Minimum);
+  if (r.dTTT != kUnknown32) {
+    metricMan->sendMetric("dTTTMin", uint64_t{r.dTTT}, "ticks", 11, artdaq::MetricMode::Minimum);
+  }
+
+  if (shortEvent || overlapped) {
+    ++fAnomalousEventLogCount;
+    if (fAnomalousEventLogCount <= 20 || fAnomalousEventLogCount % 1000 == 0) {
+      TLOG(TLVL_WARNING) << "(FragID=" << fCAEN.fragmentId << ")"
+                         << (shortEvent ? " SHORT" : "") << (overlapped ? " OVERLAPPED" : "")
+                         << " event (anomalous #" << fAnomalousEventLogCount << ")"
+                         << ": eventCounter=" << r.eventCounter
+                         << ", eventSize=" << r.eventSizeWords << " words (expected " << fExpectedEventSizeWords << ")"
+                         << ", TTT=" << r.triggerTimeTag << ", dTTT=" << r.dTTT << " ticks (one record=" << recordTicks << ")"
+                         << ", read " << readIndexInPoll << " of this poll"
+                         << ", EVENT_STORED at poll start=" << storedAtPoll;
+    }
+  }
+}
+
+void sbndaq::CAENV1730Readout::handleReadDataError(CAEN_DGTZ_ErrorCode retcode, uint8_t* blockBegin, size_t blockSize,
+                                                   size_t blockIndex, size_t n_reads, uint32_t storedAtPoll)
+{
+  ++fConsecutiveReadErrors;
+
+  uint32_t stored=0, eventSize=0, acqStatus=0;
+  CAEN_DGTZ_ReadRegister(fHandle,EVENT_STORED,&stored);
+  CAEN_DGTZ_ReadRegister(fHandle,EVENT_SIZE,&eventSize);
+  CAEN_DGTZ_ReadRegister(fHandle,CAEN_DGTZ_ACQ_STATUS_ADD,&acqStatus);
+
+  // 7.3: how much did ReadData write into the sentinel-filled block?
+  size_t changedWords = 0;
+  const size_t extent = sentinelOverwriteExtent(blockBegin, blockSize, changedWords);
+
+  // once per incident, then once per 1000 retries (the 6 Hz spam triggered MF rate limiting)
+  const bool verbose = (fConsecutiveReadErrors == 1) || (fConsecutiveReadErrors % 1000 == 0);
+  if (verbose) {
+    TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ")"
+                     << " CAEN_DGTZ_ReadData returned non zero return code; return code=" << int{retcode}
+                     << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")"
+                     << ", EVENT_STORED=" << stored << "/" << fNumBoardBuffers
+                     << ", EVENT_SIZE=" << eventSize*sizeof(uint32_t) << " bytes (" << hexWord(eventSize) << " words)"
+                     << ", ACQ_STATUS=0x" << std::hex << acqStatus << std::dec
+                     << " (eventFull=" << bool(acqStatus & 0x10)
+                     << ", eventReady=" << bool(acqStatus & 0x8)
+                     << "), n_reads this poll=" << n_reads
+                     << ", EVENT_STORED at poll start=" << storedAtPoll
+                     << ", consecutive failures=" << fConsecutiveReadErrors
+                     << ", ReadData wrote " << changedWords*sizeof(uint32_t) << " bytes (extent " << extent
+                     << " of " << blockSize << ") into block " << blockIndex;
+  }
+
+  if (!fIncidentDumped) {
+    fIncidentDumped = true;
+    dumpIncident(retcode, blockBegin, blockSize, blockIndex, extent, changedWords, n_reads,
+                 storedAtPoll, stored, eventSize, acqStatus);
+  }
+}
+
+void sbndaq::CAENV1730Readout::snapshotRegisters(std::ostream& os, const char* label)
+{
+  struct Reg { const char* name; uint32_t addr; };
+  static const Reg regs[] = {
+    {"BOARD_CONFIG",         BOARD_CONFIG_READ},
+    {"BUFFER_ORGANIZATION",  BUFFER_ORGANIZATION},
+    {"RECORD_LENGTH",        RECORD_LENGTH_REG},
+    {"POST_TRIGGER",         POST_TRIGGER_REG},
+    {"ACQ_STATUS",           CAEN_DGTZ_ACQ_STATUS_ADD},
+    {"EVENT_STORED",         EVENT_STORED},
+    {"EVENT_SIZE",           EVENT_SIZE},
+    {"BOARD_FAILURE_STATUS", BOARD_FAILURE_STAT},
+    {"READOUT_STATUS",       READOUT_STATUS},
+  };
+
+  os << "## register snapshot: " << label << "\n";
+  for (auto const& r : regs) {
+    uint32_t v = 0;
+    const auto rc = CAEN_DGTZ_ReadRegister(fHandle, r.addr, &v);
+    os << std::left << std::setw(22) << r.name << std::right
+       << " 0x" << std::hex << std::setw(4) << std::setfill('0') << r.addr
+       << " = " << std::setfill(' ') << std::dec << hexWord(v) << " (" << v << ")";
+    if (rc != CAEN_DGTZ_Success) {
+      os << "  READ FAILED rc=" << int{rc} << " (" << sbndaq::CAENDecoder::CAENError(rc) << ")";
+    } else if (r.addr == CAEN_DGTZ_ACQ_STATUS_ADD) {
+      os << "  run=" << bool(v & 0x4) << " evtReady=" << bool(v & 0x8) << " evtFull=" << bool(v & 0x10)
+         << " clkExt=" << bool(v & 0x20) << " pllLock=" << bool(v & 0x80) << " boardReady=" << bool(v & 0x100)
+         << " S-IN=" << bool(v & 0x8000) << " TRG-IN=" << bool(v & 0x10000) << " shutdown=" << bool(v & 0x80000);
+    } else if (r.addr == EVENT_SIZE) {
+      os << "  hi16=" << (v >> 16) << " lo16=0x" << std::hex << (v & 0xFFFF) << std::dec
+         << " lo12-hi16=" << (static_cast<int64_t>(v & 0xFFF) - static_cast<int64_t>(v >> 16))
+         << " expected=" << fExpectedEventSizeWords;
+    } else if (r.addr == READOUT_STATUS) {
+      os << "  evtReady=" << bool(v & 0x1) << " outBufferStatus=" << bool(v & 0x2) << " busError=" << bool(v & 0x4);
+    }
+    os << "\n";
+  }
+  for (uint32_t ch = 0; ch < fNChannels; ++ch) {
+    uint32_t v = 0;
+    const uint32_t addr = CHANNEL_STATUS_CH0 + (ch << 8);
+    const auto rc = CAEN_DGTZ_ReadRegister(fHandle, addr, &v);
+    os << "CHANNEL_STATUS[" << std::setw(2) << ch << "]     "
+       << " 0x" << std::hex << std::setw(4) << std::setfill('0') << addr
+       << " = " << std::setfill(' ') << std::dec << hexWord(v);
+    if (rc != CAEN_DGTZ_Success) {
+      os << "  READ FAILED rc=" << int{rc};
+    } else {
+      os << "  memFull=" << bool(v & 0x1) << " memEmpty=" << bool(v & 0x2) << " dacBusy=" << bool(v & 0x4)
+         << " adcPowerDown=" << bool(v & 0x8) << " spiBusy=" << bool(v & 0x100);
+    }
+    os << "\n";
+  }
+}
+
+void sbndaq::CAENV1730Readout::dumpIncident(CAEN_DGTZ_ErrorCode retcode, const uint8_t* blockBegin, size_t blockSize,
+                                            size_t blockIndex, size_t extent, size_t changedWords, size_t n_reads,
+                                            uint32_t storedAtPoll, uint32_t stored, uint32_t eventSize, uint32_t acqStatus)
+{
+  // TEST CODE: hardcoded directory on the shared NFS area. All boards on all hosts
+  // write here, so the file name carries fragmentId, run, host, pid and a ms timestamp
+  // to make sure no two boards can overwrite each other.
+  const std::string dir = "/daq/scratch/mvicenzi/v1730_dumps";
+  ::mkdir(dir.c_str(), 0775); // may already exist; a real failure shows up in the open() below
+
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  struct tm ltm = *localtime(&ts.tv_sec);
+  char stamp[48];
+  snprintf(stamp, sizeof(stamp), "%04d%02d%02d-%02d%02d%02d.%03ld",
+           ltm.tm_year + 1900, ltm.tm_mon + 1, ltm.tm_mday, ltm.tm_hour, ltm.tm_min, ltm.tm_sec,
+           ts.tv_nsec / 1000000L);
+  char host[HOST_NAME_MAX + 1] = "unknownhost";
+  if (::gethostname(host, sizeof(host)) != 0) std::strcpy(host, "unknownhost");
+  host[sizeof(host) - 1] = '\0';
+  std::ostringstream base;
+  base << dir << "/v1730_frag" << fCAEN.fragmentId
+       << "_run" << artdaq::CommandableFragmentGenerator::run_number()
+       << "_" << host << "_pid" << ::getpid() << "_" << stamp;
+  const std::string txtName = base.str() + ".txt";
+  const std::string binName = base.str() + ".bin";
+
+  std::ofstream txt(txtName);
+  std::ofstream bin(binName, std::ios::binary);
+  if (!txt || !bin) {
+    TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") cannot open incident dump files "
+                     << txtName << " / " << binName << " (errno=" << errno << ", " << std::strerror(errno)
+                     << "); no dump written";
+    return;
+  }
+  TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") writing ReadData-failure incident dump to "
+                   << txtName << " and " << binName;
+
+  txt << "# CAEN V1730 ReadData failure dump (test instrumentation)\n"
+      << "fragmentId " << fCAEN.fragmentId << "\n"
+      << "run " << artdaq::CommandableFragmentGenerator::run_number() << "\n"
+      << "host " << host << " pid " << ::getpid() << "\n"
+      << "hostTime " << stamp << "\n"
+      << "returnCode " << int{retcode} << " (" << sbndaq::CAENDecoder::CAENError(retcode) << ")\n"
+      << "EVENT_STORED " << stored << " / " << fNumBoardBuffers << "\n"
+      << "EVENT_SIZE_words " << eventSize << " (" << hexWord(eventSize) << ")\n"
+      << "ACQ_STATUS " << hexWord(acqStatus) << "\n"
+      << "nReadsThisPoll " << n_reads << "\n"
+      << "EVENT_STORED_atPollStart " << storedAtPoll << "\n"
+      << "failingBlockIndex " << blockIndex << "\n"
+      << "blockSize " << blockSize << "\n"
+      << "sentinelOverwriteExtentBytes " << extent << "\n"
+      << "sentinelChangedBytes " << changedWords * sizeof(uint32_t) << "\n"
+      << "expectedEventSizeWords " << fExpectedEventSizeWords << "\n"
+      << "mallocReadoutBufferSize " << fBufferSize << "\n"
+      << "poolBlockSize " << fPoolBuffer.blockSize() << " poolBlockCount " << fPoolBuffer.blockCount() << "\n"
+      << "lastReceivedEventCounter " << last_rcv_event_counter << "\n";
+
+  CAEN_DGTZ_BoardInfo_t info;
+  if (CAEN_DGTZ_GetInfo(fHandle, &info) == CAEN_DGTZ_Success) {
+    txt << "board " << info.ModelName << " S/N " << info.SerialNumber
+        << " ROC " << info.ROC_FirmwareRel << " AMC " << info.AMC_FirmwareRel << "\n";
+  }
+  txt << "\n## configuration\n" << fCAEN.to_string() << "\n\n";
+
+  snapshotRegisters(txt, "immediately after the failure");
+
+  // last N reads, oldest first
+  txt << "\n## last " << fRawRing.size() << " reads (oldest first); flags bit0 = dropped by size check\n"
+      << "idx pollBegin_ns pollEnd_ns readInPoll storedAtPoll evtCounter sizeWords TTT dTTT bytes flags word0 word1 word2 word3\n";
+  size_t idx = 0;
+  for (auto const& r : fRawRing) {
+    txt << idx++ << " " << r.hostPollBeginNs << " " << r.hostPollEndNs << " " << r.nReadsInPoll << " "
+        << r.eventsStoredAtPoll << " " << r.eventCounter << " " << r.eventSizeWords << " " << r.triggerTimeTag
+        << " " << r.dTTT << " " << r.returnedBytes << " " << r.flags;
+    auto w = reinterpret_cast<const uint32_t*>(r.data.data());
+    for (size_t k = 0; k < 4 && (k + 1) * sizeof(uint32_t) <= r.data.size(); ++k) txt << " " << hexWord(w[k]);
+    txt << "\n";
+  }
+  for (auto const& r : fRawRing) {
+    uint64_t meta[8] = { r.hostPollBeginNs, r.hostPollEndNs, r.eventCounter, r.eventSizeWords, r.triggerTimeTag,
+                         r.dTTT, (uint64_t{r.eventsStoredAtPoll} << 32) | r.nReadsInPoll, r.flags };
+    writeDumpRecord(bin, 1, meta, r.data.data(), r.data.size());
+  }
+
+  // the failing block, whole, sentinel included
+  {
+    uint64_t meta[8] = { blockIndex, blockSize, extent, changedWords * sizeof(uint32_t),
+                         static_cast<uint64_t>(static_cast<int64_t>(int{retcode})),
+                         (uint64_t{eventSize} << 32) | stored, acqStatus, n_reads };
+    writeDumpRecord(bin, 2, meta, blockBegin, blockSize);
+  }
+  txt << "\n## first 16 words of the failing block (0xDEADBEEF = untouched sentinel)\n";
+  {
+    auto w = reinterpret_cast<const uint32_t*>(blockBegin);
+    for (size_t k = 0; k < 16 && (k + 1) * sizeof(uint32_t) <= blockSize; ++k) {
+      txt << hexWord(w[k]) << ((k % 8 == 7) ? "\n" : " ");
+    }
+    txt << "\n";
+  }
+
+  // 7.1: is the size register frozen? same registers 100 ms later
+  ::usleep(100000);
+  snapshotRegisters(txt, "100 ms later, before FIFO pops");
+
+  // 7.4: pop words from the readout buffer with single D32 reads, bypassing the library's size logic
+  std::vector<uint32_t> words;
+  words.reserve(kFifoPopWords);
+  CAEN_DGTZ_ErrorCode rc = CAEN_DGTZ_Success;
+  for (size_t k = 0; k < kFifoPopWords; ++k) {
+    uint32_t w = 0;
+    rc = CAEN_DGTZ_ReadRegister(fHandle, READOUT_BUFFER, &w);
+    if (rc != CAEN_DGTZ_Success) break;
+    words.push_back(w);
+  }
+  size_t headerLike = 0, sampleLike = 0, zeroWords = 0;
+  for (auto w : words) {
+    if ((w >> 28) == 0xA) ++headerLike;
+    if (((w >> 16) & 0xC000) == 0 && (w & 0xC000) == 0) ++sampleLike;
+    if (w == 0) ++zeroWords;
+  }
+  txt << "\n## readout buffer (0x0000) single-word pops: " << words.size() << " words, stop code=" << int{rc}
+      << " (" << sbndaq::CAENDecoder::CAENError(rc) << ")\n"
+      << "words with 0xA header nibble=" << headerLike
+      << ", words that look like two 14-bit samples=" << sampleLike
+      << ", zero words=" << zeroWords << "\n";
+  for (size_t k = 0; k < words.size() && k < 64; ++k) {
+    txt << hexWord(words[k]) << ((k % 8 == 7) ? "\n" : " ");
+  }
+  txt << "\n";
+  {
+    uint64_t meta[8] = { words.size(), static_cast<uint64_t>(static_cast<int64_t>(int{rc})), 0, 0, 0, 0, 0, 0 };
+    writeDumpRecord(bin, 3, meta, words.data(), words.size() * sizeof(uint32_t));
+  }
+
+  snapshotRegisters(txt, "after FIFO pops");
+
+  txt.close();
+  bin.close();
+  TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") incident dump complete: "
+                   << fRawRing.size() << " ring events, failing block " << blockSize << " bytes ("
+                   << changedWords*sizeof(uint32_t) << " bytes written by ReadData), "
+                   << words.size() << " FIFO words popped (stop code " << int{rc} << ")";
 }
 
 // ------------------------------------------------------------------------
