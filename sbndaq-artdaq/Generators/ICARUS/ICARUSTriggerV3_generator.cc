@@ -378,7 +378,7 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
     fNOfDuplicateID++;
   }
   // Sending the metric regardless of the status of the trigger -- allows monitoring even if not activated
-  metricMan->SendMetric("NumberOfDuplicateIDs", fNOfDuplicateID, "Duplicate IDs", 11, artdaq::MetricMode::LastPoint);
+  metricMan->sendMetric("NumberOfDuplicateIDs", fNOfDuplicateID, "Duplicate IDs", 11, artdaq::MetricMode::LastPoint);
 
   if(fLastEvent < event_no)
   {
