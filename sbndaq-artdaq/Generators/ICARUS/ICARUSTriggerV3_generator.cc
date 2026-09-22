@@ -242,6 +242,7 @@ sbndaq::ICARUSTriggerV3::ICARUSTriggerV3(fhicl::ParameterSet const& ps)
   fTotalTriggerCalibMinbias = 0;
   fStartOfRun = 0;
   fInitialStep = 0;
+  fNOfDuplicateID = 0;
 }
 
 
@@ -367,10 +368,17 @@ bool sbndaq::ICARUSTriggerV3::getNext_(artdaq::FragmentPtrs& frags)
   {
     TLOG(TLVL_WARNING) << "White Rabbit timestamp missing!";
   }
-    //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    
+  //Add in fragment details and fragment filling function, want a fragment to contain all of the variables arriving with the trigger                                                                                    
   //Put user variables in metadata, maybe except trigger name, try all at first and might be doing not quite correctly
-    //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
-  if(fLastEvent >= event_no) TLOG(TLVL_WARNING)<< "fLastEvent="<<fLastEvent << ", event_no="<<event_no;
+  //Only create and send fragment if the trigger number has increased, noticed can get multiple of the same trigger from the board
+  
+  if(fLastEvent >= event_no)
+  {
+    TLOG(TLVL_WARNING)<< "fLastEvent=" << fLastEvent << ", event_no=" << event_no;
+    fNOfDuplicateID++;
+  }
+  // Sending the metric regardless of the status of the trigger -- allows monitoring even if not activated
+  metricMan->sendMetric("NumberOfDuplicateIDs", fNOfDuplicateID, "Duplicate IDs", 11, artdaq::MetricMode::LastPoint);
 
   if(fLastEvent < event_no)
   {
