@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 #include <mutex>
+#include <fstream>
 
 namespace sbndaq
 {
@@ -68,6 +69,9 @@ namespace sbndaq
 	
     // print board + CAEN software info
     void GetSWInfo();
+
+    // dump the record of a CAEN event to file (dumpTriggerRecords)
+    void recordTrigger(const uint8_t* data, size_t bytes, artdaq::Fragment::timestamp_t ts);
 
     // run ADC self-calibration 
     void RunADCCalibration();
@@ -131,6 +135,21 @@ namespace sbndaq
     uint32_t ch_status[CAENConfiguration::MAX_CHANNELS];
     // number of board memory buffers, read back from BUFFER_ORGANIZATION
     uint32_t fNumBoardBuffers;
+
+    // record dumped for every CAEN event read (dumpTriggerRecords)
+    struct TriggerRecord {
+      uint32_t fragmentId;        // from config
+      uint32_t recordLength;      // samples, from config
+      uint32_t caenHeader[4];     // the 4 header words of the CAEN event, copied raw
+      uint64_t fragmentTimestamp; // fTS, [ns] (0 if event dropped before TS assigned)
+      uint64_t hostPollEndNs;     // host clock when ReadData returned, ns since epoch
+      uint32_t returnedBytes;     // bytes ReadData returned for this event
+      uint32_t reserved;          // always 0
+    };
+    // make sure it's always the right size
+    static_assert(sizeof(TriggerRecord) == 48, "TriggerRecord must be 48 bytes");
+    std::ofstream fTriggerRecord;         // dump file in debugOutputDir
+    uint32_t fTriggerRecordCount = 0;     // flush counter for dumping records
     
     typedef enum {
       BOARD_CONFIG_READ  = 0x8000, // board configuration read register

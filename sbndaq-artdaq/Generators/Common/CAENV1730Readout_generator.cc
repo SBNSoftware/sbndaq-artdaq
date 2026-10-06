@@ -905,6 +905,19 @@ void sbndaq::CAENV1730Readout::start()
     }
   }
     
+  if (fCAEN.dumpTriggerRecords) {
+    std::ostringstream name;
+    name << fCAEN.debugOutputDir << "/v1730_frag" << fCAEN.fragmentId
+         << "_run" << run_number() << "_triggers.bin";
+    fTriggerRecord.open(name.str(), std::ios::binary);
+    if (fTriggerRecord) {
+      TLOG(TLVL_INFO) << "(FragID=" << fCAEN.fragmentId << ") dumping triggers to " << name.str();
+    } else {
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") cannot open " << name.str()
+                       << "; no trigger dumps this run";
+    }
+  }
+
   fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
   GetData_thread_->start();
   
@@ -1115,6 +1128,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
                        << ", PMT_EVENT_SIZE=" << header->eventSize
                        << ", PMT_TIME_TAG=" << header->triggerTimeTag 
                        << ". DROPPING THIS FRAGMENT.";
+      recordTrigger(block->begin, block->data_size, 0);
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
@@ -1164,6 +1178,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
       std::lock_guard<std::mutex> lock(fTimestampMapMutex);
       fTimestampMap[uint32_t{header->eventCounter}] = fTS;
     }
+
+    recordTrigger(block->begin, block->data_size, fTS);
 
     //print out timestamping info
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
@@ -1522,6 +1538,7 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
 
   GetData_thread_->stop();
+  if (fTriggerRecord.is_open()) fTriggerRecord.close();
 
   CAEN_DGTZ_ErrorCode retcode;
   TLOG_ARB(TSTOP,TRACE_NAME) << "SWStopAcquisition" << TLOG_ENDL;
@@ -1725,6 +1742,28 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
 
     CAENVME_End(BHandle);
   }
+}
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
+// write the event header to the trigger record, if open
+void sbndaq::CAENV1730Readout::recordTrigger(const uint8_t* data, size_t bytes, artdaq::Fragment::timestamp_t ts)
+{
+  if (!fTriggerRecord.is_open()) return; // skip if file failed to open
+  TriggerRecord r{};
+  r.fragmentId = fCAEN.fragmentId;
+  r.recordLength = static_cast<uint32_t>(fCAEN.recordLength);
+  // copy-in the CAEN header as it comes
+  std::copy_n(data, std::min(bytes, sizeof(r.caenHeader)), reinterpret_cast<uint8_t*>(r.caenHeader));
+  r.fragmentTimestamp = ts;
+  r.hostPollEndNs = (fTimePollEnd - fTimeEpoch).total_nanoseconds();
+  r.returnedBytes = static_cast<uint32_t>(bytes);
+  fTriggerRecord.write(reinterpret_cast<const char*>(&r), sizeof(r));
+  // flush every 64 events, a crash loses at most the last 64 records;
+  // this runs in the readout thread, so a slow or stalled filesystem
+  // (e.g. an NFS hiccup) delays the readout
+  if (++fTriggerRecordCount % 64 == 0) fTriggerRecord.flush();
 }
 
 // ------------------------------------------------------------------------
