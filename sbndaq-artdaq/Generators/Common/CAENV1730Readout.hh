@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <mutex>
 #include <fstream>
+#include <deque>
+#include <vector>
 
 namespace sbndaq
 {
@@ -72,6 +74,10 @@ namespace sbndaq
 
     // dump the record of a CAEN event to file (dumpTriggerRecords)
     void recordTrigger(const uint8_t* data, size_t bytes, artdaq::Fragment::timestamp_t ts);
+    // keep a full copy of the last CAEN events read (dumpCrashEvents)
+    void bufferCrashEvent(const uint8_t* data, size_t bytes);
+    // dump the buffered CAEN events to file, once per run (dumpCrashEvents)
+    void writeCrashDump();
 
     // run ADC self-calibration 
     void RunADCCalibration();
@@ -150,6 +156,11 @@ namespace sbndaq
     static_assert(sizeof(TriggerRecord) == 48, "TriggerRecord must be 48 bytes");
     std::ofstream fTriggerRecord;         // dump file in debugOutputDir
     uint32_t fTriggerRecordCount = 0;     // flush counter for dumping records
+
+    // last CAEN events read, full copies, dumped on a ReadData error (dumpCrashEvents)
+    static constexpr size_t CRASH_BUFFER_DEPTH = 16;
+    std::deque<std::vector<uint8_t>> fCrashBuffer;
+    bool fCrashDumped = false;            // one dump per run
     
     typedef enum {
       BOARD_CONFIG_READ  = 0x8000, // board configuration read register
