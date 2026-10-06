@@ -58,6 +58,9 @@ namespace sbndaq
     uint32_t selfTrgMode;          ///> sets the self trigger mode
     uint32_t selfTrgMask;          ///> sets the bit mask to apply the self-trigger mode 
     bool swTrigger;                ///> sends a software trigger
+    bool dumpTriggerRecords;       ///> dump a record of every CAEN event to file
+    bool dumpCrashEvents;          ///> dump the last CAEN events on a ReadData error
+    std::string debugOutputDir;    ///> output directory for debugging dumps
     bool allowTriggerOverlap;      ///> allows overlapping triggers
     uint32_t selfTrgBit;           ///> self trigger polarity bit
     int triggerPolarity;           ///> sets trigger polarity via CAEN_DGTZ library
