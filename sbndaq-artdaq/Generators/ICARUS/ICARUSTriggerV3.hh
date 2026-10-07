@@ -195,6 +195,7 @@ namespace sbndaq
     int fInitialStep;
     bool use_wr_time_;
     long wr_time_offset_ns_;
+    int fNOfDuplicateID;
     //expected fragments
     char buffer[1000] = {'\0'};
     uint8_t peekBuffer[2] = {0,0};

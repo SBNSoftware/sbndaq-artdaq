@@ -133,6 +133,23 @@ sbndaq::CAENConfiguration::CAENConfiguration(fhicl::ParameterSet const & ps)
   // keep false for production running
   swTrigger = ps.get<bool>("SWTrigger", false);
 
+  // write the CAEN header and timestamps of every event read
+  // to a per-board binary file in debugOutputDir
+  // this is used for debugging/test purpose, might delay the readout
+  // keep false for production running
+  dumpTriggerRecords = ps.get<bool>("dumpTriggerRecords", false);
+
+  // on the first ReadData error of a run, write the last CAEN events
+  // read (full waveforms) to a per-board binary file in debugOutputDir/crash
+  // this is used for debugging/test purpose
+  // keep false for production running
+  dumpCrashEvents = ps.get<bool>("dumpCrashEvents", false);
+
+  // directory where the debugging dumps are written
+  // file names: v1730_frag<fragmentId>_run<run>_triggers.bin
+  //             crash/v1730_frag<fragmentId>_run<run>.bin
+  debugOutputDir = ps.get<std::string>("debugOutputDir", "/tmp");
+
   // allows overlapping triggers (buffers are merged)
   // writes mask 0x0002 to register 0x8004 
   allowTriggerOverlap = ps.get<bool>("allowTriggerOverlap");
@@ -311,6 +328,9 @@ std::ostream& operator<<(std::ostream& os, const sbndaq::CAENConfiguration& e)
                                    << std::endl;                                
   os << "SelfTrgMask         0x" << std::hex << e.selfTrgMask << std::dec << " " << e.selfTrgMask << std::endl;
   os << "SWTrigger             " << e.swTrigger << std::endl;
+  os << "dumpTriggerRecords    " << e.dumpTriggerRecords << std::endl;
+  os << "dumpCrashEvents       " << e.dumpCrashEvents << std::endl;
+  os << "debugOutputDir        " << e.debugOutputDir << std::endl;
   os << "AllowTriggerOverlap   " << e.allowTriggerOverlap << std::endl;
   os << "selfTrgBit            " << " " << e.selfTrgBit << std::endl;
   os << "TriggerPolarity       " << e.triggerPolarity << " " 

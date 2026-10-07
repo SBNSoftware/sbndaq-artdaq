@@ -14,6 +14,7 @@
 #include <sstream>
 #include <time.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <algorithm>
 
 #include "boost/date_time/microsec_time_clock.hpp"
@@ -905,6 +906,26 @@ void sbndaq::CAENV1730Readout::start()
     }
   }
     
+  if (fCAEN.dumpTriggerRecords) {
+    std::ostringstream name;
+    name << fCAEN.debugOutputDir << "/v1730_frag" << fCAEN.fragmentId
+         << "_run" << run_number() << "_triggers.bin";
+    fTriggerRecord.open(name.str(), std::ios::binary);
+    if (fTriggerRecord) {
+      TLOG(TLVL_INFO) << "(FragID=" << fCAEN.fragmentId << ") dumping triggers to " << name.str();
+    } else {
+      TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") cannot open " << name.str()
+                       << "; no trigger dumps this run";
+    }
+  }
+
+  if (fCAEN.dumpCrashEvents) {
+    fCrashBuffer.clear();
+    fCrashDumped = false;
+    // may already exist; a real failure shows up when the dump is opened
+    ::mkdir((fCAEN.debugOutputDir + "/crash").c_str(), 0775);
+  }
+
   fTimePollBegin = boost::posix_time::microsec_clock::universal_time();
   GetData_thread_->start();
   
@@ -1055,6 +1076,7 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
                        << " (eventFull=" << bool(acqStatus & 0x10)
                        << ", eventReady=" << bool(acqStatus & 0x8)
                        << "), n_reads this poll=" << n_reads;
+      writeCrashDump();
       fPoolBuffer.returnFreeBlock(block);
       std::this_thread::yield();
       return false;
@@ -1115,6 +1137,8 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
                        << ", PMT_EVENT_SIZE=" << header->eventSize
                        << ", PMT_TIME_TAG=" << header->triggerTimeTag 
                        << ". DROPPING THIS FRAGMENT.";
+      recordTrigger(block->begin, block->data_size, 0);
+      bufferCrashEvent(block->begin, block->data_size);
       fPoolBuffer.returnFreeBlock(block);
       break;
     }
@@ -1164,6 +1188,9 @@ bool sbndaq::CAENV1730Readout::readWindowDataBlocks() {
       std::lock_guard<std::mutex> lock(fTimestampMapMutex);
       fTimestampMap[uint32_t{header->eventCounter}] = fTS;
     }
+
+    recordTrigger(block->begin, block->data_size, fTS);
+    bufferCrashEvent(block->begin, block->data_size);
 
     //print out timestamping info
     TLOG(TGETDATA) << "(FragID=" << fCAEN.fragmentId << ")"
@@ -1522,6 +1549,7 @@ void sbndaq::CAENV1730Readout::stop()
   TLOG_INFO("CAENV1730Readout") << "stop()" << TLOG_ENDL;
 
   GetData_thread_->stop();
+  if (fTriggerRecord.is_open()) fTriggerRecord.close();
 
   CAEN_DGTZ_ErrorCode retcode;
   TLOG_ARB(TSTOP,TRACE_NAME) << "SWStopAcquisition" << TLOG_ENDL;
@@ -1725,6 +1753,67 @@ void sbndaq::CAENV1730Readout::GetSWInfo(){
 
     CAENVME_End(BHandle);
   }
+}
+
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
+// write the event header to the trigger record, if open
+void sbndaq::CAENV1730Readout::recordTrigger(const uint8_t* data, size_t bytes, artdaq::Fragment::timestamp_t ts)
+{
+  if (!fTriggerRecord.is_open()) return; // skip if file failed to open
+  TriggerRecord r{};
+  r.fragmentId = fCAEN.fragmentId;
+  r.recordLength = static_cast<uint32_t>(fCAEN.recordLength);
+  // copy-in the CAEN header as it comes
+  std::copy_n(data, std::min(bytes, sizeof(r.caenHeader)), reinterpret_cast<uint8_t*>(r.caenHeader));
+  r.fragmentTimestamp = ts;
+  r.hostPollEndNs = (fTimePollEnd - fTimeEpoch).total_nanoseconds();
+  r.returnedBytes = static_cast<uint32_t>(bytes);
+  fTriggerRecord.write(reinterpret_cast<const char*>(&r), sizeof(r));
+  // flush every 64 events, a crash loses at most the last 64 records;
+  // this runs in the readout thread, so a slow or stalled filesystem
+  // (e.g. an NFS hiccup) delays the readout
+  if (++fTriggerRecordCount % 64 == 0) fTriggerRecord.flush();
+}
+
+// keep a full copy of the CAEN event, dropping the oldest one
+void sbndaq::CAENV1730Readout::bufferCrashEvent(const uint8_t* data, size_t bytes)
+{
+  if (!fCAEN.dumpCrashEvents) return;
+  std::vector<uint8_t> copy;
+  if (fCrashBuffer.size() >= CRASH_BUFFER_DEPTH) {
+    copy = std::move(fCrashBuffer.front()); // reuse the oldest event's memory
+    fCrashBuffer.pop_front();
+  }
+  copy.assign(data, data + bytes);
+  fCrashBuffer.push_back(std::move(copy));
+}
+
+// write the buffered CAEN events to debugOutputDir/crash, oldest first;
+// each event is preceded by a uint32 with the bytes ReadData returned for it,
+// since events dropped by the size check might have a wrong size in the CAEN header
+void sbndaq::CAENV1730Readout::writeCrashDump()
+{
+  if (!fCAEN.dumpCrashEvents || fCrashDumped) return;
+  fCrashDumped = true;
+
+  std::ostringstream name;
+  name << fCAEN.debugOutputDir << "/crash/v1730_frag" << fCAEN.fragmentId
+       << "_run" << run_number() << ".bin";
+  std::ofstream file(name.str(), std::ios::binary);
+  if (!file) {
+    TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") cannot open " << name.str()
+                     << "; no crash dump this run";
+    return;
+  }
+  for (auto const& ev : fCrashBuffer) {
+    const uint32_t bytes = static_cast<uint32_t>(ev.size());
+    file.write(reinterpret_cast<const char*>(&bytes), sizeof(bytes));
+    file.write(reinterpret_cast<const char*>(ev.data()), ev.size());
+  }
+  TLOG(TLVL_ERROR) << "(FragID=" << fCAEN.fragmentId << ") dumped last "
+                   << fCrashBuffer.size() << " CAEN events to " << name.str();
 }
 
 // ------------------------------------------------------------------------
